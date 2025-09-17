@@ -1,0 +1,31 @@
+[project]
+name = "server"
+version = "0.1.0"
+description = "FastAPI Backend"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi[standard]>=0.115.14",
+    "pydantic-settings>=2.10.1",
+    "boto3>=1.39.3",
+    "cryptography>=45.0.5",
+]
+
+[dependency-groups]
+auth = [
+    "boto3>=1.39.3",
+    "cryptography>=45.0.5",
+    "pyjwt>=2.10.1",
+    "requests>=2.32.4",
+]
+dev = [
+    "pre-commit>=4.2.0",
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.0.0",
+    "pytest-cov>=6.2.1",
+    "pytest-mock>=3.14.1",
+    "ruff>=0.12.1",
+]
+
+[tool.uv]
+default-groups = "all"

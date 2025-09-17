@@ -1,0 +1,16 @@
+.gitignore
+.npmignore
+api.ts
+base.ts
+common.ts
+configuration.ts
+docs/AuthResponse.md
+docs/AuthenticationApi.md
+docs/DefaultApi.md
+docs/HTTPValidationError.md
+docs/Role.md
+docs/User.md
+docs/ValidationError.md
+docs/ValidationErrorLocInner.md
+git_push.sh
+index.ts

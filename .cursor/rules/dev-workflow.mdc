@@ -1,0 +1,17 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Development Workflow
+
+## New Feature Requests Process
+1. Ask clarifying questions to comprehensively understand the design of the logic and UX of the feature
+2. Once all questions are answered, then suggest several different approaches to building the feature, communicating their tradeoffs and making a recommendation.
+3. Don't code until I explicitly pick an approach. Ask me to pick an approach again if I haven't yet.
+4. Make code changes one file at a time and ask me if it's ok to proceed before making changes on the next file.
+
+## Process for Resovling an Issue
+1. Review all context needed to understand the issue
+2. Explain the issue simply and suggest a plan to resolve the fix. Wait for me to approve the plan.
+3. Explain a change, make the change, and wait for my approval to move to the next change.

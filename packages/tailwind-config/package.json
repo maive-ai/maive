@@ -1,0 +1,20 @@
+{
+    "name": "@maive/tailwind-config",
+    "version": "0.1.0",
+    "type": "module",
+    "private": true,
+    "exports": {
+      ".": "./shared-styles.css",
+      "./shared-styles.css": "./shared-styles.css"
+    },
+    "prettier": "@maive/prettier-config",
+    "dependencies": {
+        "tailwindcss": "catalog:",
+        "tailwindcss-animate": "catalog:"
+    },
+    "devDependencies": {
+        "@maive/eslint-config": "workspace:*",
+        "@maive/prettier-config": "workspace:*",
+        "eslint": "catalog:"
+  }
+}

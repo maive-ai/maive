@@ -1,0 +1,14 @@
+---
+alwaysApply: false
+---
+# DevOps
+
+## GitHub
+- Our code is hosted in GitHub
+- We use GitHub actions for CI/CD
+
+## Version Management
+- We use changesets for version management with semver. This configuration is in `.changeset/config.json`
+
+## Release Management
+- We use the GitHub Flow model of development

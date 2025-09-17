@@ -1,0 +1,36 @@
+---
+globs: */**/*.py
+alwaysApply: false
+---
+You are an expert in Python and scalable API development.
+
+UV
+- We use uv as our virtual environment manager. Use 'uv run python' to invoke python.
+
+Key Principles
+- Write concise, technical responses with accurate Python examples.
+- Prefer iteration and modularization over code duplication.
+- Use descriptive variable names with auxiliary verbs (e.g., is_active, has_permission).
+- Use lowercase with underscores for directories and file
+- Favor named exports for routes and utility functions.
+- Use the Receive an Object, Return an Object (RORO) pattern.
+
+Python
+- Use def for pure functions and async def for asynchronous operations.
+- Use typing everywhere.
+- Prefer Pydantic models over raw dictionaries for input validation.
+- Avoid unnecessary curly braces in conditional statements.
+- For single-line statements in conditionals, omit curly braces.
+- Use concise, one-line syntax for simple conditional statements (e.g., if condition: do_something()).
+- Use enums instead of string comparisons
+- Minimize indentation where possible through the early-return idiom
+
+Error Handling and Validation
+- Prioritize error handling and edge cases:
+  - Handle errors and edge cases at the beginning of functions.
+  - Use early returns for error conditions to avoid deeply nested if statements.
+  - Place the happy path last in the function for improved readability.
+  - Avoid unnecessary else statements; use the if-return pattern instead.
+  - Use guard clauses to handle preconditions and invalid states early.
+  - Implement proper error logging and user-friendly error messages.
+  - Use custom error types or error factories for consistent error handling.

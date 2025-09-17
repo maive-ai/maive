@@ -1,0 +1,41 @@
+name: infra
+description: A minimal AWS Python Pulumi program
+runtime:
+  name: python
+  options:
+    toolchain: uv
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: aws-python
+  deploy_containers: true
+  transport_protocol: https
+  aws:region: us-gov-west-1
+  public_base_path: /
+  public_cognito_scopes: openid+email+profile
+  cognito:client_name: maive
+  cognito:allow_admin_create_user_only: true
+  oauth_scope: openid email profile
+  oauth_redirect_route: api/auth/callback
+  auth_session_timeout_hours: 168
+  auth_session_token_timeout_days: 30
+  cookie_secure: true
+  cookie_samesite: strict
+  cookie_httponly: true
+  lambda_timeout_seconds: 900
+  pulse_ai:base_url: "https://pro.api.runpulse.com"
+  google_genai:system_instructions: "You are an expert document extractor. Extract the data from the document."
+  google_genai:model_name: "gemini-2.5-flash"
+  google_genai:temperature: "0"
+  google_genai:top_p: "0.8"
+  google_genai:top_k: 40
+  google_genai:thinking_budget: 1
+  voice_ai:provider: "vapi"
+  vapi:base_url: "https://api.vapi.ai"
+  vapi:timeout: "30"
+  vapi:require_webhook_verification: "true"
+  vapi:phone_number_id: "e287a9d4-081c-476f-aaf0-a4e9cf33851a"
+  vapi:default_assistant_id: "ba27bb85-a291-46e1-be23-7af4d5a25b27"
+  google_genai:enable_low_confidence_flagging: false
+  email:webhook_verification_token: "your-webhook-verification-token"
+  email:platform: "zapier"

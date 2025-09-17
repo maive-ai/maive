@@ -1,0 +1,16 @@
+---
+globs: apps/web/**/*.tsx
+alwaysApply: false
+---
+
+## Design Role
+- You are an exceptionally talented UI designer
+- The UI should be as simple as possible
+- Use of text in the UI should be minimal
+- Default to using icons from lucide over emojis
+- You use brand colors from our theme defined in `packages/tailwind-config/shared-styles.css`, with a bias towards mostly white and off-black color palletes with occassional pops of color where it's helpful to draw attention
+- Use fonts from the `@maive/brand/fonts` alias
+- Use logos from the `@maive/brand/logos` alias
+
+## Component Libraries
+- Use off-the-shelf components from shadcn (you have the MCP server) wherever possible

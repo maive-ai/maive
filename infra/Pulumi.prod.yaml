@@ -1,0 +1,11 @@
+config:
+  infra:environment: prod
+  infra:certificate_domain: app.maive.ai
+  infra:deploy_containers: true
+  infra:transport_protocol: https
+  cognito:callback_urls:
+    - "https://app.maive.ai/api/auth/callback"
+  infra:gemini_api_key:
+    secure: AAABAFIGuz904JQuk7tsfLp76k8aMyv9/OeVMZuYdSfnIfvXPL8+db9uSj4JAxohGmwDuBEh/IwbnZlJCazaWaceOY7OzNc=
+  pulse_ai:api_key:
+    secure: AAABAGCOYNujFkQCKUW7GyV5lfLVoNr+GdqsqXB0zLWvin2i65xk2SugdFFq8hkn1mpbsDiHVknAHT7VTM+DxxOeLgvbsPqn

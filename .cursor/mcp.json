@@ -1,0 +1,19 @@
+{
+    "mcpServers": {
+      "assistant-ui": {
+        "command": "npx",
+        "args": ["-y", "@assistant-ui/mcp-docs-server"]
+      },
+      "shadcn": {
+        "command": "npx",
+        "args": ["shadcn@latest", "mcp"]
+      },
+      "vapi": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "@vapi-ai/mcp-docs-server"
+        ]
+      }
+    }
+  }

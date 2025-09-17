@@ -1,0 +1,63 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Monorepo Commands & Patterns
+
+## Node / Typescript Package Management
+- Use `pnpm --filter=<name>` to target specific packages
+- Use `pnpm --filter=web install <package>` to install dependencies in specific apps
+- Use `pnpm --filter=@maive/ui <command>` to run commands on specific packages
+- Use `workspace:*` protocol for internal dependencies between packages
+
+## Python Package Management
+- Use the `uv` package manager in `apps/server`
+- Use `uv add <>` to add a new package, ensuring to add it to the appropriate group
+
+## Node / Typescript Environment Management
+- Use `pnpm env:run <command>` to load .env files before executing commands
+- Use `pnpm env:copy-example` to copy .env.example files to .env
+- Use `pnpm env:remove` to remove .env files
+- Each app/package should have its own .env file (not global)
+
+## Database Operations
+- Use `pnpm db:push` to push schema changes to database
+- Use `pnpm db:studio` to open Drizzle Studio
+- Use `pnpm auth:schema:generate` to generate auth schemas interactively
+
+## Development Commands
+- Use `pnpm dev` to start all applications
+- Use `pnpm build` to build all packages
+- Use `pnpm clean` to clean all build artifacts and node_modules
+- Use `pnpm format:fix` to auto-fix formatting issues
+- Use `pnpm lint:fix` to auto-fix linting issues
+
+## Package Structure
+- `apps/web` - React frontend application
+- `apps/server` - Python / FastAPI backend server
+- `packages/brand` - Shared branding assets
+- `packages/tailwind-config` - Shared tailwind themes and configuration
+- `packages/api` - REST + OpenAPI API definitions
+
+## Environment Variables
+- Prefix environment variables by app (e.g., `SERVER_*`, `DB_*`)
+- Database connections will be configured for managed database services
+- Keep `globalEnv` empty in turbo.json to prevent leaks
+
+## Turborepo Patterns
+- Use `turbo run <task>` to run tasks across all packages
+- Use `turbo -F <package> <task>` to run tasks on specific packages
+- Configure proper caching in turbo.json for each task
+- Use proper task dependencies to optimize build times
+
+## Docker Integration
+- Use `docker compose up --build` to start all services
+- Use `docker compose run --build --rm drizzle` to run database operations
+- Database runs on port 5432, web on 3000, server on 8080
+
+## Best Practices
+- Always use `pnpm --filter` when working with specific packages
+- Keep packages pure and avoid direct environment variable access
+- Use proper workspace dependencies with `workspace:*` protocol
+- Follow the established naming conventions for packages and tasks

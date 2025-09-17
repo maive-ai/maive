@@ -1,0 +1,11 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Infrastructure
+
+## Pulumi
+- We use Pulumi for infrastructure-as-code
+- The global configuration for shared infra resources is in `infra`
+- Each app in `apps` has its own `infra` folder for configuration specific to the app

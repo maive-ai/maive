@@ -1,0 +1,17 @@
+config:
+  cognito:allow_admin_create_user_only: "false"
+  cognito:callback_urls:
+    - http://localhost:8080/api/auth/callback
+  infra:certificate_domain: localhost
+  infra:deploy_containers: "false"
+  infra:environment: dev
+  infra:gemini_api_key:
+    secure: AAABAH6FgYJB8ZHwltDNjWmvfHoiB3/foOEChyH3i7dlTBJDVZ1KuUVb/nlnWpuMs+NhQ+0R1uYUcnQ93i5XwNt+kTiyPh8=
+  infra:transport_protocol: http
+  s3:force_destroy: "true"
+  pulse_ai:api_key:
+    secure: AAABAJQPAo+PeyUAwWoVV/q+uLdM7ePW2Jey1MeBJQqWnHX9O64rEWUjBNJnxLKGyI7HNrAZNWSg+OUmrKd3ogl8JdhK7zf+
+  vapi:api_key:
+    secure: AAABAGBWCSeXGR/A6nhdDLCHqiNW4+wgoHtUGUN0wvZkKr/4deX82qBFGxqvzDIBI0ILt0yhXtDIcZDennip8S3gObQ=
+  vapi:webhook_secret:
+    secure: AAABAOk/j9+w1Rh+0r46lylxzYFDhMv5mlBPi79aHTXvnFRRCneVO2+9yiEb/nyV28NJ1cye2hzxgzpx+doSB9z/nLxNN57OAPG1Hw==

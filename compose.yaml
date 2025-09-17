@@ -1,0 +1,39 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: ./apps/web/Dockerfile
+      args:
+        # Build-time arguments for environment variables--these must be built into the JavaScript bundle so they have to be passed as build arguments
+        PUBLIC_SERVER_URL: ${PUBLIC_SERVER_URL}
+        PUBLIC_BASE_PATH: ${PUBLIC_BASE_PATH}
+        PUBLIC_COGNITO_DOMAIN: ${PUBLIC_COGNITO_DOMAIN}
+        PUBLIC_COGNITO_CLIENT_ID: ${PUBLIC_COGNITO_CLIENT_ID}
+        PUBLIC_COGNITO_SCOPES: ${PUBLIC_COGNITO_SCOPES}
+        PUBLIC_OAUTH_REDIRECT_ROUTE: ${PUBLIC_OAUTH_REDIRECT_ROUTE}
+        PUBLIC_SERVERLESS_API_URL: ${PUBLIC_SERVERLESS_API_URL}
+    env_file:
+      - ./apps/web/.env
+    ports:
+      - "3000:80"
+    healthcheck:
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      test:
+        ['CMD-SHELL', 'curl --fail --silent http://localhost:80/healthcheck || exit 1']
+
+  server:
+    build:
+      context: .
+      dockerfile: ./apps/server/Dockerfile
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./apps/server/.env
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://localhost:8080/healthcheck || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

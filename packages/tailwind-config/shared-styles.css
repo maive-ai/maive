@@ -1,0 +1,61 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Primary brand color - White background with Midnight Onix text */
+  --color-primary-50: #ffffff; /* White - primary background */
+  --color-primary-100: #f8f9fa;
+  --color-primary-200: #e9ecef;
+  --color-primary-300: #dee2e6;
+  --color-primary-400: #ced4da;
+  --color-primary-500: #adb5bd;
+  --color-primary-600: #424346; /* Iron Fog */
+  --color-primary-700: #343a40;
+  --color-primary-800: #212529;
+  --color-primary-900: #0E1317; /* Midnight Onix - primary text color */
+  --color-primary-950: #080a0c;
+
+  /* Secondary brand color - Amber Glow */
+  --color-secondary-50: #fffbf0;
+  --color-secondary-100: #fef3c7;
+  --color-secondary-200: #fde68a;
+  --color-secondary-300: #fcd34d;
+  --color-secondary-400: #fbbf24;
+  --color-secondary-500: #FFB519; /* Amber Glow - main secondary */
+  --color-secondary-600: #d97706;
+  --color-secondary-700: #b45309;
+  --color-secondary-800: #92400e;
+  --color-secondary-900: #78350f;
+  --color-secondary-950: #451a03;
+
+  /* Accent color - Solar Flare */
+  --color-accent-50: #fefce8;
+  --color-accent-100: #fef9c3;
+  --color-accent-200: #fef08a;
+  --color-accent-300: #fde047;
+  --color-accent-400: #facc15;
+  --color-accent-500: #FFE00B; /* Solar Flare - main accent */
+  --color-accent-600: #ca8a04;
+  --color-accent-700: #a16207;
+  --color-accent-800: #854d0e;
+  --color-accent-900: #713f12;
+  --color-accent-950: #422006;
+
+  /* Neutral color - Frosted Silk */
+  --color-neutral-50: #FFF9EF; /* Frosted Silk - lightest */
+  --color-neutral-100: #fef7ed;
+  --color-neutral-200: #fdecd4;
+  --color-neutral-300: #fbdba8;
+  --color-neutral-400: #f7c471;
+  --color-neutral-500: #f3a63b;
+  --color-neutral-600: #e08a1c;
+  --color-neutral-700: #b96a12;
+  --color-neutral-800: #945414;
+  --color-neutral-900: #784517;
+  --color-neutral-950: #422306;
+
+  /* Font families */
+  --font-family-sans: MonaSans, Inter, system-ui, sans-serif;
+  --font-family-mono: 'JetBrains Mono', Consolas, monospace;
+}

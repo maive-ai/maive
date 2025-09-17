@@ -1,0 +1,22 @@
+{
+  "name": "@maive/server",
+  "version": "0.1.1",
+  "scripts": {
+    "build": "pnpm generate:openapi && uv build",
+    "dev": "uv run fastapi dev --app app src/main.py --port 8080",
+    "postinstall": "uv sync",
+    "run": "uv run fastapi run --app app src/main.py --port 8080",
+    "lint": "uv run ruff check .",
+    "lint:fix": "uv run ruff check . --fix",
+    "generate:openapi": "uv run python scripts/generate_openapi.py",
+    "test": "uv run python -m pytest tests/ -v --cov=src --cov-report=term-missing",
+    "test:watch": "uv run python -m pytest tests/ -v --tb=short --cov=src --cov-report=term-missing -f",
+    "test:coverage": "uv run python -m pytest tests/ --cov=src --cov-report=html:htmlcov --cov-report=xml:coverage.xml",
+    "test:unit": "uv run python -m pytest tests/ -m unit -v",
+    "test:integration": "uv run python -m pytest tests/ -m integration -v",
+    "format": "uv run ruff format . --check",
+    "format:fix": "uv run ruff format .",
+    "format:check": "uv run ruff format . --check",
+    "typecheck": "echo 'Python typechecking handled by ruff'"
+  }
+}

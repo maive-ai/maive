@@ -1,0 +1,61 @@
+import tomllib
+from contextlib import asynccontextmanager
+from pathlib import Path
+from typing import Any, AsyncGenerator
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from src.auth.router import router as auth_router
+from src.config import get_client_base_url
+from src.utils.logger import logger
+
+
+def get_version():
+    """Get version from pyproject.toml"""
+    pyproject_path = Path(__file__).parent.parent / "pyproject.toml"
+    with open(pyproject_path, "rb") as f:
+        data = tomllib.load(f)
+    return data["project"]["version"]
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[Any, Any]:
+    """Application lifespan context manager"""
+    try:
+        logger.info("FastAPI server starting up...")
+        yield
+    finally:
+        logger.info("FastAPI server shutting down...")
+
+
+app = FastAPI(
+    title="Maive API",
+    description="API for Maive application",
+    version=get_version(),
+    docs_url="/docs",
+    redoc_url="/redoc",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[get_client_base_url()],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(auth_router, prefix="/api")
+
+
+@app.get("/")
+async def root():
+    """Root endpoint."""
+    return {"status": "ok", "message": "Maive API is running"}
+
+
+@app.get("/healthcheck")
+async def healthcheck():
+    """Health check endpoint."""
+    return {"status": "ok", "message": "Maive API is running"}

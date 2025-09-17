@@ -1,0 +1,33 @@
+{
+  "name": "@maive/api",
+  "version": "0.1.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "default": "./client/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "pnpm generate:client && tsc",
+    "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "dev": "tsc",
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false",
+    "generate:client": "pnpm dlx @openapitools/openapi-generator-cli generate -i ../../apps/server/openapi.json -g typescript-axios -o client"
+  },
+  "prettier": "@maive/prettier-config",
+  "dependencies": {
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "@maive/eslint-config": "workspace:*",
+    "@maive/prettier-config": "workspace:*",
+    "@maive/typescript-config": "workspace:*",
+    "@openapitools/openapi-generator-cli": "^2.21.0",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:"
+  }
+}

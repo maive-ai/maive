@@ -1,0 +1,35 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "turbo run build",
+    "clean": "turbo run clean",
+    "dev": "turbo watch dev --continue",
+    "format": "turbo run format --continue",
+    "format:check": "turbo run format:check --continue",
+    "format:fix": "turbo run format:fix --continue",
+    "lint": "turbo run lint --continue",
+    "lint:fix": "turbo run lint:fix --continue",
+    "postclean": "git clean -xdf .cache .turbo node_modules",
+    "start": "turbo run start",
+    "typecheck": "turbo run typecheck",
+    "api:sync": "./scripts/sync-api-client.sh",
+    "api-serverless:sync": "./scripts/sync-serverless-client.sh",
+    "validate:dependencies": "node scripts/validate-dependencies.js",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "turbo run build && changeset version"
+  },
+  "packageManager": "pnpm@10.12.3",
+  "prettier": "@maive/prettier-config",
+  "devDependencies": {
+    "@changesets/cli": "^2.29.6",
+    "@maive/prettier-config": "workspace:*",
+    "husky": "^9.1.7",
+    "prettier": "catalog:",
+    "turbo": "catalog:"
+  },
+  "engines": {
+    "node": ">=22.10.0"
+  }
+}

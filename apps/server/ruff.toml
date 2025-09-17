@@ -1,0 +1,16 @@
+# Target Python version for lint rules
+target-version = "py313"
+
+# Exclude build and virtual-env dirs
+exclude = [
+  ".git",
+  "__pycache__",
+  ".venv",
+  "build",
+  "dist",
+]
+
+# Ignore specific rules
+ignore = [
+  "B008",  # Do not perform function call in argument defaults (FastAPI Depends)
+]

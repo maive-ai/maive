@@ -1,0 +1,15 @@
+.cache/
+.turbo/
+.DS_Store
+__pycache__/
+
+.env*
+!.env.example
+
+dist/
+node_modules/
+*.egg-info/
+.ruff_cache
+.coverage
+.pytest_cache/
+.venv/

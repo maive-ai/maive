@@ -1,0 +1,16 @@
+config:
+  infra:environment: staging
+  infra:certificate_domain: staging.maive.ai
+  infra:deploy_containers: "true"
+  infra:transport_protocol: https
+  cognito:callback_urls:
+    - https://staging.maive.ai/api/auth/callback
+    - http://localhost:8080/api/auth/callback
+  infra:gemini_api_key:
+    secure: AAABADt4q46xWYAOo6FAfbpt2NMzcB/K0LW6kemP4bhuoBn0w6nJrqf6zYXN4AwYoY5aZyYgH14NxKKohOV4cWOfM27GJf0=
+  pulse_ai:api_key:
+    secure: AAABAIryWeqJ8sZLVhKx5MALHzs4SPkYFYkBddgBkrghowhRxlqc15wS6uwzRecvPIpdmKLROWPlkvlSUmyZIbvkOrTbDqPj
+  vapi:webhook_secret:
+    secure: AAABAHGrqOXeKOLgvGgsi2s6zMLR3TU/+5B5RpkuIL2yX3hSXK+AWDtHMSb67YIEW+Q2IboR/UrP0kLWVuN0xFbEskJavHRmWzNavg==
+  vapi:api_key:
+    secure: AAABAP/gG3vga8AifGbay9y2wR1RaU34oCRCgEoRcPeRnEUsWPAsDFPBpKvU80ageJKNSdm9o9wTx5yofISd4xTXdro=
