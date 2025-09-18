@@ -1,11 +1,8 @@
 config:
   maive-infra:environment: prod
-  maive-infra:certificate_domain: app.maive.ai
+  maive-infra:certificate_domain: run.maive.ai
   maive-infra:deploy_containers: true
   maive-infra:transport_protocol: https
+  maive-infra:oauth_redirect_route: /api/auth/callback
   cognito:callback_urls:
-    - "https://app.maive.ai/api/auth/callback"
-  maive-infra:gemini_api_key:
-    secure: AAABAFIGuz904JQuk7tsfLp76k8aMyv9/OeVMZuYdSfnIfvXPL8+db9uSj4JAxohGmwDuBEh/IwbnZlJCazaWaceOY7OzNc=
-  pulse_ai:api_key:
-    secure: AAABAGCOYNujFkQCKUW7GyV5lfLVoNr+GdqsqXB0zLWvin2i65xk2SugdFFq8hkn1mpbsDiHVknAHT7VTM+DxxOeLgvbsPqn
+    - "https://run.maive.ai/api/auth/callback"

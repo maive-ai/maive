@@ -7,4 +7,18 @@ runtime:
 config:
   pulumi:tags:
     value:
-      pulumi:template: python
+      pulumi:template: aws-python
+  deploy_containers: true
+  transport_protocol: https
+  aws:region: us-gov-west-1
+  public_base_path: /
+  public_cognito_scopes: openid+email+profile
+  cognito:client_name: maive
+  cognito:allow_admin_create_user_only: true
+  oauth_scope: openid email profile
+  oauth_redirect_route: api/auth/callback
+  auth_session_timeout_hours: 168
+  auth_session_token_timeout_days: 30
+  cookie_secure: true
+  cookie_samesite: strict
+  cookie_httponly: true
