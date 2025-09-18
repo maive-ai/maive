@@ -14,7 +14,6 @@
     "start": "turbo run start",
     "typecheck": "turbo run typecheck",
     "api:sync": "./scripts/sync-api-client.sh",
-    "api-serverless:sync": "./scripts/sync-serverless-client.sh",
     "validate:dependencies": "node scripts/validate-dependencies.js",
     "changeset": "changeset",
     "version-packages": "changeset version",

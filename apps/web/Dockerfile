@@ -14,7 +14,6 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json ./apps/web/
 # TODO: Pull these from package repository instead of local copy?
 COPY packages/api/package.json ./packages/api/
-COPY packages/api-serverless/package.json ./packages/api-serverless/
 COPY packages/brand/package.json ./packages/brand/
 COPY packages/tailwind-config/package.json ./packages/tailwind-config/
 
@@ -33,8 +32,6 @@ COPY apps/web/package.json ./apps/web/
 # Copy shared packages that the web app depends on
 COPY packages/api/client ./packages/api/client
 COPY packages/api/package.json ./packages/api/
-COPY packages/api-serverless/client ./packages/api-serverless/client
-COPY packages/api-serverless/package.json ./packages/api-serverless/
 COPY packages/brand/logos ./packages/brand/logos
 COPY packages/brand/fonts ./packages/brand/fonts
 COPY packages/brand/package.json ./packages/brand/

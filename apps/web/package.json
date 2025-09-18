@@ -24,7 +24,6 @@
     "@assistant-ui/react-ai-sdk": "^1.0.5",
     "@assistant-ui/react-markdown": "^0.10.9",
     "@maive/api": "workspace:*",
-    "@maive/api-serverless": "workspace:*",
     "@maive/tailwind-config": "workspace:*",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-label": "^2.1.7",

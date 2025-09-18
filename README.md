@@ -82,15 +82,6 @@ By default the following URLs will be accessible:
 
 To maintain consistent frontend API architecture, follow the **Generated API Client Pattern**:
 
-1. **Define OpenAPI Spec**: Add endpoints and schemas to `packages/api-serverless/openapi.json`
-   - Include proper request/response schemas in `components/schemas`
-   - Add authentication requirements (`CognitoAuth`)
-   - Use descriptive operation IDs
-
-2. **Generate Client**: Run `pnpm generate:client` in `packages/api-serverless/`
-   - This creates TypeScript API classes and types
-   - Generated client includes proper error handling and type safety
-
 3. **Create Frontend Client**: In `apps/web/src/clients/`, create a wrapper client
    - Import `Configuration` and the generated API class
    - Create async factory function using `getIdToken()` and `env.PUBLIC_SERVERLESS_API_URL`
