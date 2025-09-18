@@ -1,12 +1,12 @@
 config:
-  infra:environment: staging
-  infra:certificate_domain: staging.maive.ai
-  infra:deploy_containers: "true"
-  infra:transport_protocol: https
+  maive-infra:environment: staging
+  maive-infra:certificate_domain: staging.maive.ai
+  maive-infra:deploy_containers: "true"
+  maive-infra:transport_protocol: https
   cognito:callback_urls:
     - https://staging.maive.ai/api/auth/callback
     - http://localhost:8080/api/auth/callback
-  infra:gemini_api_key:
+  maive-infra:gemini_api_key:
     secure: AAABADt4q46xWYAOo6FAfbpt2NMzcB/K0LW6kemP4bhuoBn0w6nJrqf6zYXN4AwYoY5aZyYgH14NxKKohOV4cWOfM27GJf0=
   pulse_ai:api_key:
     secure: AAABAIryWeqJ8sZLVhKx5MALHzs4SPkYFYkBddgBkrghowhRxlqc15wS6uwzRecvPIpdmKLROWPlkvlSUmyZIbvkOrTbDqPj

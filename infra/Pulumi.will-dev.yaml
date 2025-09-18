@@ -2,12 +2,12 @@ config:
   cognito:allow_admin_create_user_only: "false"
   cognito:callback_urls:
     - http://localhost:8080/api/auth/callback
-  infra:certificate_domain: localhost
-  infra:deploy_containers: "false"
-  infra:environment: dev
-  infra:gemini_api_key:
+  maive-infra:certificate_domain: localhost
+  maive-infra:deploy_containers: "false"
+  maive-infra:environment: dev
+  maive-infra:gemini_api_key:
     secure: AAABAH6FgYJB8ZHwltDNjWmvfHoiB3/foOEChyH3i7dlTBJDVZ1KuUVb/nlnWpuMs+NhQ+0R1uYUcnQ93i5XwNt+kTiyPh8=
-  infra:transport_protocol: http
+  maive-infra:transport_protocol: http
   s3:force_destroy: "true"
   pulse_ai:api_key:
     secure: AAABAJQPAo+PeyUAwWoVV/q+uLdM7ePW2Jey1MeBJQqWnHX9O64rEWUjBNJnxLKGyI7HNrAZNWSg+OUmrKd3ogl8JdhK7zf+
