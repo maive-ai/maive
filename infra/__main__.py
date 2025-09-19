@@ -33,12 +33,6 @@ app_name = pulumi.get_project()
 server_app_name = f"{app_name}-server"
 web_app_name = f"{app_name}-web"
 
-# Construct the Cognito domain URL
-cognito_domain_url = pulumi.Output.format(
-    "https://{}-maive.auth-fips.us-west-1.amazoncognito.com",
-    stack_name,
-)
-
 app_domain_url = pulumi.Output.format(
     "{}://{}",
     config.require("transport_protocol"),
@@ -84,7 +78,7 @@ public_subnet_1 = ec2.Subnet(
     f"{app_name}-public-subnet-1-{stack_name}",
     vpc_id=vpc.id,
     cidr_block="10.0.3.0/24",
-    availability_zone="us-west-1a",
+    availability_zone=f"{aws_cfg.require('region')}a",
     map_public_ip_on_launch=True,
     tags={
         "Name": f"{app_name}-public-subnet-1-{environment}",
@@ -97,7 +91,7 @@ public_subnet_2 = ec2.Subnet(
     f"{app_name}-public-subnet-2-{stack_name}",
     vpc_id=vpc.id,
     cidr_block="10.0.4.0/24",
-    availability_zone="us-west-1b",
+    availability_zone=f"{aws_cfg.require('region')}c",
     map_public_ip_on_launch=True,
     tags={
         "Name": f"{app_name}-public-subnet-2-{environment}",
@@ -262,7 +256,7 @@ task_execution_role = iam.Role(
         }
     ),
     managed_policy_arns=[
-        "arn:aws-us-gov:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+        "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
     ],
     tags={
         "Name": f"{app_name}-task-execution-role-{environment}",
@@ -650,9 +644,16 @@ pool_client = cognito.UserPoolClient(
 # Create Cognito User Pool Domain for the managed login page
 user_pool_domain = cognito.UserPoolDomain(
     f"{app_name}-user-pool-domain-{stack_name}",
-    domain=f"{stack_name}-maive",
+    domain=f"{stack_name}-maive-{environment}",
     user_pool_id=user_pool.id,
     managed_login_version=2,
+)
+
+# Construct the Cognito domain URL
+cognito_domain_url = pulumi.Output.format(
+    "https://{}.auth.{}.amazoncognito.com",
+    user_pool_domain.domain,
+    aws_cfg.require("region"),
 )
 
 # S3 bucket for PDF uploads
@@ -831,7 +832,7 @@ if deploy_containers:
                         "logDriver": "awslogs",
                         "options": {
                             "awslogs-group": log_group.name,
-                            "awslogs-region": "us-west-1",
+                            "awslogs-region": aws_cfg.require("region"),
                             "awslogs-stream-prefix": "ecs",
                         },
                     },
@@ -883,7 +884,7 @@ if deploy_containers:
                         "logDriver": "awslogs",
                         "options": {
                             "awslogs-group": log_group.name,
-                            "awslogs-region": "us-west-1",
+                            "awslogs-region": aws_cfg.require("region"),
                             "awslogs-stream-prefix": "nginx",
                         },
                     },
