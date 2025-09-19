@@ -39,7 +39,7 @@ This infrastructure supports two types of environments:
    ```bash
    # Set up a local dev stack
    pulumi stack init dev
-   pulumi config set aws:region us-gov-west-1
+   pulumi config set aws:region us-west-1
    pulumi config set infra:environment dev
    pulumi config set infra:client_base_url http://localhost:3000
    pulumi config set infra:server_base_url http://localhost:8080
@@ -83,7 +83,7 @@ For actual deployments with real resources, developers use Pulumi CLI locally:
 ```bash
 # Set up a local dev stack
 pulumi stack init dev
-pulumi config set aws:region us-gov-west-1
+pulumi config set aws:region us-west-1
 pulumi config set infra:environment dev
 pulumi config set infra:client_base_url http://localhost:3000
 pulumi config set infra:server_base_url http://localhost:8080
@@ -105,7 +105,7 @@ The server application expects the following environment variables:
 - `ENVIRONMENT`: Current environment (dev, staging, prod)
 - `CLIENT_BASE_URL`: Frontend base URL
 - `SERVER_BASE_URL`: Server base URL
-- `AWS_REGION`: AWS region (defaults to us-gov-west-1)
+- `AWS_REGION`: AWS region (defaults to us-west-1)
 - `COGNITO_USER_POOL_ID`: Cognito User Pool ID
 - `COGNITO_CLIENT_ID`: Cognito App Client ID
 - `COGNITO_CLIENT_SECRET`: Cognito App Client Secret (if required)

@@ -35,7 +35,7 @@ web_app_name = f"{app_name}-web"
 
 # Construct the Cognito domain URL
 cognito_domain_url = pulumi.Output.format(
-    "https://{}-maive.auth-fips.us-gov-west-1.amazoncognito.com",
+    "https://{}-maive.auth-fips.us-west-1.amazoncognito.com",
     stack_name,
 )
 
@@ -84,7 +84,7 @@ public_subnet_1 = ec2.Subnet(
     f"{app_name}-public-subnet-1-{stack_name}",
     vpc_id=vpc.id,
     cidr_block="10.0.3.0/24",
-    availability_zone="us-gov-west-1a",
+    availability_zone="us-west-1a",
     map_public_ip_on_launch=True,
     tags={
         "Name": f"{app_name}-public-subnet-1-{environment}",
@@ -97,7 +97,7 @@ public_subnet_2 = ec2.Subnet(
     f"{app_name}-public-subnet-2-{stack_name}",
     vpc_id=vpc.id,
     cidr_block="10.0.4.0/24",
-    availability_zone="us-gov-west-1b",
+    availability_zone="us-west-1b",
     map_public_ip_on_launch=True,
     tags={
         "Name": f"{app_name}-public-subnet-2-{environment}",
@@ -744,7 +744,6 @@ if deploy_containers:
             "PUBLIC_COGNITO_CLIENT_ID": pool_client.id,
             "PUBLIC_COGNITO_SCOPES": config.require("public_cognito_scopes"),
             "PUBLIC_OAUTH_REDIRECT_ROUTE": config.require("oauth_redirect_route"),
-            "PUBLIC_SERVERLESS_API_URL": upload_api.api_endpoint,
         },
         tags=[web_ecr_repository.repository_url.apply(lambda url: f"{url}:latest")],
         push=True,
@@ -832,7 +831,7 @@ if deploy_containers:
                         "logDriver": "awslogs",
                         "options": {
                             "awslogs-group": log_group.name,
-                            "awslogs-region": "us-gov-west-1",
+                            "awslogs-region": "us-west-1",
                             "awslogs-stream-prefix": "ecs",
                         },
                     },
@@ -884,7 +883,7 @@ if deploy_containers:
                         "logDriver": "awslogs",
                         "options": {
                             "awslogs-group": log_group.name,
-                            "awslogs-region": "us-gov-west-1",
+                            "awslogs-region": "us-west-1",
                             "awslogs-stream-prefix": "nginx",
                         },
                     },

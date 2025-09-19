@@ -36,11 +36,6 @@ export const envSchema = v.object({
   PUBLIC_OAUTH_REDIRECT_ROUTE: v.string(),
 
   /**
-   * Serverless API Gateway URL for file uploads
-   */
-  PUBLIC_SERVERLESS_API_URL: v.pipe(v.string(), v.url()),
-
-  /**
    * Feature flag to enable/disable workflow functionality
    */
   PUBLIC_ENABLE_WORKFLOWS: v.optional(

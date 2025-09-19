@@ -1,8 +1,8 @@
-import { fileURLToPath } from 'node:url';
-import path from 'path';
 import tailwindcss from '@tailwindcss/vite';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
 import react from '@vitejs/plugin-react';
+import { fileURLToPath } from 'node:url';
+import path from 'path';
 import * as v from 'valibot';
 import { defineConfig } from 'vite';
 
@@ -24,7 +24,7 @@ const envSchema = v.object({
    * This will then be used to set the vite dev server's host and port.
    */
   PUBLIC_WEB_URL: v.pipe(
-    v.optional(v.string(), 'http://localhost:8080'),
+    v.optional(v.string(), 'http://localhost:3000'),
     v.url(),
   ),
 

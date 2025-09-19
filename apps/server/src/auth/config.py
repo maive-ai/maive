@@ -26,7 +26,7 @@ class AuthSettings(BaseSettings):
 
     # AWS Cognito configuration
     aws_region: str = Field(
-        default="us-gov-west-1",
+        default="us-west-1",
         description="AWS region for Cognito (can also be set via AWS_REGION env var)",
     )
     cognito_user_pool_id: str | None = Field(
@@ -39,7 +39,7 @@ class AuthSettings(BaseSettings):
         default=None, description="Cognito App Client Secret"
     )
     cognito_domain: str = Field(
-        default="https://prod-maive.auth-fips.us-gov-west-1.amazoncognito.com",
+        default="https://prod-maive.auth-fips.us-west-1.amazoncognito.com",
         description="Cognito domain (hosted UI base URL)",
     )
 

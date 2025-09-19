@@ -57,11 +57,11 @@ By default the following URLs will be accessible:
    aws configure sso
    ```
    - `SSO session name: dev-session`
-   - `SSO start URL: https://start.us-gov-west-1.us-gov-home.awsapps.com/directory/d-98677f964b#`
-   - `SSO region: us-gov-west-1`
+   - `SSO start URL: https://start.us-west-1.us-gov-home.awsapps.com/directory/d-98677f964b#`
+   - `SSO region: us-west-1`
    - `SSO registration scopes: sso:account:access`
    - Select `developer` role
-   - `Default client Region [None]: us-gov-west-1`
+   - `Default client Region [None]: us-west-1`
    - `CLI default output format (json if not specified) [None]: <hit-enter>`
    - `Profile name [developer-416450511684]: dev`
    - Login: `aws sso login --profile dev`

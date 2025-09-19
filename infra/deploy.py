@@ -97,7 +97,7 @@ def main():
     parser.add_argument(
         "--environment", required=True, choices=["dev", "staging", "prod"]
     )
-    parser.add_argument("--region", default="us-gov-west-1")
+    parser.add_argument("--region", default="us-west-1")
     parser.add_argument("--tag", default="latest")
     parser.add_argument(
         "--skip-build", action="store_true", help="Skip Docker build and push"
