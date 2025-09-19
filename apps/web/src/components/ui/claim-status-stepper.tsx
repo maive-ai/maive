@@ -1,13 +1,19 @@
 import {
-  CheckCircle,
-  Clock,
-  DollarSign,
-  FileText,
-  XCircle,
+    CheckCircle,
+    Clock,
+    DollarSign,
+    FileText,
+    XCircle,
 } from 'lucide-react';
-
-import { type CustomerDetails } from '@/clients/customer-crm';
 import { Card, CardContent, CardHeader, CardTitle } from './card';
+
+// import { type CustomerDetails } from '@/clients/customer-crm';
+
+// Placeholder type for CustomerDetails
+interface CustomerDetails {
+  claimStatus?: string;
+  notes?: string;
+}
 
 interface ClaimStatusStepperProps {
   customer: CustomerDetails;

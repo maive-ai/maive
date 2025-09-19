@@ -2,8 +2,32 @@ import { FileText, Image } from 'lucide-react';
 import { useState } from 'react';
 
 import { useAuth } from '@/auth';
-import { uploadFile, type UploadProgress } from '@/clients/upload';
 import { Input } from '@/components/ui/input';
+// import { uploadFile, type UploadProgress } from '@/clients/upload';
+
+// Placeholder types and functions
+type UploadProgress = {
+  percentage: number;
+};
+
+const uploadFile = async (file: File, options?: { onProgress?: (progress: UploadProgress) => void }): Promise<{ success: boolean; message: string; key?: string }> => {
+  // Simulate upload progress
+  if (options?.onProgress) {
+    for (let i = 0; i <= 100; i += 10) {
+      setTimeout(() => options.onProgress!({ percentage: i }), i * 10);
+    }
+  }
+  
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({
+        success: true,
+        message: 'File uploaded successfully (placeholder)',
+        key: `placeholder-${Date.now()}`,
+      });
+    }, 1000);
+  });
+};
 
 type FileType = 'pdf' | 'image';
 

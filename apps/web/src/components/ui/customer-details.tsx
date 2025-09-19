@@ -5,23 +5,51 @@ import MondayLogo from '@maive/brand/logos/integrations/monday/monday_logo.png';
 import ServiceTitanLogo from '@maive/brand/logos/integrations/servicetitan/ServiceTitan_Logo_Black_2.png';
 
 import {
-  AlertTriangle,
-  Building2,
-  Calendar,
-  CheckCircle,
-  Clock,
-  DollarSign,
-  FileText,
-  Mail,
-  MapPin,
-  Phone,
-  User,
-  XCircle,
+    AlertTriangle,
+    Building2,
+    Calendar,
+    CheckCircle,
+    Clock,
+    DollarSign,
+    FileText,
+    Mail,
+    MapPin,
+    Phone,
+    User,
+    XCircle,
 } from 'lucide-react';
-
-import { type CustomerDetails } from '@/clients/customer-crm';
 import { Button } from './button';
 import { Label } from './label';
+
+// import { type CustomerDetails } from '@/clients/customer-crm';
+
+// Placeholder type for CustomerDetails
+interface CustomerDetails {
+  id: string;
+  homeownerName: string;
+  address: string;
+  phoneNumber: string;
+  email?: string;
+  claimNumber?: string;
+  dateOfLoss?: string;
+  insuranceAgency?: string;
+  insuranceAgencyContact?: {
+    name: string;
+    phone: string;
+    email: string;
+  };
+  adjusterName?: string;
+  adjusterContact?: {
+    phone: string;
+    email: string;
+  };
+  claimStatus?: string;
+  notes?: string;
+  nextSteps?: string;
+  documentsNeeded?: string[];
+  submissionMethod?: string;
+  crmSource: 'servicetitan' | 'jobnimbus' | 'acculynx' | 'monday';
+}
 
 interface CustomerDetailsProps {
   customer: CustomerDetails;
