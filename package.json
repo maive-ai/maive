@@ -17,7 +17,8 @@
     "validate:dependencies": "node scripts/validate-dependencies.js",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "turbo run build && changeset version"
+    "release": "turbo run build && changeset version",
+    "prepare": "husky"
   },
   "packageManager": "pnpm@10.12.3",
   "prettier": "@maive/prettier-config",

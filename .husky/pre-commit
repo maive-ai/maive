@@ -1,0 +1,8 @@
+# Check if any Python files in apps/server/src/ have changed
+if git diff --cached --name-only | grep -E '^apps/server/src/.*\.py$' > /dev/null; then
+  echo "🐍 Python files in apps/server/src/ have changed"
+  echo "🔄 Running API client sync..."
+  pnpm api:sync
+else
+  echo "ℹ️  No Python files in apps/server/src/ changed, skipping API sync"
+fi

@@ -12,3 +12,6 @@ out/
 .vscode
 
 mock-data/
+
+# OpenAPI Generator generated files
+packages/api/client/.openapi-generator/
