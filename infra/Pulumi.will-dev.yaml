@@ -3,7 +3,7 @@ config:
   cognito:callback_urls:
     - http://localhost:8080/api/auth/callback
   maive-infra:certificate_domain: localhost
-  maive-infra:deploy_containers: "true"
+  maive-infra:deploy_containers: "false"
   maive-infra:environment: dev
   maive-infra:transport_protocol: http
   maive-infra:oauth_redirect_route: /api/auth/callback

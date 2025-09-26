@@ -578,10 +578,7 @@ user_pool = cognito.UserPool(
         require_symbols=True,
         temporary_password_validity_days=7,
     ),
-    mfa_configuration="ON",
-    software_token_mfa_configuration=cognito.UserPoolSoftwareTokenMfaConfigurationArgs(
-        enabled=True,
-    ),
+    mfa_configuration="OFF",
     username_attributes=["email"],
     auto_verified_attributes=["email"],
     lambda_config={},
