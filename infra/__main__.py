@@ -736,7 +736,7 @@ if deploy_containers:
         ),
         platforms=["linux/amd64"],  # Ensure compatibility with AWS Fargate
         build_args={
-            "PUBLIC_SERVER_URL": app_domain_url,
+            "PUBLIC_SERVER_URL": config.require("public_server_url"),
             "PUBLIC_BASE_PATH": config.require("public_base_path"),
             "PUBLIC_COGNITO_DOMAIN": cognito_domain_url,
             "PUBLIC_COGNITO_CLIENT_ID": pool_client.id,

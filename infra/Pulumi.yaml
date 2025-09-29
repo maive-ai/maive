@@ -12,7 +12,6 @@ config:
   transport_protocol: https
   aws:region: us-west-1
   public_base_path: /
-  public_cognito_scopes: openid+email+profile
   cognito:client_name: maive
   cognito:allow_admin_create_user_only: true
   oauth_scope: openid email profile
