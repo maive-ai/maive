@@ -23,14 +23,6 @@ class AppSettings(BaseSettings):
         default="http://localhost:3000", description="Frontend base URL"
     )
 
-    # Service Titan CRM configuration
-    service_titan_tenant_id: str | None = Field(
-        default=None, description="Service Titan Tenant ID"
-    )
-    service_titan_api_key: str | None = Field(
-        default=None, description="Service Titan API Key"
-    )
-
 
 _app_settings: AppSettings | None = None
 
