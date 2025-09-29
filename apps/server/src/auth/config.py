@@ -15,9 +15,7 @@ from src.utils.logger import logger
 class AuthSettings(BaseSettings):
     """Configuration for the auth system using Pydantic settings."""
 
-    model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore"
-    )
+    model_config = SettingsConfigDict(case_sensitive=False, extra="ignore")
 
     # Provider configuration
     auth_provider: str = Field(

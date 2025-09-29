@@ -13,9 +13,7 @@ class Environment(str, Enum):
 
 
 class AppSettings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore"
-    )
+    model_config = SettingsConfigDict(case_sensitive=False, extra="ignore")
 
     environment: Environment = Field(
         default=Environment.DEVELOPMENT,
@@ -23,6 +21,14 @@ class AppSettings(BaseSettings):
     )
     client_base_url: str = Field(
         default="http://localhost:3000", description="Frontend base URL"
+    )
+
+    # Service Titan CRM configuration
+    service_titan_tenant_id: str | None = Field(
+        default=None, description="Service Titan Tenant ID"
+    )
+    service_titan_api_key: str | None = Field(
+        default=None, description="Service Titan API Key"
     )
 
 
