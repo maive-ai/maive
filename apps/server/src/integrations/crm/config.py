@@ -32,6 +32,10 @@ class CRMSettings(BaseSettings):
     base_url: str = Field(
         default="https://api.servicetitan.io", description="API base URL"
     )
+    token_url: str = Field(
+        default="https://auth-integration.servicetitan.io/connect/token",
+        description="OAuth token endpoint URL"
+    )
 
     # General CRM settings
     crm_request_timeout: int = Field(

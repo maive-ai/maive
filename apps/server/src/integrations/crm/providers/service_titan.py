@@ -34,6 +34,7 @@ class ServiceTitanProvider(CRMProvider):
         self.client_secret = self.settings.client_secret
         self.app_key = self.settings.app_key
         self.base_url = self.settings.base_url
+        self.token_url = self.settings.token_url
 
         # HTTP client configuration
         self.client = httpx.AsyncClient(
@@ -51,17 +52,18 @@ class ServiceTitanProvider(CRMProvider):
         if self._access_token:
             return self._access_token
 
-        token_url = f"{self.base_url}/oauth/token"
-
         auth_data = {
             "grant_type": "client_credentials",
             "client_id": self.client_id,
             "client_secret": self.client_secret,
-            "scope": "api",
         }
 
         try:
-            response = await self.client.post(token_url, data=auth_data)
+            response = await self.client.post(
+                self.token_url,
+                data=auth_data,
+                headers={"Content-Type": "application/x-www-form-urlencoded"}
+            )
             response.raise_for_status()
 
             token_response = response.json()
