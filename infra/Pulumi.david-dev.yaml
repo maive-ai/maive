@@ -1,17 +1,7 @@
+environment:
+  - maive-infra/david-dev
 config:
-  cognito:allow_admin_create_user_only: "false"
-  cognito:callback_urls:
-    - http://localhost:8080/api/auth/callback
   maive-infra:certificate_domain: localhost
-  maive-infra:deploy_containers: "false"
-  maive-infra:environment: dev
-  maive-infra:gemini_api_key:
-    secure: AAABAPioD6Y61c7GFjN4XCYETbTXfDiHPiXBY3LpY+QuQfs7npo1rhnJAF9wcbZj+kfCZ6TOyoBWPiuXHjifNzfvOZUv8zc=
   maive-infra:transport_protocol: http
+  maive-infra:deploy_containers: "false"
   s3:force_destroy: "true"
-  pulse_ai:api_key:
-    secure: AAABAO47Q0iL5fDmq35hlaAR3QxpcxKbM4ELSX/fKkjBa6fbxO2Bzb4JPuCxZIQEW5hyBnXelRtiWXqEfTc14IjfyRt4mTQB
-  vapi:api_key:
-    secure: AAABAOs021BzGRBkIaHmBh0gGXY8EKT+TQQHHW6tfCncWWDK6tZj/tl6TSHXbOn9W/AKuGuK6V2K6fFuc+0o5nxen7Q=
-  vapi:webhook_secret:
-    secure: AAABAA9enXAA5BNFw9MYld8Lt7LMeLNPXtR4YqG7B8nAzjYfAf0GSs/o7WSDEezgGuC82rWzGVhvyyLe+O1jMBY9s1SstaEjY5kTVA==
