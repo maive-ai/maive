@@ -114,7 +114,7 @@ class ServiceTitanProvider(CRMProvider):
             CRMError: If the project is not found or an error occurs
         """
         try:
-            url = f"{self.base_api_url}{ServiceTitanEndpoints.PROJECT_BY_ID.format(tenant_id=self.tenant_id, appointment_id=project_id)}"
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.PROJECT_BY_ID.format(tenant_id=self.tenant_id, id=project_id)}"
 
             logger.debug(f"Fetching project status for ID: {project_id}")
 
@@ -136,6 +136,166 @@ class ServiceTitanProvider(CRMProvider):
             logger.error(f"Unexpected error fetching project {project_id}: {e}")
             raise CRMError(f"Failed to fetch project status: {str(e)}", "UNKNOWN_ERROR")
 
+    async def get_appointment_status(self, appointment_id: str) -> ProjectStatusResponse:
+        """
+        Get the status of a specific appointment by ID from Service Titan.
+
+        Args:
+            appointment_id: The Service Titan appointment ID
+
+        Returns:
+            ProjectStatusResponse: The appointment status information
+
+        Raises:
+            CRMError: If the appointment is not found or an error occurs
+        """
+        try:
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.APPOINTMENT_BY_ID.format(tenant_id=self.tenant_id, id=appointment_id)}"
+
+            logger.debug(f"Fetching appointment status for ID: {appointment_id}")
+
+            response = await self._make_authenticated_request("GET", url)
+            response.raise_for_status()
+
+            data = response.json()
+
+            # Transform Service Titan appointment data to our schema
+            return self._transform_job_to_project_status(data)
+
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise CRMError(f"Appointment with ID {appointment_id} not found", "NOT_FOUND")
+            else:
+                logger.error(f"HTTP error fetching appointment {appointment_id}: {e}")
+                raise CRMError(f"Failed to fetch appointment status: {e}", "HTTP_ERROR")
+        except Exception as e:
+            logger.error(f"Unexpected error fetching appointment {appointment_id}: {e}")
+            raise CRMError(f"Failed to fetch appointment status: {str(e)}", "UNKNOWN_ERROR")
+
+    async def get_all_appointment_statuses(self) -> ProjectStatusListResponse:
+        """
+        Get the status of all appointments from Service Titan.
+
+        Returns:
+            ProjectStatusListResponse: List of all appointment statuses
+
+        Raises:
+            CRMError: If an error occurs while fetching appointment statuses
+        """
+        try:
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.APPOINTMENTS.format(tenant_id=self.tenant_id)}"
+
+            logger.debug("Fetching all appointment statuses")
+
+            response = await self._make_authenticated_request("GET", url)
+            response.raise_for_status()
+
+            data = response.json()
+
+            # Service Titan returns data in a "data" field with pagination info
+            jobs = data.get("data", [])
+            total_count = data.get("totalCount", len(jobs))
+
+            # Transform all appointments to project statuses
+            projects = [self._transform_job_to_project_status(job) for job in jobs]
+
+            return ProjectStatusListResponse(
+                projects=projects,
+                total_count=total_count,
+                provider=CRMProviderEnum.SERVICE_TITAN,
+            )
+
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error fetching all appointments: {e}")
+            raise CRMError(f"Failed to fetch appointment statuses: {e}", "HTTP_ERROR")
+        except Exception as e:
+            logger.error(f"Unexpected error fetching all appointments: {e}")
+            raise CRMError(
+                f"Failed to fetch appointment statuses: {str(e)}", "UNKNOWN_ERROR"
+            )
+
+    async def get_job_status(self, job_id: str) -> ProjectStatusResponse:
+        """
+        Get the status of a specific job by ID from Service Titan.
+
+        Args:
+            job_id: The Service Titan job ID
+
+        Returns:
+            ProjectStatusResponse: The job status information
+
+        Raises:
+            CRMError: If the job is not found or an error occurs
+        """
+        try:
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.JOB_BY_ID.format(tenant_id=self.tenant_id, id=job_id)}"
+
+            logger.debug(f"Fetching job status for ID: {job_id}")
+
+            response = await self._make_authenticated_request("GET", url)
+            response.raise_for_status()
+
+            data = response.json()
+
+            # Transform Service Titan job data to our schema
+            return self._transform_job_to_project_status(data)
+
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise CRMError(f"Job with ID {job_id} not found", "NOT_FOUND")
+            else:
+                logger.error(f"HTTP error fetching job {job_id}: {e}")
+                raise CRMError(f"Failed to fetch job status: {e}", "HTTP_ERROR")
+        except Exception as e:
+            logger.error(f"Unexpected error fetching job {job_id}: {e}")
+            raise CRMError(f"Failed to fetch job status: {str(e)}", "UNKNOWN_ERROR")
+
+    async def get_all_job_statuses(self) -> ProjectStatusListResponse:
+        """
+        Get the status of all jobs from Service Titan.
+
+        Returns:
+            ProjectStatusListResponse: List of all job statuses
+
+        Raises:
+            CRMError: If an error occurs while fetching job statuses
+        """
+        try:
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.JOBS.format(tenant_id=self.tenant_id)}"
+
+            logger.debug("Fetching all job statuses")
+
+            response = await self._make_authenticated_request("GET", url)
+            response.raise_for_status()
+
+            data = response.json()
+
+            # Debug: Log the actual response structure for jobs
+            logger.info(f"Jobs endpoint response keys: {list(data.keys())}")
+            logger.info(f"Jobs response sample: {str(data)[:500]}...")
+
+            # Service Titan returns data in a "data" field with pagination info
+            jobs = data.get("data", [])
+            total_count = data.get("totalCount") or data.get("count") or len(jobs)
+
+            # Transform all jobs to project statuses
+            projects = [self._transform_job_to_project_status(job) for job in jobs]
+
+            return ProjectStatusListResponse(
+                projects=projects,
+                total_count=total_count,
+                provider=CRMProviderEnum.SERVICE_TITAN,
+            )
+
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error fetching all jobs: {e}")
+            raise CRMError(f"Failed to fetch job statuses: {e}", "HTTP_ERROR")
+        except Exception as e:
+            logger.error(f"Unexpected error fetching all jobs: {e}")
+            raise CRMError(
+                f"Failed to fetch job statuses: {str(e)}", "UNKNOWN_ERROR"
+            )
+
     async def get_all_project_statuses(self) -> ProjectStatusListResponse:
         """
         Get the status of all projects from Service Titan.
@@ -156,9 +316,16 @@ class ServiceTitanProvider(CRMProvider):
 
             data = response.json()
 
+            # Debug: Log the actual response structure
+            logger.info(f"Projects endpoint response keys: {list(data.keys())}")
+            logger.info(f"Projects response sample: {str(data)[:500]}...")
+
+            # Debug: Log the actual response structure for jobs
+            logger.info(f"Jobs endpoint response keys: {list(data.keys())}")
+
             # Service Titan returns data in a "data" field with pagination info
             jobs = data.get("data", [])
-            total_count = data.get("totalCount", len(jobs))
+            total_count = data.get("totalCount") or data.get("count") or len(jobs)
 
             # Transform all jobs to project statuses
             projects = [self._transform_job_to_project_status(job) for job in jobs]
