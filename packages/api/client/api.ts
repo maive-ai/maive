@@ -61,6 +61,19 @@ export interface AuthResponse {
     'mfa_setup_required'?: boolean;
 }
 /**
+ * Available CRM providers.
+ * @export
+ * @enum {string}
+ */
+
+export const CRMProvider = {
+    ServiceTitan: 'service_titan'
+} as const;
+
+export type CRMProvider = typeof CRMProvider[keyof typeof CRMProvider];
+
+
+/**
  * 
  * @export
  * @interface HTTPValidationError
@@ -73,6 +86,91 @@ export interface HTTPValidationError {
      */
     'detail'?: Array<ValidationError>;
 }
+/**
+ * Project status values across CRM systems.
+ * @export
+ * @enum {string}
+ */
+
+export const ProjectStatus = {
+    OnHold: 'on_hold',
+    Active: 'active',
+    Completed: 'completed',
+    Cancelled: 'cancelled',
+    Scheduled: 'scheduled',
+    InProgress: 'in_progress',
+    Pending: 'pending'
+} as const;
+
+export type ProjectStatus = typeof ProjectStatus[keyof typeof ProjectStatus];
+
+
+/**
+ * Response model for multiple project statuses.
+ * @export
+ * @interface ProjectStatusListResponse
+ */
+export interface ProjectStatusListResponse {
+    /**
+     * List of project statuses
+     * @type {Array<ProjectStatusResponse>}
+     * @memberof ProjectStatusListResponse
+     */
+    'projects': Array<ProjectStatusResponse>;
+    /**
+     * Total number of projects
+     * @type {number}
+     * @memberof ProjectStatusListResponse
+     */
+    'total_count': number;
+    /**
+     * CRM provider
+     * @type {CRMProvider}
+     * @memberof ProjectStatusListResponse
+     */
+    'provider': CRMProvider;
+}
+
+
+/**
+ * Response model for project status information.
+ * @export
+ * @interface ProjectStatusResponse
+ */
+export interface ProjectStatusResponse {
+    /**
+     * Unique project identifier
+     * @type {string}
+     * @memberof ProjectStatusResponse
+     */
+    'project_id': string;
+    /**
+     * Current project status
+     * @type {ProjectStatus}
+     * @memberof ProjectStatusResponse
+     */
+    'status': ProjectStatus;
+    /**
+     * CRM provider
+     * @type {CRMProvider}
+     * @memberof ProjectStatusResponse
+     */
+    'provider': CRMProvider;
+    /**
+     * 
+     * @type {string}
+     * @memberof ProjectStatusResponse
+     */
+    'updated_at'?: string | null;
+    /**
+     * 
+     * @type {{ [key: string]: any; }}
+     * @memberof ProjectStatusResponse
+     */
+    'provider_data'?: { [key: string]: any; } | null;
+}
+
+
 /**
  * User roles in the system.
  * @export
@@ -496,6 +594,184 @@ export class AuthenticationApi extends BaseAPI {
      */
     public signOutApiAuthSignoutPost(options?: RawAxiosRequestConfig) {
         return AuthenticationApiFp(this.configuration).signOutApiAuthSignoutPost(options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+
+/**
+ * CRMApi - axios parameter creator
+ * @export
+ */
+export const CRMApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * Get the status of all projects.  Args:     crm_service: The CRM service instance from dependency injection  Returns:     ProjectStatusListResponse: List of all project statuses  Raises:     HTTPException: If an error occurs while fetching project statuses
+         * @summary Get All Project Statuses
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getAllProjectStatusesApiCrmProjectsStatusGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/crm/projects/status`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Get the status of a specific project by ID.  Args:     project_id: The unique identifier for the project     crm_service: The CRM service instance from dependency injection  Returns:     ProjectStatusResponse: The project status information  Raises:     HTTPException: If the project is not found or an error occurs
+         * @summary Get Project Status
+         * @param {string} projectId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getProjectStatusApiCrmProjectsProjectIdStatusGet: async (projectId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'projectId' is not null or undefined
+            assertParamExists('getProjectStatusApiCrmProjectsProjectIdStatusGet', 'projectId', projectId)
+            const localVarPath = `/api/crm/projects/{project_id}/status`
+                .replace(`{${"project_id"}}`, encodeURIComponent(String(projectId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * CRMApi - functional programming interface
+ * @export
+ */
+export const CRMApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = CRMApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * Get the status of all projects.  Args:     crm_service: The CRM service instance from dependency injection  Returns:     ProjectStatusListResponse: List of all project statuses  Raises:     HTTPException: If an error occurs while fetching project statuses
+         * @summary Get All Project Statuses
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getAllProjectStatusesApiCrmProjectsStatusGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ProjectStatusListResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getAllProjectStatusesApiCrmProjectsStatusGet(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.getAllProjectStatusesApiCrmProjectsStatusGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Get the status of a specific project by ID.  Args:     project_id: The unique identifier for the project     crm_service: The CRM service instance from dependency injection  Returns:     ProjectStatusResponse: The project status information  Raises:     HTTPException: If the project is not found or an error occurs
+         * @summary Get Project Status
+         * @param {string} projectId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getProjectStatusApiCrmProjectsProjectIdStatusGet(projectId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ProjectStatusResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getProjectStatusApiCrmProjectsProjectIdStatusGet(projectId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.getProjectStatusApiCrmProjectsProjectIdStatusGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+    }
+};
+
+/**
+ * CRMApi - factory interface
+ * @export
+ */
+export const CRMApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = CRMApiFp(configuration)
+    return {
+        /**
+         * Get the status of all projects.  Args:     crm_service: The CRM service instance from dependency injection  Returns:     ProjectStatusListResponse: List of all project statuses  Raises:     HTTPException: If an error occurs while fetching project statuses
+         * @summary Get All Project Statuses
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getAllProjectStatusesApiCrmProjectsStatusGet(options?: RawAxiosRequestConfig): AxiosPromise<ProjectStatusListResponse> {
+            return localVarFp.getAllProjectStatusesApiCrmProjectsStatusGet(options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Get the status of a specific project by ID.  Args:     project_id: The unique identifier for the project     crm_service: The CRM service instance from dependency injection  Returns:     ProjectStatusResponse: The project status information  Raises:     HTTPException: If the project is not found or an error occurs
+         * @summary Get Project Status
+         * @param {string} projectId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getProjectStatusApiCrmProjectsProjectIdStatusGet(projectId: string, options?: RawAxiosRequestConfig): AxiosPromise<ProjectStatusResponse> {
+            return localVarFp.getProjectStatusApiCrmProjectsProjectIdStatusGet(projectId, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * CRMApi - object-oriented interface
+ * @export
+ * @class CRMApi
+ * @extends {BaseAPI}
+ */
+export class CRMApi extends BaseAPI {
+    /**
+     * Get the status of all projects.  Args:     crm_service: The CRM service instance from dependency injection  Returns:     ProjectStatusListResponse: List of all project statuses  Raises:     HTTPException: If an error occurs while fetching project statuses
+     * @summary Get All Project Statuses
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CRMApi
+     */
+    public getAllProjectStatusesApiCrmProjectsStatusGet(options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).getAllProjectStatusesApiCrmProjectsStatusGet(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Get the status of a specific project by ID.  Args:     project_id: The unique identifier for the project     crm_service: The CRM service instance from dependency injection  Returns:     ProjectStatusResponse: The project status information  Raises:     HTTPException: If the project is not found or an error occurs
+     * @summary Get Project Status
+     * @param {string} projectId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CRMApi
+     */
+    public getProjectStatusApiCrmProjectsProjectIdStatusGet(projectId: string, options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).getProjectStatusApiCrmProjectsProjectIdStatusGet(projectId, options).then((request) => request(this.axios, this.basePath));
     }
 }
 

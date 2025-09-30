@@ -13,9 +13,7 @@ class Environment(str, Enum):
 
 
 class AppSettings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore"
-    )
+    model_config = SettingsConfigDict(case_sensitive=False, extra="ignore")
 
     environment: Environment = Field(
         default=Environment.DEVELOPMENT,
