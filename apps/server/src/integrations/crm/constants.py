@@ -19,6 +19,27 @@ class ProjectStatus(str, Enum):
     IN_PROGRESS = "in_progress"
     PENDING = "pending"
 
+    @classmethod
+    def from_service_titan(cls, status: str) -> "ProjectStatus":
+        """
+        Convert Service Titan status to ProjectStatus enum.
+
+        Args:
+            status: Service Titan status string
+
+        Returns:
+            ProjectStatus: Mapped status enum value
+        """
+        service_titan_mapping = {
+            "scheduled": cls.SCHEDULED,
+            "dispatched": cls.ACTIVE,
+            "working": cls.IN_PROGRESS,
+            "hold": cls.ON_HOLD,
+            "done": cls.COMPLETED,
+            "canceled": cls.CANCELLED,
+        }
+        return service_titan_mapping.get(status.lower(), cls.ACTIVE)
+
 
 class CRMProvider(str, Enum):
     """Available CRM providers."""
