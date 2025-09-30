@@ -24,20 +24,12 @@ class AuthSettings(BaseSettings):
 
     # AWS Cognito configuration
     aws_region: str = Field(
-        default="us-west-1",
         description="AWS region for Cognito (can also be set via AWS_REGION env var)",
     )
-    cognito_user_pool_id: str | None = Field(
-        default=None, description="Cognito User Pool ID"
-    )
-    cognito_client_id: str | None = Field(
-        default=None, description="Cognito App Client ID"
-    )
-    cognito_client_secret: str | None = Field(
-        default=None, description="Cognito App Client Secret"
-    )
+    cognito_user_pool_id: str | None = Field(description="Cognito User Pool ID")
+    cognito_client_id: str | None = Field(description="Cognito App Client ID")
+    cognito_client_secret: str | None = Field(description="Cognito App Client Secret")
     cognito_domain: str = Field(
-        default="https://prod-maive.auth-fips.us-west-1.amazoncognito.com",
         description="Cognito domain (hosted UI base URL)",
     )
 
@@ -55,26 +47,20 @@ class AuthSettings(BaseSettings):
 
     # OAuth2 configuration
     oauth_redirect_uri: str = Field(
-        default="http://localhost:8080/auth/callback",
         description="OAuth2 redirect URI",
     )
-    oauth_scope: str = Field(
-        default="openid email profile", description="OAuth2 scopes to request"
-    )
+    oauth_scope: str = Field(description="OAuth2 scopes to request")
 
     # Cookie configuration - defaults to most secure settings
     cookie_secure: bool = Field(
-        default=True,
         description="Set secure flag for cookies (True for HTTPS, False for HTTP)",
     )
-    cookie_samesite: SameSite = Field(
-        default=SameSite.LAX, description="SameSite setting for cookies"
-    )
+    cookie_samesite: SameSite = Field(description="SameSite setting for cookies")
     cookie_domain: str = Field(
         description="Domain for cookies (None for current domain)"
     )
     cookie_httponly: bool = Field(
-        default=True, description="Set HttpOnly flag for cookies (True for security)"
+        description="Set HttpOnly flag for cookies (True for security)"
     )
 
     def get_mfa_methods(self) -> list[str]:
