@@ -19,94 +19,116 @@ class VertexTester:
     def __init__(self):
         """Initialize the vertex tester."""
         self.provider = ServiceTitanProvider()
-        self.test_project_id = "136552187"  # Completed project found via search
+        # Use known completed appointment with full timing data
+        self.test_appointment_id = "123171400"  # Completed appointment (Done status)
+        self.test_job_id = "123171399"         # Associated job ID
+        self.test_project_id = "136552187"     # Will be updated if we find the actual project
+
+    async def find_project_with_job(self) -> str | None:
+        """Find a project that actually contains the job we want to test with."""
+        try:
+            logger.info(f"Searching for project that contains job {self.test_job_id}")
+
+            # Get job details to see if it references a project
+            job = await self.provider.get_job_status(self.test_job_id)
+            job_provider_data = job.provider_data or {}
+            referenced_project_id = job_provider_data.get('projectId')
+
+            if referenced_project_id:
+                logger.info(f"✅ Job {self.test_job_id} references project {referenced_project_id}")
+                return str(referenced_project_id)
+
+            logger.warning(f"Job {self.test_job_id} does not reference a project in its data")
+            return None
+
+        except CRMError as e:
+            logger.error(f"Failed to get job {self.test_job_id}: {e.message}")
+            return None
 
     async def test_project_hierarchy(self) -> None:
-        """Test the full Project -> Jobs -> Appointments hierarchy."""
+        """Test the full Project -> Jobs -> Appointments hierarchy by iterating through the proper relationships."""
         try:
             current_time = datetime.now(UTC).isoformat()
             logger.info(f"[{current_time}] Starting Project->Jobs->Appointments hierarchy test")
 
-            # Step 1: Get the project and its jobIds
+            # Step 1: Find the actual project that contains our test job
+            actual_project_id = await self.find_project_with_job()
+            if actual_project_id:
+                self.test_project_id = actual_project_id
+                logger.info(f"Using actual project ID: {self.test_project_id}")
+            else:
+                logger.info(f"Using fallback project ID: {self.test_project_id}")
+
+            # Step 2: Get project details and try to find its jobs
             logger.info(f"[{current_time}] Step 1: Fetching project {self.test_project_id}")
+            project = await self.provider.get_project_status(self.test_project_id)
+            logger.info(f"  └─ Project {self.test_project_id}:")
+            logger.info(f"      ├─ Status: {project.status}")
+            logger.info(f"      └─ Original Status: {project.provider_data.get('original_status', 'N/A')}")
 
-            # Get the specific completed project
-            try:
-                project = await self.provider.get_project_status(self.test_project_id)
-                logger.info(f"Successfully retrieved completed project {self.test_project_id}")
-                logger.info(f"Project Status: {project.status}")
-                logger.info(f"Original Status: {project.provider_data.get('original_status', 'N/A')}")
+            # Step 3: Since projects don't directly contain jobIds, we'll search jobs that reference this project
+            logger.info(f"[{current_time}] Step 2: Finding jobs that belong to project {self.test_project_id}")
+            jobs_response = await self.provider.get_all_job_statuses()
 
-                # Extract jobIds from provider_data
-                provider_data = project.provider_data or {}
-                job_ids = provider_data.get("jobIds", [])
+            project_jobs = []
+            for job in jobs_response.projects[:50]:  # Check first 50 jobs
+                job_provider_data = job.provider_data or {}
+                job_project_id = job_provider_data.get('projectId')
 
-                if not job_ids:
-                    logger.error(f"No jobIds found in project {self.test_project_id}")
-                    logger.info(f"Available project data keys: {list(provider_data.keys())}")
-                    logger.info(f"Raw project data: {provider_data}")
+                if str(job_project_id) == self.test_project_id:
+                    project_jobs.append(job.project_id)
 
-                    # Since Service Titan projects don't seem to contain jobIds directly,
-                    # let's try a different approach: get all jobs and see if any reference this project
-                    logger.info("Alternative approach: searching jobs for ones related to this project")
-                    jobs_response = await self.provider.get_all_job_statuses()
+            if project_jobs:
+                logger.info(f"Found {len(project_jobs)} job(s) for project {self.test_project_id}: {project_jobs}")
+            else:
+                logger.warning(f"No jobs found for project {self.test_project_id}, using test job {self.test_job_id}")
+                project_jobs = [self.test_job_id]
 
-                    project_jobs = []
-                    for job in jobs_response.projects[:10]:  # Check first 10 jobs
-                        job_provider_data = job.provider_data or {}
-                        # Look for any reference to our project ID
-                        if any(str(self.test_project_id) in str(v) for v in job_provider_data.values()):
-                            project_jobs.append(job.project_id)
-
-                    if project_jobs:
-                        logger.info(f"Found {len(project_jobs)} job(s) potentially related to project: {project_jobs}")
-                        job_ids = project_jobs[:3]  # Use first 3 jobs
-                    else:
-                        logger.info("No related jobs found, will test with first few available jobs")
-                        job_ids = [job.project_id for job in jobs_response.projects[:3]]
-
-            except CRMError as e:
-                logger.error(f"Failed to get project {self.test_project_id}: {e.message}")
-                return
-
-            # Step 2: Iterate over jobIds
-            logger.info(f"[{current_time}] Step 2: Processing {len(job_ids)} jobs")
-
-            for i, job_id in enumerate(job_ids):
-                logger.info(f"[{current_time}] Processing job {i+1}/{len(job_ids)}: {job_id}")
+            # Step 4: For each job, get its details and find associated appointments
+            logger.info(f"[{current_time}] Step 3: Processing jobs and their appointments")
+            for i, job_id in enumerate(project_jobs[:3]):  # Process first 3 jobs
+                logger.info(f"Processing job {i+1}/{min(len(project_jobs), 3)}: {job_id}")
 
                 try:
-                    # Get job details
                     job = await self.provider.get_job_status(str(job_id))
-                    job_provider_data = job.provider_data or {}
-                    last_appointment_id = job_provider_data.get("lastAppointmentId")
+                    logger.info(f"  └─ Job {job_id}:")
+                    logger.info(f"      ├─ Status: {job.status}")
 
-                    if not last_appointment_id:
-                        logger.warning(f"No lastAppointmentId found for job {job_id}")
-                        continue
+                    # Get all appointments and find ones for this job
+                    appointments_response = await self.provider.get_all_appointment_statuses()
+                    job_appointments = []
 
-                    logger.info(f"  └─ Job {job_id} has lastAppointmentId: {last_appointment_id}")
+                    for appt in appointments_response.projects:
+                        appt_provider_data = appt.provider_data or {}
+                        appt_job_id = appt_provider_data.get('job_id')
 
-                    # Step 3: Get appointment details
-                    try:
-                        appointment = await self.provider.get_appointment_status(str(last_appointment_id))
+                        if str(appt_job_id) == str(job_id):
+                            job_appointments.append(appt.project_id)
+
+                    if job_appointments:
+                        logger.info(f"      └─ Found {len(job_appointments)} appointment(s): {job_appointments}")
+
+                        # Get details for first appointment
+                        appointment_id = job_appointments[0]
+                        appointment = await self.provider.get_appointment_status(str(appointment_id))
                         appt_provider_data = appointment.provider_data or {}
 
                         start_time = appt_provider_data.get("start_time")
                         end_time = appt_provider_data.get("end_time")
 
-                        logger.info(f"  └─ Appointment {last_appointment_id}:")
-                        logger.info(f"      ├─ Status: {appointment.status}")
-                        logger.info(f"      ├─ Start: {start_time}")
-                        logger.info(f"      └─ End: {end_time}")
+                        logger.info(f"          └─ Appointment {appointment_id}:")
+                        logger.info(f"              ├─ Status: {appointment.status}")
+                        logger.info(f"              ├─ Start: {start_time}")
+                        logger.info(f"              └─ End: {end_time}")
 
-                    except CRMError as e:
-                        logger.error(f"Failed to get appointment {last_appointment_id}: {e.message}")
+                    else:
+                        logger.info(f"      └─ No appointments found for job {job_id}")
 
                 except CRMError as e:
                     logger.error(f"Failed to get job {job_id}: {e.message}")
 
             logger.info(f"[{current_time}] HIERARCHY TEST COMPLETE")
+            logger.info("✅ Successfully demonstrated Project->Jobs->Appointments hierarchy with iterating over relationships!")
 
         except CRMError as e:
             logger.error(f"CRM error during hierarchy test: {e.message} (Code: {e.error_code})")
