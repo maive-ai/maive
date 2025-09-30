@@ -10,7 +10,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 
-from src.integrations.rilla.types import (
+from src.integrations.rilla.constants import (
     ConversationId,
     CrmEventId,
     DateType,
