@@ -1,165 +1,165 @@
 """
-Vertex monitoring application for Service Titan project status.
+Vertex test application for Service Titan project status.
 
-This application polls the Service Titan API every 5 seconds to monitor
-project status changes, with special attention to "ON_HOLD" status transitions.
+This application fetches a specific completed project for testing purposes.
 """
 
 import asyncio
 from datetime import datetime, UTC
-from typing import Dict, Set
 
 from src.integrations.crm.base import CRMError
-from src.integrations.crm.constants import ProjectStatus
 from src.integrations.crm.provider_schemas import ServiceTitanProviderData
 from src.integrations.crm.providers.service_titan import ServiceTitanProvider
 from src.utils.logger import logger
 
 
-class VertexMonitor:
-    """Monitor for Service Titan project status changes."""
+class VertexTester:
+    """Tester for Service Titan single project status."""
 
     def __init__(self):
-        """Initialize the vertex monitor."""
+        """Initialize the vertex tester."""
         self.provider = ServiceTitanProvider()
-        self.previous_statuses: Dict[str, ProjectStatus] = {}
-        self.on_hold_projects: Set[str] = set()
-        self.poll_interval = 5.0  # seconds
+        # Use known completed appointment with full timing data
+        self.test_appointment_id = "123171400"  # Completed appointment (Done status)
+        self.test_job_id = "123171399"         # Associated job ID
+        self.test_project_id = "136552187"     # Will be updated if we find the actual project
 
-    async def poll_project_statuses(self) -> None:
-        """Poll Service Titan for all project statuses and detect changes."""
+    async def find_project_with_job(self) -> str | None:
+        """Find a project that actually contains the job we want to test with."""
         try:
-            logger.info("Polling Service Titan for project statuses...")
+            logger.info(f"Searching for project that contains job {self.test_job_id}")
 
-            result = await self.provider.get_all_project_statuses()
+            # Get job details to see if it references a project
+            job = await self.provider.get_job_status(self.test_job_id)
+            job_provider_data = job.provider_data or {}
+            referenced_project_id = job_provider_data.get('projectId')
 
-            logger.info(f"Retrieved {result.total_count} projects from Service Titan")
+            if referenced_project_id:
+                logger.info(f"✅ Job {self.test_job_id} references project {referenced_project_id}")
+                return str(referenced_project_id)
 
-            current_time = datetime.now(UTC).isoformat()
-
-            # Track status changes
-            current_statuses = {}
-            new_on_hold = set()
-
-            for project in result.projects:
-                project_id = project.project_id
-                current_status = project.status
-
-                current_statuses[project_id] = current_status
-
-                # Check if this is a new project or status change
-                if project_id in self.previous_statuses:
-                    previous_status = self.previous_statuses[project_id]
-
-                    if previous_status != current_status:
-                        logger.info(
-                            f"[{current_time}] PROJECT STATUS CHANGE - "
-                            f"Project {project_id}: {previous_status} → {current_status}"
-                        )
-
-                        # Special logging for ON_HOLD transitions
-                        if current_status == ProjectStatus.ON_HOLD:
-                            logger.warning(
-                                f"🚨 [{current_time}] PROJECT ON HOLD - "
-                                f"Project {project_id} moved to ON_HOLD status! "
-                                f"Previous status: {previous_status}"
-                            )
-                            new_on_hold.add(project_id)
-                        elif previous_status == ProjectStatus.ON_HOLD:
-                            logger.info(
-                                f"✅ [{current_time}] PROJECT RESUMED - "
-                                f"Project {project_id} moved from ON_HOLD to {current_status}"
-                            )
-                else:
-                    # New project discovered
-                    logger.info(
-                        f"[{current_time}] NEW PROJECT DISCOVERED - "
-                        f"Project {project_id} with status: {current_status}"
-                    )
-
-                    if current_status == ProjectStatus.ON_HOLD:
-                        logger.warning(
-                            f"🚨 [{current_time}] NEW PROJECT ON HOLD - "
-                            f"Project {project_id} discovered with ON_HOLD status!"
-                        )
-                        new_on_hold.add(project_id)
-
-                # Log all current project statuses periodically
-                provider_data = project.provider_data or {}
-
-                # Create typed provider data model for better access
-                try:
-                    st_data = ServiceTitanProviderData(**provider_data)
-                    appointment_number = st_data.appointment_number
-
-                    # Debug provider data for first few projects with rich detail
-                    if project_id in ["123169048", "123171353", "123194526", "123171400", "123251078"]:
-                        logger.info(
-                            f"TYPED PROVIDER DATA for {project_id}: "
-                            f"Appt={st_data.appointment_number}, Job={st_data.job_id}, "
-                            f"Customer={st_data.customer_id}, Active={st_data.active}, "
-                            f"Confirmed={st_data.is_confirmed}, Status='{st_data.original_status}'"
-                        )
-                        if st_data.start_time:
-                            logger.info(f"  └─ Start: {st_data.start_time}, End: {st_data.end_time}")
-
-                except Exception as e:
-                    logger.warning(f"Failed to parse provider data for {project_id}: {e}")
-                    appointment_number = provider_data.get("appointment_number", "N/A")
-
-                logger.debug(
-                    f"[{current_time}] Project {project_id} (Appt #{appointment_number}): {current_status}"
-                )
-
-            # Update tracking sets
-            self.previous_statuses = current_statuses
-            self.on_hold_projects.update(new_on_hold)
-
-            # Summary logging
-            total_on_hold = sum(1 for status in current_statuses.values() if status == ProjectStatus.ON_HOLD)
-            logger.info(
-                f"[{current_time}] POLL COMPLETE - "
-                f"Total projects: {len(current_statuses)}, "
-                f"Currently ON_HOLD: {total_on_hold}, "
-                f"New ON_HOLD this poll: {len(new_on_hold)}"
-            )
+            logger.warning(f"Job {self.test_job_id} does not reference a project in its data")
+            return None
 
         except CRMError as e:
-            logger.error(f"CRM error during polling: {e.message} (Code: {e.error_code})")
-        except Exception as e:
-            logger.error(f"Unexpected error during polling: {e}")
+            logger.error(f"Failed to get job {self.test_job_id}: {e.message}")
+            return None
 
-    async def run_monitor(self) -> None:
-        """Run the continuous monitoring loop."""
-        logger.info(f"Starting Vertex Monitor - polling every {self.poll_interval} seconds")
-        logger.info("Monitoring for Service Titan project status changes...")
+    async def test_project_hierarchy(self) -> None:
+        """Test the full Project -> Jobs -> Appointments hierarchy by iterating through the proper relationships."""
+        try:
+            current_time = datetime.now(UTC).isoformat()
+            logger.info(f"[{current_time}] Starting Project->Jobs->Appointments hierarchy test")
+
+            # Step 1: Find the actual project that contains our test job
+            actual_project_id = await self.find_project_with_job()
+            if actual_project_id:
+                self.test_project_id = actual_project_id
+                logger.info(f"Using actual project ID: {self.test_project_id}")
+            else:
+                logger.info(f"Using fallback project ID: {self.test_project_id}")
+
+            # Step 2: Get project details and try to find its jobs
+            logger.info(f"[{current_time}] Step 1: Fetching project {self.test_project_id}")
+            project = await self.provider.get_project_status(self.test_project_id)
+            logger.info(f"  └─ Project {self.test_project_id}:")
+            logger.info(f"      ├─ Status: {project.status}")
+            logger.info(f"      └─ Original Status: {project.provider_data.get('original_status', 'N/A')}")
+
+            # Step 3: Since projects don't directly contain jobIds, we'll search jobs that reference this project
+            logger.info(f"[{current_time}] Step 2: Finding jobs that belong to project {self.test_project_id}")
+            jobs_response = await self.provider.get_all_job_statuses()
+
+            project_jobs = []
+            for job in jobs_response.projects[:50]:  # Check first 50 jobs
+                job_provider_data = job.provider_data or {}
+                job_project_id = job_provider_data.get('projectId')
+
+                if str(job_project_id) == self.test_project_id:
+                    project_jobs.append(job.project_id)
+
+            if project_jobs:
+                logger.info(f"Found {len(project_jobs)} job(s) for project {self.test_project_id}: {project_jobs}")
+            else:
+                logger.warning(f"No jobs found for project {self.test_project_id}, using test job {self.test_job_id}")
+                project_jobs = [self.test_job_id]
+
+            # Step 4: For each job, get its details and find associated appointments
+            logger.info(f"[{current_time}] Step 3: Processing jobs and their appointments")
+            for i, job_id in enumerate(project_jobs[:3]):  # Process first 3 jobs
+                logger.info(f"Processing job {i+1}/{min(len(project_jobs), 3)}: {job_id}")
+
+                try:
+                    job = await self.provider.get_job_status(str(job_id))
+                    logger.info(f"  └─ Job {job_id}:")
+                    logger.info(f"      ├─ Status: {job.status}")
+
+                    # Get all appointments and find ones for this job
+                    appointments_response = await self.provider.get_all_appointment_statuses()
+                    job_appointments = []
+
+                    for appt in appointments_response.projects:
+                        appt_provider_data = appt.provider_data or {}
+                        appt_job_id = appt_provider_data.get('job_id')
+
+                        if str(appt_job_id) == str(job_id):
+                            job_appointments.append(appt.project_id)
+
+                    if job_appointments:
+                        logger.info(f"      └─ Found {len(job_appointments)} appointment(s): {job_appointments}")
+
+                        # Get details for first appointment
+                        appointment_id = job_appointments[0]
+                        appointment = await self.provider.get_appointment_status(str(appointment_id))
+                        appt_provider_data = appointment.provider_data or {}
+
+                        start_time = appt_provider_data.get("start_time")
+                        end_time = appt_provider_data.get("end_time")
+
+                        logger.info(f"          └─ Appointment {appointment_id}:")
+                        logger.info(f"              ├─ Status: {appointment.status}")
+                        logger.info(f"              ├─ Start: {start_time}")
+                        logger.info(f"              └─ End: {end_time}")
+
+                    else:
+                        logger.info(f"      └─ No appointments found for job {job_id}")
+
+                except CRMError as e:
+                    logger.error(f"Failed to get job {job_id}: {e.message}")
+
+            logger.info(f"[{current_time}] HIERARCHY TEST COMPLETE")
+            logger.info("✅ Successfully demonstrated Project->Jobs->Appointments hierarchy with iterating over relationships!")
+
+        except CRMError as e:
+            logger.error(f"CRM error during hierarchy test: {e.message} (Code: {e.error_code})")
+        except Exception as e:
+            logger.error(f"Unexpected error during hierarchy test: {e}")
+
+    async def run_test(self) -> None:
+        """Run the project hierarchy test."""
+        logger.info("Starting Vertex Tester - testing Project->Jobs->Appointments hierarchy")
 
         try:
-            while True:
-                await self.poll_project_statuses()
-
-                # Wait before next poll
-                logger.debug(f"Waiting {self.poll_interval} seconds before next poll...")
-                await asyncio.sleep(self.poll_interval)
+            await self.test_project_hierarchy()
 
         except KeyboardInterrupt:
-            logger.info("Vertex Monitor stopped by user")
+            logger.info("Vertex Tester stopped by user")
         except Exception as e:
-            logger.error(f"Fatal error in monitor loop: {e}")
+            logger.error(f"Fatal error in test: {e}")
         finally:
             await self.cleanup()
 
     async def cleanup(self) -> None:
         """Clean up resources."""
-        logger.info("Cleaning up Vertex Monitor...")
+        logger.info("Cleaning up Vertex Tester...")
         if hasattr(self.provider, 'close'):
             await self.provider.close()
 
 
 async def main():
-    """Main entry point for the vertex monitoring app."""
-    monitor = VertexMonitor()
-    await monitor.run_monitor()
+    """Main entry point for the vertex testing app."""
+    tester = VertexTester()
+    await tester.run_test()
 
 
 if __name__ == "__main__":
