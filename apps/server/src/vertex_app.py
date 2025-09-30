@@ -11,6 +11,7 @@ from typing import Dict, Set
 
 from src.integrations.crm.base import CRMError
 from src.integrations.crm.constants import ProjectStatus
+from src.integrations.crm.provider_schemas import ServiceTitanProviderData
 from src.integrations.crm.providers.service_titan import ServiceTitanProvider
 from src.utils.logger import logger
 
@@ -85,9 +86,29 @@ class VertexMonitor:
 
                 # Log all current project statuses periodically
                 provider_data = project.provider_data or {}
-                job_number = provider_data.get("job_number", "N/A")
+
+                # Create typed provider data model for better access
+                try:
+                    st_data = ServiceTitanProviderData(**provider_data)
+                    appointment_number = st_data.appointment_number
+
+                    # Debug provider data for first few projects with rich detail
+                    if project_id in ["123169048", "123171353", "123194526", "123171400", "123251078"]:
+                        logger.info(
+                            f"TYPED PROVIDER DATA for {project_id}: "
+                            f"Appt={st_data.appointment_number}, Job={st_data.job_id}, "
+                            f"Customer={st_data.customer_id}, Active={st_data.active}, "
+                            f"Confirmed={st_data.is_confirmed}, Status='{st_data.original_status}'"
+                        )
+                        if st_data.start_time:
+                            logger.info(f"  └─ Start: {st_data.start_time}, End: {st_data.end_time}")
+
+                except Exception as e:
+                    logger.warning(f"Failed to parse provider data for {project_id}: {e}")
+                    appointment_number = provider_data.get("appointment_number", "N/A")
+
                 logger.debug(
-                    f"[{current_time}] Project {project_id} (Job #{job_number}): {current_status}"
+                    f"[{current_time}] Project {project_id} (Appt #{appointment_number}): {current_status}"
                 )
 
             # Update tracking sets

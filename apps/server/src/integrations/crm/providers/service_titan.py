@@ -14,6 +14,7 @@ from src.integrations.crm.base import CRMError, CRMProvider
 from src.integrations.crm.config import get_crm_settings
 from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
 from src.integrations.crm.constants import ProjectStatus, ServiceTitanEndpoints
+from src.integrations.crm.provider_schemas import CRMProviderDataFactory
 from src.integrations.crm.schemas import (
     ProjectStatusListResponse,
     ProjectStatusResponse,
@@ -190,20 +191,8 @@ class ServiceTitanProvider(CRMProvider):
             ProjectStatusResponse: Transformed project status
         """
         # Map Service Titan job status to our ProjectStatus enum
-        service_titan_status = job_data.get("jobStatus", {}).get("name", "").lower()
-
-        # Map Service Titan statuses to our enum
-        # Service Titan statuses: Scheduled, Dispatched, Working, Hold, Done, Canceled
-        status_mapping = {
-            "scheduled": ProjectStatus.SCHEDULED,
-            "dispatched": ProjectStatus.ACTIVE,  # Dispatched jobs are active/in progress
-            "working": ProjectStatus.IN_PROGRESS,
-            "hold": ProjectStatus.ON_HOLD,
-            "done": ProjectStatus.COMPLETED,
-            "canceled": ProjectStatus.CANCELLED,
-        }
-
-        mapped_status = status_mapping.get(service_titan_status, ProjectStatus.ACTIVE)
+        service_titan_status = job_data.get("status", "")
+        mapped_status = ProjectStatus.from_service_titan(service_titan_status)
 
         # Extract update timestamp
         updated_at = None
@@ -215,19 +204,15 @@ class ServiceTitanProvider(CRMProvider):
             except (ValueError, TypeError):
                 updated_at = datetime.now(UTC)
 
+        # Create structured provider data using Pydantic model
+        provider_data_model = CRMProviderDataFactory.create_service_titan_data(job_data)
+
         return ProjectStatusResponse(
             project_id=str(job_data.get("id", "")),
             status=mapped_status,
             provider=CRMProviderEnum.SERVICE_TITAN,
             updated_at=updated_at,
-            provider_data={
-                "job_number": job_data.get("jobNumber"),
-                "customer_id": job_data.get("customerId"),
-                "location_id": job_data.get("locationId"),
-                "job_type": job_data.get("jobType", {}).get("name"),
-                "priority": job_data.get("priority", {}).get("name"),
-                "original_status": service_titan_status,
-            },
+            provider_data=provider_data_model.model_dump(),
         )
 
     async def close(self):
