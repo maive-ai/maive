@@ -33,7 +33,7 @@ class ServiceTitanProvider(CRMProvider):
         self.client_id = self.settings.client_id
         self.client_secret = self.settings.client_secret
         self.app_key = self.settings.app_key
-        self.base_url = self.settings.base_url
+        self.base_api_url = self.settings.base_api_url
         self.token_url = self.settings.token_url
 
         # HTTP client configuration
@@ -94,6 +94,7 @@ class ServiceTitanProvider(CRMProvider):
 
         headers = kwargs.get("headers", {})
         headers["Authorization"] = f"Bearer {token}"
+        headers["ST-App-Key"] = self.app_key
         kwargs["headers"] = headers
 
         return await self.client.request(method, url, **kwargs)
@@ -112,7 +113,7 @@ class ServiceTitanProvider(CRMProvider):
             CRMError: If the project is not found or an error occurs
         """
         try:
-            url = f"{self.base_url}{ServiceTitanEndpoints.PROJECT_BY_ID.format(tenant_id=self.tenant_id, job_id=project_id)}"
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.PROJECT_BY_ID.format(tenant_id=self.tenant_id, appointment_id=project_id)}"
 
             logger.debug(f"Fetching project status for ID: {project_id}")
 
@@ -145,7 +146,7 @@ class ServiceTitanProvider(CRMProvider):
             CRMError: If an error occurs while fetching project statuses
         """
         try:
-            url = f"{self.base_url}{ServiceTitanEndpoints.PROJECTS.format(tenant_id=self.tenant_id)}"
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.PROJECTS.format(tenant_id=self.tenant_id)}"
 
             logger.debug("Fetching all project statuses")
 

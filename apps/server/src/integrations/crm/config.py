@@ -29,8 +29,8 @@ class CRMSettings(BaseSettings):
     client_id: str = Field(description="Client ID")
     client_secret: str = Field(description="Client Secret")
     app_key: str = Field(description="App Key")
-    base_url: str = Field(
-        default="https://api.servicetitan.io", description="API base URL"
+    base_api_url: str = Field(
+        default="https://api-integration.servicetitan.io", description="API base URL for requests"
     )
     token_url: str = Field(
         default="https://auth-integration.servicetitan.io/connect/token",

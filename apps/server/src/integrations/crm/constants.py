@@ -30,5 +30,5 @@ class ServiceTitanEndpoints:
     """Service Titan API endpoints."""
 
     BASE_URL = "https://api.servicetitan.io"
-    PROJECTS = "/tenant/{tenant_id}/jpm/v2/jobs"
-    PROJECT_BY_ID = "/tenant/{tenant_id}/jpm/v2/jobs/{job_id}"
+    PROJECTS = "/jpm/v2/tenant/{tenant_id}/export/appointments"
+    PROJECT_BY_ID = "/jpm/v2/tenant/{tenant_id}/export/appointments/{appointment_id}"
