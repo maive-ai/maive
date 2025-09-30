@@ -5,7 +5,7 @@ This application fetches a specific completed project for testing purposes.
 """
 
 import asyncio
-from datetime import datetime, UTC
+from datetime import datetime, timedelta, UTC
 
 from src.integrations.crm.base import CRMError
 from src.integrations.crm.providers.service_titan import ServiceTitanProvider
@@ -133,15 +133,16 @@ class VertexTester:
                         if start_time and end_time:
                             try:
                                 logger.info("Querying Rilla API...")
-                                conversations = await self.rilla_service.get_conversations_for_appointment(
+                                response = await self.rilla_service.get_conversations_for_appointment(
                                     appointment_id=str(appointment_id),
                                     start_time=start_time,
                                     end_time=end_time,
                                 )
 
-                                if conversations:
-                                    logger.info(f"✅ Found {len(conversations)} Rilla conversation(s)")
-                                    for conv in conversations:
+                                if response.conversations:
+                                    logger.info(f"✅ Found {len(response.conversations)} Rilla conversation(s)")
+                                    logger.info(f"   (Page {response.current_page}/{response.total_pages}, Total: {response.total_conversations})")
+                                    for conv in response.conversations:
                                         logger.info(f"├─ {conv.title} ({conv.duration}s)")
                                         logger.info(f"├─ User: {conv.user.name}")
                                         logger.info(f"└─ URL: {conv.rilla_url}")
@@ -166,11 +167,54 @@ class VertexTester:
         except Exception as e:
             logger.error(f"Unexpected error during hierarchy test: {e}")
 
+    async def test_rilla_recent(self) -> None:
+        """Test Rilla API with recent data (last 24 hours)."""
+        try:
+            now = datetime.now(UTC)
+            start_time = now - timedelta(hours=24)
+            end_time = now
+            
+            logger.info("=" * 60)
+            logger.info("TESTING RILLA API - Last 24 hours")
+            logger.info(f"Time range: {start_time} to {end_time}")
+            logger.info("=" * 60)
+            
+            # Query without filtering by appointment_id (pass None to see all conversations)
+            response = await self.rilla_service.get_conversations_for_appointment(
+                appointment_id=None,
+                start_time=start_time,
+                end_time=end_time,
+                padding_hours=0,  # No padding since we're already using 24 hours
+            )
+            
+            logger.info("✅ Rilla API Response:")
+            logger.info(f"   Total conversations: {response.total_conversations}")
+            logger.info(f"   Current page: {response.current_page}/{response.total_pages}")
+            logger.info(f"   Conversations in this page: {len(response.conversations)}")
+            
+            if response.conversations:
+                logger.info("\n📋 First 3 conversations:")
+                for i, conv in enumerate(response.conversations[:3]):
+                    logger.info(f"\n   [{i+1}] {conv.title}")
+                    logger.info(f"       Date: {conv.date}")
+                    logger.info(f"       Duration: {conv.duration}s")
+                    logger.info(f"       CRM Event ID: {conv.crm_event_id}")
+                    logger.info(f"       User: {conv.user.name}")
+            else:
+                logger.warning("⚠️  No conversations found in the last 24 hours")
+                
+        except Exception as e:
+            logger.error(f"❌ Error testing Rilla: {e}")
+
     async def run_test(self) -> None:
         """Run the project hierarchy test."""
         logger.info("Starting Vertex Tester - testing Project->Jobs->Appointments hierarchy")
 
         try:
+            # First test Rilla with recent data
+            await self.test_rilla_recent()
+            
+            # Then run the full hierarchy test
             await self.test_project_hierarchy()
 
         except KeyboardInterrupt:

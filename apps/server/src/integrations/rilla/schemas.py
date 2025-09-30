@@ -91,126 +91,143 @@ class User(BaseModel):
 class TrackerData(BaseModel):
     """Individual tracker data within a checklist."""
 
+    model_config = {"populate_by_name": True}
+
     name: str = Field(..., description="Name of the tracker")
-    is_hit: bool = Field(..., description="Whether the tracker was hit")
-    ai_score: float = Field(..., description="AI tracker score")
+    is_hit: bool = Field(..., alias="isHit", description="Whether the tracker was hit")
+    ai_score: float | None = Field(None, alias="aiScore", description="AI tracker score")
 
 
 class Checklist(BaseModel):
     """Checklist data for a conversation."""
 
+    model_config = {"populate_by_name": True}
+
     name: str = Field(..., description="Name of the checklist")
     score: int = Field(..., description="Score for the conversation")
     denominator: int = Field(..., description="Maximum possible score")
-    tracker_data: list[TrackerData] = Field(..., description="Individual trackers")
+    tracker_data: list[TrackerData] = Field(..., alias="trackerData", description="Individual trackers")
 
 
 class Conversation(BaseModel):
     """Individual conversation data."""
 
-    conversation_id: ConversationId = Field(..., description="Unique ID for the conversation")
-    recording_id: RecordingId = Field(..., description="Unique ID for the audio recording")
-    title: str = Field(..., description="Title of the conversation")
+    model_config = {"populate_by_name": True}
+
+    conversation_id: ConversationId = Field(..., alias="conversationId", description="Unique ID for the conversation")
+    recording_id: RecordingId = Field(..., alias="recordingId", description="Unique ID for the audio recording")
+    title: str | None = Field(None, description="Title of the conversation")
     date: datetime = Field(..., description="Date when conversation began")
-    processed_on: datetime = Field(..., description="Date when conversation was processed")
+    processed_on: datetime | None = Field(None, alias="processedOn", description="Date when conversation was processed")
     duration: int = Field(..., description="Duration of conversation in seconds")
-    crm_event_id: CrmEventId | None = Field(None, description="ID of associated CRM appointment/job")
-    rilla_url: HttpUrl = Field(..., description="URL of conversation on Rilla")
+    crm_event_id: CrmEventId | None = Field(None, alias="crmEventId", description="ID of associated CRM appointment/job")
+    rilla_url: HttpUrl = Field(..., alias="rillaUrl", description="URL of conversation on Rilla")
     user: User = Field(..., description="User who recorded the conversation")
     checklists: list[Checklist] = Field(..., description="Latest checklists for the conversation")
-    job_number: str | None = Field(None, description="Job number for the appointment")
-    st_link: str | None = Field(None, description="ServiceTitan link (ST integrations only)")
-    total_sold: float | None = Field(None, description="Total amount sold")
+    job_number: str | None = Field(None, alias="jobNumber", description="Job number for the appointment")
+    st_link: str | None = Field(None, alias="stLink", description="ServiceTitan link (ST integrations only)")
+    total_sold: float | None = Field(None, alias="totalSold", description="Total amount sold")
     outcome: Outcome | None = Field(None, description="Outcome of the appointment")
-    job_summary: str | None = Field(None, description="Summary of the appointment")
-    custom_summary: str | None = Field(None, description="Admin summary in custom format")
-    rep_speed_wpm: float | None = Field(None, description="Rep's talking speed (WPM)")
-    rep_talk_ratio: float | None = Field(None, description="Ratio of time rep spent talking")
+    job_summary: str | None = Field(None, alias="jobSummary", description="Summary of the appointment")
+    custom_summary: str | None = Field(None, alias="customSummary", description="Admin summary in custom format")
+    rep_speed_wpm: float | None = Field(None, alias="repSpeedWPM", description="Rep's talking speed (WPM)")
+    rep_talk_ratio: float | None = Field(None, alias="repTalkRatio", description="Ratio of time rep spent talking")
     longest_rep_monologue: int | None = Field(
         None,
+        alias="longestRepMonologue",
         description="Duration of longest rep monologue (seconds)"
     )
     longest_customer_monologue: int | None = Field(
         None,
+        alias="longestCustomerMonologue",
         description="Duration of longest customer monologue (seconds)"
     )
-    total_comments: int = Field(..., description="Number of comments on the conversation")
+    total_comments: int = Field(..., alias="totalComments", description="Number of comments on the conversation")
 
 
 class Team(BaseModel):
     """Team information with analytics."""
 
-    team_id: TeamId = Field(..., description="Unique ID for the team")
+    model_config = {"populate_by_name": True}
+
+    team_id: TeamId = Field(..., alias="teamId", description="Unique ID for the team")
     name: str = Field(..., description="Name of the team")
-    external_team_id: str | None = Field(None, description="External system team ID")
-    parent_team_id: TeamId | None = Field(None, description="Parent team ID if applicable")
-    parent_team_name: str | None = Field(None, description="Parent team name if applicable")
+    external_team_id: str | None = Field(None, alias="externalTeamId", description="External system team ID")
+    parent_team_id: TeamId | None = Field(None, alias="parentTeamId", description="Parent team ID if applicable")
+    parent_team_name: str | None = Field(None, alias="parentTeamName", description="Parent team name if applicable")
 
     # Analytics for the requested date range
-    appointments_recorded: int = Field(..., description="Number of CRM appointments recorded")
-    analytics_viewed: int = Field(..., description="Number of analytics viewed")
-    average_conversation_duration: float = Field(..., description="Average conversation duration")
-    average_conversation_length: float = Field(..., description="Average conversation length")
-    clip_view_duration: int = Field(..., description="Total clip view duration")
-    comments_given: int = Field(..., description="Number of comments written")
-    comments_read: int = Field(..., description="Number of comments read")
-    comments_received: int = Field(..., description="Number of comments received")
-    conversations_viewed: int = Field(..., description="Number of conversations viewed")
-    conversations_recorded: int = Field(..., description="Total conversations recorded")
-    viewed_recorded_ratio: float = Field(..., description="Ratio of viewed to recorded conversations")
-    conversation_view_duration: int = Field(..., description="Total conversation view duration")
-    patience_average: float = Field(..., description="Average patience for the team")
-    recording_compliance: float = Field(..., description="Recording compliance ratio")
-    scorecards_given: int = Field(..., description="Number of scorecards graded")
-    scorecards_received: int = Field(..., description="Number of scorecards received")
-    talk_ratio_average: float = Field(..., description="Average talk ratio")
-    total_appointments: int = Field(..., description="Total number of appointments")
+    appointments_recorded: int = Field(..., alias="appointmentsRecorded", description="Number of CRM appointments recorded")
+    analytics_viewed: int = Field(..., alias="analyticsViewed", description="Number of analytics viewed")
+    average_conversation_duration: float = Field(..., alias="averageConversationDuration", description="Average conversation duration")
+    average_conversation_length: float = Field(..., alias="averageConversationLength", description="Average conversation length")
+    clip_view_duration: int = Field(..., alias="clipViewDuration", description="Total clip view duration")
+    comments_given: int = Field(..., alias="commentsGiven", description="Number of comments written")
+    comments_read: int = Field(..., alias="commentsRead", description="Number of comments read")
+    comments_received: int = Field(..., alias="commentsReceived", description="Number of comments received")
+    conversations_viewed: int = Field(..., alias="conversationsViewed", description="Number of conversations viewed")
+    conversations_recorded: int = Field(..., alias="conversationsRecorded", description="Total conversations recorded")
+    viewed_recorded_ratio: float = Field(..., alias="viewedRecordedRatio", description="Ratio of viewed to recorded conversations")
+    conversation_view_duration: int = Field(..., alias="conversationViewDuration", description="Total conversation view duration")
+    patience_average: float = Field(..., alias="patienceAverage", description="Average patience for the team")
+    recording_compliance: float = Field(..., alias="recordingCompliance", description="Recording compliance ratio")
+    scorecards_given: int = Field(..., alias="scorecardsGiven", description="Number of scorecards graded")
+    scorecards_received: int = Field(..., alias="scorecardsReceived", description="Number of scorecards received")
+    talk_ratio_average: float = Field(..., alias="talkRatioAverage", description="Average talk ratio")
+    total_appointments: int = Field(..., alias="totalAppointments", description="Total number of appointments")
 
 
 class UserTeam(BaseModel):
     """Team information for a user."""
 
-    team_id: TeamId = Field(..., description="Unique ID of the team")
+    model_config = {"populate_by_name": True}
+
+    team_id: TeamId = Field(..., alias="teamId", description="Unique ID of the team")
     name: str = Field(..., description="Name of the team")
 
 
 class UserWithAnalytics(BaseModel):
     """User information with analytics."""
 
-    user_id: UserId = Field(..., description="Unique ID of the user")
+    model_config = {"populate_by_name": True}
+
+    user_id: UserId = Field(..., alias="userId", description="Unique ID of the user")
     name: str = Field(..., description="Name of the user")
     email: str = Field(..., description="Email of the user")
-    is_removed: bool = Field(..., description="Whether user has been deleted")
+    is_removed: bool = Field(..., alias="isRemoved", description="Whether user has been deleted")
     role: str = Field(..., description="User's role within Rilla")
     teams: list[UserTeam] = Field(..., description="Teams the user belongs to")
 
     # Analytics for the requested date range
-    analytics_viewed: int = Field(..., description="Number of analytics viewed")
-    appointments_recorded: int = Field(..., description="Number of appointments recorded")
-    average_conversation_duration: float = Field(..., description="Average conversation duration")
-    average_conversation_length: float = Field(..., description="Average conversation length")
-    clip_view_duration: int = Field(..., description="Total clip view duration")
-    comments_received: int = Field(..., description="Number of comments received")
-    comments_received_read: int = Field(..., description="Number of received comments read")
-    comments_given: int = Field(..., description="Number of comments given")
-    conversations_recorded: int = Field(..., description="Number of conversations recorded")
-    conversations_viewed: int = Field(..., description="Number of conversations viewed")
-    conversation_view_duration: int = Field(..., description="Total conversation view duration")
+    analytics_viewed: int = Field(..., alias="analyticsViewed", description="Number of analytics viewed")
+    appointments_recorded: int = Field(..., alias="appointmentsRecorded", description="Number of appointments recorded")
+    average_conversation_duration: float = Field(..., alias="averageConversationDuration", description="Average conversation duration")
+    average_conversation_length: float = Field(..., alias="averageConversationLength", description="Average conversation length")
+    clip_view_duration: int = Field(..., alias="clipViewDuration", description="Total clip view duration")
+    comments_received: int = Field(..., alias="commentsReceived", description="Number of comments received")
+    comments_received_read: int = Field(..., alias="commentsReceivedRead", description="Number of received comments read")
+    comments_given: int = Field(..., alias="commentsGiven", description="Number of comments given")
+    conversations_recorded: int = Field(..., alias="conversationsRecorded", description="Number of conversations recorded")
+    conversations_viewed: int = Field(..., alias="conversationsViewed", description="Number of conversations viewed")
+    conversation_view_duration: int = Field(..., alias="conversationViewDuration", description="Total conversation view duration")
     time_of_first_recording: datetime | None = Field(
         None,
+        alias="timeOfFirstRecording",
         description="Date of first recording"
     )
-    patience_average: float = Field(..., description="Average patience score")
-    recording_compliance: float = Field(..., description="Recording compliance ratio")
-    scorecards_given: int = Field(..., description="Number of scorecards graded")
-    scorecards_received: int = Field(..., description="Number of scorecards received")
-    talk_ratio_average: float = Field(..., description="Average talk ratio")
-    total_appointments: int = Field(..., description="Total number of appointments")
+    patience_average: float = Field(..., alias="patienceAverage", description="Average patience score")
+    recording_compliance: float = Field(..., alias="recordingCompliance", description="Recording compliance ratio")
+    scorecards_given: int = Field(..., alias="scorecardsGiven", description="Number of scorecards graded")
+    scorecards_received: int = Field(..., alias="scorecardsReceived", description="Number of scorecards received")
+    talk_ratio_average: float = Field(..., alias="talkRatioAverage", description="Average talk ratio")
+    total_appointments: int = Field(..., alias="totalAppointments", description="Total number of appointments")
 
 
 # Response Models
 class ConversationsExportResponse(BaseModel):
     """Response model for conversations export."""
+
+    model_config = {"populate_by_name": True}
 
     conversations: list[Conversation] = Field(..., description="Conversations for this page")
     current_page: int = Field(..., alias="currentPage", description="Current page number")
@@ -221,10 +238,14 @@ class ConversationsExportResponse(BaseModel):
 class TeamsExportResponse(BaseModel):
     """Response model for teams export."""
 
+    model_config = {"populate_by_name": True}
+
     teams: list[Team] = Field(..., description="All teams with analytics")
 
 
 class UsersExportResponse(BaseModel):
     """Response model for users export."""
+
+    model_config = {"populate_by_name": True}
 
     users: list[UserWithAnalytics] = Field(..., description="All users with analytics")
