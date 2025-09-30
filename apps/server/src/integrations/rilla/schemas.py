@@ -24,6 +24,8 @@ from src.integrations.rilla.constants import (
 class ConversationsExportRequest(BaseModel):
     """Request model for exporting conversations."""
 
+    model_config = {"populate_by_name": True}
+
     from_date: datetime = Field(..., alias="fromDate", description="Beginning of the desired time range")
     to_date: datetime = Field(..., alias="toDate", description="End of the desired time range")
     users: list[str] | None = Field(
@@ -50,12 +52,16 @@ class ConversationsExportRequest(BaseModel):
 class TeamsExportRequest(BaseModel):
     """Request model for exporting teams."""
 
+    model_config = {"populate_by_name": True}
+
     from_date: datetime = Field(..., alias="fromDate", description="Beginning of the desired time range")
     to_date: datetime = Field(..., alias="toDate", description="End of the desired time range")
 
 
 class UsersExportRequest(BaseModel):
     """Request model for exporting users."""
+
+    model_config = {"populate_by_name": True}
 
     from_date: datetime = Field(..., alias="fromDate", description="Beginning of the desired time range")
     to_date: datetime = Field(..., alias="toDate", description="End of the desired time range")

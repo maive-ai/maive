@@ -8,8 +8,10 @@ import asyncio
 from datetime import datetime, UTC
 
 from src.integrations.crm.base import CRMError
-from src.integrations.crm.provider_schemas import ServiceTitanProviderData
 from src.integrations.crm.providers.service_titan import ServiceTitanProvider
+from src.integrations.rilla.client import RillaClient
+from src.integrations.rilla.config import get_rilla_settings
+from src.integrations.rilla.service import RillaService
 from src.utils.logger import logger
 
 
@@ -19,6 +21,12 @@ class VertexTester:
     def __init__(self):
         """Initialize the vertex tester."""
         self.provider = ServiceTitanProvider()
+        
+        # Initialize Rilla client and service manually (not using FastAPI dependency)
+        rilla_settings = get_rilla_settings()
+        rilla_client = RillaClient(settings=rilla_settings)
+        self.rilla_service = RillaService(rilla_client=rilla_client)
+        
         # Use known completed appointment with full timing data
         self.test_appointment_id = "123171400"  # Completed appointment (Done status)
         self.test_job_id = "123171399"         # Associated job ID
@@ -121,6 +129,29 @@ class VertexTester:
                         logger.info(f"              ├─ Start: {start_time}")
                         logger.info(f"              └─ End: {end_time}")
 
+                        # Query Rilla for conversations related to this appointment
+                        if start_time and end_time:
+                            try:
+                                logger.info("Querying Rilla API...")
+                                conversations = await self.rilla_service.get_conversations_for_appointment(
+                                    appointment_id=str(appointment_id),
+                                    start_time=start_time,
+                                    end_time=end_time,
+                                )
+
+                                if conversations:
+                                    logger.info(f"✅ Found {len(conversations)} Rilla conversation(s)")
+                                    for conv in conversations:
+                                        logger.info(f"├─ {conv.title} ({conv.duration}s)")
+                                        logger.info(f"├─ User: {conv.user.name}")
+                                        logger.info(f"└─ URL: {conv.rilla_url}")
+                                else:
+                                    logger.warning("⚠️ No Rilla conversations found")
+                            except Exception as e:
+                                logger.error(f"❌ Error querying Rilla: {e}")
+                        else:
+                            logger.warning("⚠️ Missing timing data, skipping Rilla query")
+
                     else:
                         logger.info(f"      └─ No appointments found for job {job_id}")
 
@@ -154,6 +185,8 @@ class VertexTester:
         logger.info("Cleaning up Vertex Tester...")
         if hasattr(self.provider, 'close'):
             await self.provider.close()
+        if hasattr(self.rilla_service, 'rilla_client') and hasattr(self.rilla_service.rilla_client, 'close'):
+            await self.rilla_service.rilla_client.close()
 
 
 async def main():

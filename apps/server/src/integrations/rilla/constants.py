@@ -11,9 +11,9 @@ from enum import Enum
 class RillaEndpoint(str, Enum):
     """Rilla API endpoints."""
 
-    CONVERSATIONS_EXPORT = "/api/v1/conversations/export"
-    TEAMS_EXPORT = "/api/v1/teams/export"
-    USERS_EXPORT = "/api/v1/users/export"
+    CONVERSATIONS_EXPORT = "/export/conversations"
+    TEAMS_EXPORT = "/export/teams"
+    USERS_EXPORT = "/export/users"
 
 
 class DateType(str, Enum):
