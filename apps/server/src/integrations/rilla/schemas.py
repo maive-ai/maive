@@ -6,7 +6,6 @@ data exports, and API responses.
 """
 
 from datetime import datetime
-from typing import Any
 
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 
@@ -25,14 +24,15 @@ from src.integrations.rilla.constants import (
 class ConversationsExportRequest(BaseModel):
     """Request model for exporting conversations."""
 
-    from_date: datetime = Field(..., description="Beginning of the desired time range")
-    to_date: datetime = Field(..., description="End of the desired time range")
+    from_date: datetime = Field(..., alias="fromDate", description="Beginning of the desired time range")
+    to_date: datetime = Field(..., alias="toDate", description="End of the desired time range")
     users: list[str] | None = Field(
         None,
         description="Optional array of user emails. If empty/None, returns all users"
     )
     date_type: DateType = Field(
         DateType.TIME_OF_RECORDING,
+        alias="dateType",
         description="Filter by time of recording or processed date"
     )
     page: int = Field(1, ge=1, description="Page number (1-based)")
@@ -50,15 +50,15 @@ class ConversationsExportRequest(BaseModel):
 class TeamsExportRequest(BaseModel):
     """Request model for exporting teams."""
 
-    from_date: datetime = Field(..., description="Beginning of the desired time range")
-    to_date: datetime = Field(..., description="End of the desired time range")
+    from_date: datetime = Field(..., alias="fromDate", description="Beginning of the desired time range")
+    to_date: datetime = Field(..., alias="toDate", description="End of the desired time range")
 
 
 class UsersExportRequest(BaseModel):
     """Request model for exporting users."""
 
-    from_date: datetime = Field(..., description="Beginning of the desired time range")
-    to_date: datetime = Field(..., description="End of the desired time range")
+    from_date: datetime = Field(..., alias="fromDate", description="Beginning of the desired time range")
+    to_date: datetime = Field(..., alias="toDate", description="End of the desired time range")
     users: list[str] | None = Field(
         None,
         description="Optional array of user emails. If empty/None, returns all users"
@@ -207,32 +207,18 @@ class ConversationsExportResponse(BaseModel):
     """Response model for conversations export."""
 
     conversations: list[Conversation] = Field(..., description="Conversations for this page")
-    total_count: int = Field(..., description="Total number of conversations")
-    page: int = Field(..., description="Current page number")
-    limit: int = Field(..., description="Number of conversations per page")
-    error: str | None = Field(None, description="Error message if export failed")
+    current_page: int = Field(..., alias="currentPage", description="Current page number")
+    total_pages: int = Field(..., alias="totalPages", description="Total number of pages")
+    total_conversations: int = Field(..., alias="totalConversations", description="Total number of conversations")
 
 
 class TeamsExportResponse(BaseModel):
     """Response model for teams export."""
 
     teams: list[Team] = Field(..., description="All teams with analytics")
-    total_count: int = Field(..., description="Total number of teams")
-    error: str | None = Field(None, description="Error message if export failed")
 
 
 class UsersExportResponse(BaseModel):
     """Response model for users export."""
 
     users: list[UserWithAnalytics] = Field(..., description="All users with analytics")
-    total_count: int = Field(..., description="Total number of users")
-    error: str | None = Field(None, description="Error message if export failed")
-
-
-# Error Response Models
-class RillaErrorResponse(BaseModel):
-    """Error response from Rilla operations."""
-
-    success: bool = Field(default=False, description="Operation success status")
-    error: str = Field(..., description="Error message")
-    error_code: str | None = Field(None, description="Rilla-specific error code")

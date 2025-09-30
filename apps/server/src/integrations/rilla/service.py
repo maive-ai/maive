@@ -46,14 +46,7 @@ class RillaService:
             return result
         except Exception as e:
             logger.error(f"Error exporting conversations: {e}")
-            # Return error response instead of raising
-            return ConversationsExportResponse(
-                conversations=[],
-                total_count=0,
-                page=request.page,
-                limit=request.limit,
-                error=f"Failed to export conversations: {str(e)}"
-            )
+            raise
 
     async def export_teams(self, request: TeamsExportRequest) -> TeamsExportResponse:
         """
@@ -72,12 +65,7 @@ class RillaService:
             return result
         except Exception as e:
             logger.error(f"Error exporting teams: {e}")
-            # Return error response instead of raising
-            return TeamsExportResponse(
-                teams=[],
-                total_count=0,
-                error=f"Failed to export teams: {str(e)}"
-            )
+            raise
 
     async def export_users(self, request: UsersExportRequest) -> UsersExportResponse:
         """
@@ -96,9 +84,4 @@ class RillaService:
             return result
         except Exception as e:
             logger.error(f"Error exporting users: {e}")
-            # Return error response instead of raising
-            return UsersExportResponse(
-                users=[],
-                total_count=0,
-                error=f"Failed to export users: {str(e)}"
-            )
+            raise
