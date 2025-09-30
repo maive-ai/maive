@@ -38,6 +38,8 @@ class ProjectStatus(str, Enum):
             "done": cls.COMPLETED,
             "canceled": cls.CANCELLED,
         }
+        if status is None:
+            return cls.ACTIVE
         return service_titan_mapping.get(status.lower(), cls.ACTIVE)
 
 
@@ -50,6 +52,14 @@ class CRMProvider(str, Enum):
 class ServiceTitanEndpoints:
     """Service Titan API endpoints."""
 
-    BASE_URL = "https://api.servicetitan.io"
-    PROJECTS = "/jpm/v2/tenant/{tenant_id}/export/appointments"
-    PROJECT_BY_ID = "/jpm/v2/tenant/{tenant_id}/export/appointments/{appointment_id}"
+    # Projects endpoints
+    PROJECTS = "/jpm/v2/tenant/{tenant_id}/projects"
+    PROJECT_BY_ID = "/jpm/v2/tenant/{tenant_id}/projects/{id}"
+
+    # Appointments endpoints
+    APPOINTMENTS = "/jpm/v2/tenant/{tenant_id}/export/appointments"
+    APPOINTMENT_BY_ID = "/jpm/v2/tenant/{tenant_id}/appointments/{id}"
+
+    # Jobs endpoints
+    JOBS = "/jpm/v2/tenant/{tenant_id}/jobs"
+    JOB_BY_ID = "/jpm/v2/tenant/{tenant_id}/jobs/{id}"
