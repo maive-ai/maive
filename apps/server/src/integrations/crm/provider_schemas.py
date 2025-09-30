@@ -70,7 +70,7 @@ class CRMProviderDataFactory:
                 customer_id=raw_data.get("customerId", 0),
                 active=raw_data.get("active", False),
                 is_confirmed=raw_data.get("isConfirmed", False),
-                original_status=raw_data.get("status", ""),
+                original_status=raw_data.get("status") or "unknown",
                 start_time=start_time,
                 end_time=end_time,
                 special_instructions=raw_data.get("specialInstructions"),
@@ -85,5 +85,5 @@ class CRMProviderDataFactory:
                 customer_id=raw_data.get("customerId", 0),
                 active=raw_data.get("active", False),
                 is_confirmed=raw_data.get("isConfirmed", False),
-                original_status=raw_data.get("status", ""),
+                original_status=raw_data.get("status") or "unknown",
             )
