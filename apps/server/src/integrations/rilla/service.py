@@ -9,7 +9,6 @@ from datetime import datetime, timedelta
 
 from src.integrations.rilla.client import RillaClient
 from src.integrations.rilla.schemas import (
-    Conversation,
     ConversationsExportRequest,
     ConversationsExportResponse,
     TeamsExportRequest,
@@ -91,22 +90,23 @@ class RillaService:
 
     async def get_conversations_for_appointment(
         self,
-        appointment_id: str,
+        appointment_id: str | None,
         start_time: datetime,
         end_time: datetime,
         padding_hours: int = 0.1,
-    ) -> list[Conversation]:
+    ) -> ConversationsExportResponse:
         """
         Get Rilla conversations associated with a specific CRM appointment.
 
         Args:
-            appointment_id: The CRM appointment/event ID
+            appointment_id: The CRM appointment/event ID (None to return all conversations in time range)
             start_time: Appointment start time
             end_time: Appointment end time
-            padding_hours: Hours to pad the time range (default: 1)
+            padding_hours: Hours to pad the time range (default: 0.1)
 
         Returns:
-            List of conversations matching the appointment ID
+            ConversationsExportResponse with conversations and pagination metadata.
+            If appointment_id is provided, only matching conversations are included.
         """
         from_date = start_time - timedelta(hours=padding_hours)
         to_date = end_time + timedelta(hours=padding_hours)
@@ -119,8 +119,13 @@ class RillaService:
 
         response = await self.rilla_client.export_conversations(request)
 
-        # Filter to conversations matching this specific appointment
-        return [
-            conv for conv in response.conversations
-            if conv.crm_event_id == appointment_id
-        ]
+        # Filter to conversations matching this specific appointment (if appointment_id provided)
+        if appointment_id is not None:
+            filtered_conversations = [
+                conv for conv in response.conversations
+                if conv.crm_event_id == appointment_id
+            ]
+            # Return filtered response (keep pagination metadata but update conversations)
+            response.conversations = filtered_conversations
+        
+        return response

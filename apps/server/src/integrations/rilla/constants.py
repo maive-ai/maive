@@ -27,10 +27,12 @@ class Outcome(str, Enum):
     """Possible outcomes for appointments."""
 
     SOLD = "sold"
+    SOLD_CAPS = "Sold"  # API also returns capitalized version
     NOT_SOLD = "not_sold"
     FOLLOW_UP = "follow_up"
     NO_SHOW = "no_show"
     CANCELLED = "cancelled"
+    OPEN = "Open"  # API returns this value
 
 
 # Type aliases for better readability
