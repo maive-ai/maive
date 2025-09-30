@@ -16,27 +16,6 @@ class RillaEndpoint(str, Enum):
     USERS_EXPORT = "/api/v1/users/export"
 
 
-class RillaErrorCode(str, Enum):
-    """Rilla-specific error codes."""
-
-    AUTHENTICATION_FAILED = "AUTHENTICATION_FAILED"
-    RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED"
-    INVALID_REQUEST = "INVALID_REQUEST"
-    SERVER_ERROR = "SERVER_ERROR"
-    TIMEOUT = "TIMEOUT"
-    CONNECTION_ERROR = "CONNECTION_ERROR"
-    UNKNOWN_ERROR = "UNKNOWN_ERROR"
-
-
-class RillaStatus(str, Enum):
-    """Rilla operation status values."""
-
-    SUCCESS = "success"
-    FAILED = "failed"
-    PENDING = "pending"
-    IN_PROGRESS = "in_progress"
-
-
 class DateType(str, Enum):
     """Date type for filtering conversations."""
 

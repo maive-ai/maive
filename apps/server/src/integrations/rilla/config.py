@@ -25,19 +25,6 @@ class RillaSettings(BaseSettings):
         description="Rilla API base URL"
     )
     timeout: int = Field(default=30, description="Request timeout in seconds")
-    max_retries: int = Field(default=3, description="Maximum number of retry attempts")
-    retry_delay: float = Field(default=1.0, description="Base delay between retries in seconds")
-    max_retry_delay: float = Field(default=60.0, description="Maximum delay between retries in seconds")
-    backoff_factor: float = Field(default=2.0, description="Exponential backoff factor for retries")
-
-    # Rate limiting
-    requests_per_minute: int = Field(default=60, description="Maximum requests per minute")
-    burst_limit: int = Field(default=10, description="Burst limit for requests")
-
-    # Logging
-    log_requests: bool = Field(default=False, description="Whether to log HTTP requests")
-    log_responses: bool = Field(default=False, description="Whether to log HTTP responses")
-    mask_sensitive_data: bool = Field(default=True, description="Whether to mask sensitive data in logs")
 
 
 # Global settings instance
@@ -55,8 +42,6 @@ def get_rilla_settings() -> RillaSettings:
     if _rilla_settings is None:
         _rilla_settings = RillaSettings()
         logger.info("RillaSettings loaded")
-        if _rilla_settings.api_key:
-            logger.info(f"Rilla API Key (first 5 chars): {_rilla_settings.api_key[:5]}...")
     return _rilla_settings
 
 
