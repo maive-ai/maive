@@ -144,6 +144,81 @@
         }
       }
     },
+    "/api/crm/projects/{project_id}/status": {
+      "get": {
+        "tags": [
+          "CRM"
+        ],
+        "summary": "Get Project Status",
+        "description": "Get the status of a specific project by ID.\n\nArgs:\n    project_id: The unique identifier for the project\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    ProjectStatusResponse: The project status information\n\nRaises:\n    HTTPException: If the project is not found or an error occurs",
+        "operationId": "get_project_status_api_crm_projects__project_id__status_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/crm/projects/status": {
+      "get": {
+        "tags": [
+          "CRM"
+        ],
+        "summary": "Get All Project Statuses",
+        "description": "Get the status of all projects.\n\nArgs:\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    ProjectStatusListResponse: List of all project statuses\n\nRaises:\n    HTTPException: If an error occurs while fetching project statuses",
+        "operationId": "get_all_project_statuses_api_crm_projects_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectStatusListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/": {
       "get": {
         "summary": "Root",
@@ -233,6 +308,14 @@
         "title": "AuthResponse",
         "description": "Schema for authentication responses."
       },
+      "CRMProvider": {
+        "type": "string",
+        "enum": [
+          "service_titan"
+        ],
+        "title": "CRMProvider",
+        "description": "Available CRM providers."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -245,6 +328,100 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "ProjectStatus": {
+        "type": "string",
+        "enum": [
+          "on_hold",
+          "active",
+          "completed",
+          "cancelled",
+          "scheduled",
+          "in_progress",
+          "pending"
+        ],
+        "title": "ProjectStatus",
+        "description": "Project status values across CRM systems."
+      },
+      "ProjectStatusListResponse": {
+        "properties": {
+          "projects": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectStatusResponse"
+            },
+            "type": "array",
+            "title": "Projects",
+            "description": "List of project statuses"
+          },
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count",
+            "description": "Total number of projects"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/CRMProvider",
+            "description": "CRM provider"
+          }
+        },
+        "type": "object",
+        "required": [
+          "projects",
+          "total_count",
+          "provider"
+        ],
+        "title": "ProjectStatusListResponse",
+        "description": "Response model for multiple project statuses."
+      },
+      "ProjectStatusResponse": {
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "title": "Project Id",
+            "description": "Unique project identifier"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ProjectStatus",
+            "description": "Current project status"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/CRMProvider",
+            "description": "CRM provider"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At",
+            "description": "Last status update timestamp"
+          },
+          "provider_data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Data",
+            "description": "Provider-specific data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id",
+          "status",
+          "provider"
+        ],
+        "title": "ProjectStatusResponse",
+        "description": "Response model for project status information."
       },
       "Role": {
         "type": "string",

@@ -1,10 +1,7 @@
+environment:
+  - maive-infra/will-dev
 config:
-  cognito:allow_admin_create_user_only: "false"
-  cognito:callback_urls:
-    - http://localhost:8080/api/auth/callback
   maive-infra:certificate_domain: localhost
-  maive-infra:deploy_containers: "false"
-  maive-infra:environment: dev
   maive-infra:transport_protocol: http
-  maive-infra:oauth_redirect_route: /api/auth/callback
-  s3:force_destroy: "true"
+  maive-infra:deploy_containers: false
+  s3:force_destroy: true

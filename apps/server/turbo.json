@@ -4,12 +4,12 @@
   "tasks": {
     "dev": {
       "env": ["SERVER_*", "PUBLIC_WEB_URL"],
-      "inputs": ["$TURBO_DEFAULT$", ".env"],
+      "inputs": ["$TURBO_DEFAULT$"],
       "persistent": true
     },
     "build": {
       "env": ["SERVER_*", "PUBLIC_WEB_URL"],
-      "inputs": ["$TURBO_DEFAULT$", ".env"]
+      "inputs": ["$TURBO_DEFAULT$"]
     },
     "start": {
       "env": ["SERVER_*", "PUBLIC_WEB_URL"],

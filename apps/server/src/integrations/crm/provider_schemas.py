@@ -1,0 +1,89 @@
+"""
+Provider-specific schemas for CRM integration data.
+
+This module contains Pydantic models for provider-specific data
+that gets stored in the provider_data field.
+"""
+
+from datetime import datetime
+from typing import Any
+
+from pydantic import BaseModel, Field
+
+
+class ServiceTitanProviderData(BaseModel):
+    """Service Titan specific provider data."""
+
+    appointment_number: str = Field(..., description="Service Titan appointment number")
+    job_id: int = Field(..., description="Associated job ID")
+    customer_id: int = Field(..., description="Customer identifier")
+    active: bool = Field(..., description="Whether appointment is active")
+    is_confirmed: bool = Field(..., description="Whether appointment is confirmed")
+    original_status: str = Field(..., description="Original Service Titan status string")
+
+    # Optional fields that might be available
+    start_time: datetime | None = Field(None, description="Appointment start time")
+    end_time: datetime | None = Field(None, description="Appointment end time")
+    special_instructions: str | None = Field(None, description="Special instructions")
+    arrival_window_start: datetime | None = Field(None, description="Arrival window start")
+    arrival_window_end: datetime | None = Field(None, description="Arrival window end")
+
+    class Config:
+        """Pydantic configuration."""
+        # Allow extra fields for future extensibility
+        extra = "allow"
+        # Use enum values for serialization
+        use_enum_values = True
+
+
+class CRMProviderDataFactory:
+    """Factory for creating provider-specific data models."""
+
+    @staticmethod
+    def create_service_titan_data(raw_data: dict[str, Any]) -> ServiceTitanProviderData:
+        """Create Service Titan provider data from raw API response."""
+        try:
+            # Parse datetime fields
+            start_time = None
+            if raw_data.get("start"):
+                start_time = datetime.fromisoformat(raw_data["start"].replace("Z", "+00:00"))
+
+            end_time = None
+            if raw_data.get("end"):
+                end_time = datetime.fromisoformat(raw_data["end"].replace("Z", "+00:00"))
+
+            arrival_window_start = None
+            if raw_data.get("arrivalWindowStart"):
+                arrival_window_start = datetime.fromisoformat(
+                    raw_data["arrivalWindowStart"].replace("Z", "+00:00")
+                )
+
+            arrival_window_end = None
+            if raw_data.get("arrivalWindowEnd"):
+                arrival_window_end = datetime.fromisoformat(
+                    raw_data["arrivalWindowEnd"].replace("Z", "+00:00")
+                )
+
+            return ServiceTitanProviderData(
+                appointment_number=raw_data.get("appointmentNumber", ""),
+                job_id=raw_data.get("jobId", 0),
+                customer_id=raw_data.get("customerId", 0),
+                active=raw_data.get("active", False),
+                is_confirmed=raw_data.get("isConfirmed", False),
+                original_status=raw_data.get("status", ""),
+                start_time=start_time,
+                end_time=end_time,
+                special_instructions=raw_data.get("specialInstructions"),
+                arrival_window_start=arrival_window_start,
+                arrival_window_end=arrival_window_end,
+            )
+        except Exception as e:
+            # Fallback to basic data if parsing fails
+            return ServiceTitanProviderData(
+                appointment_number=raw_data.get("appointmentNumber", ""),
+                job_id=raw_data.get("jobId", 0),
+                customer_id=raw_data.get("customerId", 0),
+                active=raw_data.get("active", False),
+                is_confirmed=raw_data.get("isConfirmed", False),
+                original_status=raw_data.get("status", ""),
+            )

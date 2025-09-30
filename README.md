@@ -160,14 +160,14 @@ You can read more about this
 - Create a personal dev stack:
 `pulumi stack init maive/<your-name>-dev --copy-config-from maive/infra/test`
 - Commit the newly created `Pulumi.<your-name>-dev.yaml` file
-- Package all the lambda functions
-`cd maive/apps/backend`
-`bash scripts/package_lambda.sh functions/{function_name}` <- do this for all functions in the functions dir
+- Create your own Pulumi ESC environment by cloning mine:
+- `esc env clone maive/maive-infra/will-dev maive/maive-infra/<your-stack-name>`
+- Attach it to your stack: `pulumi config env add maive-infra/<your-stack-name>`
 - In the `infra/` directory, run `pulumi up -y` 
 - Manually create a style in the AWS cognito GUI for our managed login page
 - Get vars in console for the next step 
-`pulumi stack output --show-secrets `   
-- Set env vars in `apps/web/.env` and `apps/server/.env`
+`pulumi stack output --show-secrets `
+- Update the esc vars in your esc env you created earlier to use these outputs
 - In the root directory, run `pnpm dev'`
 -- You should get hot reloads for any frontend or server changes
 - Sign up for a user account, verify email, and setup MFA
