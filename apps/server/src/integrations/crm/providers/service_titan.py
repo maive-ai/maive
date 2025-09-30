@@ -14,7 +14,7 @@ from src.integrations.crm.base import CRMError, CRMProvider
 from src.integrations.crm.config import get_crm_settings
 from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
 from src.integrations.crm.constants import ProjectStatus, ServiceTitanEndpoints
-from src.integrations.crm.provider_schemas import CRMProviderDataFactory
+from src.integrations.crm.provider_schemas import CRMProviderDataFactory, FormSubmissionListResponse
 from src.integrations.crm.schemas import (
     ProjectStatusListResponse,
     ProjectStatusResponse,
@@ -343,6 +343,59 @@ class ServiceTitanProvider(CRMProvider):
             logger.error(f"Unexpected error fetching all projects: {e}")
             raise CRMError(
                 f"Failed to fetch project statuses: {str(e)}", "UNKNOWN_ERROR"
+            )
+
+    async def get_all_form_submissions(self, form_ids: list[int], status: str | None = None, owners: list[dict] | None = None) -> FormSubmissionListResponse:
+        """
+        Get all form submissions from Service Titan for a specific form.
+
+        Args:
+            form_ids: List of form IDs to get submissions for
+            status: Optional form status to filter by (Started, Completed, Any)
+            owners: Optional list of owner objects with type and id
+
+        Returns:
+            FormSubmissionListResponse: List of all form submissions
+
+        Raises:
+            CRMError: If an error occurs while fetching form submissions
+        """
+        try:
+            # Use the general form submissions endpoint
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.FORM_SUBMISSIONS.format(tenant_id=self.tenant_id)}"
+
+            # Prepare query parameters using camelCase as Service Titan expects
+            # Convert list of form IDs to comma-separated string
+            form_ids_str = ",".join(str(form_id) for form_id in form_ids)
+            params = {
+                "formIds": form_ids_str,
+            }
+
+            if status:
+                params["status"] = status
+
+            if owners:
+                params["owners"] = owners
+
+            logger.debug(f"Fetching form submissions for form IDs {form_ids} with status: {status}, owners: {owners}")
+            logger.debug(f"Request URL: {url}")
+            logger.debug(f"Request params: {params}")
+
+            response = await self._make_authenticated_request("GET", url, params=params)
+            response.raise_for_status()
+
+            data = response.json()
+
+            # Return the response directly as FormSubmissionListResponse
+            return FormSubmissionListResponse(**data)
+
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error fetching form submissions: {e}")
+            raise CRMError(f"Failed to fetch form submissions: {e}", "HTTP_ERROR")
+        except Exception as e:
+            logger.error(f"Unexpected error fetching form submissions: {e}")
+            raise CRMError(
+                f"Failed to fetch form submissions: {str(e)}", "UNKNOWN_ERROR"
             )
 
     def _transform_job_to_project_status(

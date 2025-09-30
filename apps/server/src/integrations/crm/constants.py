@@ -11,13 +11,12 @@ from enum import Enum
 class ProjectStatus(str, Enum):
     """Project status values across CRM systems."""
 
-    ON_HOLD = "on_hold"
-    ACTIVE = "active"
-    COMPLETED = "completed"
+    HOLD = "hold"
+    DISPATCHED = "dispatched"
+    DONE = "done"
     CANCELLED = "cancelled"
     SCHEDULED = "scheduled"
-    IN_PROGRESS = "in_progress"
-    PENDING = "pending"
+    WORKING = "working"
 
     @classmethod
     def from_service_titan(cls, status: str) -> "ProjectStatus":
@@ -32,21 +31,41 @@ class ProjectStatus(str, Enum):
         """
         service_titan_mapping = {
             "scheduled": cls.SCHEDULED,
-            "dispatched": cls.ACTIVE,
-            "working": cls.IN_PROGRESS,
-            "hold": cls.ON_HOLD,
-            "done": cls.COMPLETED,
+            "dispatched": cls.DISPATCHED,
+            "working": cls.WORKING,
+            "hold": cls.HOLD,
+            "done": cls.DONE,
             "canceled": cls.CANCELLED,
         }
-        if status is None:
-            return cls.ACTIVE
-        return service_titan_mapping.get(status.lower(), cls.ACTIVE)
+        return service_titan_mapping.get(status.lower(), cls.DISPATCHED)
 
 
 class CRMProvider(str, Enum):
     """Available CRM providers."""
 
     SERVICE_TITAN = "service_titan"
+
+
+class OwnerType(str, Enum):
+    """Owner types for CRM entities."""
+
+    JOB = "Job"
+    CALL = "Call"
+    CUSTOMER = "Customer"
+    LOCATION = "Location"
+    EQUIPMENT = "Equipment"
+    TECHNICIAN = "Technician"
+    JOB_APPOINTMENT = "JobAppointment"
+    MEMBERSHIP = "Membership"
+    TRUCK = "Truck"
+
+
+class FormStatus(str, Enum):
+    """Form submission status values."""
+
+    STARTED = "Started"
+    COMPLETED = "Completed"
+    ANY = "Any"
 
 
 class ServiceTitanEndpoints:
@@ -63,3 +82,7 @@ class ServiceTitanEndpoints:
     # Jobs endpoints
     JOBS = "/jpm/v2/tenant/{tenant_id}/jobs"
     JOB_BY_ID = "/jpm/v2/tenant/{tenant_id}/jobs/{id}"
+
+    # Form submissions endpoints
+    FORM_SUBMISSIONS = "/forms/v2/tenant/{tenant_id}/submissions"
+    FORM_SUBMISSIONS_BY_FORM_ID = "/forms/v2/tenant/{tenant_id}/forms/{form_id}/submissions"
