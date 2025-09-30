@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.auth.router import router as auth_router
 from src.config import get_client_base_url
+from src.integrations.crm.router import router as crm_router
 from src.utils.logger import logger
 
 
@@ -47,6 +48,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router, prefix="/api")
+app.include_router(crm_router, prefix="/api")
 
 
 @app.get("/")
