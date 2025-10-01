@@ -4,18 +4,16 @@ Project status values across CRM systems.
 
 ## Enum
 
-* `OnHold` (value: `'on_hold'`)
+* `Hold` (value: `'hold'`)
 
-* `Active` (value: `'active'`)
+* `Dispatched` (value: `'dispatched'`)
 
-* `Completed` (value: `'completed'`)
+* `Done` (value: `'done'`)
 
 * `Cancelled` (value: `'cancelled'`)
 
 * `Scheduled` (value: `'scheduled'`)
 
-* `InProgress` (value: `'in_progress'`)
-
-* `Pending` (value: `'pending'`)
+* `Working` (value: `'working'`)
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
