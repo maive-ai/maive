@@ -5,11 +5,13 @@ This application fetches a specific completed project for testing purposes.
 """
 
 import asyncio
-from datetime import datetime, UTC
+from datetime import datetime, timedelta, UTC
 
 from src.integrations.crm.base import CRMError
-from src.integrations.crm.provider_schemas import ServiceTitanProviderData
 from src.integrations.crm.providers.service_titan import ServiceTitanProvider
+from src.integrations.rilla.client import RillaClient
+from src.integrations.rilla.config import get_rilla_settings
+from src.integrations.rilla.service import RillaService
 from src.utils.logger import logger
 
 
@@ -19,6 +21,12 @@ class VertexTester:
     def __init__(self):
         """Initialize the vertex tester."""
         self.provider = ServiceTitanProvider()
+        
+        # Initialize Rilla client and service manually (not using FastAPI dependency)
+        rilla_settings = get_rilla_settings()
+        rilla_client = RillaClient(settings=rilla_settings)
+        self.rilla_service = RillaService(rilla_client=rilla_client)
+        
         # Use known completed appointment with full timing data
         self.test_appointment_id = "123171400"  # Completed appointment (Done status)
         self.test_job_id = "123171399"         # Associated job ID
@@ -121,6 +129,39 @@ class VertexTester:
                         logger.info(f"              ├─ Start: {start_time}")
                         logger.info(f"              └─ End: {end_time}")
 
+                        # Query Rilla for conversations related to this appointment
+                        if start_time and end_time:
+                            try:
+                                logger.info("Querying Rilla API...")
+                                response = await self.rilla_service.get_conversations_for_appointment(
+                                    appointment_id=str(appointment_id),
+                                    start_time=start_time,
+                                    end_time=end_time,
+                                )
+
+                                if response.conversations:
+                                    logger.info(f"✅ Found {len(response.conversations)} Rilla conversation(s)")
+                                    logger.info(f"   (Page {response.current_page}/{response.total_pages}, Total: {response.total_conversations})")
+                                    for conv in response.conversations:
+                                        logger.info(f"├─ {conv.title} ({conv.duration}s)")
+                                        logger.info(f"├─ Conversation ID: {conv.conversation_id}")
+                                        logger.info(f"├─ Recording ID: {conv.recording_id}")
+                                        logger.info(f"├─ Rilla URL: {conv.rilla_url}")
+                                        logger.info(f"├─ CRM Event ID: {conv.crm_event_id}")
+                                        logger.info(f"├─ Job Number: {conv.job_number}")
+                                        logger.info(f"├─ ST Link: {conv.st_link}")
+                                        logger.info(f"├─ Job Summary: {conv.job_summary}")
+                                        logger.info(f"├─ Outcome: {conv.outcome}")
+                                        logger.info(f"├─ Audio URL: {conv.audio_url}")
+                                        logger.info(f"├─ Transcript URL: {conv.transcript_url}")
+                                        logger.info(f"└─ User: {conv.user.name}")
+                                else:
+                                    logger.warning("⚠️ No Rilla conversations found")
+                            except Exception as e:
+                                logger.error(f"❌ Error querying Rilla: {e}")
+                        else:
+                            logger.warning("⚠️ Missing timing data, skipping Rilla query")
+
                     else:
                         logger.info(f"      └─ No appointments found for job {job_id}")
 
@@ -135,11 +176,113 @@ class VertexTester:
         except Exception as e:
             logger.error(f"Unexpected error during hierarchy test: {e}")
 
+    async def test_rilla_recent(self) -> None:
+        """Test Rilla API with recent data (last 24 hours) and search for audioUrl/transcriptUrl."""
+        try:
+            now = datetime.now(UTC)
+            start_time = now - timedelta(hours=24)
+            end_time = now
+
+            logger.info("=" * 60)
+            logger.info("TESTING RILLA API - Last 24 hours")
+            logger.info(f"Time range: {start_time} to {end_time}")
+            logger.info("=" * 60)
+
+            # Query without filtering by appointment_id (pass None to see all conversations)
+            response = await self.rilla_service.get_conversations_for_appointment(
+                appointment_id=None,
+                start_time=start_time,
+                end_time=end_time,
+                padding_hours=0,  # No padding since we're already using 24 hours
+            )
+
+            logger.info("✅ Rilla API Response:")
+            logger.info(f"   Total conversations: {response.total_conversations}")
+            logger.info(f"   Current page: {response.current_page}/{response.total_pages}")
+            logger.info(f"   Conversations in this page: {len(response.conversations)}")
+
+            # Search for audioUrl and transcriptUrl across ALL conversations
+            has_audio_url = False
+            has_transcript_url = False
+            conversations_with_audio = []
+            conversations_with_transcript = []
+
+            logger.info(f"\n🔍 Searching ALL {len(response.conversations)} conversations for audioUrl and transcriptUrl...")
+
+            for conv in response.conversations:
+                if conv.audio_url is not None:
+                    has_audio_url = True
+                    conversations_with_audio.append({
+                        'title': conv.title,
+                        'conversation_id': conv.conversation_id,
+                        'audio_url': conv.audio_url
+                    })
+
+                if conv.transcript_url is not None:
+                    has_transcript_url = True
+                    conversations_with_transcript.append({
+                        'title': conv.title,
+                        'conversation_id': conv.conversation_id,
+                        'transcript_url': conv.transcript_url
+                    })
+
+            # Log results
+            if conversations_with_audio:
+                logger.info(f"🎵 Found {len(conversations_with_audio)} conversations with audioUrl:")
+                for conv in conversations_with_audio:
+                    logger.info(f"   • {conv['title']} ({conv['conversation_id']})")
+                    logger.info(f"     Audio URL: {conv['audio_url']}")
+            else:
+                logger.info("🎵 No conversations found with audioUrl")
+
+            if conversations_with_transcript:
+                logger.info(f"📝 Found {len(conversations_with_transcript)} conversations with transcriptUrl:")
+                for conv in conversations_with_transcript:
+                    logger.info(f"   • {conv['title']} ({conv['conversation_id']})")
+                    logger.info(f"     Transcript URL: {conv['transcript_url']}")
+            else:
+                logger.info("📝 No conversations found with transcriptUrl")
+
+            # Log final boolean results
+            logger.info("\n" + "=" * 60)
+            logger.info("FINAL RESULTS:")
+            logger.info(f"Has audioUrl: {has_audio_url}")
+            logger.info(f"Has transcriptUrl: {has_transcript_url}")
+            logger.info(f"Has either audioUrl OR transcriptUrl: {has_audio_url or has_transcript_url}")
+            logger.info("=" * 60)
+
+            if response.conversations:
+                logger.info("\n📋 First 3 conversations (detailed):")
+                for i, conv in enumerate(response.conversations[:3]):
+                    logger.info(f"\n   [{i+1}] {conv.title}")
+                    logger.info(f"       Date: {conv.date}")
+                    logger.info(f"       Duration: {conv.duration}s")
+                    logger.info(f"       Conversation ID: {conv.conversation_id}")
+                    logger.info(f"       Recording ID: {conv.recording_id}")
+                    logger.info(f"       Rilla URL: {conv.rilla_url}")
+                    logger.info(f"       CRM Event ID: {conv.crm_event_id}")
+                    logger.info(f"       Job Number: {conv.job_number}")
+                    logger.info(f"       ST Link: {conv.st_link}")
+                    logger.info(f"       Job Summary: {conv.job_summary}")
+                    logger.info(f"       Outcome: {conv.outcome}")
+                    logger.info(f"       Audio URL: {conv.audio_url}")
+                    logger.info(f"       Transcript URL: {conv.transcript_url}")
+                    logger.info(f"       User: {conv.user.name}")
+            else:
+                logger.warning("⚠️  No conversations found in the last 24 hours")
+
+        except Exception as e:
+            logger.error(f"❌ Error testing Rilla: {e}")
+
     async def run_test(self) -> None:
         """Run the project hierarchy test."""
         logger.info("Starting Vertex Tester - testing Project->Jobs->Appointments hierarchy")
 
         try:
+            # First test Rilla with recent data
+            await self.test_rilla_recent()
+            
+            # Then run the full hierarchy test
             await self.test_project_hierarchy()
 
         except KeyboardInterrupt:
@@ -154,6 +297,8 @@ class VertexTester:
         logger.info("Cleaning up Vertex Tester...")
         if hasattr(self.provider, 'close'):
             await self.provider.close()
+        if hasattr(self.rilla_service, 'rilla_client') and hasattr(self.rilla_service.rilla_client, 'close'):
+            await self.rilla_service.rilla_client.close()
 
 
 async def main():
