@@ -161,6 +161,8 @@ class CognitoAuthProvider(AuthProvider):
 
         # Use the configured domain from settings, not construct from user_pool_id
         self.cognito_domain = settings.cognito_domain
+        # Cache redirect URI to avoid dynamic lookup per request
+        self.oauth_redirect_uri = settings.oauth_redirect_uri
 
         if not all([self.user_pool_id, self.client_id]):
             raise ValueError("COGNITO_USER_POOL_ID and COGNITO_CLIENT_ID must be set")
@@ -387,7 +389,7 @@ class CognitoAuthProvider(AuthProvider):
                 "grant_type": "authorization_code",
                 "client_id": self.client_id,
                 "code": code,
-                "redirect_uri": get_auth_settings().oauth_redirect_uri,
+                "redirect_uri": self.oauth_redirect_uri,
             }
             if self.client_secret:
                 data["client_secret"] = self.client_secret
