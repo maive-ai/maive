@@ -2,7 +2,6 @@
 
 import logging
 import mimetypes
-from datetime import datetime
 from pathlib import Path
 from typing import TypeVar
 
@@ -106,29 +105,16 @@ class GeminiClient:
             logger.info(f"Uploading file: {file_path} with MIME type: {mime_type}")
 
             # Upload file using the google-genai library
-            uploaded_file = client.files.upload(
-                path=str(file_path),
-                display_name=request.display_name or file_path.name,
-                mime_type=mime_type,
-            )
+            uploaded_file = client.files.upload(file=str(file_path))
 
             # Convert to our metadata format
             metadata = FileMetadata(
                 name=uploaded_file.name,
-                display_name=uploaded_file.display_name or file_path.name,
-                mime_type=uploaded_file.mime_type,
-                size_bytes=uploaded_file.size_bytes,
-                create_time=datetime.fromisoformat(
-                    uploaded_file.create_time.rstrip("Z")
-                ),
-                update_time=datetime.fromisoformat(
-                    uploaded_file.update_time.rstrip("Z")
-                ),
-                expiration_time=datetime.fromisoformat(
-                    uploaded_file.expiration_time.rstrip("Z")
-                ),
-                sha256_hash=uploaded_file.sha256_hash,
-                uri=uploaded_file.uri,
+                display_name=getattr(uploaded_file, 'display_name', None) or file_path.name,
+                mime_type=getattr(uploaded_file, 'mime_type', None),
+                size_bytes=getattr(uploaded_file, 'size_bytes', None),
+                sha256_hash=getattr(uploaded_file, 'sha256_hash', None),
+                uri=getattr(uploaded_file, 'uri', None),
             )
 
             logger.info(f"File uploaded successfully: {metadata.name}")
@@ -274,16 +260,11 @@ class GeminiClient:
 
             return FileMetadata(
                 name=file.name,
-                display_name=file.display_name,
-                mime_type=file.mime_type,
-                size_bytes=file.size_bytes,
-                create_time=datetime.fromisoformat(file.create_time.rstrip("Z")),
-                update_time=datetime.fromisoformat(file.update_time.rstrip("Z")),
-                expiration_time=datetime.fromisoformat(
-                    file.expiration_time.rstrip("Z")
-                ),
-                sha256_hash=file.sha256_hash,
-                uri=file.uri,
+                display_name=getattr(file, 'display_name', None),
+                mime_type=getattr(file, 'mime_type', None),
+                size_bytes=getattr(file, 'size_bytes', None),
+                sha256_hash=getattr(file, 'sha256_hash', None),
+                uri=getattr(file, 'uri', None),
             )
 
         except Exception as e:
