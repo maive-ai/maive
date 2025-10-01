@@ -103,10 +103,10 @@ class Checklist(BaseModel):
 
     model_config = {"populate_by_name": True}
 
-    name: str = Field(..., description="Name of the checklist")
-    score: int = Field(..., description="Score for the conversation")
-    denominator: int = Field(..., description="Maximum possible score")
-    tracker_data: list[TrackerData] = Field(..., alias="trackerData", description="Individual trackers")
+    name: str | None = Field(None, description="Name of the checklist")
+    score: int | None = Field(None, description="Score for the conversation")
+    denominator: int | None = Field(None, description="Maximum possible score")
+    tracker_data: list[TrackerData] = Field(default_factory=list, alias="trackerData", description="Individual trackers")
 
 
 class Conversation(BaseModel):
@@ -143,6 +143,8 @@ class Conversation(BaseModel):
         description="Duration of longest customer monologue (seconds)"
     )
     total_comments: int = Field(..., alias="totalComments", description="Number of comments on the conversation")
+    audio_url: str | None = Field(None, alias="audioUrl", description="URL to download the audio file")
+    transcript_url: str | None = Field(None, alias="transcriptUrl", description="URL to download the transcript file")
 
 
 class Team(BaseModel):
