@@ -332,13 +332,12 @@
       "ProjectStatus": {
         "type": "string",
         "enum": [
-          "on_hold",
-          "active",
-          "completed",
+          "hold",
+          "dispatched",
+          "done",
           "cancelled",
           "scheduled",
-          "in_progress",
-          "pending"
+          "working"
         ],
         "title": "ProjectStatus",
         "description": "Project status values across CRM systems."
