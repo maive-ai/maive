@@ -93,13 +93,12 @@ export interface HTTPValidationError {
  */
 
 export const ProjectStatus = {
-    OnHold: 'on_hold',
-    Active: 'active',
-    Completed: 'completed',
+    Hold: 'hold',
+    Dispatched: 'dispatched',
+    Done: 'done',
     Cancelled: 'cancelled',
     Scheduled: 'scheduled',
-    InProgress: 'in_progress',
-    Pending: 'pending'
+    Working: 'working'
 } as const;
 
 export type ProjectStatus = typeof ProjectStatus[keyof typeof ProjectStatus];

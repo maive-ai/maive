@@ -8,6 +8,7 @@ must implement, ensuring consistent behavior across different CRM systems.
 from abc import ABC, abstractmethod
 
 from src.integrations.crm.schemas import ProjectStatusListResponse, ProjectStatusResponse
+from src.integrations.crm.provider_schemas import FormSubmissionListResponse
 
 
 class CRMProvider(ABC):
@@ -97,6 +98,24 @@ class CRMProvider(ABC):
 
         Raises:
             CRMError: If an error occurs while fetching job statuses
+        """
+        pass
+
+    @abstractmethod
+    async def get_all_form_submissions(self, form_ids: list[int], status: str | None = None, owners: list[dict] | None = None) -> FormSubmissionListResponse:
+        """
+        Get all form submissions for a specific form.
+
+        Args:
+            form_ids: List of form IDs to get submissions for
+            status: Optional form status to filter by (Started, Completed, Any)
+            owners: Optional list of owner objects with type and id
+
+        Returns:
+            FormSubmissionListResponse: List of all form submissions
+
+        Raises:
+            CRMError: If an error occurs while fetching form submissions
         """
         pass
 
