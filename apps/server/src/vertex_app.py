@@ -7,6 +7,7 @@ This application fetches a specific completed project for testing purposes.
 import asyncio
 from datetime import UTC, datetime, timedelta
 
+from src.ai.gemini import get_gemini_client, GenerateContentRequest
 from src.integrations.crm.base import CRMError
 from src.integrations.crm.constants import FormStatus
 from src.integrations.crm.providers.service_titan import ServiceTitanProvider
@@ -268,11 +269,42 @@ class VertexTester:
         except Exception as e:
             logger.error(f"❌ Error testing Rilla: {e}")
 
+    async def test_gemini_joke(self) -> None:
+        """Test Gemini API with a simple joke request."""
+        try:
+            logger.info("=" * 60)
+            logger.info("TESTING GEMINI API - Tell me a joke")
+            logger.info("=" * 60)
+
+            # Initialize Gemini client
+            gemini_client = get_gemini_client()
+
+            # Create request for a joke
+            request = GenerateContentRequest(
+                prompt="Tell me a joke"
+            )
+
+            # Generate content
+            response = await gemini_client.generate_content(request)
+
+            logger.info("✅ Gemini API Response:")
+            logger.info(f"   Generated text: {response.text}")
+            if response.usage:
+                logger.info(f"   Usage: {response.usage}")
+            if response.finish_reason:
+                logger.info(f"   Finish reason: {response.finish_reason}")
+
+        except Exception as e:
+            logger.error(f"❌ Error testing Gemini: {e}")
+
     async def run_test(self) -> None:
         """Run the form submissions test."""
         logger.info("Starting Vertex Tester - testing Form Submissions endpoint")
 
         try:
+            # Test Gemini API with a joke
+            await self.test_gemini_joke()
+
             # Test form submissions endpoint
             await self.test_form_submissions()
 
