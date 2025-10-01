@@ -5,6 +5,7 @@ This module provides the business logic layer for Rilla operations,
 sitting between the FastAPI routes and the Rilla client.
 """
 
+import asyncio
 from datetime import datetime, timedelta
 
 from src.integrations.rilla.client import RillaClient
@@ -48,6 +49,75 @@ class RillaService:
             return result
         except Exception as e:
             logger.error(f"Error exporting conversations: {e}")
+            raise
+
+    async def export_all_conversations(self, request: ConversationsExportRequest) -> ConversationsExportResponse:
+        """
+        Export ALL conversations across all pages concurrently.
+
+        Args:
+            request: The conversation export request (page will be ignored)
+
+        Returns:
+            ConversationsExportResponse: All conversations from all pages
+        """
+        try:
+            logger.info(f"Exporting ALL conversations from {request.from_date} to {request.to_date}")
+
+            # First, get page 1 to determine total pages
+            first_request = ConversationsExportRequest(
+                from_date=request.from_date,
+                to_date=request.to_date,
+                users=request.users,
+                date_type=request.date_type,
+                page=1,
+                limit=25,  # Use max limit
+            )
+            first_result = await self.rilla_client.export_conversations(first_request)
+
+            logger.info(f"Found {first_result.total_conversations} conversations across {first_result.total_pages} pages")
+
+            if first_result.total_pages <= 1:
+                # Only one page, return as is
+                return first_result
+
+            # Create requests for remaining pages
+            remaining_requests = []
+            for page_num in range(2, first_result.total_pages + 1):
+                page_request = ConversationsExportRequest(
+                    from_date=request.from_date,
+                    to_date=request.to_date,
+                    users=request.users,
+                    date_type=request.date_type,
+                    page=page_num,
+                    limit=25,
+                )
+                remaining_requests.append(page_request)
+
+            # Execute all remaining page requests concurrently
+            logger.info(f"Fetching {len(remaining_requests)} additional pages concurrently")
+            remaining_tasks = [
+                self.rilla_client.export_conversations(req) for req in remaining_requests
+            ]
+            remaining_results = await asyncio.gather(*remaining_tasks)
+
+            # Combine all conversations
+            all_conversations = list(first_result.conversations)
+            for result in remaining_results:
+                all_conversations.extend(result.conversations)
+
+            logger.info(f"Successfully collected {len(all_conversations)} conversations from all pages")
+
+            # Return combined result
+            return ConversationsExportResponse(
+                conversations=all_conversations,
+                current_page=1,
+                total_pages=1,
+                total_conversations=len(all_conversations),
+            )
+
+        except Exception as e:
+            logger.error(f"Error exporting all conversations: {e}")
             raise
 
     async def export_teams(self, request: TeamsExportRequest) -> TeamsExportResponse:
@@ -117,7 +187,8 @@ class RillaService:
             users=None,
         )
 
-        response = await self.rilla_client.export_conversations(request)
+        # Get ALL conversations across all pages
+        response = await self.export_all_conversations(request)
 
         # Filter to conversations matching this specific appointment (if appointment_id provided)
         if appointment_id is not None:
