@@ -1,7 +1,6 @@
 """Pydantic schemas for Gemini integration requests and responses."""
 
-from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -14,7 +13,8 @@ class FileUploadRequest(BaseModel):
         default=None, description="Optional display name for the file"
     )
     mime_type: Optional[str] = Field(
-        default=None, description="MIME type of the file (auto-detected if not provided)"
+        default=None,
+        description="MIME type of the file (auto-detected if not provided)",
     )
 
 
@@ -22,14 +22,11 @@ class FileMetadata(BaseModel):
     """Metadata for an uploaded file."""
 
     name: str = Field(description="Unique name/ID of the file")
-    display_name: Optional[str] = Field(description="Display name of the file")
-    mime_type: str = Field(description="MIME type of the file")
-    size_bytes: int = Field(description="Size of the file in bytes")
-    create_time: datetime = Field(description="When the file was created")
-    update_time: datetime = Field(description="When the file was last updated")
-    expiration_time: datetime = Field(description="When the file will be deleted")
-    sha256_hash: str = Field(description="SHA256 hash of the file")
-    uri: str = Field(description="URI of the uploaded file")
+    display_name: Optional[str] = Field(default=None, description="Display name of the file")
+    mime_type: Optional[str] = Field(default=None, description="MIME type of the file")
+    size_bytes: Optional[int] = Field(default=None, description="Size of the file in bytes")
+    sha256_hash: Optional[str] = Field(default=None, description="SHA256 hash of the file")
+    uri: Optional[str] = Field(default=None, description="URI of the uploaded file")
 
 
 class GenerateContentRequest(BaseModel):

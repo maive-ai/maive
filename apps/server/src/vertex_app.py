@@ -7,7 +7,7 @@ This application fetches a specific completed project for testing purposes.
 import asyncio
 from datetime import UTC, datetime, timedelta
 
-from src.ai.gemini import get_gemini_client, GenerateContentRequest
+from src.ai.gemini import get_gemini_client, GenerateContentRequest, FileUploadRequest
 from src.integrations.crm.base import CRMError
 from src.integrations.crm.constants import FormStatus
 from src.integrations.crm.providers.service_titan import ServiceTitanProvider
@@ -297,6 +297,65 @@ class VertexTester:
         except Exception as e:
             logger.error(f"❌ Error testing Gemini: {e}")
 
+    async def test_gemini_file_analysis(self) -> None:
+        """Test Gemini API with file upload and analysis."""
+        try:
+            logger.info("=" * 60)
+            logger.info("TESTING GEMINI API - File Upload and Analysis")
+            logger.info("=" * 60)
+
+            # Initialize Gemini client
+            gemini_client = get_gemini_client()
+
+            # Path to the PNG file
+            file_path = "/Users/willcray/maive/packages/brand/logos/Maive-Main-Logo-Transparent-Dark-Text.png"
+
+            logger.info(f"Uploading file: {file_path}")
+
+            # Upload the file
+            upload_request = FileUploadRequest(
+                file_path=file_path,
+                display_name="Maive Logo"
+            )
+
+            uploaded_file = await gemini_client.upload_file(upload_request)
+
+            logger.info("✅ File uploaded successfully:")
+            logger.info(f"   File name: {uploaded_file.name}")
+            logger.info(f"   Display name: {uploaded_file.display_name}")
+            logger.info(f"   MIME type: {uploaded_file.mime_type}")
+            logger.info(f"   Size: {uploaded_file.size_bytes} bytes")
+            logger.info(f"   URI: {uploaded_file.uri}")
+
+            # Generate content using the uploaded file
+            logger.info("Requesting file analysis from Gemini...")
+
+            analysis_request = GenerateContentRequest(
+                prompt="Please describe this image in detail. What do you see? What are the colors, design elements, and overall style?",
+                files=[uploaded_file.name]
+            )
+
+            response = await gemini_client.generate_content(analysis_request)
+
+            logger.info("✅ Gemini File Analysis Response:")
+            logger.info(f"   Generated analysis: {response.text}")
+            if response.usage:
+                logger.info(f"   Usage: {response.usage}")
+            if response.finish_reason:
+                logger.info(f"   Finish reason: {response.finish_reason}")
+
+            # Clean up - delete the uploaded file
+            logger.info("Cleaning up uploaded file...")
+            delete_response = await gemini_client.delete_file(uploaded_file.name)
+
+            if delete_response.success:
+                logger.info("✅ File cleaned up successfully")
+            else:
+                logger.warning(f"⚠️ File cleanup failed: {delete_response.message}")
+
+        except Exception as e:
+            logger.error(f"❌ Error testing Gemini file analysis: {e}")
+
     async def run_test(self) -> None:
         """Run the form submissions test."""
         logger.info("Starting Vertex Tester - testing Form Submissions endpoint")
@@ -304,6 +363,9 @@ class VertexTester:
         try:
             # Test Gemini API with a joke
             await self.test_gemini_joke()
+
+            # Test Gemini API with file upload and analysis
+            await self.test_gemini_file_analysis()
 
             # Test form submissions endpoint
             await self.test_form_submissions()
