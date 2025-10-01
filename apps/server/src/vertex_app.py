@@ -7,7 +7,8 @@ This application fetches a specific completed project for testing purposes.
 import asyncio
 from datetime import UTC, datetime, timedelta
 
-from src.ai.gemini import get_gemini_client, GenerateContentRequest, FileUploadRequest
+from src.ai.gemini import get_gemini_client
+from src.ai.gemini.schemas import FileUploadRequest, GenerateContentRequest
 from src.integrations.crm.base import CRMError
 from src.integrations.crm.constants import FormStatus
 from src.integrations.crm.providers.service_titan import ServiceTitanProvider
@@ -44,15 +45,12 @@ class VertexTester:
 
             # Get form submissions with completed status, no owner filter
             submissions_response = await self.provider.get_all_form_submissions(
-                form_ids=self.test_form_ids,
-                status=FormStatus.COMPLETED.value
+                form_ids=self.test_form_ids, status=FormStatus.COMPLETED.value
             )
 
             logger.info("✅ Form submissions response:")
             logger.info(f"   Total submissions: {submissions_response.total_count}")
-            logger.info(
-                f"   Submissions in response: {len(submissions_response.data)}"
-            )
+            logger.info(f"   Submissions in response: {len(submissions_response.data)}")
 
             # Log details of first few submissions
             if submissions_response.data:
@@ -280,9 +278,7 @@ class VertexTester:
             gemini_client = get_gemini_client()
 
             # Create request for a joke
-            request = GenerateContentRequest(
-                prompt="Tell me a joke"
-            )
+            request = GenerateContentRequest(prompt="Tell me a joke")
 
             # Generate content
             response = await gemini_client.generate_content(request)
@@ -314,8 +310,7 @@ class VertexTester:
 
             # Upload the file
             upload_request = FileUploadRequest(
-                file_path=file_path,
-                display_name="Maive Logo"
+                file_path=file_path, display_name="Maive Logo"
             )
 
             uploaded_file = await gemini_client.upload_file(upload_request)
@@ -332,7 +327,7 @@ class VertexTester:
 
             analysis_request = GenerateContentRequest(
                 prompt="Please describe this image in detail. What do you see? What are the colors, design elements, and overall style?",
-                files=[uploaded_file.name]
+                files=[uploaded_file.name],
             )
 
             response = await gemini_client.generate_content(analysis_request)
