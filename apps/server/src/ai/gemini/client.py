@@ -10,15 +10,7 @@ from google.genai import types
 from pydantic import BaseModel
 
 from src.ai.gemini.config import GeminiSettings
-from src.ai.gemini.exceptions import (
-    GeminiAPIError,
-    GeminiAuthenticationError,
-    GeminiBadRequestError,
-    GeminiContentGenerationError,
-    GeminiFileUploadError,
-    GeminiRateLimitError,
-    GeminiServerError,
-)
+from src.ai.gemini.exceptions import GeminiError
 from src.ai.gemini.schemas import (
     DeleteFileResponse,
     FileMetadata,
@@ -57,23 +49,12 @@ class GeminiClient:
                 logger.info("Gemini client initialized")
             except Exception as e:
                 logger.error(f"Failed to initialize Gemini client: {e}")
-                raise GeminiAuthenticationError(f"Failed to authenticate: {e}")
+                raise GeminiError(f"Failed to authenticate: {e}")
         return self._client
 
     def _handle_api_error(self, error: Exception, operation: str) -> None:
         """Handle API errors and convert to appropriate exceptions."""
-        error_msg = str(error).lower()
-
-        if "authentication" in error_msg or "unauthorized" in error_msg:
-            raise GeminiAuthenticationError(f"{operation} failed: {error}")
-        elif "rate limit" in error_msg or "quota" in error_msg:
-            raise GeminiRateLimitError(f"{operation} failed: {error}")
-        elif "bad request" in error_msg or "invalid" in error_msg:
-            raise GeminiBadRequestError(f"{operation} failed: {error}")
-        elif "server error" in error_msg or "internal" in error_msg:
-            raise GeminiServerError(f"{operation} failed: {error}")
-        else:
-            raise GeminiAPIError(f"{operation} failed: {error}")
+        raise GeminiError(f"{operation} failed: {error}")
 
     async def upload_file(self, request: FileUploadRequest) -> FileMetadata:
         """Upload a file to Gemini Files API.
@@ -93,7 +74,7 @@ class GeminiClient:
             file_path = Path(request.file_path)
 
             if not file_path.exists():
-                raise GeminiFileUploadError(f"File not found: {request.file_path}")
+                raise GeminiError(f"File not found: {request.file_path}")
 
             # Auto-detect MIME type if not provided
             mime_type = request.mime_type
@@ -122,7 +103,7 @@ class GeminiClient:
 
         except Exception as e:
             logger.error(f"File upload failed: {e}")
-            if isinstance(e, (GeminiFileUploadError, GeminiAPIError)):
+            if isinstance(e, GeminiError):
                 raise
             self._handle_api_error(e, "File upload")
 
@@ -189,7 +170,7 @@ class GeminiClient:
 
         except Exception as e:
             logger.error(f"Content generation failed: {e}")
-            if isinstance(e, GeminiContentGenerationError):
+            if isinstance(e, GeminiError):
                 raise
             self._handle_api_error(e, "Content generation")
 
@@ -232,13 +213,11 @@ class GeminiClient:
                 return request.response_model(**json_data)
             except (json.JSONDecodeError, ValueError) as e:
                 logger.error(f"Failed to parse structured response: {e}")
-                raise GeminiContentGenerationError(
-                    f"Failed to parse structured response: {e}"
-                )
+                raise GeminiError(f"Failed to parse structured response: {e}")
 
         except Exception as e:
             logger.error(f"Structured content generation failed: {e}")
-            if isinstance(e, GeminiContentGenerationError):
+            if isinstance(e, GeminiError):
                 raise
             self._handle_api_error(e, "Structured content generation")
 
