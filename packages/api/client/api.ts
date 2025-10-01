@@ -74,6 +74,328 @@ export type CRMProvider = typeof CRMProvider[keyof typeof CRMProvider];
 
 
 /**
+ * Response model for estimate item information.
+ * @export
+ * @interface EstimateItemResponse
+ */
+export interface EstimateItemResponse {
+    /**
+     * ID of the estimate item
+     * @type {number}
+     * @memberof EstimateItemResponse
+     */
+    'id': number;
+    /**
+     * SKU details
+     * @type {SkuModel}
+     * @memberof EstimateItemResponse
+     */
+    'sku': SkuModel;
+    /**
+     * SKU account
+     * @type {string}
+     * @memberof EstimateItemResponse
+     */
+    'skuAccount': string;
+    /**
+     * Item description
+     * @type {string}
+     * @memberof EstimateItemResponse
+     */
+    'description': string;
+    /**
+     * 
+     * @type {number}
+     * @memberof EstimateItemResponse
+     */
+    'membershipTypeId'?: number | null;
+    /**
+     * Quantity
+     * @type {number}
+     * @memberof EstimateItemResponse
+     */
+    'qty': number;
+    /**
+     * Unit rate
+     * @type {number}
+     * @memberof EstimateItemResponse
+     */
+    'unitRate': number;
+    /**
+     * Total amount
+     * @type {number}
+     * @memberof EstimateItemResponse
+     */
+    'total': number;
+    /**
+     * Unit cost
+     * @type {number}
+     * @memberof EstimateItemResponse
+     */
+    'unitCost': number;
+    /**
+     * Total cost
+     * @type {number}
+     * @memberof EstimateItemResponse
+     */
+    'totalCost': number;
+    /**
+     * 
+     * @type {string}
+     * @memberof EstimateItemResponse
+     */
+    'itemGroupName'?: string | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof EstimateItemResponse
+     */
+    'itemGroupRootId'?: number | null;
+    /**
+     * Date/time (in UTC) when the item was created
+     * @type {string}
+     * @memberof EstimateItemResponse
+     */
+    'createdOn': string;
+    /**
+     * Date/time (in UTC) when the item was last modified
+     * @type {string}
+     * @memberof EstimateItemResponse
+     */
+    'modifiedOn': string;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof EstimateItemResponse
+     */
+    'chargeable'?: boolean | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof EstimateItemResponse
+     */
+    'invoiceItemId'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof EstimateItemResponse
+     */
+    'budgetCodeId'?: number | null;
+}
+/**
+ * Response model for estimate items list.
+ * @export
+ * @interface EstimateItemsResponse
+ */
+export interface EstimateItemsResponse {
+    /**
+     * List of estimate items
+     * @type {Array<EstimateItemResponse>}
+     * @memberof EstimateItemsResponse
+     */
+    'items': Array<EstimateItemResponse>;
+    /**
+     * 
+     * @type {number}
+     * @memberof EstimateItemsResponse
+     */
+    'total_count'?: number | null;
+    /**
+     * Current page number
+     * @type {number}
+     * @memberof EstimateItemsResponse
+     */
+    'page': number;
+    /**
+     * Page size
+     * @type {number}
+     * @memberof EstimateItemsResponse
+     */
+    'page_size': number;
+    /**
+     * Whether there are more items
+     * @type {boolean}
+     * @memberof EstimateItemsResponse
+     */
+    'has_more': boolean;
+}
+/**
+ * Response model for Service Titan estimate information.
+ * @export
+ * @interface EstimateResponse
+ */
+export interface EstimateResponse {
+    /**
+     * ID of the estimate
+     * @type {number}
+     * @memberof EstimateResponse
+     */
+    'id': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof EstimateResponse
+     */
+    'jobId'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof EstimateResponse
+     */
+    'projectId'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof EstimateResponse
+     */
+    'locationId'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof EstimateResponse
+     */
+    'customerId'?: number | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof EstimateResponse
+     */
+    'name'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof EstimateResponse
+     */
+    'jobNumber'?: string | null;
+    /**
+     * 
+     * @type {EstimateStatus}
+     * @memberof EstimateResponse
+     */
+    'status'?: EstimateStatus | null;
+    /**
+     * Review status of the estimate
+     * @type {EstimateReviewStatus}
+     * @memberof EstimateResponse
+     */
+    'reviewStatus': EstimateReviewStatus;
+    /**
+     * 
+     * @type {string}
+     * @memberof EstimateResponse
+     */
+    'summary'?: string | null;
+    /**
+     * Date/time (in UTC) when the estimate was created
+     * @type {string}
+     * @memberof EstimateResponse
+     */
+    'createdOn': string;
+    /**
+     * Date/time (in UTC) when estimate was last modified
+     * @type {string}
+     * @memberof EstimateResponse
+     */
+    'modifiedOn': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof EstimateResponse
+     */
+    'soldOn'?: string | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof EstimateResponse
+     */
+    'soldBy'?: number | null;
+    /**
+     * Whether the estimate is active
+     * @type {boolean}
+     * @memberof EstimateResponse
+     */
+    'active': boolean;
+    /**
+     * Subtotal amount
+     * @type {number}
+     * @memberof EstimateResponse
+     */
+    'subtotal': number;
+    /**
+     * Tax amount
+     * @type {number}
+     * @memberof EstimateResponse
+     */
+    'tax': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof EstimateResponse
+     */
+    'businessUnitId'?: number | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof EstimateResponse
+     */
+    'businessUnitName'?: string | null;
+    /**
+     * Whether this estimate is recommended
+     * @type {boolean}
+     * @memberof EstimateResponse
+     */
+    'isRecommended': boolean;
+    /**
+     * 
+     * @type {number}
+     * @memberof EstimateResponse
+     */
+    'budgetCodeId'?: number | null;
+    /**
+     * Whether this estimate is a change order
+     * @type {boolean}
+     * @memberof EstimateResponse
+     */
+    'isChangeOrder': boolean;
+}
+
+
+/**
+ * Estimate review status values.
+ * @export
+ * @enum {string}
+ */
+
+export const EstimateReviewStatus = {
+    None: 'None',
+    NeedsApproval: 'NeedsApproval',
+    Approved: 'Approved',
+    NotApproved: 'NotApproved'
+} as const;
+
+export type EstimateReviewStatus = typeof EstimateReviewStatus[keyof typeof EstimateReviewStatus];
+
+
+/**
+ * Estimate status model with value and name.
+ * @export
+ * @interface EstimateStatus
+ */
+export interface EstimateStatus {
+    /**
+     * Status value
+     * @type {number}
+     * @memberof EstimateStatus
+     */
+    'value': number;
+    /**
+     * Status name
+     * @type {string}
+     * @memberof EstimateStatus
+     */
+    'name': string;
+}
+/**
  * 
  * @export
  * @interface HTTPValidationError
@@ -85,6 +407,169 @@ export interface HTTPValidationError {
      * @memberof HTTPValidationError
      */
     'detail'?: Array<ValidationError>;
+}
+/**
+ * Response model for Service Titan job information.
+ * @export
+ * @interface JobResponse
+ */
+export interface JobResponse {
+    /**
+     * ID of the job
+     * @type {number}
+     * @memberof JobResponse
+     */
+    'id': number;
+    /**
+     * Job number
+     * @type {string}
+     * @memberof JobResponse
+     */
+    'jobNumber': string;
+    /**
+     * 
+     * @type {number}
+     * @memberof JobResponse
+     */
+    'projectId'?: number | null;
+    /**
+     * ID of the job\'s customer
+     * @type {number}
+     * @memberof JobResponse
+     */
+    'customerId': number;
+    /**
+     * ID of the job\'s location
+     * @type {number}
+     * @memberof JobResponse
+     */
+    'locationId': number;
+    /**
+     * Status of the job
+     * @type {string}
+     * @memberof JobResponse
+     */
+    'jobStatus': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof JobResponse
+     */
+    'completedOn'?: string | null;
+    /**
+     * ID of the job\'s business unit
+     * @type {number}
+     * @memberof JobResponse
+     */
+    'businessUnitId': number;
+    /**
+     * ID of job type
+     * @type {number}
+     * @memberof JobResponse
+     */
+    'jobTypeId': number;
+    /**
+     * Priority of the job
+     * @type {string}
+     * @memberof JobResponse
+     */
+    'priority': string;
+    /**
+     * ID of the job\'s campaign
+     * @type {number}
+     * @memberof JobResponse
+     */
+    'campaignId': number;
+    /**
+     * Number of appointments on the job
+     * @type {number}
+     * @memberof JobResponse
+     */
+    'appointmentCount': number;
+    /**
+     * ID of the first appointment on the job
+     * @type {number}
+     * @memberof JobResponse
+     */
+    'firstAppointmentId': number;
+    /**
+     * ID of the last appointment on the job
+     * @type {number}
+     * @memberof JobResponse
+     */
+    'lastAppointmentId': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof JobResponse
+     */
+    'recallForId'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof JobResponse
+     */
+    'warrantyId'?: number | null;
+    /**
+     * Whether the job is a no-charge job
+     * @type {boolean}
+     * @memberof JobResponse
+     */
+    'noCharge': boolean;
+    /**
+     * Whether notifications will be sent to customers
+     * @type {boolean}
+     * @memberof JobResponse
+     */
+    'notificationsEnabled': boolean;
+    /**
+     * Date/time (in UTC) when the job was created
+     * @type {string}
+     * @memberof JobResponse
+     */
+    'createdOn': string;
+    /**
+     * ID of the user who created the job
+     * @type {number}
+     * @memberof JobResponse
+     */
+    'createdById': number;
+    /**
+     * Date/time (in UTC) when job was last modified
+     * @type {string}
+     * @memberof JobResponse
+     */
+    'modifiedOn': string;
+    /**
+     * Tags on the job
+     * @type {Array<number>}
+     * @memberof JobResponse
+     */
+    'tagTypeIds': Array<number>;
+    /**
+     * 
+     * @type {string}
+     * @memberof JobResponse
+     */
+    'customerPo'?: string | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof JobResponse
+     */
+    'invoiceId'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof JobResponse
+     */
+    'total'?: number | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof JobResponse
+     */
+    'summary'?: string | null;
 }
 /**
  * Project status values across CRM systems.
@@ -185,6 +670,61 @@ export const Role = {
 export type Role = typeof Role[keyof typeof Role];
 
 
+/**
+ * SKU model for estimate items.
+ * @export
+ * @interface SkuModel
+ */
+export interface SkuModel {
+    /**
+     * SKU ID
+     * @type {number}
+     * @memberof SkuModel
+     */
+    'id': number;
+    /**
+     * SKU name
+     * @type {string}
+     * @memberof SkuModel
+     */
+    'name': string;
+    /**
+     * Display name
+     * @type {string}
+     * @memberof SkuModel
+     */
+    'displayName': string;
+    /**
+     * SKU type
+     * @type {string}
+     * @memberof SkuModel
+     */
+    'type': string;
+    /**
+     * Sold hours
+     * @type {number}
+     * @memberof SkuModel
+     */
+    'soldHours': number;
+    /**
+     * General ledger account ID
+     * @type {number}
+     * @memberof SkuModel
+     */
+    'generalLedgerAccountId': number;
+    /**
+     * General ledger account name
+     * @type {string}
+     * @memberof SkuModel
+     */
+    'generalLedgerAccountName': string;
+    /**
+     * Date/time (in UTC) when SKU was last modified
+     * @type {string}
+     * @memberof SkuModel
+     */
+    'modifiedOn': string;
+}
 /**
  * User information.
  * @export
@@ -639,6 +1179,153 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
             };
         },
         /**
+         * Get a specific estimate by ID.  Args:     tenant: The tenant ID     estimate_id: The unique identifier for the estimate     crm_service: The CRM service instance from dependency injection  Returns:     EstimateResponse: The estimate information  Raises:     HTTPException: If the estimate is not found or an error occurs
+         * @summary Get Estimate
+         * @param {number} tenant 
+         * @param {number} estimateId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getEstimateApiCrmTenantEstimatesEstimateIdGet: async (tenant: number, estimateId: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'tenant' is not null or undefined
+            assertParamExists('getEstimateApiCrmTenantEstimatesEstimateIdGet', 'tenant', tenant)
+            // verify required parameter 'estimateId' is not null or undefined
+            assertParamExists('getEstimateApiCrmTenantEstimatesEstimateIdGet', 'estimateId', estimateId)
+            const localVarPath = `/api/crm/{tenant}/estimates/{estimate_id}`
+                .replace(`{${"tenant"}}`, encodeURIComponent(String(tenant)))
+                .replace(`{${"estimate_id"}}`, encodeURIComponent(String(estimateId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Get estimate items with optional filters.  Args:     tenant: The tenant ID     estimate_id: Optional estimate ID to filter items     ids: Optional comma-separated string of item IDs (max 50)     active: Optional active status filter (True, False, Any)     page: Optional page number for pagination     page_size: Optional page size for pagination (max 50)     crm_service: The CRM service instance from dependency injection  Returns:     EstimateItemsResponse: The paginated list of estimate items  Raises:     HTTPException: If an error occurs
+         * @summary Get Estimate Items
+         * @param {number} tenant 
+         * @param {number | null} [estimateId] 
+         * @param {string | null} [ids] 
+         * @param {string | null} [active] 
+         * @param {number | null} [page] 
+         * @param {number | null} [pageSize] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getEstimateItemsApiCrmTenantEstimatesItemsGet: async (tenant: number, estimateId?: number | null, ids?: string | null, active?: string | null, page?: number | null, pageSize?: number | null, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'tenant' is not null or undefined
+            assertParamExists('getEstimateItemsApiCrmTenantEstimatesItemsGet', 'tenant', tenant)
+            const localVarPath = `/api/crm/{tenant}/estimates/items`
+                .replace(`{${"tenant"}}`, encodeURIComponent(String(tenant)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            if (estimateId !== undefined) {
+                localVarQueryParameter['estimate_id'] = estimateId;
+            }
+
+            if (ids !== undefined) {
+                localVarQueryParameter['ids'] = ids;
+            }
+
+            if (active !== undefined) {
+                localVarQueryParameter['active'] = active;
+            }
+
+            if (page !== undefined) {
+                localVarQueryParameter['page'] = page;
+            }
+
+            if (pageSize !== undefined) {
+                localVarQueryParameter['page_size'] = pageSize;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Get a specific job by ID.  Args:     tenant: The tenant ID     job_id: The unique identifier for the job     crm_service: The CRM service instance from dependency injection  Returns:     JobResponse: The job information  Raises:     HTTPException: If the job is not found or an error occurs
+         * @summary Get Job
+         * @param {number} tenant 
+         * @param {number} jobId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getJobApiCrmTenantJobsJobIdGet: async (tenant: number, jobId: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'tenant' is not null or undefined
+            assertParamExists('getJobApiCrmTenantJobsJobIdGet', 'tenant', tenant)
+            // verify required parameter 'jobId' is not null or undefined
+            assertParamExists('getJobApiCrmTenantJobsJobIdGet', 'jobId', jobId)
+            const localVarPath = `/api/crm/{tenant}/jobs/{job_id}`
+                .replace(`{${"tenant"}}`, encodeURIComponent(String(tenant)))
+                .replace(`{${"job_id"}}`, encodeURIComponent(String(jobId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
          * Get the status of a specific project by ID.  Args:     project_id: The unique identifier for the project     crm_service: The CRM service instance from dependency injection  Returns:     ProjectStatusResponse: The project status information  Raises:     HTTPException: If the project is not found or an error occurs
          * @summary Get Project Status
          * @param {string} projectId 
@@ -699,6 +1386,52 @@ export const CRMApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
+         * Get a specific estimate by ID.  Args:     tenant: The tenant ID     estimate_id: The unique identifier for the estimate     crm_service: The CRM service instance from dependency injection  Returns:     EstimateResponse: The estimate information  Raises:     HTTPException: If the estimate is not found or an error occurs
+         * @summary Get Estimate
+         * @param {number} tenant 
+         * @param {number} estimateId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getEstimateApiCrmTenantEstimatesEstimateIdGet(tenant: number, estimateId: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<EstimateResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getEstimateApiCrmTenantEstimatesEstimateIdGet(tenant, estimateId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.getEstimateApiCrmTenantEstimatesEstimateIdGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Get estimate items with optional filters.  Args:     tenant: The tenant ID     estimate_id: Optional estimate ID to filter items     ids: Optional comma-separated string of item IDs (max 50)     active: Optional active status filter (True, False, Any)     page: Optional page number for pagination     page_size: Optional page size for pagination (max 50)     crm_service: The CRM service instance from dependency injection  Returns:     EstimateItemsResponse: The paginated list of estimate items  Raises:     HTTPException: If an error occurs
+         * @summary Get Estimate Items
+         * @param {number} tenant 
+         * @param {number | null} [estimateId] 
+         * @param {string | null} [ids] 
+         * @param {string | null} [active] 
+         * @param {number | null} [page] 
+         * @param {number | null} [pageSize] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getEstimateItemsApiCrmTenantEstimatesItemsGet(tenant: number, estimateId?: number | null, ids?: string | null, active?: string | null, page?: number | null, pageSize?: number | null, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<EstimateItemsResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getEstimateItemsApiCrmTenantEstimatesItemsGet(tenant, estimateId, ids, active, page, pageSize, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.getEstimateItemsApiCrmTenantEstimatesItemsGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Get a specific job by ID.  Args:     tenant: The tenant ID     job_id: The unique identifier for the job     crm_service: The CRM service instance from dependency injection  Returns:     JobResponse: The job information  Raises:     HTTPException: If the job is not found or an error occurs
+         * @summary Get Job
+         * @param {number} tenant 
+         * @param {number} jobId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getJobApiCrmTenantJobsJobIdGet(tenant: number, jobId: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<JobResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getJobApiCrmTenantJobsJobIdGet(tenant, jobId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.getJobApiCrmTenantJobsJobIdGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
          * Get the status of a specific project by ID.  Args:     project_id: The unique identifier for the project     crm_service: The CRM service instance from dependency injection  Returns:     ProjectStatusResponse: The project status information  Raises:     HTTPException: If the project is not found or an error occurs
          * @summary Get Project Status
          * @param {string} projectId 
@@ -731,6 +1464,43 @@ export const CRMApiFactory = function (configuration?: Configuration, basePath?:
             return localVarFp.getAllProjectStatusesApiCrmProjectsStatusGet(options).then((request) => request(axios, basePath));
         },
         /**
+         * Get a specific estimate by ID.  Args:     tenant: The tenant ID     estimate_id: The unique identifier for the estimate     crm_service: The CRM service instance from dependency injection  Returns:     EstimateResponse: The estimate information  Raises:     HTTPException: If the estimate is not found or an error occurs
+         * @summary Get Estimate
+         * @param {number} tenant 
+         * @param {number} estimateId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getEstimateApiCrmTenantEstimatesEstimateIdGet(tenant: number, estimateId: number, options?: RawAxiosRequestConfig): AxiosPromise<EstimateResponse> {
+            return localVarFp.getEstimateApiCrmTenantEstimatesEstimateIdGet(tenant, estimateId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Get estimate items with optional filters.  Args:     tenant: The tenant ID     estimate_id: Optional estimate ID to filter items     ids: Optional comma-separated string of item IDs (max 50)     active: Optional active status filter (True, False, Any)     page: Optional page number for pagination     page_size: Optional page size for pagination (max 50)     crm_service: The CRM service instance from dependency injection  Returns:     EstimateItemsResponse: The paginated list of estimate items  Raises:     HTTPException: If an error occurs
+         * @summary Get Estimate Items
+         * @param {number} tenant 
+         * @param {number | null} [estimateId] 
+         * @param {string | null} [ids] 
+         * @param {string | null} [active] 
+         * @param {number | null} [page] 
+         * @param {number | null} [pageSize] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getEstimateItemsApiCrmTenantEstimatesItemsGet(tenant: number, estimateId?: number | null, ids?: string | null, active?: string | null, page?: number | null, pageSize?: number | null, options?: RawAxiosRequestConfig): AxiosPromise<EstimateItemsResponse> {
+            return localVarFp.getEstimateItemsApiCrmTenantEstimatesItemsGet(tenant, estimateId, ids, active, page, pageSize, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Get a specific job by ID.  Args:     tenant: The tenant ID     job_id: The unique identifier for the job     crm_service: The CRM service instance from dependency injection  Returns:     JobResponse: The job information  Raises:     HTTPException: If the job is not found or an error occurs
+         * @summary Get Job
+         * @param {number} tenant 
+         * @param {number} jobId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getJobApiCrmTenantJobsJobIdGet(tenant: number, jobId: number, options?: RawAxiosRequestConfig): AxiosPromise<JobResponse> {
+            return localVarFp.getJobApiCrmTenantJobsJobIdGet(tenant, jobId, options).then((request) => request(axios, basePath));
+        },
+        /**
          * Get the status of a specific project by ID.  Args:     project_id: The unique identifier for the project     crm_service: The CRM service instance from dependency injection  Returns:     ProjectStatusResponse: The project status information  Raises:     HTTPException: If the project is not found or an error occurs
          * @summary Get Project Status
          * @param {string} projectId 
@@ -759,6 +1529,49 @@ export class CRMApi extends BaseAPI {
      */
     public getAllProjectStatusesApiCrmProjectsStatusGet(options?: RawAxiosRequestConfig) {
         return CRMApiFp(this.configuration).getAllProjectStatusesApiCrmProjectsStatusGet(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Get a specific estimate by ID.  Args:     tenant: The tenant ID     estimate_id: The unique identifier for the estimate     crm_service: The CRM service instance from dependency injection  Returns:     EstimateResponse: The estimate information  Raises:     HTTPException: If the estimate is not found or an error occurs
+     * @summary Get Estimate
+     * @param {number} tenant 
+     * @param {number} estimateId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CRMApi
+     */
+    public getEstimateApiCrmTenantEstimatesEstimateIdGet(tenant: number, estimateId: number, options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).getEstimateApiCrmTenantEstimatesEstimateIdGet(tenant, estimateId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Get estimate items with optional filters.  Args:     tenant: The tenant ID     estimate_id: Optional estimate ID to filter items     ids: Optional comma-separated string of item IDs (max 50)     active: Optional active status filter (True, False, Any)     page: Optional page number for pagination     page_size: Optional page size for pagination (max 50)     crm_service: The CRM service instance from dependency injection  Returns:     EstimateItemsResponse: The paginated list of estimate items  Raises:     HTTPException: If an error occurs
+     * @summary Get Estimate Items
+     * @param {number} tenant 
+     * @param {number | null} [estimateId] 
+     * @param {string | null} [ids] 
+     * @param {string | null} [active] 
+     * @param {number | null} [page] 
+     * @param {number | null} [pageSize] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CRMApi
+     */
+    public getEstimateItemsApiCrmTenantEstimatesItemsGet(tenant: number, estimateId?: number | null, ids?: string | null, active?: string | null, page?: number | null, pageSize?: number | null, options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).getEstimateItemsApiCrmTenantEstimatesItemsGet(tenant, estimateId, ids, active, page, pageSize, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Get a specific job by ID.  Args:     tenant: The tenant ID     job_id: The unique identifier for the job     crm_service: The CRM service instance from dependency injection  Returns:     JobResponse: The job information  Raises:     HTTPException: If the job is not found or an error occurs
+     * @summary Get Job
+     * @param {number} tenant 
+     * @param {number} jobId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CRMApi
+     */
+    public getJobApiCrmTenantJobsJobIdGet(tenant: number, jobId: number, options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).getJobApiCrmTenantJobsJobIdGet(tenant, jobId, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
