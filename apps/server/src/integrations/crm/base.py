@@ -7,8 +7,13 @@ must implement, ensuring consistent behavior across different CRM systems.
 
 from abc import ABC, abstractmethod
 
-from src.integrations.crm.schemas import ProjectStatusListResponse, ProjectStatusResponse
 from src.integrations.crm.provider_schemas import FormSubmissionListResponse
+from src.integrations.crm.schemas import (
+    EstimateResponse,
+    JobResponse,
+    ProjectStatusListResponse,
+    ProjectStatusResponse,
+)
 
 
 class CRMProvider(ABC):
@@ -44,7 +49,9 @@ class CRMProvider(ABC):
         pass
 
     @abstractmethod
-    async def get_appointment_status(self, appointment_id: str) -> ProjectStatusResponse:
+    async def get_appointment_status(
+        self, appointment_id: str
+    ) -> ProjectStatusResponse:
         """
         Get the status of a specific appointment by ID.
 
@@ -73,36 +80,12 @@ class CRMProvider(ABC):
         pass
 
     @abstractmethod
-    async def get_job_status(self, job_id: str) -> ProjectStatusResponse:
-        """
-        Get the status of a specific job by ID.
-
-        Args:
-            job_id: The unique identifier for the job
-
-        Returns:
-            ProjectStatusResponse: The job status information
-
-        Raises:
-            CRMError: If the job is not found or an error occurs
-        """
-        pass
-
-    @abstractmethod
-    async def get_all_job_statuses(self) -> ProjectStatusListResponse:
-        """
-        Get the status of all jobs.
-
-        Returns:
-            ProjectStatusListResponse: List of all job statuses
-
-        Raises:
-            CRMError: If an error occurs while fetching job statuses
-        """
-        pass
-
-    @abstractmethod
-    async def get_all_form_submissions(self, form_ids: list[int], status: str | None = None, owners: list[dict] | None = None) -> FormSubmissionListResponse:
+    async def get_all_form_submissions(
+        self,
+        form_ids: list[int],
+        status: str | None = None,
+        owners: list[dict] | None = None,
+    ) -> FormSubmissionListResponse:
         """
         Get all form submissions for a specific form.
 
@@ -116,6 +99,38 @@ class CRMProvider(ABC):
 
         Raises:
             CRMError: If an error occurs while fetching form submissions
+        """
+        pass
+
+    @abstractmethod
+    async def get_job(self, job_id: int) -> JobResponse:
+        """
+        Get a specific job by ID.
+
+        Args:
+            job_id: The unique identifier for the job
+
+        Returns:
+            JobResponse: The job information
+
+        Raises:
+            CRMError: If the job is not found or an error occurs
+        """
+        pass
+
+    @abstractmethod
+    async def get_estimate(self, estimate_id: int) -> EstimateResponse:
+        """
+        Get a specific estimate by ID.
+
+        Args:
+            estimate_id: The unique identifier for the estimate
+
+        Returns:
+            EstimateResponse: The estimate information
+
+        Raises:
+            CRMError: If the estimate is not found or an error occurs
         """
         pass
 

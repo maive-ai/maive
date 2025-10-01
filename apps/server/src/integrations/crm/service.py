@@ -6,7 +6,14 @@ sitting between the FastAPI routes and the CRM providers.
 """
 
 from src.integrations.crm.base import CRMError, CRMProvider
-from src.integrations.crm.schemas import CRMErrorResponse, ProjectStatusListResponse, ProjectStatusResponse
+from src.integrations.crm.schemas import (
+    CRMErrorResponse,
+    EstimateItemsResponse,
+    EstimateResponse,
+    JobResponse,
+    ProjectStatusListResponse,
+    ProjectStatusResponse,
+)
 from src.utils.logger import logger
 
 
@@ -73,6 +80,113 @@ class CRMService:
             )
         except Exception as e:
             logger.error(f"Unexpected error getting all projects: {e}")
+            return CRMErrorResponse(
+                error=f"Unexpected error: {str(e)}",
+                error_code="UNKNOWN_ERROR",
+                provider=getattr(self.crm_provider, 'provider_name', None)
+            )
+
+    async def get_job(self, job_id: int) -> JobResponse | CRMErrorResponse:
+        """
+        Get a specific job by ID.
+
+        Args:
+            job_id: The job identifier
+
+        Returns:
+            JobResponse or CRMErrorResponse: The result of the operation
+        """
+        try:
+            logger.info(f"Getting job: {job_id}")
+            result = await self.crm_provider.get_job(job_id)
+            logger.info(f"Successfully retrieved job {job_id}")
+            return result
+        except CRMError as e:
+            logger.error(f"CRM error getting job {job_id}: {e.message}")
+            return CRMErrorResponse(
+                error=e.message,
+                error_code=e.error_code,
+                provider=getattr(self.crm_provider, 'provider_name', None)
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error getting job {job_id}: {e}")
+            return CRMErrorResponse(
+                error=f"Unexpected error: {str(e)}",
+                error_code="UNKNOWN_ERROR",
+                provider=getattr(self.crm_provider, 'provider_name', None)
+            )
+
+    async def get_estimate(self, estimate_id: int) -> EstimateResponse | CRMErrorResponse:
+        """
+        Get a specific estimate by ID.
+
+        Args:
+            estimate_id: The estimate identifier
+
+        Returns:
+            EstimateResponse or CRMErrorResponse: The result of the operation
+        """
+        try:
+            logger.info(f"Getting estimate: {estimate_id}")
+            result = await self.crm_provider.get_estimate(estimate_id)
+            logger.info(f"Successfully retrieved estimate {estimate_id}")
+            return result
+        except CRMError as e:
+            logger.error(f"CRM error getting estimate {estimate_id}: {e.message}")
+            return CRMErrorResponse(
+                error=e.message,
+                error_code=e.error_code,
+                provider=getattr(self.crm_provider, 'provider_name', None)
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error getting estimate {estimate_id}: {e}")
+            return CRMErrorResponse(
+                error=f"Unexpected error: {str(e)}",
+                error_code="UNKNOWN_ERROR",
+                provider=getattr(self.crm_provider, 'provider_name', None)
+            )
+
+    async def get_estimate_items(
+        self,
+        estimate_id: int | None = None,
+        ids: str | None = None,
+        active: str | None = None,
+        page: int | None = None,
+        page_size: int | None = None,
+    ) -> EstimateItemsResponse | CRMErrorResponse:
+        """
+        Get estimate items with optional filters.
+
+        Args:
+            estimate_id: Optional estimate ID to filter items
+            ids: Optional comma-separated string of item IDs
+            active: Optional active status filter
+            page: Optional page number
+            page_size: Optional page size
+
+        Returns:
+            EstimateItemsResponse or CRMErrorResponse: The result of the operation
+        """
+        try:
+            logger.info(f"Getting estimate items for estimate_id: {estimate_id}")
+            result = await self.crm_provider.get_estimate_items(
+                estimate_id=estimate_id,
+                ids=ids,
+                active=active,
+                page=page,
+                page_size=page_size,
+            )
+            logger.info(f"Successfully retrieved {len(result.items)} estimate items")
+            return result
+        except CRMError as e:
+            logger.error(f"CRM error getting estimate items: {e.message}")
+            return CRMErrorResponse(
+                error=e.message,
+                error_code=e.error_code,
+                provider=getattr(self.crm_provider, 'provider_name', None)
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error getting estimate items: {e}")
             return CRMErrorResponse(
                 error=f"Unexpected error: {str(e)}",
                 error_code="UNKNOWN_ERROR",

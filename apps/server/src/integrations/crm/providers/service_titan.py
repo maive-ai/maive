@@ -14,8 +14,15 @@ from src.integrations.crm.base import CRMError, CRMProvider
 from src.integrations.crm.config import get_crm_settings
 from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
 from src.integrations.crm.constants import ProjectStatus, ServiceTitanEndpoints
-from src.integrations.crm.provider_schemas import CRMProviderDataFactory, FormSubmissionListResponse
+from src.integrations.crm.provider_schemas import (
+    CRMProviderDataFactory,
+    FormSubmissionListResponse,
+)
 from src.integrations.crm.schemas import (
+    EstimateItemResponse,
+    EstimateItemsResponse,
+    EstimateResponse,
+    JobResponse,
     ProjectStatusListResponse,
     ProjectStatusResponse,
 )
@@ -63,7 +70,7 @@ class ServiceTitanProvider(CRMProvider):
             response = await self.client.post(
                 self.token_url,
                 data=auth_data,
-                headers={"Content-Type": "application/x-www-form-urlencoded"}
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
             response.raise_for_status()
 
@@ -136,7 +143,9 @@ class ServiceTitanProvider(CRMProvider):
             logger.error(f"Unexpected error fetching project {project_id}: {e}")
             raise CRMError(f"Failed to fetch project status: {str(e)}", "UNKNOWN_ERROR")
 
-    async def get_appointment_status(self, appointment_id: str) -> ProjectStatusResponse:
+    async def get_appointment_status(
+        self, appointment_id: str
+    ) -> ProjectStatusResponse:
         """
         Get the status of a specific appointment by ID from Service Titan.
 
@@ -164,13 +173,17 @@ class ServiceTitanProvider(CRMProvider):
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
-                raise CRMError(f"Appointment with ID {appointment_id} not found", "NOT_FOUND")
+                raise CRMError(
+                    f"Appointment with ID {appointment_id} not found", "NOT_FOUND"
+                )
             else:
                 logger.error(f"HTTP error fetching appointment {appointment_id}: {e}")
                 raise CRMError(f"Failed to fetch appointment status: {e}", "HTTP_ERROR")
         except Exception as e:
             logger.error(f"Unexpected error fetching appointment {appointment_id}: {e}")
-            raise CRMError(f"Failed to fetch appointment status: {str(e)}", "UNKNOWN_ERROR")
+            raise CRMError(
+                f"Failed to fetch appointment status: {str(e)}", "UNKNOWN_ERROR"
+            )
 
     async def get_all_appointment_statuses(self) -> ProjectStatusListResponse:
         """
@@ -212,88 +225,6 @@ class ServiceTitanProvider(CRMProvider):
             logger.error(f"Unexpected error fetching all appointments: {e}")
             raise CRMError(
                 f"Failed to fetch appointment statuses: {str(e)}", "UNKNOWN_ERROR"
-            )
-
-    async def get_job_status(self, job_id: str) -> ProjectStatusResponse:
-        """
-        Get the status of a specific job by ID from Service Titan.
-
-        Args:
-            job_id: The Service Titan job ID
-
-        Returns:
-            ProjectStatusResponse: The job status information
-
-        Raises:
-            CRMError: If the job is not found or an error occurs
-        """
-        try:
-            url = f"{self.base_api_url}{ServiceTitanEndpoints.JOB_BY_ID.format(tenant_id=self.tenant_id, id=job_id)}"
-
-            logger.debug(f"Fetching job status for ID: {job_id}")
-
-            response = await self._make_authenticated_request("GET", url)
-            response.raise_for_status()
-
-            data = response.json()
-
-            # Transform Service Titan job data to our schema
-            return self._transform_job_to_project_status(data)
-
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 404:
-                raise CRMError(f"Job with ID {job_id} not found", "NOT_FOUND")
-            else:
-                logger.error(f"HTTP error fetching job {job_id}: {e}")
-                raise CRMError(f"Failed to fetch job status: {e}", "HTTP_ERROR")
-        except Exception as e:
-            logger.error(f"Unexpected error fetching job {job_id}: {e}")
-            raise CRMError(f"Failed to fetch job status: {str(e)}", "UNKNOWN_ERROR")
-
-    async def get_all_job_statuses(self) -> ProjectStatusListResponse:
-        """
-        Get the status of all jobs from Service Titan.
-
-        Returns:
-            ProjectStatusListResponse: List of all job statuses
-
-        Raises:
-            CRMError: If an error occurs while fetching job statuses
-        """
-        try:
-            url = f"{self.base_api_url}{ServiceTitanEndpoints.JOBS.format(tenant_id=self.tenant_id)}"
-
-            logger.debug("Fetching all job statuses")
-
-            response = await self._make_authenticated_request("GET", url)
-            response.raise_for_status()
-
-            data = response.json()
-
-            # Debug: Log the actual response structure for jobs
-            logger.info(f"Jobs endpoint response keys: {list(data.keys())}")
-            logger.info(f"Jobs response sample: {str(data)[:500]}...")
-
-            # Service Titan returns data in a "data" field with pagination info
-            jobs = data.get("data", [])
-            total_count = data.get("totalCount") or data.get("count") or len(jobs)
-
-            # Transform all jobs to project statuses
-            projects = [self._transform_job_to_project_status(job) for job in jobs]
-
-            return ProjectStatusListResponse(
-                projects=projects,
-                total_count=total_count,
-                provider=CRMProviderEnum.SERVICE_TITAN,
-            )
-
-        except httpx.HTTPStatusError as e:
-            logger.error(f"HTTP error fetching all jobs: {e}")
-            raise CRMError(f"Failed to fetch job statuses: {e}", "HTTP_ERROR")
-        except Exception as e:
-            logger.error(f"Unexpected error fetching all jobs: {e}")
-            raise CRMError(
-                f"Failed to fetch job statuses: {str(e)}", "UNKNOWN_ERROR"
             )
 
     async def get_all_project_statuses(self) -> ProjectStatusListResponse:
@@ -345,7 +276,12 @@ class ServiceTitanProvider(CRMProvider):
                 f"Failed to fetch project statuses: {str(e)}", "UNKNOWN_ERROR"
             )
 
-    async def get_all_form_submissions(self, form_ids: list[int], status: str | None = None, owners: list[dict] | None = None) -> FormSubmissionListResponse:
+    async def get_all_form_submissions(
+        self,
+        form_ids: list[int],
+        status: str | None = None,
+        owners: list[dict] | None = None,
+    ) -> FormSubmissionListResponse:
         """
         Get all form submissions from Service Titan for a specific form.
 
@@ -377,7 +313,9 @@ class ServiceTitanProvider(CRMProvider):
             if owners:
                 params["owners"] = owners
 
-            logger.debug(f"Fetching form submissions for form IDs {form_ids} with status: {status}, owners: {owners}")
+            logger.debug(
+                f"Fetching form submissions for form IDs {form_ids} with status: {status}, owners: {owners}"
+            )
             logger.debug(f"Request URL: {url}")
             logger.debug(f"Request params: {params}")
 
@@ -434,6 +372,209 @@ class ServiceTitanProvider(CRMProvider):
             updated_at=updated_at,
             provider_data=provider_data_model.model_dump(),
         )
+
+    async def get_estimate(self, estimate_id: int) -> EstimateResponse:
+        """
+        Get a specific estimate by ID from Service Titan.
+
+        Args:
+            estimate_id: The Service Titan estimate ID
+
+        Returns:
+            EstimateResponse: The estimate information
+
+        Raises:
+            CRMError: If the estimate is not found or an error occurs
+        """
+        try:
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.ESTIMATE_BY_ID.format(tenant_id=self.tenant_id, id=estimate_id)}"
+
+            logger.debug(f"Fetching estimate for ID: {estimate_id}")
+
+            response = await self._make_authenticated_request("GET", url)
+            response.raise_for_status()
+
+            data = response.json()
+
+            # Return the raw response as EstimateResponse
+            return EstimateResponse(**data)
+
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise CRMError(f"Estimate with ID {estimate_id} not found", "NOT_FOUND")
+            else:
+                logger.error(f"HTTP error fetching estimate {estimate_id}: {e}")
+                raise CRMError(f"Failed to fetch estimate: {e}", "HTTP_ERROR")
+        except Exception as e:
+            logger.error(f"Unexpected error fetching estimate {estimate_id}: {e}")
+            raise CRMError(f"Failed to fetch estimate: {str(e)}", "UNKNOWN_ERROR")
+
+    async def get_job(self, job_id: int) -> JobResponse:
+        """
+        Get a specific job by ID from Service Titan.
+
+        Args:
+            job_id: The Service Titan job ID
+
+        Returns:
+            JobResponse: The job information
+
+        Raises:
+            CRMError: If the job is not found or an error occurs
+        """
+        try:
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.JOB_BY_ID.format(tenant_id=self.tenant_id, id=job_id)}"
+
+            logger.debug(f"Fetching job for ID: {job_id}")
+
+            response = await self._make_authenticated_request("GET", url)
+            response.raise_for_status()
+
+            data = response.json()
+
+            # Return the raw response as JobResponse
+            return JobResponse(**data)
+
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise CRMError(f"Job with ID {job_id} not found", "NOT_FOUND")
+            else:
+                logger.error(f"HTTP error fetching job {job_id}: {e}")
+                raise CRMError(f"Failed to fetch job: {e}", "HTTP_ERROR")
+        except Exception as e:
+            logger.error(f"Unexpected error fetching job {job_id}: {e}")
+            raise CRMError(f"Failed to fetch job: {str(e)}", "UNKNOWN_ERROR")
+
+    async def get_estimates(
+        self,
+        job_id: int | None = None,
+        page: int | None = None,
+        page_size: int | None = None,
+        ids: str | None = None,
+    ) -> list[EstimateResponse]:
+        """
+        Get estimates from Service Titan with optional filters.
+
+        Args:
+            job_id: Optional job ID to filter estimates
+            page: Optional page number for pagination
+            page_size: Optional page size for pagination (max 50)
+            ids: Optional comma-separated string of estimate IDs
+
+        Returns:
+            list[EstimateResponse]: List of estimates
+
+        Raises:
+            CRMError: If an error occurs while fetching estimates
+        """
+        try:
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.ESTIMATES.format(tenant_id=self.tenant_id)}"
+
+            # Build query parameters
+            params = {}
+            if job_id is not None:
+                params["jobId"] = job_id
+            if page is not None:
+                params["page"] = page
+            if page_size is not None:
+                params["pageSize"] = min(page_size, 50)  # Enforce max of 50
+            if ids is not None:
+                params["ids"] = ids
+
+            logger.debug(f"Fetching estimates with params: {params}")
+
+            response = await self._make_authenticated_request("GET", url, params=params)
+            response.raise_for_status()
+
+            data = response.json()
+
+            # Service Titan returns data in a "data" field with pagination info
+            estimates_data = data.get("data", [])
+
+            # Convert each estimate to EstimateResponse
+            estimates = [EstimateResponse(**estimate_data) for estimate_data in estimates_data]
+
+            logger.info(f"Found {len(estimates)} estimates")
+            return estimates
+
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error fetching estimates: {e}")
+            raise CRMError(f"Failed to fetch estimates: {e}", "HTTP_ERROR")
+        except Exception as e:
+            logger.error(f"Unexpected error fetching estimates: {e}")
+            raise CRMError(f"Failed to fetch estimates: {str(e)}", "UNKNOWN_ERROR")
+
+    async def get_estimate_items(
+        self,
+        estimate_id: int | None = None,
+        ids: str | None = None,
+        active: str | None = None,
+        page: int | None = None,
+        page_size: int | None = None,
+    ) -> EstimateItemsResponse:
+        """
+        Get estimate items from Service Titan with optional filters.
+
+        Args:
+            estimate_id: Optional estimate ID to filter items
+            ids: Optional comma-separated string of item IDs (max 50)
+            active: Optional active status filter ("True", "False", "Any")
+            page: Optional page number for pagination
+            page_size: Optional page size for pagination (max 50)
+
+        Returns:
+            EstimateItemsResponse: Paginated list of estimate items
+
+        Raises:
+            CRMError: If an error occurs while fetching estimate items
+        """
+        try:
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.ESTIMATE_ITEMS.format(tenant_id=self.tenant_id)}"
+
+            # Build query parameters
+            params = {}
+            if estimate_id is not None:
+                params["estimateId"] = estimate_id
+            if ids is not None:
+                params["ids"] = ids
+            if active is not None:
+                params["active"] = active
+            if page is not None:
+                params["page"] = page
+            if page_size is not None:
+                params["pageSize"] = min(page_size, 50)  # Enforce max of 50
+
+            logger.debug(f"Fetching estimate items with params: {params}")
+
+            response = await self._make_authenticated_request("GET", url, params=params)
+            response.raise_for_status()
+
+            data = response.json()
+
+            # Service Titan returns data in a "data" field with pagination info
+            items_data = data.get("data", [])
+
+            # Convert each item to EstimateItemResponse
+            items = [EstimateItemResponse(**item_data) for item_data in items_data]
+
+            # Build the response with pagination info
+            items_response = EstimateItemsResponse(
+                items=items,
+                total_count=data.get("totalCount"),
+                page=data.get("page", page or 1),
+                page_size=data.get("pageSize", page_size or 50),
+                has_more=data.get("hasMore", False),
+            )
+
+            logger.info(f"Found {len(items)} estimate items")
+            return items_response
+
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error fetching estimate items: {e}")
+            raise CRMError(f"Failed to fetch estimate items: {e}", "HTTP_ERROR")
+        except Exception as e:
+            logger.error(f"Unexpected error fetching estimate items: {e}")
+            raise CRMError(f"Failed to fetch estimate items: {str(e)}", "UNKNOWN_ERROR")
 
     async def close(self):
         """Close the HTTP client."""
