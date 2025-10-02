@@ -4,11 +4,73 @@ All URIs are relative to *http://localhost*
 
 |Method | HTTP request | Description|
 |------------- | ------------- | -------------|
+|[**addJobNoteApiCrmTenantJobsJobIdNotesPost**](#addjobnoteapicrmtenantjobsjobidnotespost) | **POST** /api/crm/{tenant}/jobs/{job_id}/notes | Add Job Note|
 |[**getAllProjectStatusesApiCrmProjectsStatusGet**](#getallprojectstatusesapicrmprojectsstatusget) | **GET** /api/crm/projects/status | Get All Project Statuses|
 |[**getEstimateApiCrmTenantEstimatesEstimateIdGet**](#getestimateapicrmtenantestimatesestimateidget) | **GET** /api/crm/{tenant}/estimates/{estimate_id} | Get Estimate|
 |[**getEstimateItemsApiCrmTenantEstimatesItemsGet**](#getestimateitemsapicrmtenantestimatesitemsget) | **GET** /api/crm/{tenant}/estimates/items | Get Estimate Items|
 |[**getJobApiCrmTenantJobsJobIdGet**](#getjobapicrmtenantjobsjobidget) | **GET** /api/crm/{tenant}/jobs/{job_id} | Get Job|
 |[**getProjectStatusApiCrmProjectsProjectIdStatusGet**](#getprojectstatusapicrmprojectsprojectidstatusget) | **GET** /api/crm/projects/{project_id}/status | Get Project Status|
+
+# **addJobNoteApiCrmTenantJobsJobIdNotesPost**
+> JobNoteResponse addJobNoteApiCrmTenantJobsJobIdNotesPost()
+
+Add a note to a specific job.  Args:     tenant: The tenant ID     job_id: The unique identifier for the job     text: The text content of the note     pin_to_top: Whether to pin the note to the top (optional)     crm_service: The CRM service instance from dependency injection  Returns:     JobNoteResponse: The created note information  Raises:     HTTPException: If the job is not found or an error occurs
+
+### Example
+
+```typescript
+import {
+    CRMApi,
+    Configuration
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new CRMApi(configuration);
+
+let tenant: number; // (default to undefined)
+let jobId: number; // (default to undefined)
+let text: string; // (default to undefined)
+let pinToTop: boolean; // (optional) (default to undefined)
+
+const { status, data } = await apiInstance.addJobNoteApiCrmTenantJobsJobIdNotesPost(
+    tenant,
+    jobId,
+    text,
+    pinToTop
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **tenant** | [**number**] |  | defaults to undefined|
+| **jobId** | [**number**] |  | defaults to undefined|
+| **text** | [**string**] |  | defaults to undefined|
+| **pinToTop** | [**boolean**] |  | (optional) defaults to undefined|
+
+
+### Return type
+
+**JobNoteResponse**
+
+### Authorization
+
+[HTTPBearer](../README.md#HTTPBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | Successful Response |  -  |
+|**422** | Validation Error |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **getAllProjectStatusesApiCrmProjectsStatusGet**
 > ProjectStatusListResponse getAllProjectStatusesApiCrmProjectsStatusGet()
