@@ -11,10 +11,10 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from src.auth.dependencies import get_current_user
 from src.auth.schemas import User
-from src.integrations.voice_ai.constants import VoiceAIErrorCode
-from src.integrations.voice_ai.dependencies import get_voice_ai_service
-from src.integrations.voice_ai.schemas import CallRequest, CallResponse, VoiceAIErrorResponse
-from src.integrations.voice_ai.service import VoiceAIService
+from src.ai.voice_ai.constants import VoiceAIErrorCode
+from src.ai.voice_ai.dependencies import get_voice_ai_service
+from src.ai.voice_ai.schemas import CallRequest, CallResponse, VoiceAIErrorResponse
+from src.ai.voice_ai.service import VoiceAIService
 
 router = APIRouter(prefix="/voice-ai", tags=["Voice AI"])
 

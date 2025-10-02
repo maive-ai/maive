@@ -5,10 +5,10 @@ This module provides factory functions to create Voice AI provider instances
 based on configuration, following the same pattern as the CRM module.
 """
 
-from src.integrations.voice_ai.base import VoiceAIProvider
-from src.integrations.voice_ai.config import get_voice_ai_settings
-from src.integrations.voice_ai.constants import VoiceAIProvider as VoiceAIProviderEnum
-from src.integrations.voice_ai.providers.vapi import VapiProvider
+from src.ai.voice_ai.base import VoiceAIProvider
+from src.ai.voice_ai.config import get_voice_ai_settings
+from src.ai.voice_ai.constants import VoiceAIProvider as VoiceAIProviderEnum
+from src.ai.voice_ai.providers.vapi import VapiProvider
 from src.utils.logger import logger
 
 

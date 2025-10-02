@@ -9,7 +9,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from src.integrations.voice_ai.constants import CallStatus, VoiceAIErrorCode, VoiceAIProvider as VoiceAIProviderEnum, WebhookEventType
+from src.ai.voice_ai.constants import CallStatus, VoiceAIErrorCode, VoiceAIProvider as VoiceAIProviderEnum, WebhookEventType
 
 
 class CallRequest(BaseModel):
