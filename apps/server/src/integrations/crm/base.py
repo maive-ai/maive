@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 from src.integrations.crm.provider_schemas import FormSubmissionListResponse
 from src.integrations.crm.schemas import (
     EstimateResponse,
+    JobNoteResponse,
     JobResponse,
     ProjectStatusListResponse,
     ProjectStatusResponse,
@@ -131,6 +132,24 @@ class CRMProvider(ABC):
 
         Raises:
             CRMError: If the estimate is not found or an error occurs
+        """
+        pass
+
+    @abstractmethod
+    async def add_job_note(self, job_id: int, text: str, pin_to_top: bool | None = None) -> JobNoteResponse:
+        """
+        Add a note to a specific job.
+
+        Args:
+            job_id: The unique identifier for the job
+            text: The text content of the note
+            pin_to_top: Whether to pin the note to the top (optional)
+
+        Returns:
+            JobNoteResponse: The created note information
+
+        Raises:
+            CRMError: If the job is not found or an error occurs
         """
         pass
 

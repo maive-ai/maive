@@ -11,9 +11,11 @@ from src.auth.dependencies import get_current_user
 from src.auth.schemas import User
 from src.integrations.crm.dependencies import get_crm_service
 from src.integrations.crm.schemas import (
+    AddJobNoteRequest,
     CRMErrorResponse,
     EstimateItemsResponse,
     EstimateResponse,
+    JobNoteResponse,
     JobResponse,
     ProjectStatusListResponse,
     ProjectStatusResponse,
@@ -181,5 +183,41 @@ async def get_estimate_items(
 
     if isinstance(result, CRMErrorResponse):
         raise HTTPException(status_code=500, detail=result.error)
+
+    return result
+
+
+@router.post("/{tenant}/jobs/{job_id}/notes", response_model=JobNoteResponse)
+async def add_job_note(
+    tenant: int,
+    job_id: int,
+    text: str,
+    pin_to_top: bool | None = None,
+    current_user: User = Depends(get_current_user),
+    crm_service: CRMService = Depends(get_crm_service),
+) -> JobNoteResponse:
+    """
+    Add a note to a specific job.
+
+    Args:
+        tenant: The tenant ID
+        job_id: The unique identifier for the job
+        text: The text content of the note
+        pin_to_top: Whether to pin the note to the top (optional)
+        crm_service: The CRM service instance from dependency injection
+
+    Returns:
+        JobNoteResponse: The created note information
+
+    Raises:
+        HTTPException: If the job is not found or an error occurs
+    """
+    result = await crm_service.add_job_note(job_id, text, pin_to_top)
+
+    if isinstance(result, CRMErrorResponse):
+        if result.error_code == "NOT_FOUND":
+            raise HTTPException(status_code=404, detail=result.error)
+        else:
+            raise HTTPException(status_code=500, detail=result.error)
 
     return result
