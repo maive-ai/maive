@@ -13,7 +13,7 @@ import httpx
 from src.integrations.crm.base import CRMError, CRMProvider
 from src.integrations.crm.config import get_crm_settings
 from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
-from src.integrations.crm.constants import ProjectStatus, ServiceTitanEndpoints
+from src.integrations.crm.constants import ServiceTitanEndpoints, Status
 from src.integrations.crm.provider_schemas import (
     CRMProviderDataFactory,
     FormSubmissionListResponse,
@@ -30,6 +30,8 @@ from src.integrations.crm.schemas import (
     JobResponse,
     ProjectStatusListResponse,
     ProjectStatusResponse,
+    ProjectSubStatusListResponse,
+    UpdateProjectRequest,
 )
 from src.utils.logger import logger
 
@@ -353,9 +355,14 @@ class ServiceTitanProvider(CRMProvider):
         Returns:
             ProjectStatusResponse: Transformed project status
         """
-        # Map Service Titan job status to our ProjectStatus enum
+        # Get Service Titan job status (it already matches our Status enum values)
         service_titan_status = job_data.get("status", "")
-        mapped_status = ProjectStatus.from_service_titan(service_titan_status)
+        # Convert to Status enum - Service Titan uses exact same values
+        try:
+            mapped_status = Status(service_titan_status)
+        except ValueError:
+            # Default to SCHEDULED if status is unknown
+            mapped_status = Status.SCHEDULED
 
         # Extract update timestamp
         updated_at = None
@@ -725,6 +732,154 @@ class ServiceTitanProvider(CRMProvider):
         except Exception as e:
             logger.error(f"Unexpected error removing cancellation from job {job_id}: {e}")
             raise CRMError(f"Failed to remove cancellation: {str(e)}", "UNKNOWN_ERROR")
+
+    async def get_project_substatuses(
+        self,
+        name: str | None = None,
+        status_id: int | None = None,
+        active: str | None = "True",
+        page: int | None = None,
+        page_size: int | None = None,
+    ) -> ProjectSubStatusListResponse:
+        """
+        Get project sub statuses from Service Titan.
+
+        Args:
+            name: Optional filter by project sub status name
+            status_id: Optional filter by parent project status id
+            active: Optional active status filter (True, False, Any)
+            page: Optional page number
+            page_size: Optional page size
+
+        Returns:
+            ProjectSubStatusListResponse: List of project sub statuses
+
+        Raises:
+            CRMError: If an error occurs
+        """
+        try:
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.PROJECT_SUBSTATUSES.format(tenant_id=self.tenant_id)}"
+
+            params: dict[str, Any] = {}
+            if name is not None:
+                params["name"] = name
+            if status_id is not None:
+                params["statusId"] = status_id
+            if active is not None:
+                params["active"] = active
+            if page is not None:
+                params["page"] = page
+            if page_size is not None:
+                params["pageSize"] = page_size
+
+            logger.debug(f"Fetching project substatuses with params: {params}")
+
+            response = await self._make_authenticated_request("GET", url, params=params)
+            response.raise_for_status()
+
+            data = response.json()
+            logger.info(f"Found {len(data.get('data', []))} project substatuses")
+
+            return ProjectSubStatusListResponse(**data)
+
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error fetching project substatuses: {e}")
+            raise CRMError(f"Failed to fetch project substatuses: {e}", "HTTP_ERROR")
+        except Exception as e:
+            logger.error(f"Unexpected error fetching project substatuses: {e}")
+            raise CRMError(f"Failed to fetch project substatuses: {str(e)}", "UNKNOWN_ERROR")
+
+    async def get_project_by_id(self, project_id: int) -> dict[str, Any]:
+        """
+        Get a project by ID from Service Titan.
+
+        Args:
+            project_id: The Service Titan project ID
+
+        Returns:
+            dict: Project data
+
+        Raises:
+            CRMError: If the project is not found or an error occurs
+        """
+        try:
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.PROJECT_BY_ID.format(tenant_id=self.tenant_id, id=project_id)}"
+
+            logger.debug(f"Fetching project {project_id}")
+
+            response = await self._make_authenticated_request("GET", url)
+            response.raise_for_status()
+
+            data = response.json()
+            logger.info(f"Successfully fetched project {project_id}")
+
+            return data
+
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise CRMError(f"Project with ID {project_id} not found", "NOT_FOUND")
+            else:
+                logger.error(f"HTTP error fetching project {project_id}: {e}")
+                raise CRMError(f"Failed to fetch project: {e}", "HTTP_ERROR")
+        except Exception as e:
+            logger.error(f"Unexpected error fetching project {project_id}: {e}")
+            raise CRMError(f"Failed to fetch project: {str(e)}", "UNKNOWN_ERROR")
+
+    async def update_project(self, request: UpdateProjectRequest) -> dict[str, Any]:
+        """
+        Update a project in Service Titan.
+
+        Args:
+            request: Update project request with fields to update
+
+        Returns:
+            dict: Updated project data
+
+        Raises:
+            CRMError: If the project is not found or an error occurs
+        """
+        try:
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.PROJECT_UPDATE.format(tenant_id=self.tenant_id, id=request.project_id)}"
+
+            # Dump Pydantic model excluding None values and using API aliases
+            request_body = request.model_dump(exclude_none=True, by_alias=True, exclude={"tenant", "project_id", "external_data"})
+
+            # Handle external_data separately - API expects specific format
+            if request.external_data is not None:
+                # Service Titan approved application GUID
+                approved_guid = "4a1ac44b-bab3-4de9-9a59-b40327e3fd42"
+                request_body["externalData"] = {
+                    "applicationGuid": approved_guid,
+                    "patchMode": "Merge",  # Use Merge to preserve existing data
+                    "externalData": [
+                        {"key": item.key, "value": item.value}
+                        for item in request.external_data
+                    ]
+                }
+
+            logger.debug(f"Updating project {request.project_id} with data: {request_body}")
+
+            response = await self._make_authenticated_request("PATCH", url, json=request_body)
+            response.raise_for_status()
+
+            data = response.json()
+            logger.info(f"Successfully updated project {request.project_id}")
+
+            return data
+
+        except httpx.HTTPStatusError as e:
+            error_body = e.response.text
+            logger.error(f"HTTP {e.response.status_code} error updating project {request.project_id}: {error_body}")
+
+            if e.response.status_code == 404:
+                raise CRMError(f"Project with ID {request.project_id} not found", "NOT_FOUND")
+            elif e.response.status_code == 400:
+                raise CRMError(f"Invalid request data for project {request.project_id}: {error_body}", "INVALID_REQUEST")
+            else:
+                raise CRMError(f"Failed to update project: {error_body}", "HTTP_ERROR")
+        except Exception as e:
+            logger.error(f"Unexpected error updating project {request.project_id}: {e}")
+            raise CRMError(f"Failed to update project: {str(e)}", "UNKNOWN_ERROR")
 
     async def close(self):
         """Close the HTTP client."""
