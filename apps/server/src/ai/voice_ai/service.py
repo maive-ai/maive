@@ -5,9 +5,9 @@ This module provides the business logic layer for Voice AI operations,
 sitting between the FastAPI routes and the Voice AI providers.
 """
 
-from src.integrations.voice_ai.base import VoiceAIError, VoiceAIProvider
-from src.integrations.voice_ai.constants import VoiceAIErrorCode
-from src.integrations.voice_ai.schemas import CallRequest, CallResponse, VoiceAIErrorResponse
+from src.ai.voice_ai.base import VoiceAIError, VoiceAIProvider
+from src.ai.voice_ai.constants import VoiceAIErrorCode
+from src.ai.voice_ai.schemas import CallRequest, CallResponse, VoiceAIErrorResponse
 from src.utils.logger import logger
 
 

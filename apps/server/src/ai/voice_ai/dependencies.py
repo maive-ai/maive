@@ -7,9 +7,9 @@ FastAPI endpoints, following the same pattern as the CRM module.
 
 from fastapi import Depends
 
-from src.integrations.voice_ai.base import VoiceAIProvider
-from src.integrations.voice_ai.providers.factory import get_voice_ai_provider
-from src.integrations.voice_ai.service import VoiceAIService
+from src.ai.voice_ai.base import VoiceAIProvider
+from src.ai.voice_ai.providers.factory import get_voice_ai_provider
+from src.ai.voice_ai.service import VoiceAIService
 
 
 def get_voice_ai_provider_dependency() -> VoiceAIProvider:

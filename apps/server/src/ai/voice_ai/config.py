@@ -8,7 +8,7 @@ for Voice AI integrations using Pydantic settings.
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from src.integrations.voice_ai.constants import VoiceAIProvider
+from src.ai.voice_ai.constants import VoiceAIProvider
 from src.utils.logger import logger
 
 

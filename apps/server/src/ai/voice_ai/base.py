@@ -7,7 +7,7 @@ must implement, ensuring consistent behavior across different voice AI systems.
 
 from abc import ABC, abstractmethod
 
-from src.integrations.voice_ai.schemas import CallRequest, CallResponse, WebhookEvent
+from src.ai.voice_ai.schemas import CallRequest, CallResponse, WebhookEvent
 
 
 class VoiceAIProvider(ABC):

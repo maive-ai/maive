@@ -12,11 +12,11 @@ import httpx
 import phonenumbers
 from pydantic import ValidationError
 
-from src.integrations.voice_ai.base import VoiceAIError, VoiceAIProvider
-from src.integrations.voice_ai.config import get_vapi_settings, get_voice_ai_settings
-from src.integrations.voice_ai.constants import CallStatus, VoiceAIErrorCode, VoiceAIProvider as VoiceAIProviderEnum, WebhookEventType
-from src.integrations.voice_ai.providers.vapi_schemas import VapiCallData, VapiEndpoints, VapiMessage, VapiWebhookPayload
-from src.integrations.voice_ai.schemas import (
+from src.ai.voice_ai.base import VoiceAIError, VoiceAIProvider
+from src.ai.voice_ai.config import get_vapi_settings, get_voice_ai_settings
+from src.ai.voice_ai.constants import CallStatus, VoiceAIErrorCode, VoiceAIProvider as VoiceAIProviderEnum, WebhookEventType
+from src.ai.voice_ai.providers.vapi_schemas import VapiCallData, VapiEndpoints, VapiMessage, VapiWebhookPayload
+from src.ai.voice_ai.schemas import (
     CallEndedData,
     CallRequest,
     CallResponse,
