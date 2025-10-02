@@ -148,6 +148,7 @@ class ServiceTitanEndpoints:
     # Project endpoints
     PROJECT_SUBSTATUSES = "/jpm/v2/tenant/{tenant_id}/project-substatuses"
     PROJECT_UPDATE = "/jpm/v2/tenant/{tenant_id}/projects/{id}"
+    PROJECT_NOTES = "/jpm/v2/tenant/{tenant_id}/projects/{id}/notes"
 
     # Estimates endpoints
     ESTIMATES = "/sales/v2/tenant/{tenant_id}/estimates"

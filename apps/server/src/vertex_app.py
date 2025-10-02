@@ -772,7 +772,16 @@ class VertexTester:
             logger.info(f"   New SubStatus: {result.get('subStatus')}")
             logger.info(f"   External Data: {result.get('externalData', [])}")
 
-            logger.info("\n✅ PROJECT UPDATE TEST COMPLETE")
+            # Step 3: Add a note to the project
+            logger.info(f"\nStep 3: Adding note to project {project_id}")
+            note_text = "discrepancy found between call recording, estimate, and cool down form"
+            note_result = await self.provider.add_project_note(project_id, note_text, pin_to_top=True)
+            logger.info("✅ Project note added successfully!")
+            logger.info(f"   Note Text: {note_result.text}")
+            logger.info(f"   Is Pinned: {note_result.is_pinned}")
+            logger.info(f"   Created On: {note_result.created_on}")
+
+            logger.info("\n✅ PROJECT UPDATE AND NOTE TEST COMPLETE")
 
         except CRMError as e:
             logger.error(f"❌ CRM error during test: {e.message} (Code: {e.error_code})")

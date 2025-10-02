@@ -214,6 +214,25 @@ class JobNoteResponse(BaseModel):
     modified_on: datetime = Field(..., description="Date/time (in UTC) the note was modified", alias="modifiedOn")
 
 
+class AddProjectNoteRequest(BaseModel):
+    """Request model for adding a note to a project."""
+
+    tenant: int = Field(..., description="Tenant ID")
+    project_id: int = Field(..., description="ID of the project to add note to", alias="projectId")
+    text: str = Field(..., description="Text content of the note")
+    pin_to_top: bool | None = Field(None, description="Whether to pin the note to the top", alias="pinToTop")
+
+
+class ProjectNoteResponse(BaseModel):
+    """Response model for project note."""
+
+    text: str = Field(..., description="Text content of the note")
+    is_pinned: bool = Field(..., description="Whether the note is pinned to the top", alias="isPinned")
+    created_by_id: int = Field(..., description="ID of user who created this note", alias="createdById")
+    created_on: datetime = Field(..., description="Date/time (in UTC) the note was created", alias="createdOn")
+    modified_on: datetime = Field(..., description="Date/time (in UTC) the note was modified", alias="modifiedOn")
+
+
 class JobHoldReasonResponse(BaseModel):
     """Response model for job hold reason."""
 

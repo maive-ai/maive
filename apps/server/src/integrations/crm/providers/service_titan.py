@@ -28,6 +28,7 @@ from src.integrations.crm.schemas import (
     JobHoldReasonsListResponse,
     JobNoteResponse,
     JobResponse,
+    ProjectNoteResponse,
     ProjectStatusListResponse,
     ProjectStatusResponse,
     ProjectSubStatusListResponse,
@@ -880,6 +881,50 @@ class ServiceTitanProvider(CRMProvider):
         except Exception as e:
             logger.error(f"Unexpected error updating project {request.project_id}: {e}")
             raise CRMError(f"Failed to update project: {str(e)}", "UNKNOWN_ERROR")
+
+    async def add_project_note(self, project_id: int, text: str, pin_to_top: bool | None = None) -> ProjectNoteResponse:
+        """
+        Add a note to a specific project in Service Titan.
+
+        Args:
+            project_id: The Service Titan project ID
+            text: The text content of the note
+            pin_to_top: Whether to pin the note to the top (optional)
+
+        Returns:
+            ProjectNoteResponse: The created note information
+
+        Raises:
+            CRMError: If the project is not found or an error occurs
+        """
+        try:
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.PROJECT_NOTES.format(tenant_id=self.tenant_id, id=project_id)}"
+
+            # Prepare request body with camelCase field names
+            request_body = {"text": text}
+            if pin_to_top is not None:
+                request_body["pinToTop"] = pin_to_top
+
+            logger.debug(f"Adding note to project {project_id}")
+
+            response = await self._make_authenticated_request("POST", url, json=request_body)
+            response.raise_for_status()
+
+            data = response.json()
+
+            # Return the response as ProjectNoteResponse
+            return ProjectNoteResponse(**data)
+
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise CRMError(f"Project with ID {project_id} not found", "NOT_FOUND")
+            else:
+                error_body = e.response.text
+                logger.error(f"HTTP error adding note to project {project_id}: {error_body}")
+                raise CRMError(f"Failed to add note to project: {error_body}", "HTTP_ERROR")
+        except Exception as e:
+            logger.error(f"Unexpected error adding note to project {project_id}: {e}")
+            raise CRMError(f"Failed to add note to project: {str(e)}", "UNKNOWN_ERROR")
 
     async def close(self):
         """Close the HTTP client."""
