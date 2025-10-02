@@ -10,14 +10,14 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from src.integrations.crm.constants import CRMProvider, EstimateReviewStatus, JobStatus, ProjectStatus
+from src.integrations.crm.constants import CRMProvider, EstimateReviewStatus, Status
 
 
 class ProjectStatusResponse(BaseModel):
     """Response model for project status information."""
 
     project_id: str = Field(..., description="Unique project identifier")
-    status: ProjectStatus = Field(..., description="Current project status")
+    status: Status = Field(..., description="Current project status")
     provider: CRMProvider = Field(..., description="CRM provider")
     updated_at: datetime | None = Field(None, description="Last status update timestamp")
     provider_data: dict[str, Any] | None = Field(None, description="Provider-specific data")
@@ -241,3 +241,45 @@ class HoldJobRequest(BaseModel):
     job_id: int = Field(..., description="ID of the job to put on hold", alias="jobId")
     reason_id: int = Field(..., description="ID of job hold reason", alias="reasonId")
     memo: str = Field(..., description="Memo of job hold reason")
+
+
+class ProjectSubStatusResponse(BaseModel):
+    """Response model for project sub status."""
+
+    id: int = Field(..., description="ID of the project sub status")
+    name: str = Field(..., description="Name of the project sub status")
+    status_id: int = Field(..., description="Id of the parent status", alias="statusId")
+    order: int = Field(..., description="Order of the project status")
+    modified_on: datetime = Field(..., description="Date/time (in UTC) when project sub status was last modified", alias="modifiedOn")
+    active: bool = Field(..., description="When true, project sub status is active")
+
+
+class ProjectSubStatusListResponse(BaseModel):
+    """Response model for paginated list of project sub statuses."""
+
+    page: int = Field(..., description="From which page this output has started")
+    page_size: int = Field(..., description="Page size for this query", alias="pageSize")
+    has_more: bool = Field(..., description="True if there are more records", alias="hasMore")
+    total_count: int | None = Field(None, description="Total count of records for this query", alias="totalCount")
+    data: list[ProjectSubStatusResponse] = Field(..., description="The collection of result items")
+
+
+class ExternalDataItem(BaseModel):
+    """External data key-value pair."""
+
+    key: str = Field(..., description="External data key")
+    value: str | None = Field(None, description="External data value")
+
+
+class UpdateProjectRequest(BaseModel):
+    """Request model for updating a project."""
+
+    model_config = {"populate_by_name": True}
+
+    tenant: int = Field(..., description="Tenant ID")
+    project_id: int = Field(..., description="ID of the project to update", alias="projectId")
+    status_id: int | None = Field(None, description="Project status ID", alias="statusId")
+    sub_status_id: int | None = Field(None, description="Project sub status ID", alias="subStatusId")
+    name: str | None = Field(None, description="Project name")
+    summary: str | None = Field(None, description="Project summary (HTML)")
+    external_data: list[ExternalDataItem] | None = Field(None, description="External data to attach to project", alias="externalData")

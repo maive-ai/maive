@@ -14,9 +14,15 @@ from src.integrations.crm.constants import (
     JOB_HOLD_REASON_NAMES,
     FormStatus,
     JobHoldReasonId,
+    SubStatus,
 )
 from src.integrations.crm.providers.service_titan import ServiceTitanProvider
-from src.integrations.crm.schemas import EstimateItemsRequest, EstimatesRequest
+from src.integrations.crm.schemas import (
+    EstimateItemsRequest,
+    EstimatesRequest,
+    ExternalDataItem,
+    UpdateProjectRequest,
+)
 from src.integrations.rilla.client import RillaClient
 from src.integrations.rilla.config import get_rilla_settings
 from src.integrations.rilla.service import RillaService
@@ -531,8 +537,18 @@ class VertexTester:
             logger.info(f"TESTING JOB HOLD AND ESTIMATES - Job ID: {job_id}")
             logger.info("=" * 60)
 
+            # Step 0: Fetch project substatuses
+            logger.info("\nStep 0: Fetching all project substatuses")
+            try:
+                substatuses_response = await self.provider.get_project_substatuses(active="True")
+                logger.info(f"✅ Found {len(substatuses_response.data)} active project substatuses:")
+                for substatus in substatuses_response.data:
+                    logger.info(f"   ID: {substatus.id:8} | Status ID: {substatus.status_id:3} | Name: {substatus.name}")
+            except Exception as e:
+                logger.error(f"❌ Error fetching project substatuses: {e}")
+
             # Step 1: Get the job details
-            logger.info(f"Step 1: Fetching job {job_id}")
+            logger.info(f"\nStep 1: Fetching job {job_id}")
             job = await self.provider.get_job(job_id)
 
             logger.info("✅ Job Details:")
@@ -712,13 +728,64 @@ class VertexTester:
         except Exception as e:
             logger.error(f"❌ Unexpected error during test: {e}")
 
+    async def test_update_project(self) -> None:
+        """Test updating a project status with Maive identification."""
+        try:
+            project_id = 279331225
+            logger.info("=" * 60)
+            logger.info(f"TESTING PROJECT UPDATE - Project ID: {project_id}")
+            logger.info("=" * 60)
+
+            # Step 1: Get the current project details
+            logger.info(f"\nStep 1: Fetching project {project_id}")
+            try:
+                project = await self.provider.get_project_by_id(project_id)
+                logger.info("✅ Current Project Details:")
+                logger.info(f"   Project ID: {project.get('id')}")
+                logger.info(f"   Project Number: {project.get('number')}")
+                logger.info(f"   Status: {project.get('status')}")
+                logger.info(f"   Status ID: {project.get('statusId')}")
+                logger.info(f"   SubStatus: {project.get('subStatus')}")
+                logger.info(f"   SubStatus ID: {project.get('subStatusId')}")
+            except Exception as e:
+                logger.info(f"⚠️ Could not fetch project details: {e}")
+
+            # Step 2: Update project to Sales Hold substatus with Maive identification
+            logger.info(f"\nStep 2: Updating project {project_id} to Sales Hold")
+            logger.info(f"   Using SubStatus: SALES_SALES_HOLD (ID: {SubStatus.SALES_SALES_HOLD.value})")
+
+            update_request = UpdateProjectRequest(
+                tenant=int(self.provider.tenant_id),
+                project_id=project_id,
+                status_id=383,  # Status ID for "Sales 1 - Sales Hold" substatus
+                sub_status_id=SubStatus.SALES_SALES_HOLD.value,
+                external_data=[
+                    ExternalDataItem(key="managed_by", value="maive_ai"),
+                    ExternalDataItem(key="action", value="sales_hold"),
+                    ExternalDataItem(key="timestamp", value=datetime.now(UTC).isoformat())
+                ]
+            )
+
+            result = await self.provider.update_project(update_request)
+            logger.info("✅ Project updated successfully!")
+            logger.info(f"   New Status: {result.get('status')}")
+            logger.info(f"   New SubStatus: {result.get('subStatus')}")
+            logger.info(f"   External Data: {result.get('externalData', [])}")
+
+            logger.info("\n✅ PROJECT UPDATE TEST COMPLETE")
+
+        except CRMError as e:
+            logger.error(f"❌ CRM error during test: {e.message} (Code: {e.error_code})")
+        except Exception as e:
+            logger.error(f"❌ Unexpected error during test: {e}")
+
     async def run_test(self) -> None:
-        """Run the job hold and estimates test."""
-        logger.info("Starting Vertex Tester - testing Job Hold and Estimates")
+        """Run the project update test."""
+        logger.info("Starting Vertex Tester - testing Project Update")
 
         try:
-            # Test job hold and estimates functionality
-            await self.test_job_hold_and_estimates()
+            # Test project update functionality
+            await self.test_update_project()
 
         except KeyboardInterrupt:
             logger.info("Vertex Tester stopped by user")
