@@ -68,6 +68,15 @@ class FormStatus(str, Enum):
     ANY = "Any"
 
 
+class EstimateReviewStatus(str, Enum):
+    """Estimate review status values."""
+
+    NONE = "None"
+    NEEDS_APPROVAL = "NeedsApproval"
+    APPROVED = "Approved"
+    NOT_APPROVED = "NotApproved"
+
+
 class ServiceTitanEndpoints:
     """Service Titan API endpoints."""
 
@@ -82,6 +91,11 @@ class ServiceTitanEndpoints:
     # Jobs endpoints
     JOBS = "/jpm/v2/tenant/{tenant_id}/jobs"
     JOB_BY_ID = "/jpm/v2/tenant/{tenant_id}/jobs/{id}"
+
+    # Estimates endpoints
+    ESTIMATES = "/sales/v2/tenant/{tenant_id}/estimates"
+    ESTIMATE_BY_ID = "/sales/v2/tenant/{tenant_id}/estimates/{id}"
+    ESTIMATE_ITEMS = "/sales/v2/tenant/{tenant_id}/estimates/items"
 
     # Form submissions endpoints
     FORM_SUBMISSIONS = "/forms/v2/tenant/{tenant_id}/submissions"

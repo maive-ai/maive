@@ -219,6 +219,248 @@
         ]
       }
     },
+    "/api/crm/{tenant}/estimates/{estimate_id}": {
+      "get": {
+        "tags": [
+          "CRM"
+        ],
+        "summary": "Get Estimate",
+        "description": "Get a specific estimate by ID.\n\nArgs:\n    tenant: The tenant ID\n    estimate_id: The unique identifier for the estimate\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    EstimateResponse: The estimate information\n\nRaises:\n    HTTPException: If the estimate is not found or an error occurs",
+        "operationId": "get_estimate_api_crm__tenant__estimates__estimate_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "tenant",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Tenant"
+            }
+          },
+          {
+            "name": "estimate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Estimate Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstimateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/crm/{tenant}/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "CRM"
+        ],
+        "summary": "Get Job",
+        "description": "Get a specific job by ID.\n\nArgs:\n    tenant: The tenant ID\n    job_id: The unique identifier for the job\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    JobResponse: The job information\n\nRaises:\n    HTTPException: If the job is not found or an error occurs",
+        "operationId": "get_job_api_crm__tenant__jobs__job_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "tenant",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Tenant"
+            }
+          },
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/crm/{tenant}/estimates/items": {
+      "get": {
+        "tags": [
+          "CRM"
+        ],
+        "summary": "Get Estimate Items",
+        "description": "Get estimate items with optional filters.\n\nArgs:\n    tenant: The tenant ID\n    estimate_id: Optional estimate ID to filter items\n    ids: Optional comma-separated string of item IDs (max 50)\n    active: Optional active status filter (True, False, Any)\n    page: Optional page number for pagination\n    page_size: Optional page size for pagination (max 50)\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    EstimateItemsResponse: The paginated list of estimate items\n\nRaises:\n    HTTPException: If an error occurs",
+        "operationId": "get_estimate_items_api_crm__tenant__estimates_items_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "tenant",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Tenant"
+            }
+          },
+          {
+            "name": "estimate_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Estimate Id"
+            }
+          },
+          {
+            "name": "ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ids"
+            }
+          },
+          {
+            "name": "active",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Active"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstimateItemsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "summary": "Root",
@@ -316,6 +558,454 @@
         "title": "CRMProvider",
         "description": "Available CRM providers."
       },
+      "EstimateItemResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "ID of the estimate item"
+          },
+          "sku": {
+            "$ref": "#/components/schemas/SkuModel",
+            "description": "SKU details"
+          },
+          "skuAccount": {
+            "type": "string",
+            "title": "Skuaccount",
+            "description": "SKU account"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Item description"
+          },
+          "membershipTypeId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Membershiptypeid",
+            "description": "Membership type ID"
+          },
+          "qty": {
+            "type": "number",
+            "title": "Qty",
+            "description": "Quantity"
+          },
+          "unitRate": {
+            "type": "number",
+            "title": "Unitrate",
+            "description": "Unit rate"
+          },
+          "total": {
+            "type": "number",
+            "title": "Total",
+            "description": "Total amount"
+          },
+          "unitCost": {
+            "type": "number",
+            "title": "Unitcost",
+            "description": "Unit cost"
+          },
+          "totalCost": {
+            "type": "number",
+            "title": "Totalcost",
+            "description": "Total cost"
+          },
+          "itemGroupName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Itemgroupname",
+            "description": "Item group name"
+          },
+          "itemGroupRootId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Itemgrouprootid",
+            "description": "Item group root ID"
+          },
+          "createdOn": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdon",
+            "description": "Date/time (in UTC) when the item was created"
+          },
+          "modifiedOn": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Modifiedon",
+            "description": "Date/time (in UTC) when the item was last modified"
+          },
+          "chargeable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chargeable",
+            "description": "Whether the item is chargeable"
+          },
+          "invoiceItemId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoiceitemid",
+            "description": "The invoice item which was created from this estimate item"
+          },
+          "budgetCodeId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budgetcodeid",
+            "description": "Budget code ID"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "sku",
+          "skuAccount",
+          "description",
+          "qty",
+          "unitRate",
+          "total",
+          "unitCost",
+          "totalCost",
+          "createdOn",
+          "modifiedOn"
+        ],
+        "title": "EstimateItemResponse",
+        "description": "Response model for estimate item information."
+      },
+      "EstimateItemsResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EstimateItemResponse"
+            },
+            "type": "array",
+            "title": "Items",
+            "description": "List of estimate items"
+          },
+          "total_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Count",
+            "description": "Total count of items (if requested)"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page",
+            "description": "Current page number"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size",
+            "description": "Page size"
+          },
+          "has_more": {
+            "type": "boolean",
+            "title": "Has More",
+            "description": "Whether there are more items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "page_size",
+          "has_more"
+        ],
+        "title": "EstimateItemsResponse",
+        "description": "Response model for estimate items list."
+      },
+      "EstimateResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "ID of the estimate"
+          },
+          "jobId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jobid",
+            "description": "ID of the associated job"
+          },
+          "projectId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projectid",
+            "description": "ID of the associated project"
+          },
+          "locationId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locationid",
+            "description": "ID of the location"
+          },
+          "customerId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customerid",
+            "description": "ID of the customer"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Name of the estimate"
+          },
+          "jobNumber": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jobnumber",
+            "description": "Job number"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EstimateStatus"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Status of the estimate"
+          },
+          "reviewStatus": {
+            "$ref": "#/components/schemas/EstimateReviewStatus",
+            "description": "Review status of the estimate"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary",
+            "description": "Summary of the estimate"
+          },
+          "createdOn": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdon",
+            "description": "Date/time (in UTC) when the estimate was created"
+          },
+          "modifiedOn": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Modifiedon",
+            "description": "Date/time (in UTC) when estimate was last modified"
+          },
+          "soldOn": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Soldon",
+            "description": "Date/time (in UTC) when the estimate was sold"
+          },
+          "soldBy": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Soldby",
+            "description": "ID of who sold the estimate"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active",
+            "description": "Whether the estimate is active"
+          },
+          "subtotal": {
+            "type": "number",
+            "title": "Subtotal",
+            "description": "Subtotal amount"
+          },
+          "tax": {
+            "type": "number",
+            "title": "Tax",
+            "description": "Tax amount"
+          },
+          "businessUnitId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Businessunitid",
+            "description": "ID of the business unit"
+          },
+          "businessUnitName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Businessunitname",
+            "description": "Name of the business unit"
+          },
+          "isRecommended": {
+            "type": "boolean",
+            "title": "Isrecommended",
+            "description": "Whether this estimate is recommended"
+          },
+          "budgetCodeId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budgetcodeid",
+            "description": "ID of the budget code"
+          },
+          "isChangeOrder": {
+            "type": "boolean",
+            "title": "Ischangeorder",
+            "description": "Whether this estimate is a change order"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "reviewStatus",
+          "createdOn",
+          "modifiedOn",
+          "active",
+          "subtotal",
+          "tax",
+          "isRecommended",
+          "isChangeOrder"
+        ],
+        "title": "EstimateResponse",
+        "description": "Response model for Service Titan estimate information."
+      },
+      "EstimateReviewStatus": {
+        "type": "string",
+        "enum": [
+          "None",
+          "NeedsApproval",
+          "Approved",
+          "NotApproved"
+        ],
+        "title": "EstimateReviewStatus",
+        "description": "Estimate review status values."
+      },
+      "EstimateStatus": {
+        "properties": {
+          "value": {
+            "type": "integer",
+            "title": "Value",
+            "description": "Status value"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Status name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "name"
+        ],
+        "title": "EstimateStatus",
+        "description": "Estimate status model with value and name."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -328,6 +1018,225 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "JobResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "ID of the job"
+          },
+          "jobNumber": {
+            "type": "string",
+            "title": "Jobnumber",
+            "description": "Job number"
+          },
+          "projectId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projectid",
+            "description": "ID of the job's project"
+          },
+          "customerId": {
+            "type": "integer",
+            "title": "Customerid",
+            "description": "ID of the job's customer"
+          },
+          "locationId": {
+            "type": "integer",
+            "title": "Locationid",
+            "description": "ID of the job's location"
+          },
+          "jobStatus": {
+            "type": "string",
+            "title": "Jobstatus",
+            "description": "Status of the job"
+          },
+          "completedOn": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completedon",
+            "description": "Date/time (in UTC) when the job was completed"
+          },
+          "businessUnitId": {
+            "type": "integer",
+            "title": "Businessunitid",
+            "description": "ID of the job's business unit"
+          },
+          "jobTypeId": {
+            "type": "integer",
+            "title": "Jobtypeid",
+            "description": "ID of job type"
+          },
+          "priority": {
+            "type": "string",
+            "title": "Priority",
+            "description": "Priority of the job"
+          },
+          "campaignId": {
+            "type": "integer",
+            "title": "Campaignid",
+            "description": "ID of the job's campaign"
+          },
+          "appointmentCount": {
+            "type": "integer",
+            "title": "Appointmentcount",
+            "description": "Number of appointments on the job"
+          },
+          "firstAppointmentId": {
+            "type": "integer",
+            "title": "Firstappointmentid",
+            "description": "ID of the first appointment on the job"
+          },
+          "lastAppointmentId": {
+            "type": "integer",
+            "title": "Lastappointmentid",
+            "description": "ID of the last appointment on the job"
+          },
+          "recallForId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recallforid",
+            "description": "ID of the job for which this job is a recall"
+          },
+          "warrantyId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Warrantyid",
+            "description": "ID of the job for which this job is a warranty"
+          },
+          "noCharge": {
+            "type": "boolean",
+            "title": "Nocharge",
+            "description": "Whether the job is a no-charge job"
+          },
+          "notificationsEnabled": {
+            "type": "boolean",
+            "title": "Notificationsenabled",
+            "description": "Whether notifications will be sent to customers"
+          },
+          "createdOn": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdon",
+            "description": "Date/time (in UTC) when the job was created"
+          },
+          "createdById": {
+            "type": "integer",
+            "title": "Createdbyid",
+            "description": "ID of the user who created the job"
+          },
+          "modifiedOn": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Modifiedon",
+            "description": "Date/time (in UTC) when job was last modified"
+          },
+          "tagTypeIds": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Tagtypeids",
+            "description": "Tags on the job"
+          },
+          "customerPo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customerpo",
+            "description": "Customer PO"
+          },
+          "invoiceId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoiceid",
+            "description": "ID of the invoice associated with this job"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total",
+            "description": "Total amount of the job"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary",
+            "description": "Job summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "jobNumber",
+          "customerId",
+          "locationId",
+          "jobStatus",
+          "businessUnitId",
+          "jobTypeId",
+          "priority",
+          "campaignId",
+          "appointmentCount",
+          "firstAppointmentId",
+          "lastAppointmentId",
+          "noCharge",
+          "notificationsEnabled",
+          "createdOn",
+          "createdById",
+          "modifiedOn",
+          "tagTypeIds"
+        ],
+        "title": "JobResponse",
+        "description": "Response model for Service Titan job information."
       },
       "ProjectStatus": {
         "type": "string",
@@ -431,6 +1340,64 @@
         ],
         "title": "Role",
         "description": "User roles in the system."
+      },
+      "SkuModel": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "SKU ID"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "SKU name"
+          },
+          "displayName": {
+            "type": "string",
+            "title": "Displayname",
+            "description": "Display name"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "SKU type"
+          },
+          "soldHours": {
+            "type": "number",
+            "title": "Soldhours",
+            "description": "Sold hours"
+          },
+          "generalLedgerAccountId": {
+            "type": "integer",
+            "title": "Generalledgeraccountid",
+            "description": "General ledger account ID"
+          },
+          "generalLedgerAccountName": {
+            "type": "string",
+            "title": "Generalledgeraccountname",
+            "description": "General ledger account name"
+          },
+          "modifiedOn": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Modifiedon",
+            "description": "Date/time (in UTC) when SKU was last modified"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "displayName",
+          "type",
+          "soldHours",
+          "generalLedgerAccountId",
+          "generalLedgerAccountName",
+          "modifiedOn"
+        ],
+        "title": "SkuModel",
+        "description": "SKU model for estimate items."
       },
       "User": {
         "properties": {
