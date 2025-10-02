@@ -609,24 +609,6 @@ export interface JobResponse {
     'summary'?: string | null;
 }
 /**
- * Project status values across CRM systems.
- * @export
- * @enum {string}
- */
-
-export const ProjectStatus = {
-    Hold: 'hold',
-    Dispatched: 'dispatched',
-    Done: 'done',
-    Cancelled: 'cancelled',
-    Scheduled: 'scheduled',
-    Working: 'working'
-} as const;
-
-export type ProjectStatus = typeof ProjectStatus[keyof typeof ProjectStatus];
-
-
-/**
  * Response model for multiple project statuses.
  * @export
  * @interface ProjectStatusListResponse
@@ -667,10 +649,10 @@ export interface ProjectStatusResponse {
     'project_id': string;
     /**
      * Current project status
-     * @type {ProjectStatus}
+     * @type {Status}
      * @memberof ProjectStatusResponse
      */
-    'status': ProjectStatus;
+    'status': Status;
     /**
      * CRM provider
      * @type {CRMProvider}
@@ -762,6 +744,24 @@ export interface SkuModel {
      */
     'modifiedOn': string;
 }
+/**
+ * Status values for Service Titan jobs and projects.
+ * @export
+ * @enum {string}
+ */
+
+export const Status = {
+    Scheduled: 'Scheduled',
+    Dispatched: 'Dispatched',
+    InProgress: 'InProgress',
+    Hold: 'Hold',
+    Completed: 'Completed',
+    Canceled: 'Canceled'
+} as const;
+
+export type Status = typeof Status[keyof typeof Status];
+
+
 /**
  * User information.
  * @export
