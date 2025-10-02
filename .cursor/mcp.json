@@ -1,5 +1,10 @@
 {
     "mcpServers": {
+      "@reapi/mcp-openapi": {
+        "command": "npx",
+        "args": ["-y", "@reapi/mcp-openapi@latest", "--dir", "./.cursor/external_docs/service_titan"],
+        "env": {}
+      },
       "assistant-ui": {
         "command": "npx",
         "args": ["-y", "@assistant-ui/mcp-docs-server"]
