@@ -20,8 +20,11 @@ from src.integrations.crm.provider_schemas import (
 )
 from src.integrations.crm.schemas import (
     EstimateItemResponse,
+    EstimateItemsRequest,
     EstimateItemsResponse,
     EstimateResponse,
+    EstimatesListResponse,
+    EstimatesRequest,
     JobResponse,
     ProjectStatusListResponse,
     ProjectStatusResponse,
@@ -447,22 +450,16 @@ class ServiceTitanProvider(CRMProvider):
 
     async def get_estimates(
         self,
-        job_id: int | None = None,
-        page: int | None = None,
-        page_size: int | None = None,
-        ids: str | None = None,
-    ) -> list[EstimateResponse]:
+        request: EstimatesRequest,
+    ) -> EstimatesListResponse:
         """
         Get estimates from Service Titan with optional filters.
 
         Args:
-            job_id: Optional job ID to filter estimates
-            page: Optional page number for pagination
-            page_size: Optional page size for pagination (max 50)
-            ids: Optional comma-separated string of estimate IDs
+            request: EstimatesRequest with filter and pagination parameters
 
         Returns:
-            list[EstimateResponse]: List of estimates
+            EstimatesListResponse: Paginated list of estimates
 
         Raises:
             CRMError: If an error occurs while fetching estimates
@@ -470,16 +467,16 @@ class ServiceTitanProvider(CRMProvider):
         try:
             url = f"{self.base_api_url}{ServiceTitanEndpoints.ESTIMATES.format(tenant_id=self.tenant_id)}"
 
-            # Build query parameters
+            # Convert request model to params dict with camelCase field names
             params = {}
-            if job_id is not None:
-                params["jobId"] = job_id
-            if page is not None:
-                params["page"] = page
-            if page_size is not None:
-                params["pageSize"] = min(page_size, 50)  # Enforce max of 50
-            if ids is not None:
-                params["ids"] = ids
+            if request.job_id is not None:
+                params["jobId"] = request.job_id
+            if request.page is not None:
+                params["page"] = request.page
+            if request.page_size is not None:
+                params["pageSize"] = min(request.page_size, 50)  # Enforce max of 50
+            if request.ids is not None:
+                params["ids"] = request.ids
 
             logger.debug(f"Fetching estimates with params: {params}")
 
@@ -494,8 +491,17 @@ class ServiceTitanProvider(CRMProvider):
             # Convert each estimate to EstimateResponse
             estimates = [EstimateResponse(**estimate_data) for estimate_data in estimates_data]
 
+            # Build the response with pagination info
+            estimates_response = EstimatesListResponse(
+                estimates=estimates,
+                total_count=data.get("totalCount"),
+                page=data.get("page", request.page),
+                page_size=data.get("pageSize", request.page_size),
+                has_more=data.get("hasMore"),
+            )
+
             logger.info(f"Found {len(estimates)} estimates")
-            return estimates
+            return estimates_response
 
         except httpx.HTTPStatusError as e:
             logger.error(f"HTTP error fetching estimates: {e}")
@@ -506,21 +512,13 @@ class ServiceTitanProvider(CRMProvider):
 
     async def get_estimate_items(
         self,
-        estimate_id: int | None = None,
-        ids: str | None = None,
-        active: str | None = None,
-        page: int | None = None,
-        page_size: int | None = None,
+        request: EstimateItemsRequest,
     ) -> EstimateItemsResponse:
         """
         Get estimate items from Service Titan with optional filters.
 
         Args:
-            estimate_id: Optional estimate ID to filter items
-            ids: Optional comma-separated string of item IDs (max 50)
-            active: Optional active status filter ("True", "False", "Any")
-            page: Optional page number for pagination
-            page_size: Optional page size for pagination (max 50)
+            request: EstimateItemsRequest with filter and pagination parameters
 
         Returns:
             EstimateItemsResponse: Paginated list of estimate items
@@ -531,18 +529,18 @@ class ServiceTitanProvider(CRMProvider):
         try:
             url = f"{self.base_api_url}{ServiceTitanEndpoints.ESTIMATE_ITEMS.format(tenant_id=self.tenant_id)}"
 
-            # Build query parameters
+            # Convert request model to params dict with camelCase field names
             params = {}
-            if estimate_id is not None:
-                params["estimateId"] = estimate_id
-            if ids is not None:
-                params["ids"] = ids
-            if active is not None:
-                params["active"] = active
-            if page is not None:
-                params["page"] = page
-            if page_size is not None:
-                params["pageSize"] = min(page_size, 50)  # Enforce max of 50
+            if request.estimate_id is not None:
+                params["estimateId"] = request.estimate_id
+            if request.ids is not None:
+                params["ids"] = request.ids
+            if request.active is not None:
+                params["active"] = request.active
+            if request.page is not None:
+                params["page"] = request.page
+            if request.page_size is not None:
+                params["pageSize"] = min(request.page_size, 50)  # Enforce max of 50
 
             logger.debug(f"Fetching estimate items with params: {params}")
 
@@ -561,8 +559,8 @@ class ServiceTitanProvider(CRMProvider):
             items_response = EstimateItemsResponse(
                 items=items,
                 total_count=data.get("totalCount"),
-                page=data.get("page", page or 1),
-                page_size=data.get("pageSize", page_size or 50),
+                page=data.get("page", request.page or 1),
+                page_size=data.get("pageSize", request.page_size or 50),
                 has_more=data.get("hasMore", False),
             )
 

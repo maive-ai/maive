@@ -49,9 +49,9 @@ class EstimatesRequest(BaseModel):
     """Request model for getting estimates with filters."""
 
     tenant: int = Field(..., description="Tenant ID")
-    job_id: int | None = Field(None, description="Job ID to filter estimates")
+    job_id: int | None = Field(None, description="Job ID to filter estimates", alias="jobId")
     page: int | None = Field(None, description="Page number for pagination")
-    page_size: int | None = Field(None, description="Page size for pagination (max 50)", le=50)
+    page_size: int | None = Field(None, description="Page size for pagination (max 50)", le=50, alias="pageSize")
     ids: str | None = Field(None, description="Comma separated string of estimate IDs")
 
 
@@ -155,15 +155,25 @@ class EstimateItemResponse(BaseModel):
     budget_code_id: int | None = Field(None, description="Budget code ID", alias="budgetCodeId")
 
 
+class EstimatesListResponse(BaseModel):
+    """Response model for estimates list."""
+
+    estimates: list[EstimateResponse] = Field(..., description="List of estimates")
+    total_count: int | None = Field(None, description="Total count of estimates (if requested)")
+    page: int | None = Field(None, description="Current page number")
+    page_size: int | None = Field(None, description="Page size")
+    has_more: bool | None = Field(None, description="Whether there are more estimates")
+
+
 class EstimateItemsRequest(BaseModel):
     """Request model for getting estimate items."""
 
     tenant: int = Field(..., description="Tenant ID")
-    estimate_id: int | None = Field(None, description="Estimate ID to filter items")
+    estimate_id: int | None = Field(None, description="Estimate ID to filter items", alias="estimateId")
     ids: str | None = Field(None, description="Comma separated string of item IDs (max 50)")
     active: str | None = Field(None, description="Filter by active status (True, False, Any)")
     page: int | None = Field(None, description="Page number for pagination")
-    page_size: int | None = Field(None, description="Page size for pagination (default 50)", le=50)
+    page_size: int | None = Field(None, description="Page size for pagination (default 50)", le=50, alias="pageSize")
 
 
 class EstimateItemsResponse(BaseModel):

@@ -12,6 +12,7 @@ from src.ai.gemini.schemas import FileUploadRequest, GenerateContentRequest
 from src.integrations.crm.base import CRMError
 from src.integrations.crm.constants import FormStatus
 from src.integrations.crm.providers.service_titan import ServiceTitanProvider
+from src.integrations.crm.schemas import EstimateItemsRequest, EstimatesRequest
 from src.integrations.rilla.client import RillaClient
 from src.integrations.rilla.config import get_rilla_settings
 from src.integrations.rilla.service import RillaService
@@ -373,19 +374,20 @@ class VertexTester:
 
             # Step 2: Get all estimates for this job
             logger.info(f"\\nStep 2: Fetching estimates for job {job_id}")
-            estimates = await self.provider.get_estimates(job_id=job_id)
+            estimates_request = EstimatesRequest(tenant=self.provider.tenant_id, job_id=job_id)
+            estimates_response = await self.provider.get_estimates(estimates_request)
 
-            logger.info(f"✅ Found {len(estimates)} estimates for job {job_id}")
+            logger.info(f"✅ Found {len(estimates_response.estimates)} estimates for job {job_id}")
 
             # Log estimate IDs
-            estimate_ids = [estimate.id for estimate in estimates]
+            estimate_ids = [estimate.id for estimate in estimates_response.estimates]
             logger.info(f"   Estimate IDs: {estimate_ids}")
 
             # Step 3: Check which estimates have 'sold' status
             logger.info(f"\\nStep 3: Checking estimate statuses")
             sold_estimates = []
 
-            for estimate in estimates:
+            for estimate in estimates_response.estimates:
                 logger.info(f"\\n   Estimate {estimate.id}:")
                 logger.info(f"      Name: {estimate.name}")
                 logger.info(f"      Review Status: {estimate.review_status}")
@@ -443,7 +445,7 @@ class VertexTester:
 
             # Summary with selected estimate details
             logger.info(f"\\n📊 Final Summary:")
-            logger.info(f"   Total estimates: {len(estimates)}")
+            logger.info(f"   Total estimates: {len(estimates_response.estimates)}")
             logger.info(f"   Sold estimates: {len(sold_estimates)}")
             logger.info(f"   Selected estimate ID: {selected_estimate.id}")
             logger.info(f"   Selected estimate details:")
@@ -461,7 +463,8 @@ class VertexTester:
 
             # Step 5: Fetch and log items for the selected estimate
             logger.info(f"\\nStep 5: Fetching items for estimate {selected_estimate.id}")
-            items_response = await self.provider.get_estimate_items(estimate_id=selected_estimate.id)
+            items_request = EstimateItemsRequest(tenant=self.provider.tenant_id, estimate_id=selected_estimate.id)
+            items_response = await self.provider.get_estimate_items(items_request)
 
             logger.info(f"✅ Found {len(items_response.items)} items for estimate {selected_estimate.id}")
 
