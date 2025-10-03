@@ -13,6 +13,7 @@ import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthSignupSuccessRouteImport } from './routes/auth/signup-success'
 import { Route as AuthErrorRouteImport } from './routes/auth/error'
+import { Route as AuthedPhoneInputRouteImport } from './routes/_authed/phone-input'
 import { Route as AuthedWorkflowsIndexRouteImport } from './routes/_authed/workflows/index'
 import { Route as AuthedVoiceAiIndexRouteImport } from './routes/_authed/voice-ai/index'
 import { Route as AuthedWorkflowsNew_workflowRouteImport } from './routes/_authed/workflows/new_workflow'
@@ -37,6 +38,11 @@ const AuthErrorRoute = AuthErrorRouteImport.update({
   id: '/auth/error',
   path: '/auth/error',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthedPhoneInputRoute = AuthedPhoneInputRouteImport.update({
+  id: '/phone-input',
+  path: '/phone-input',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedWorkflowsIndexRoute = AuthedWorkflowsIndexRouteImport.update({
   id: '/workflows/',
@@ -68,6 +74,7 @@ const AuthedVoiceAiCustomerIdRoute = AuthedVoiceAiCustomerIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/phone-input': typeof AuthedPhoneInputRoute
   '/auth/error': typeof AuthErrorRoute
   '/auth/signup-success': typeof AuthSignupSuccessRoute
   '/voice-ai/$customerId': typeof AuthedVoiceAiCustomerIdRoute
@@ -78,6 +85,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/phone-input': typeof AuthedPhoneInputRoute
   '/auth/error': typeof AuthErrorRoute
   '/auth/signup-success': typeof AuthSignupSuccessRoute
   '/voice-ai/$customerId': typeof AuthedVoiceAiCustomerIdRoute
@@ -90,6 +98,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteWithChildren
+  '/_authed/phone-input': typeof AuthedPhoneInputRoute
   '/auth/error': typeof AuthErrorRoute
   '/auth/signup-success': typeof AuthSignupSuccessRoute
   '/_authed/voice-ai/$customerId': typeof AuthedVoiceAiCustomerIdRoute
@@ -102,6 +111,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/phone-input'
     | '/auth/error'
     | '/auth/signup-success'
     | '/voice-ai/$customerId'
@@ -112,6 +122,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/phone-input'
     | '/auth/error'
     | '/auth/signup-success'
     | '/voice-ai/$customerId'
@@ -123,6 +134,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authed'
+    | '/_authed/phone-input'
     | '/auth/error'
     | '/auth/signup-success'
     | '/_authed/voice-ai/$customerId'
@@ -169,6 +181,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthErrorRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/phone-input': {
+      id: '/_authed/phone-input'
+      path: '/phone-input'
+      fullPath: '/phone-input'
+      preLoaderRoute: typeof AuthedPhoneInputRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/workflows/': {
       id: '/_authed/workflows/'
       path: '/workflows'
@@ -208,6 +227,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthedRouteChildren {
+  AuthedPhoneInputRoute: typeof AuthedPhoneInputRoute
   AuthedVoiceAiCustomerIdRoute: typeof AuthedVoiceAiCustomerIdRoute
   AuthedWorkflowsWorkflowIdRoute: typeof AuthedWorkflowsWorkflowIdRoute
   AuthedWorkflowsNew_workflowRoute: typeof AuthedWorkflowsNew_workflowRoute
@@ -216,6 +236,7 @@ interface AuthedRouteChildren {
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedPhoneInputRoute: AuthedPhoneInputRoute,
   AuthedVoiceAiCustomerIdRoute: AuthedVoiceAiCustomerIdRoute,
   AuthedWorkflowsWorkflowIdRoute: AuthedWorkflowsWorkflowIdRoute,
   AuthedWorkflowsNew_workflowRoute: AuthedWorkflowsNew_workflowRoute,
