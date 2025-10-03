@@ -43,6 +43,8 @@ class MockProjectData(BaseModel):
         None, description="Insurance adjuster contact"
     )
     notes: str | None = Field(None, description="Project notes")
+    tenant: int | None = Field(None, description="Tenant ID")
+    job_id: int | None = Field(None, description="Job ID")
 
 
 class MockProject(BaseModel):
@@ -565,16 +567,13 @@ def get_mock_projects() -> list[MockProject]:
     for project_data in MOCK_PROJECTS_RAW:
 
         # Add Service Titan-like metadata with numeric tenant and job_id
-        metadata = {
-            "tenant": 1,
-            "job_id": _derive_numeric_job_id(project_data.id),
-        }
+        project_data.tenant = 1
+        project_data.job_id = _derive_numeric_job_id(project_data.id)
 
         project = MockProject(
             project_data=project_data,
             status=random.choice(PROJECT_STATUSES),
             updated_at=now,
-            metadata=metadata,
         )
         projects.append(project)
 
