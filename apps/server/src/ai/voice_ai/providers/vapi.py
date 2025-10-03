@@ -7,6 +7,7 @@ This module implements the VoiceAIProvider interface for Vapi.
 import json
 from http import HTTPStatus
 from typing import Any
+import asyncio
 
 import httpx
 import phonenumbers
@@ -15,7 +16,7 @@ from pydantic import ValidationError
 from src.ai.voice_ai.base import VoiceAIError, VoiceAIProvider
 from src.ai.voice_ai.config import get_vapi_settings, get_voice_ai_settings
 from src.ai.voice_ai.constants import CallStatus, VoiceAIErrorCode, VoiceAIProvider as VoiceAIProviderEnum, WebhookEventType
-from src.ai.voice_ai.providers.vapi_schemas import VapiCallData, VapiEndpoints, VapiMessage, VapiWebhookPayload
+from src.ai.voice_ai.providers.vapi_schemas import VapiCallData, VapiClaimStatusData, VapiEndpoints, VapiMessage, VapiWebhookPayload
 from src.ai.voice_ai.schemas import (
     CallEndedData,
     CallRequest,
@@ -192,6 +193,50 @@ class VapiProvider(VoiceAIProvider):
             error_msg = f"HTTP error getting call status: {str(e)}"
             logger.error(f"[Vapi Provider] {error_msg}")
             raise VoiceAIError(error_msg, error_code=VoiceAIErrorCode.HTTP_ERROR)
+
+    async def monitor_ongoing_call(self, call_id: str) -> None:
+        """Poll call status every 10s up to 24h; on end, log structured data."""
+        poll_interval_seconds = 10
+        max_polling_duration = 60 * 60 * 24  # 24 hours
+        start_time = asyncio.get_event_loop().time()
+
+        try:
+            while True:
+                elapsed = asyncio.get_event_loop().time() - start_time
+                if elapsed > max_polling_duration:
+                    logger.warning(f"[Vapi Provider] Monitoring timed out for call {call_id}")
+                    break
+
+                try:
+                    status = await self.get_call_status(call_id)
+                except VoiceAIError as e:
+                    logger.error(f"[Vapi Provider] Error polling call {call_id}: {e.message}")
+                    break
+
+                logger.info(f"[Vapi Provider] Call {call_id} status: {status.status}")
+
+                # End condition
+                if CallStatus.is_call_ended(status.status):
+                    # Log structured data if available
+                    self._log_structured_data_from_provider_data(call_id, status.provider_data or {})
+                    break
+
+                await asyncio.sleep(poll_interval_seconds)
+        except asyncio.CancelledError:
+            logger.info(f"[Vapi Provider] Monitoring task for call {call_id} canceled")
+
+    def _log_structured_data_from_provider_data(self, call_id: str, provider_data: dict[str, Any]) -> None:
+        """Extract and log structured data from provider response (if present)."""
+        try:
+            analysis = provider_data.get("analysis") or {}
+            structured = analysis.get("structuredData")
+            if structured:
+                structured = VapiClaimStatusData(**structured)
+                logger.info(f"[Vapi Provider] Structured data for call {call_id}: {structured}")
+            else:
+                logger.info(f"[Vapi Provider] No structured data found for call {call_id}")
+        except Exception as e:
+            logger.error(f"[Vapi Provider] Error logging structured data for call {call_id}: {e}")
 
     def _build_headers(self) -> dict[str, str]:
         """Build HTTP headers for Vapi API requests."""

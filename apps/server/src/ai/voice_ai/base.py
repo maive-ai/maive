@@ -76,6 +76,18 @@ class VoiceAIProvider(ABC):
         """
         pass
 
+    @abstractmethod
+    async def monitor_ongoing_call(self, call_id: str) -> None:
+        """
+        Monitor an ongoing call until it reaches a terminal state. Implementations
+        should poll provider status at a reasonable interval and exit when the call
+        has completed or a timeout elapses.
+
+        Args:
+            call_id: The call identifier to monitor
+        """
+        pass
+
 
 class VoiceAIError(Exception):
     """Base exception for Voice AI-related errors."""
