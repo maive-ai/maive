@@ -481,6 +481,8 @@ class ServiceTitanProvider(CRMProvider):
             params = {}
             if request.job_id is not None:
                 params["jobId"] = request.job_id
+            if request.project_id is not None:
+                params["projectId"] = request.project_id
             if request.page is not None:
                 params["page"] = request.page
             if request.page_size is not None:
@@ -925,6 +927,61 @@ class ServiceTitanProvider(CRMProvider):
         except Exception as e:
             logger.error(f"Unexpected error adding note to project {project_id}: {e}")
             raise CRMError(f"Failed to add note to project: {str(e)}", "UNKNOWN_ERROR")
+
+    async def get_form_submissions(
+        self,
+        form_id: int | None = None,
+        page: int = 1,
+        page_size: int = 50,
+        status: str | None = None,
+    ) -> dict[str, Any]:
+        """
+        Get form submissions from Service Titan.
+
+        Args:
+            form_id: Optional form ID to filter submissions
+            page: Page number (default 1)
+            page_size: Page size (default 50)
+            status: Optional status filter (Started, Completed, Any)
+
+        Returns:
+            dict: Form submissions data with pagination info
+
+        Raises:
+            CRMError: If an error occurs fetching submissions
+        """
+        try:
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.FORM_SUBMISSIONS.format(tenant_id=self.tenant_id)}"
+
+            # Build query parameters
+            params: dict[str, Any] = {
+                "page": page,
+                "pageSize": page_size,
+            }
+
+            if form_id is not None:
+                params["formIds"] = str(form_id)
+
+            if status is not None:
+                params["status"] = status
+
+            logger.debug(f"Fetching form submissions with params: {params}")
+
+            response = await self._make_authenticated_request("GET", url, params=params)
+            response.raise_for_status()
+
+            data = response.json()
+            logger.info(f"Successfully fetched {len(data.get('data', []))} form submissions")
+
+            return data
+
+        except httpx.HTTPStatusError as e:
+            error_body = e.response.text
+            logger.error(f"HTTP error fetching form submissions: {error_body}")
+            raise CRMError(f"Failed to fetch form submissions: {error_body}", "HTTP_ERROR")
+        except Exception as e:
+            logger.error(f"Unexpected error fetching form submissions: {e}")
+            raise CRMError(f"Failed to fetch form submissions: {str(e)}", "UNKNOWN_ERROR")
 
     async def close(self):
         """Close the HTTP client."""

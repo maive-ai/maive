@@ -5,15 +5,20 @@ This application fetches a specific completed project for testing purposes.
 """
 
 import asyncio
+import json
 from datetime import UTC, datetime, timedelta
+from typing import Any
+
+from pydantic import BaseModel, Field
 
 from src.ai.gemini import get_gemini_client
-from src.ai.gemini.schemas import FileUploadRequest, GenerateContentRequest
+from src.ai.gemini.schemas import FileUploadRequest, GenerateStructuredContentRequest
 from src.integrations.crm.base import CRMError
 from src.integrations.crm.constants import (
     JOB_HOLD_REASON_NAMES,
     FormStatus,
     JobHoldReasonId,
+    Status,
     SubStatus,
 )
 from src.integrations.crm.providers.service_titan import ServiceTitanProvider
@@ -27,6 +32,17 @@ from src.integrations.rilla.client import RillaClient
 from src.integrations.rilla.config import get_rilla_settings
 from src.integrations.rilla.service import RillaService
 from src.utils.logger import logger
+
+
+class DiscrepancyReview(BaseModel):
+    """Structured output for discrepancy review."""
+
+    needs_review: bool = Field(
+        description="True if discrepancies were found and the job needs review, False otherwise"
+    )
+    hold_explanation: str = Field(
+        description="Concise explanation of discrepancies found with timestamps (MM:SS format)"
+    )
 
 
 class VertexTester:
@@ -788,13 +804,355 @@ class VertexTester:
         except Exception as e:
             logger.error(f"❌ Unexpected error during test: {e}")
 
+    async def test_analyze_form_fields(self) -> None:
+        """Analyze form 2933 to extract all possible fields across multiple submissions."""
+        try:
+            form_id = 2933
+            logger.info("=" * 60)
+            logger.info(f"ANALYZING FORM {form_id} - Extracting All Fields")
+            logger.info("=" * 60)
+
+            # Track all unique fields across submissions
+            all_fields: dict[str, dict[str, Any]] = {}
+
+            # Fetch multiple pages to get comprehensive field coverage
+            max_pages = 5
+            submissions_analyzed = 0
+
+            for page in range(1, max_pages + 1):
+                logger.info(f"\nFetching submissions page {page}...")
+
+                result = await self.provider.get_form_submissions(
+                    form_id=form_id,
+                    page=page,
+                    page_size=50,
+                    status="Any"
+                )
+
+                submissions = result.get("data", [])
+                if not submissions:
+                    logger.info(f"No more submissions found on page {page}")
+                    break
+
+                logger.info(f"✅ Found {len(submissions)} submissions on page {page}")
+                submissions_analyzed += len(submissions)
+
+                # Extract fields from each submission
+                for submission in submissions:
+                    units = submission.get("units", [])
+                    for unit in units:
+                        if isinstance(unit, dict) and "units" in unit:
+                            # This is a unit container with sections
+                            unit_name = unit.get("name", "Unknown Unit")
+                            sections = unit.get("units", [])
+
+                            for section in sections:
+                                if isinstance(section, dict):
+                                    section_type = section.get("type", "")
+
+                                    # Look for field data
+                                    field_id = section.get("id", "")
+                                    field_name = section.get("name", "")
+                                    field_type = section_type
+
+                                    # Create unique key for field
+                                    field_key = f"{unit_name}::{field_name}::{field_id}"
+
+                                    if field_key not in all_fields:
+                                        all_fields[field_key] = {
+                                            "unit": unit_name,
+                                            "id": field_id,
+                                            "name": field_name,
+                                            "type": field_type,
+                                            "sample_value": section.get("value") or section.get("values")
+                                        }
+
+                if not result.get("hasMore", False):
+                    logger.info("No more pages available")
+                    break
+
+            # Display results
+            logger.info("\n" + "=" * 60)
+            logger.info(f"ANALYSIS COMPLETE")
+            logger.info("=" * 60)
+            logger.info(f"📊 Total Submissions Analyzed: {submissions_analyzed}")
+            logger.info(f"📝 Unique Fields Found: {len(all_fields)}")
+            logger.info("\n" + "=" * 60)
+            logger.info("FIELD DETAILS:")
+            logger.info("=" * 60)
+
+            # Group by unit for better organization
+            fields_by_unit: dict[str, list[dict[str, Any]]] = {}
+            for field_info in all_fields.values():
+                unit = field_info["unit"]
+                if unit not in fields_by_unit:
+                    fields_by_unit[unit] = []
+                fields_by_unit[unit].append(field_info)
+
+            # Display organized by unit
+            for unit, fields in sorted(fields_by_unit.items()):
+                logger.info(f"\n📁 Unit: {unit}")
+                logger.info("-" * 60)
+                for field in sorted(fields, key=lambda x: x["name"] or ""):
+                    logger.info(f"  • Field: {field['name'] or '(unnamed)'}")
+                    logger.info(f"    ID: {field['id']}")
+                    logger.info(f"    Type: {field['type']}")
+                    if field['sample_value'] is not None:
+                        sample = str(field['sample_value'])
+                        if len(sample) > 50:
+                            sample = sample[:50] + "..."
+                        logger.info(f"    Sample: {sample}")
+                    logger.info("")
+
+            logger.info("\n✅ FORM FIELD ANALYSIS COMPLETE")
+
+        except CRMError as e:
+            logger.error(f"❌ CRM error during form analysis: {e.message} (Code: {e.error_code})")
+        except Exception as e:
+            logger.error(f"❌ Unexpected error during form analysis: {e}")
+
+    async def test_discrepancy_detection_workflow(self) -> None:
+        """Complete workflow: fetch project, estimate, form, analyze audio for discrepancies."""
+        try:
+            project_id = 261980979
+            audio_path = "/Users/willcray/maive/vertex-demo-convo.mp3"
+            # Set to None to attempt auto-discovery, or provide a known estimate ID from the GUI
+            known_sold_estimate_id = None  # TODO: Set this if auto-discovery fails
+
+            logger.info("=" * 60)
+            logger.info(f"DISCREPANCY DETECTION WORKFLOW - Project {project_id}")
+            logger.info("=" * 60)
+
+            # Step 1: Fetch project details
+            logger.info(f"\nStep 1: Fetching project {project_id}")
+            project = await self.provider.get_project_by_id(project_id)
+            logger.info(f"✅ Project fetched: {project.get('number')}")
+
+            # Step 2: Get the sold estimate
+            logger.info(f"\nStep 2: Getting sold estimate")
+
+            if known_sold_estimate_id is not None:
+                # Use the known estimate ID directly
+                logger.info(f"   Using known estimate ID: {known_sold_estimate_id}")
+                selected_estimate = await self.provider.get_estimate(known_sold_estimate_id)
+                logger.info(f"✅ Retrieved estimate: {selected_estimate.id}")
+            else:
+                # Attempt auto-discovery by getting estimates for this project
+                logger.info(f"   Attempting auto-discovery of sold estimate...")
+                logger.info(f"   Querying estimates by project ID: {project_id}")
+
+                # Get estimates for this project
+                estimates_request = EstimatesRequest(
+                    tenant=int(self.provider.tenant_id),
+                    project_id=project_id,
+                    page=1,
+                    page_size=50
+                )
+
+                estimates_response = await self.provider.get_estimates(estimates_request)
+                logger.info(f"   Found {len(estimates_response.estimates)} estimates for project {project_id}")
+
+                # Filter for sold estimates (sold_on date indicates the estimate was sold)
+                sold_estimates = []
+                for estimate in estimates_response.estimates:
+                    is_approved = estimate.review_status.value == "Approved"
+                    has_sold_date = estimate.sold_on is not None
+
+                    # An estimate is sold if it has a sold_on date
+                    if has_sold_date:
+                        sold_estimates.append(estimate)
+                        approval_status = "Approved" if is_approved else estimate.review_status.value
+                        logger.info(f"   - Estimate {estimate.id}: {estimate.name or '(no name)'} - SOLD ({approval_status}, sold on {estimate.sold_on})")
+                    else:
+                        status_info = f"review_status={estimate.review_status.value}, sold_on=None"
+                        logger.info(f"   - Estimate {estimate.id}: {estimate.name or '(no name)'} - NOT SOLD ({status_info})")
+
+                if len(sold_estimates) == 0:
+                    error_msg = (
+                        f"No sold estimates found for project {project_id}. "
+                        f"Found {len(estimates_response.estimates)} total estimates, but none are marked as sold.\n"
+                        f"Please check the ServiceTitan GUI and manually set known_sold_estimate_id."
+                    )
+                    raise CRMError(error_msg, "NO_SOLD_ESTIMATE")
+                elif len(sold_estimates) > 1:
+                    estimate_list = ", ".join([str(e.id) for e in sold_estimates])
+                    error_msg = (
+                        f"Multiple sold estimates found for project {project_id}: {estimate_list}.\n"
+                        f"Please manually set known_sold_estimate_id to the correct estimate ID."
+                    )
+                    raise CRMError(error_msg, "MULTIPLE_SOLD_ESTIMATES")
+
+                selected_estimate = sold_estimates[0]
+                logger.info(f"✅ Auto-discovered sold estimate: {selected_estimate.id}")
+
+            # Log estimate details for verification
+            logger.info(f"   Estimate Name: {selected_estimate.name or '(no name)'}")
+            logger.info(f"   Subtotal: ${selected_estimate.subtotal:,.2f}")
+            logger.info(f"   Tax: ${selected_estimate.tax:,.2f}")
+            logger.info(f"   Total: ${selected_estimate.subtotal + selected_estimate.tax:,.2f}")
+            if selected_estimate.sold_on:
+                logger.info(f"   Sold On: {selected_estimate.sold_on}")
+
+            # Get the job_id from the estimate
+            job_id = selected_estimate.job_id
+            if not job_id:
+                raise CRMError(f"Selected estimate {selected_estimate.id} has no associated job", "NO_JOB")
+            logger.info(f"   Associated job: {job_id}")
+
+            # Get estimate items
+            items_request = EstimateItemsRequest(
+                tenant=int(self.provider.tenant_id),
+                estimate_id=selected_estimate.id,
+                page=1,
+                page_size=50
+            )
+            items_result = await self.provider.get_estimate_items(items_request)
+            logger.info(f"   Estimate has {len(items_result.items)} items")
+
+            # Log first few items for verification
+            logger.info(f"   First {min(5, len(items_result.items))} items:")
+            for i, item in enumerate(items_result.items[:5]):
+                logger.info(f"     {i+1}. {item.description[:60]}... (Qty: {item.qty}, Total: ${item.total:,.2f})")
+
+            # Step 3: Get form submission (Notes to Production)
+            logger.info(f"\nStep 3: Fetching form 2933 submission for job {job_id}")
+            form_result = await self.provider.get_form_submissions(
+                form_id=2933,
+                page=1,
+                page_size=10,
+                status="Any"
+            )
+
+            # Find submission for this specific job
+            notes_to_production = None
+            for submission in form_result.get("data", []):
+                owners = submission.get("owners", [])
+                for owner in owners:
+                    if owner.get("type") == "Job" and owner.get("id") == job_id:
+                        # Extract Notes to Production unit
+                        units = submission.get("units", [])
+                        for unit in units:
+                            if isinstance(unit, dict) and unit.get("name") == "Notes to Production":
+                                notes_to_production = unit
+                                break
+                        break
+                if notes_to_production:
+                    break
+
+            if notes_to_production:
+                logger.info(f"✅ Found Notes to Production data")
+            else:
+                logger.warning(f"⚠️ No Notes to Production found for job {job_id}")
+                notes_to_production = {"message": "No Notes to Production found"}
+
+            # Step 4: Upload audio to Gemini
+            logger.info(f"\nStep 4: Uploading audio to Gemini Files API")
+            gemini_client = get_gemini_client()
+            upload_request = FileUploadRequest(file_path=audio_path)
+            uploaded_file = await gemini_client.upload_file(upload_request)
+            logger.info(f"✅ Audio uploaded: {uploaded_file.name}")
+
+            # Step 5: Prepare data for Gemini
+            logger.info(f"\nStep 5: Preparing data for analysis")
+
+            # Format estimate data
+            estimate_data = {
+                "estimate_id": selected_estimate.id,
+                "name": selected_estimate.name,
+                "subtotal": selected_estimate.subtotal,
+                "tax": selected_estimate.tax,
+                "items": [
+                    {
+                        "description": item.description,
+                        "quantity": item.qty,
+                        "unit_rate": item.unit_rate,
+                        "total": item.total,
+                        "sku_name": item.sku.name
+                    }
+                    for item in items_result.items
+                ]
+            }
+
+            prompt = f"""You are an expert sales admin for a roofing company. You are reviewing the audio from a conversation between one of our sales reps and a customer. Please listen to and understand the contents of the audio conversation, the contents of the estimate, and any notes to production that the sales rep submitted via form following the conversation.
+
+Identify what, if anything, mentioned during the conversation that was not updated in the estimate or logged in the form. If there is any information that would affect the roofing service provided or how it is provided, then please flag the conversation for review.
+
+Simply and concisely log what was not included in the estimate or form but stated during the audio conversation. In this concise message of the discrepancy, please include a timestamp in the audio when the discrepancy occurred in format (MM:SS).
+
+**Estimate Contents:**
+{json.dumps(estimate_data, indent=2)}
+
+**Notes to Production:**
+{json.dumps(notes_to_production, indent=2)}
+"""
+
+            # Step 6: Call Gemini with structured output
+            logger.info(f"\nStep 6: Analyzing audio for discrepancies")
+            structured_request = GenerateStructuredContentRequest(
+                prompt=prompt,
+                response_model=DiscrepancyReview,
+                files=[uploaded_file.name],
+                temperature=0.7
+            )
+
+            review_result = await gemini_client.generate_structured_content(structured_request)
+            logger.info(f"✅ Analysis complete")
+            logger.info(f"   Needs Review: {review_result.needs_review}")
+            logger.info(f"   Explanation: {review_result.hold_explanation}")
+
+            # Step 7: Conditional project hold
+            if review_result.needs_review:
+                logger.info(f"\nStep 7: Discrepancy found - Updating project to HOLD")
+
+                # Update project status to HOLD with Sales Hold substatus
+                update_request = UpdateProjectRequest(
+                    tenant=int(self.provider.tenant_id),
+                    project_id=project_id,
+                    status_id=383,  # Hold status ID
+                    sub_status_id=SubStatus.SALES_SALES_HOLD.value,
+                    external_data=[
+                        ExternalDataItem(key="managed_by", value="maive_ai"),
+                        ExternalDataItem(key="action", value="discrepancy_detected"),
+                        ExternalDataItem(key="timestamp", value=datetime.now(UTC).isoformat())
+                    ]
+                )
+
+                await self.provider.update_project(update_request)
+                logger.info(f"✅ Project updated to HOLD status")
+
+                # Add note to project
+                logger.info(f"   Adding note to project (pinned to top):")
+                logger.info(f"   Note content: {review_result.hold_explanation}")
+                await self.provider.add_project_note(
+                    project_id=project_id,
+                    text=review_result.hold_explanation,
+                    pin_to_top=True
+                )
+                logger.info(f"✅ Note added to project")
+            else:
+                logger.info(f"\nStep 7: No discrepancies found - No action needed")
+
+            # Step 8: Cleanup - delete uploaded audio
+            logger.info(f"\nStep 8: Cleaning up uploaded file")
+            await gemini_client.delete_file(uploaded_file.name)
+            logger.info(f"✅ Audio file deleted from Gemini")
+
+            logger.info("\n✅ DISCREPANCY DETECTION WORKFLOW COMPLETE")
+
+        except CRMError as e:
+            logger.error(f"❌ CRM error during workflow: {e.message} (Code: {e.error_code})")
+        except Exception as e:
+            logger.error(f"❌ Unexpected error during workflow: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+
     async def run_test(self) -> None:
-        """Run the project update test."""
-        logger.info("Starting Vertex Tester - testing Project Update")
+        """Run the discrepancy detection workflow."""
+        logger.info("Starting Vertex Tester - Discrepancy Detection Workflow")
 
         try:
-            # Test project update functionality
-            await self.test_update_project()
+            # Run the comprehensive workflow
+            await self.test_discrepancy_detection_workflow()
 
         except KeyboardInterrupt:
             logger.info("Vertex Tester stopped by user")
