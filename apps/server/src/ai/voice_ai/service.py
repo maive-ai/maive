@@ -9,6 +9,7 @@ from src.ai.voice_ai.base import VoiceAIError, VoiceAIProvider
 from src.ai.voice_ai.constants import VoiceAIErrorCode
 from src.ai.voice_ai.schemas import CallRequest, CallResponse, VoiceAIErrorResponse
 from src.utils.logger import logger
+import asyncio
 
 
 class VoiceAIService:
@@ -39,6 +40,11 @@ class VoiceAIService:
             logger.info(f"Creating outbound call to: {request.phone_number}")
             result = await self.voice_ai_provider.create_outbound_call(request)
             logger.info(f"Successfully created call {result.call_id} with status: {result.status}")
+            # Start background monitoring via provider
+            try:
+                asyncio.create_task(self.voice_ai_provider.monitor_ongoing_call(result.call_id))
+            except Exception as monitor_err:
+                logger.error(f"Failed to start call monitor task for {result.call_id}: {monitor_err}")
             return result
         except VoiceAIError as e:
             logger.error(f"Voice AI error creating call: {e.message}")

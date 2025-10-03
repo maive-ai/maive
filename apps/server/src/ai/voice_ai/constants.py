@@ -21,6 +21,13 @@ class CallStatus(str, Enum):
     FAILED = "failed"
     CANCELED = "canceled"
 
+    CALL_ENDED_STATUSES = [ENDED, FAILED, CANCELED, BUSY, NO_ANSWER]
+
+    @classmethod
+    def is_call_ended(cls, status: "CallStatus") -> bool:
+        """Check if a call status indicates the call has ended."""
+        return status in cls.CALL_ENDED_STATUSES
+
 
 class VoiceAIProvider(str, Enum):
     """Available Voice AI providers."""
