@@ -542,6 +542,43 @@ export interface HTTPValidationError {
     'detail'?: Array<ValidationError>;
 }
 /**
+ * Response model for job note.
+ * @export
+ * @interface JobNoteResponse
+ */
+export interface JobNoteResponse {
+    /**
+     * Text content of the note
+     * @type {string}
+     * @memberof JobNoteResponse
+     */
+    'text': string;
+    /**
+     * Whether the note is pinned to the top
+     * @type {boolean}
+     * @memberof JobNoteResponse
+     */
+    'isPinned': boolean;
+    /**
+     * ID of user who created this note
+     * @type {number}
+     * @memberof JobNoteResponse
+     */
+    'createdById': number;
+    /**
+     * Date/time (in UTC) the note was created
+     * @type {string}
+     * @memberof JobNoteResponse
+     */
+    'createdOn': string;
+    /**
+     * Date/time (in UTC) the note was modified
+     * @type {string}
+     * @memberof JobNoteResponse
+     */
+    'modifiedOn': string;
+}
+/**
  * Response model for Service Titan job information.
  * @export
  * @interface JobResponse
@@ -1291,6 +1328,60 @@ export class AuthenticationApi extends BaseAPI {
 export const CRMApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
         /**
+         * Add a note to a specific job.  Args:     tenant: The tenant ID     job_id: The unique identifier for the job     text: The text content of the note     pin_to_top: Whether to pin the note to the top (optional)     crm_service: The CRM service instance from dependency injection  Returns:     JobNoteResponse: The created note information  Raises:     HTTPException: If the job is not found or an error occurs
+         * @summary Add Job Note
+         * @param {number} tenant 
+         * @param {number} jobId 
+         * @param {string} text 
+         * @param {boolean | null} [pinToTop] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        addJobNoteApiCrmTenantJobsJobIdNotesPost: async (tenant: number, jobId: number, text: string, pinToTop?: boolean | null, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'tenant' is not null or undefined
+            assertParamExists('addJobNoteApiCrmTenantJobsJobIdNotesPost', 'tenant', tenant)
+            // verify required parameter 'jobId' is not null or undefined
+            assertParamExists('addJobNoteApiCrmTenantJobsJobIdNotesPost', 'jobId', jobId)
+            // verify required parameter 'text' is not null or undefined
+            assertParamExists('addJobNoteApiCrmTenantJobsJobIdNotesPost', 'text', text)
+            const localVarPath = `/api/crm/{tenant}/jobs/{job_id}/notes`
+                .replace(`{${"tenant"}}`, encodeURIComponent(String(tenant)))
+                .replace(`{${"job_id"}}`, encodeURIComponent(String(jobId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            if (text !== undefined) {
+                localVarQueryParameter['text'] = text;
+            }
+
+            if (pinToTop !== undefined) {
+                localVarQueryParameter['pin_to_top'] = pinToTop;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
          * Get the status of all projects.  Args:     crm_service: The CRM service instance from dependency injection  Returns:     ProjectStatusListResponse: List of all project statuses  Raises:     HTTPException: If an error occurs while fetching project statuses
          * @summary Get All Project Statuses
          * @param {*} [options] Override http request option.
@@ -1520,6 +1611,22 @@ export const CRMApiFp = function(configuration?: Configuration) {
     const localVarAxiosParamCreator = CRMApiAxiosParamCreator(configuration)
     return {
         /**
+         * Add a note to a specific job.  Args:     tenant: The tenant ID     job_id: The unique identifier for the job     text: The text content of the note     pin_to_top: Whether to pin the note to the top (optional)     crm_service: The CRM service instance from dependency injection  Returns:     JobNoteResponse: The created note information  Raises:     HTTPException: If the job is not found or an error occurs
+         * @summary Add Job Note
+         * @param {number} tenant 
+         * @param {number} jobId 
+         * @param {string} text 
+         * @param {boolean | null} [pinToTop] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async addJobNoteApiCrmTenantJobsJobIdNotesPost(tenant: number, jobId: number, text: string, pinToTop?: boolean | null, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<JobNoteResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.addJobNoteApiCrmTenantJobsJobIdNotesPost(tenant, jobId, text, pinToTop, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.addJobNoteApiCrmTenantJobsJobIdNotesPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
          * Get the status of all projects.  Args:     crm_service: The CRM service instance from dependency injection  Returns:     ProjectStatusListResponse: List of all project statuses  Raises:     HTTPException: If an error occurs while fetching project statuses
          * @summary Get All Project Statuses
          * @param {*} [options] Override http request option.
@@ -1601,6 +1708,19 @@ export const CRMApiFactory = function (configuration?: Configuration, basePath?:
     const localVarFp = CRMApiFp(configuration)
     return {
         /**
+         * Add a note to a specific job.  Args:     tenant: The tenant ID     job_id: The unique identifier for the job     text: The text content of the note     pin_to_top: Whether to pin the note to the top (optional)     crm_service: The CRM service instance from dependency injection  Returns:     JobNoteResponse: The created note information  Raises:     HTTPException: If the job is not found or an error occurs
+         * @summary Add Job Note
+         * @param {number} tenant 
+         * @param {number} jobId 
+         * @param {string} text 
+         * @param {boolean | null} [pinToTop] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        addJobNoteApiCrmTenantJobsJobIdNotesPost(tenant: number, jobId: number, text: string, pinToTop?: boolean | null, options?: RawAxiosRequestConfig): AxiosPromise<JobNoteResponse> {
+            return localVarFp.addJobNoteApiCrmTenantJobsJobIdNotesPost(tenant, jobId, text, pinToTop, options).then((request) => request(axios, basePath));
+        },
+        /**
          * Get the status of all projects.  Args:     crm_service: The CRM service instance from dependency injection  Returns:     ProjectStatusListResponse: List of all project statuses  Raises:     HTTPException: If an error occurs while fetching project statuses
          * @summary Get All Project Statuses
          * @param {*} [options] Override http request option.
@@ -1666,6 +1786,21 @@ export const CRMApiFactory = function (configuration?: Configuration, basePath?:
  * @extends {BaseAPI}
  */
 export class CRMApi extends BaseAPI {
+    /**
+     * Add a note to a specific job.  Args:     tenant: The tenant ID     job_id: The unique identifier for the job     text: The text content of the note     pin_to_top: Whether to pin the note to the top (optional)     crm_service: The CRM service instance from dependency injection  Returns:     JobNoteResponse: The created note information  Raises:     HTTPException: If the job is not found or an error occurs
+     * @summary Add Job Note
+     * @param {number} tenant 
+     * @param {number} jobId 
+     * @param {string} text 
+     * @param {boolean | null} [pinToTop] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CRMApi
+     */
+    public addJobNoteApiCrmTenantJobsJobIdNotesPost(tenant: number, jobId: number, text: string, pinToTop?: boolean | null, options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).addJobNoteApiCrmTenantJobsJobIdNotesPost(tenant, jobId, text, pinToTop, options).then((request) => request(this.axios, this.basePath));
+    }
+
     /**
      * Get the status of all projects.  Args:     crm_service: The CRM service instance from dependency injection  Returns:     ProjectStatusListResponse: List of all project statuses  Raises:     HTTPException: If an error occurs while fetching project statuses
      * @summary Get All Project Statuses
