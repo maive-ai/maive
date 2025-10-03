@@ -201,7 +201,8 @@ export const CallStatus = {
     Busy: 'busy',
     NoAnswer: 'no_answer',
     Failed: 'failed',
-    Canceled: 'canceled'
+    Canceled: 'canceled',
+    EndedFailedCanceledBusyNoAnswer: '[\'ended\', \'failed\', \'canceled\', \'busy\', \'no_answer\']'
 } as const;
 
 export type CallStatus = typeof CallStatus[keyof typeof CallStatus];

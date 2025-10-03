@@ -22,4 +22,6 @@ Call status values across Voice AI systems.
 
 * `Canceled` (value: `'canceled'`)
 
+* `EndedFailedCanceledBusyNoAnswer` (value: `'[\'ended\', \'failed\', \'canceled\', \'busy\', \'no_answer\']'`)
+
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
