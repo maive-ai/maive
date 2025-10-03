@@ -25,6 +25,8 @@ from src.integrations.crm.schemas import (
     EstimateResponse,
     EstimatesListResponse,
     EstimatesRequest,
+    JobHoldReasonsListResponse,
+    JobNoteResponse,
     JobResponse,
     ProjectStatusListResponse,
     ProjectStatusResponse,
@@ -573,6 +575,156 @@ class ServiceTitanProvider(CRMProvider):
         except Exception as e:
             logger.error(f"Unexpected error fetching estimate items: {e}")
             raise CRMError(f"Failed to fetch estimate items: {str(e)}", "UNKNOWN_ERROR")
+
+    async def add_job_note(self, job_id: int, text: str, pin_to_top: bool | None = None) -> JobNoteResponse:
+        """
+        Add a note to a specific job in Service Titan.
+
+        Args:
+            job_id: The Service Titan job ID
+            text: The text content of the note
+            pin_to_top: Whether to pin the note to the top (optional)
+
+        Returns:
+            JobNoteResponse: The created note information
+
+        Raises:
+            CRMError: If the job is not found or an error occurs
+        """
+        try:
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.JOB_NOTES.format(tenant_id=self.tenant_id, id=job_id)}"
+
+            # Prepare request body with camelCase field names
+            request_body = {"text": text}
+            if pin_to_top is not None:
+                request_body["pinToTop"] = pin_to_top
+
+            logger.debug(f"Adding note to job {job_id}")
+
+            response = await self._make_authenticated_request("POST", url, json=request_body)
+            response.raise_for_status()
+
+            data = response.json()
+
+            # Return the response as JobNoteResponse
+            return JobNoteResponse(**data)
+
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise CRMError(f"Job with ID {job_id} not found", "NOT_FOUND")
+            else:
+                logger.error(f"HTTP error adding note to job {job_id}: {e}")
+                raise CRMError(f"Failed to add note to job: {e}", "HTTP_ERROR")
+        except Exception as e:
+            logger.error(f"Unexpected error adding note to job {job_id}: {e}")
+            raise CRMError(f"Failed to add note to job: {str(e)}", "UNKNOWN_ERROR")
+
+    async def get_job_hold_reasons(self, active: str | None = None) -> JobHoldReasonsListResponse:
+        """
+        Get a list of job hold reasons from Service Titan.
+
+        Args:
+            active: Optional active status filter (True, False, Any)
+
+        Returns:
+            JobHoldReasonsListResponse: List of job hold reasons
+
+        Raises:
+            CRMError: If an error occurs while fetching hold reasons
+        """
+        try:
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.JOB_HOLD_REASONS.format(tenant_id=self.tenant_id)}"
+
+            params = {}
+            if active is not None:
+                params["active"] = active
+
+            logger.debug("Fetching job hold reasons")
+
+            response = await self._make_authenticated_request("GET", url, params=params)
+            response.raise_for_status()
+
+            data = response.json()
+
+            # Return the response as JobHoldReasonsListResponse
+            return JobHoldReasonsListResponse(**data)
+
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error fetching job hold reasons: {e}")
+            raise CRMError(f"Failed to fetch job hold reasons: {e}", "HTTP_ERROR")
+        except Exception as e:
+            logger.error(f"Unexpected error fetching job hold reasons: {e}")
+            raise CRMError(f"Failed to fetch job hold reasons: {str(e)}", "UNKNOWN_ERROR")
+
+    async def hold_job(self, job_id: int, reason_id: int, memo: str) -> None:
+        """
+        Put a job on hold in Service Titan.
+
+        Args:
+            job_id: The Service Titan job ID
+            reason_id: The ID of the hold reason
+            memo: The memo/message for the hold
+
+        Raises:
+            CRMError: If the job is not found or an error occurs
+        """
+        try:
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.JOB_HOLD.format(tenant_id=self.tenant_id, id=job_id)}"
+
+            # Prepare request body with camelCase field names
+            request_body = {
+                "reasonId": reason_id,
+                "memo": memo
+            }
+
+            logger.debug(f"Putting job {job_id} on hold with reason {reason_id}")
+
+            response = await self._make_authenticated_request("PUT", url, json=request_body)
+            response.raise_for_status()
+
+            logger.info(f"Successfully put job {job_id} on hold")
+
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise CRMError(f"Job with ID {job_id} not found", "NOT_FOUND")
+            else:
+                logger.error(f"HTTP error holding job {job_id}: {e}")
+                raise CRMError(f"Failed to hold job: {e}", "HTTP_ERROR")
+        except Exception as e:
+            logger.error(f"Unexpected error holding job {job_id}: {e}")
+            raise CRMError(f"Failed to hold job: {str(e)}", "UNKNOWN_ERROR")
+
+    async def remove_job_cancellation(self, job_id: int) -> None:
+        """
+        Remove cancellation from a job in Service Titan.
+
+        Args:
+            job_id: The Service Titan job ID
+
+        Raises:
+            CRMError: If the job is not found or an error occurs
+        """
+        try:
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.JOB_REMOVE_CANCELLATION.format(tenant_id=self.tenant_id, id=job_id)}"
+
+            logger.debug(f"Removing cancellation from job {job_id}")
+
+            response = await self._make_authenticated_request("PUT", url)
+            response.raise_for_status()
+
+            logger.info(f"Successfully removed cancellation from job {job_id}")
+
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise CRMError(f"Job with ID {job_id} not found", "NOT_FOUND")
+            elif e.response.status_code == 400:
+                raise CRMError(f"Job {job_id} is not in a canceled state", "INVALID_STATE")
+            else:
+                logger.error(f"HTTP error removing cancellation from job {job_id}: {e}")
+                raise CRMError(f"Failed to remove cancellation: {e}", "HTTP_ERROR")
+        except Exception as e:
+            logger.error(f"Unexpected error removing cancellation from job {job_id}: {e}")
+            raise CRMError(f"Failed to remove cancellation: {str(e)}", "UNKNOWN_ERROR")
 
     async def close(self):
         """Close the HTTP client."""

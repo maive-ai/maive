@@ -10,7 +10,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from src.integrations.crm.constants import CRMProvider, EstimateReviewStatus, ProjectStatus
+from src.integrations.crm.constants import CRMProvider, EstimateReviewStatus, JobStatus, ProjectStatus
 
 
 class ProjectStatusResponse(BaseModel):
@@ -193,3 +193,51 @@ class CRMErrorResponse(BaseModel):
     error: str = Field(..., description="Error message")
     error_code: str | None = Field(None, description="Provider-specific error code")
     provider: CRMProvider | None = Field(None, description="CRM provider")
+
+
+class AddJobNoteRequest(BaseModel):
+    """Request model for adding a note to a job."""
+
+    tenant: int = Field(..., description="Tenant ID")
+    job_id: int = Field(..., description="ID of the job to add note to", alias="jobId")
+    text: str = Field(..., description="Text content of the note")
+    pin_to_top: bool | None = Field(None, description="Whether to pin the note to the top", alias="pinToTop")
+
+
+class JobNoteResponse(BaseModel):
+    """Response model for job note."""
+
+    text: str = Field(..., description="Text content of the note")
+    is_pinned: bool = Field(..., description="Whether the note is pinned to the top", alias="isPinned")
+    created_by_id: int = Field(..., description="ID of user who created this note", alias="createdById")
+    created_on: datetime = Field(..., description="Date/time (in UTC) the note was created", alias="createdOn")
+    modified_on: datetime = Field(..., description="Date/time (in UTC) the note was modified", alias="modifiedOn")
+
+
+class JobHoldReasonResponse(BaseModel):
+    """Response model for job hold reason."""
+
+    id: int = Field(..., description="Job Hold Reason ID")
+    name: str = Field(..., description="Job Hold Reason Name")
+    active: bool = Field(..., description="Job Hold Reason Active Status")
+    created_on: datetime = Field(..., description="Date/time (in UTC) when the reason was created", alias="createdOn")
+    modified_on: datetime = Field(..., description="Date/time (in UTC) when reason was last modified", alias="modifiedOn")
+
+
+class JobHoldReasonsListResponse(BaseModel):
+    """Response model for paginated list of job hold reasons."""
+
+    page: int = Field(..., description="From which page this output has started")
+    page_size: int = Field(..., description="Page size for this query", alias="pageSize")
+    has_more: bool = Field(..., description="True if there are more records", alias="hasMore")
+    total_count: int | None = Field(None, description="Total count of records for this query", alias="totalCount")
+    data: list[JobHoldReasonResponse] = Field(..., description="The collection of result items")
+
+
+class HoldJobRequest(BaseModel):
+    """Request model for putting a job on hold."""
+
+    tenant: int = Field(..., description="Tenant ID")
+    job_id: int = Field(..., description="ID of the job to put on hold", alias="jobId")
+    reason_id: int = Field(..., description="ID of job hold reason", alias="reasonId")
+    memo: str = Field(..., description="Memo of job hold reason")

@@ -10,7 +10,11 @@ from datetime import UTC, datetime, timedelta
 from src.ai.gemini import get_gemini_client
 from src.ai.gemini.schemas import FileUploadRequest, GenerateContentRequest
 from src.integrations.crm.base import CRMError
-from src.integrations.crm.constants import FormStatus
+from src.integrations.crm.constants import (
+    JOB_HOLD_REASON_NAMES,
+    FormStatus,
+    JobHoldReasonId,
+)
 from src.integrations.crm.providers.service_titan import ServiceTitanProvider
 from src.integrations.crm.schemas import EstimateItemsRequest, EstimatesRequest
 from src.integrations.rilla.client import RillaClient
@@ -374,17 +378,21 @@ class VertexTester:
 
             # Step 2: Get all estimates for this job
             logger.info(f"\\nStep 2: Fetching estimates for job {job_id}")
-            estimates_request = EstimatesRequest(tenant=self.provider.tenant_id, job_id=job_id)
+            estimates_request = EstimatesRequest(
+                tenant=self.provider.tenant_id, job_id=job_id
+            )
             estimates_response = await self.provider.get_estimates(estimates_request)
 
-            logger.info(f"✅ Found {len(estimates_response.estimates)} estimates for job {job_id}")
+            logger.info(
+                f"✅ Found {len(estimates_response.estimates)} estimates for job {job_id}"
+            )
 
             # Log estimate IDs
             estimate_ids = [estimate.id for estimate in estimates_response.estimates]
             logger.info(f"   Estimate IDs: {estimate_ids}")
 
             # Step 3: Check which estimates have 'sold' status
-            logger.info(f"\\nStep 3: Checking estimate statuses")
+            logger.info("\\nStep 3: Checking estimate statuses")
             sold_estimates = []
 
             for estimate in estimates_response.estimates:
@@ -399,7 +407,10 @@ class VertexTester:
                     logger.info(f"      Status Name: {estimate.status.name}")
 
                     # Check if status indicates 'sold' (you may need to adjust this condition)
-                    if estimate.status.name.lower() == "sold" or "sold" in estimate.status.name.lower():
+                    if (
+                        estimate.status.name.lower() == "sold"
+                        or "sold" in estimate.status.name.lower()
+                    ):
                         sold_estimates.append(estimate)
                         logger.info("      ✅ This estimate is SOLD!")
                 else:
@@ -411,7 +422,7 @@ class VertexTester:
                 logger.info(f"      Is Recommended: {estimate.is_recommended}")
 
             # Step 4: Apply selection logic for sold estimates
-            logger.info(f"\\nStep 4: Applying selection logic for sold estimates")
+            logger.info("\\nStep 4: Applying selection logic for sold estimates")
             logger.info(f"   Found {len(sold_estimates)} sold estimates")
 
             if len(sold_estimates) == 0:
@@ -425,7 +436,9 @@ class VertexTester:
                 selected_estimate = sold_estimates[0]
                 logger.info(f"   ✅ Single sold estimate found: {selected_estimate.id}")
             else:
-                logger.info(f"   Multiple sold estimates found, applying selection criteria...")
+                logger.info(
+                    "   Multiple sold estimates found, applying selection criteria..."
+                )
 
                 # Filter by active = True
                 active_sold_estimates = [e for e in sold_estimates if e.active]
@@ -433,28 +446,42 @@ class VertexTester:
 
                 if len(active_sold_estimates) == 1:
                     selected_estimate = active_sold_estimates[0]
-                    logger.info(f"   ✅ Single active sold estimate selected: {selected_estimate.id}")
+                    logger.info(
+                        f"   ✅ Single active sold estimate selected: {selected_estimate.id}"
+                    )
                 else:
                     # If no active estimates or multiple active estimates, choose most recent by modified_on
-                    estimates_to_choose_from = active_sold_estimates if active_sold_estimates else sold_estimates
-                    logger.info(f"   Choosing from {len(estimates_to_choose_from)} estimates based on most recent modified_on date")
+                    estimates_to_choose_from = (
+                        active_sold_estimates
+                        if active_sold_estimates
+                        else sold_estimates
+                    )
+                    logger.info(
+                        f"   Choosing from {len(estimates_to_choose_from)} estimates based on most recent modified_on date"
+                    )
 
                     # Sort by modified_on descending (most recent first)
-                    selected_estimate = max(estimates_to_choose_from, key=lambda x: x.modified_on)
-                    logger.info(f"   ✅ Most recent estimate selected: {selected_estimate.id} (modified: {selected_estimate.modified_on})")
+                    selected_estimate = max(
+                        estimates_to_choose_from, key=lambda x: x.modified_on
+                    )
+                    logger.info(
+                        f"   ✅ Most recent estimate selected: {selected_estimate.id} (modified: {selected_estimate.modified_on})"
+                    )
 
             # Summary with selected estimate details
-            logger.info(f"\\n📊 Final Summary:")
+            logger.info("\\n📊 Final Summary:")
             logger.info(f"   Total estimates: {len(estimates_response.estimates)}")
             logger.info(f"   Sold estimates: {len(sold_estimates)}")
             logger.info(f"   Selected estimate ID: {selected_estimate.id}")
-            logger.info(f"   Selected estimate details:")
+            logger.info("   Selected estimate details:")
             logger.info(f"      Name: {selected_estimate.name}")
             logger.info(f"      Active: {selected_estimate.active}")
             logger.info(f"      Modified On: {selected_estimate.modified_on}")
             logger.info(f"      Subtotal: ${selected_estimate.subtotal}")
             logger.info(f"      Tax: ${selected_estimate.tax}")
-            logger.info(f"      Total: ${selected_estimate.subtotal + selected_estimate.tax}")
+            logger.info(
+                f"      Total: ${selected_estimate.subtotal + selected_estimate.tax}"
+            )
 
             if selected_estimate.sold_on:
                 logger.info(f"      Sold On: {selected_estimate.sold_on}")
@@ -462,17 +489,25 @@ class VertexTester:
                 logger.info(f"      Sold By: {selected_estimate.sold_by}")
 
             # Step 5: Fetch and log items for the selected estimate
-            logger.info(f"\\nStep 5: Fetching items for estimate {selected_estimate.id}")
-            items_request = EstimateItemsRequest(tenant=self.provider.tenant_id, estimate_id=selected_estimate.id)
+            logger.info(
+                f"\\nStep 5: Fetching items for estimate {selected_estimate.id}"
+            )
+            items_request = EstimateItemsRequest(
+                tenant=self.provider.tenant_id, estimate_id=selected_estimate.id
+            )
             items_response = await self.provider.get_estimate_items(items_request)
 
-            logger.info(f"✅ Found {len(items_response.items)} items for estimate {selected_estimate.id}")
+            logger.info(
+                f"✅ Found {len(items_response.items)} items for estimate {selected_estimate.id}"
+            )
 
             if items_response.items:
                 logger.info("\\n📦 Estimate Items:")
                 for i, item in enumerate(items_response.items):
                     logger.info(f"\\n   [{i + 1}] Item {item.id}")
-                    logger.info(f"       SKU: {item.sku.name} ({item.sku.display_name})")
+                    logger.info(
+                        f"       SKU: {item.sku.name} ({item.sku.display_name})"
+                    )
                     logger.info(f"       Quantity: {item.qty}")
                     logger.info(f"       Unit Cost: ${item.unit_cost:.2f}")
                     logger.info(f"       Total: ${item.total:.2f}")
@@ -482,26 +517,208 @@ class VertexTester:
             logger.info("\\n✅ JOB AND ESTIMATES TEST COMPLETE")
 
         except CRMError as e:
-            logger.error(f"❌ CRM error during job and estimates test: {e.message} (Code: {e.error_code})")
+            logger.error(
+                f"❌ CRM error during job and estimates test: {e.message} (Code: {e.error_code})"
+            )
         except Exception as e:
             logger.error(f"❌ Unexpected error during job and estimates test: {e}")
 
+    async def test_job_hold_and_estimates(self) -> None:
+        """Test getting job estimates and putting the job on hold."""
+        try:
+            job_id = 141751428
+            logger.info("=" * 60)
+            logger.info(f"TESTING JOB HOLD AND ESTIMATES - Job ID: {job_id}")
+            logger.info("=" * 60)
+
+            # Step 1: Get the job details
+            logger.info(f"Step 1: Fetching job {job_id}")
+            job = await self.provider.get_job(job_id)
+
+            logger.info("✅ Job Details:")
+            logger.info(f"   Job ID: {job.id}")
+            logger.info(f"   Job Number: {job.job_number}")
+            logger.info(f"   Job Status: {job.job_status}")
+            logger.info(f"   Customer ID: {job.customer_id}")
+            logger.info(f"   Location ID: {job.location_id}")
+            logger.info(f"   Project ID: {job.project_id}")
+
+            # Step 1.5: If job is canceled, remove the cancellation
+            if job.job_status == "Canceled":
+                logger.info(f"\n⚠️ Job {job_id} is in Canceled status, removing cancellation...")
+                await self.provider.remove_job_cancellation(job_id)
+                logger.info("✅ Cancellation removed successfully")
+
+                # Re-fetch the job to get updated status
+                job = await self.provider.get_job(job_id)
+                logger.info(f"   Updated Job Status: {job.job_status}")
+
+            # Step 2: Get all estimates for this job
+            logger.info(f"\nStep 2: Fetching estimates for job {job_id}")
+            estimates_request = EstimatesRequest(
+                tenant=self.provider.tenant_id, job_id=job_id
+            )
+            estimates_response = await self.provider.get_estimates(estimates_request)
+
+            logger.info(
+                f"✅ Found {len(estimates_response.estimates)} estimates for job {job_id}"
+            )
+
+            # Log estimate IDs
+            estimate_ids = [estimate.id for estimate in estimates_response.estimates]
+            logger.info(f"   Estimate IDs: {estimate_ids}")
+
+            # Step 3: Check which estimates have 'sold' status
+            logger.info("\nStep 3: Checking estimate statuses")
+            sold_estimates = []
+
+            for estimate in estimates_response.estimates:
+                logger.info(f"\n   Estimate {estimate.id}:")
+                logger.info(f"      Name: {estimate.name}")
+                logger.info(f"      Review Status: {estimate.review_status}")
+                logger.info(f"      Active: {estimate.active}")
+                logger.info(f"      Modified On: {estimate.modified_on}")
+
+                if estimate.status:
+                    logger.info(f"      Status Value: {estimate.status.value}")
+                    logger.info(f"      Status Name: {estimate.status.name}")
+
+                    # Check if status indicates 'sold'
+                    if (
+                        estimate.status.name.lower() == "sold"
+                        or "sold" in estimate.status.name.lower()
+                    ):
+                        sold_estimates.append(estimate)
+                        logger.info("      ✅ This estimate is SOLD!")
+                else:
+                    logger.info("      Status: None")
+
+                logger.info(f"      Subtotal: ${estimate.subtotal}")
+                logger.info(f"      Tax: ${estimate.tax}")
+
+            # Step 4: Apply selection logic for sold estimates
+            logger.info("\nStep 4: Applying selection logic for sold estimates")
+            logger.info(f"   Found {len(sold_estimates)} sold estimates")
+
+            if len(sold_estimates) == 0:
+                error_msg = f"❌ ERROR: No sold estimates found for job {job_id}"
+                logger.error(error_msg)
+                raise CRMError(error_msg, "NO_SOLD_ESTIMATES")
+
+            selected_estimate = None
+
+            if len(sold_estimates) == 1:
+                selected_estimate = sold_estimates[0]
+                logger.info(f"   ✅ Single sold estimate found: {selected_estimate.id}")
+            else:
+                logger.info(
+                    "   Multiple sold estimates found, applying selection criteria..."
+                )
+
+                # Filter by active = True
+                active_sold_estimates = [e for e in sold_estimates if e.active]
+                logger.info(f"   Active sold estimates: {len(active_sold_estimates)}")
+
+                if len(active_sold_estimates) == 1:
+                    selected_estimate = active_sold_estimates[0]
+                    logger.info(
+                        f"   ✅ Single active sold estimate selected: {selected_estimate.id}"
+                    )
+                else:
+                    # If no active estimates or multiple active estimates, choose most recent by modified_on
+                    estimates_to_choose_from = (
+                        active_sold_estimates
+                        if active_sold_estimates
+                        else sold_estimates
+                    )
+                    logger.info(
+                        f"   Choosing from {len(estimates_to_choose_from)} estimates based on most recent modified_on date"
+                    )
+
+                    # Sort by modified_on descending (most recent first)
+                    selected_estimate = max(
+                        estimates_to_choose_from, key=lambda x: x.modified_on
+                    )
+                    logger.info(
+                        f"   ✅ Most recent estimate selected: {selected_estimate.id} (modified: {selected_estimate.modified_on})"
+                    )
+
+            # Summary with selected estimate details
+            logger.info("\n📊 Selected Estimate Summary:")
+            logger.info(f"   Estimate ID: {selected_estimate.id}")
+            logger.info(f"   Name: {selected_estimate.name}")
+            logger.info(f"   Active: {selected_estimate.active}")
+            logger.info(f"   Modified On: {selected_estimate.modified_on}")
+            logger.info(f"   Subtotal: ${selected_estimate.subtotal}")
+            logger.info(f"   Tax: ${selected_estimate.tax}")
+
+            # Step 5: Get available hold reasons
+            logger.info("\nStep 5: Fetching job hold reasons")
+            hold_reasons_response = await self.provider.get_job_hold_reasons(
+                active="True"
+            )
+
+            logger.info(
+                f"✅ Found {len(hold_reasons_response.data)} active hold reasons"
+            )
+
+            if not hold_reasons_response.data:
+                raise CRMError("No active hold reasons found", "NO_HOLD_REASONS")
+
+            # Log all hold reasons
+            logger.info("\n📋 Available Hold Reasons:")
+            for i, reason in enumerate(hold_reasons_response.data):
+                logger.info(f"   [{i + 1}] ID: {reason.id} - Name: {reason.name}")
+
+            # Use the "2nd Look Needed" hold reason
+            hold_reason_id = JobHoldReasonId.SECOND_LOOK_NEEDED
+            hold_reason_name = JOB_HOLD_REASON_NAMES[hold_reason_id]
+
+            # Verify the reason exists in the available reasons
+            available_reason_ids = [r.id for r in hold_reasons_response.data]
+            if hold_reason_id.value not in available_reason_ids:
+                logger.warning(
+                    f"⚠️ Hold reason ID {hold_reason_id.value} not found in available reasons, using first available"
+                )
+                hold_reason_id_value = hold_reasons_response.data[0].id
+                hold_reason_name = hold_reasons_response.data[0].name
+            else:
+                hold_reason_id_value = hold_reason_id.value
+
+            logger.info(
+                f"\n   Using hold reason: {hold_reason_name} (ID: {hold_reason_id_value})"
+            )
+
+            # Step 6: Put the job on hold with the message
+            logger.info(f"\nStep 6: Putting job {job_id} on hold")
+            memo = "hey from maive.ai"
+            await self.provider.hold_job(job_id, hold_reason_id_value, memo)
+
+            logger.info("✅ Job put on hold successfully:")
+            logger.info(f"   Reason: {hold_reason_name}")
+            logger.info(f"   Memo: {memo}")
+
+            # Step 7: Verify the final job status
+            logger.info(f"\nStep 7: Verifying final job status")
+            final_job = await self.provider.get_job(job_id)
+            logger.info(f"✅ Final Job Status: {final_job.job_status}")
+
+            logger.info("\n✅ JOB HOLD AND ESTIMATES TEST COMPLETE")
+
+        except CRMError as e:
+            logger.error(
+                f"❌ CRM error during test: {e.message} (Code: {e.error_code})"
+            )
+        except Exception as e:
+            logger.error(f"❌ Unexpected error during test: {e}")
+
     async def run_test(self) -> None:
-        """Run the form submissions test."""
-        logger.info("Starting Vertex Tester - testing Form Submissions endpoint")
+        """Run the job hold and estimates test."""
+        logger.info("Starting Vertex Tester - testing Job Hold and Estimates")
 
         try:
-            # Test the new job and estimates functionality
-            await self.test_job_and_estimates()
-
-            # Test Gemini API with a joke
-            await self.test_gemini_joke()
-
-            # Test Gemini API with file upload and analysis
-            await self.test_gemini_file_analysis()
-
-            # Test form submissions endpoint
-            await self.test_form_submissions()
+            # Test job hold and estimates functionality
+            await self.test_job_hold_and_estimates()
 
         except KeyboardInterrupt:
             logger.info("Vertex Tester stopped by user")
