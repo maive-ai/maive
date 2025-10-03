@@ -926,7 +926,8 @@
           "busy",
           "no_answer",
           "failed",
-          "canceled"
+          "canceled",
+          "['ended', 'failed', 'canceled', 'busy', 'no_answer']"
         ],
         "title": "CallStatus",
         "description": "Call status values across Voice AI systems."
