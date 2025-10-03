@@ -1653,19 +1653,6 @@
         "title": "JobResponse",
         "description": "Response model for Service Titan job information."
       },
-      "ProjectStatus": {
-        "type": "string",
-        "enum": [
-          "hold",
-          "dispatched",
-          "done",
-          "cancelled",
-          "scheduled",
-          "working"
-        ],
-        "title": "ProjectStatus",
-        "description": "Project status values across CRM systems."
-      },
       "ProjectStatusListResponse": {
         "properties": {
           "projects": {
@@ -1703,7 +1690,7 @@
             "description": "Unique project identifier"
           },
           "status": {
-            "$ref": "#/components/schemas/ProjectStatus",
+            "$ref": "#/components/schemas/Status",
             "description": "Current project status"
           },
           "provider": {
@@ -1813,6 +1800,19 @@
         ],
         "title": "SkuModel",
         "description": "SKU model for estimate items."
+      },
+      "Status": {
+        "type": "string",
+        "enum": [
+          "Scheduled",
+          "Dispatched",
+          "InProgress",
+          "Hold",
+          "Completed",
+          "Canceled"
+        ],
+        "title": "Status",
+        "description": "Status values for Service Titan jobs and projects."
       },
       "User": {
         "properties": {
