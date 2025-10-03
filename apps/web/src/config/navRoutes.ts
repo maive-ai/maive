@@ -1,9 +1,9 @@
-import { Mic, Phone, SquarePlus, Workflow } from 'lucide-react';
+import { FolderKanban, Phone, SquarePlus, Workflow } from 'lucide-react';
 import type { AnyRoute } from '@tanstack/react-router';
 import type { LucideIcon } from 'lucide-react';
 import { env } from '../env';
 import { Route as PhoneInputRoute } from '../routes/_authed/phone-input.tsx';
-import { Route as VoiceAIRoute } from '../routes/_authed/voice-ai/index.tsx';
+import { Route as ProjectsRoute } from '../routes/_authed/projects.tsx';
 import { Route as WorkflowsRoute } from '../routes/_authed/workflows/index.tsx';
 import { Route as BuilderRoute } from '../routes/_authed/workflows/new_workflow.tsx';
 
@@ -26,9 +26,9 @@ const allNavItems: NavItem[] = [
     icon: Workflow,
   },
   {
-    label: 'Claim Check',
-    route: VoiceAIRoute,
-    icon: Mic,
+    label: 'Projects',
+    route: ProjectsRoute,
+    icon: FolderKanban,
   },
   {
     label: 'Phone Input',
