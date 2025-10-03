@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { AlertCircle, FileSearch, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useFetchProjects } from '@/clients/crm';
@@ -13,10 +13,10 @@ export const Route = createFileRoute('/_authed/projects')({
 function Projects() {
   const { data, isLoading, isError, error } = useFetchProjects();
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const navigate = useNavigate();
 
   const handleProjectClick = (projectId: string): void => {
-    console.log('Project clicked:', projectId);
-    // TODO: Navigate to project detail or phone input
+    navigate({ to: '/project-detail', search: { projectId } });
   };
 
   // Filter projects based on search query
@@ -30,18 +30,19 @@ function Projects() {
     return data.projects.filter((project) => {
       const providerData = project.provider_data as any;
       
-      // Search across multiple fields
+      // Search across multiple fields (camelCase from mock CRM)
       const searchableFields = [
         project.project_id,
         project.status,
-        providerData?.customer_name,
+        providerData?.customerName,
         providerData?.address,
         providerData?.phone,
         providerData?.email,
-        providerData?.claim_number,
-        providerData?.insurance_agency,
-        providerData?.agency_contact_name,
-        providerData?.adjuster_name,
+        providerData?.claimNumber,
+        providerData?.insuranceAgency,
+        providerData?.insuranceAgencyContact?.name,
+        providerData?.adjusterName,
+        providerData?.adjusterContact?.name,
       ];
 
       return searchableFields.some((field) =>
@@ -128,9 +129,6 @@ function Projects() {
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Projects</h1>
-        <p className="text-gray-600 mt-1">
-          {data.total_count} {data.total_count === 1 ? 'project' : 'projects'} from {data.provider}
-        </p>
       </div>
 
       {/* Search Bar */}
