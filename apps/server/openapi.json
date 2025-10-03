@@ -730,7 +730,8 @@
       "CRMProvider": {
         "type": "string",
         "enum": [
-          "service_titan"
+          "service_titan",
+          "mock_crm"
         ],
         "title": "CRMProvider",
         "description": "Available CRM providers."

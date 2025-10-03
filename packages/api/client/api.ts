@@ -67,7 +67,8 @@ export interface AuthResponse {
  */
 
 export const CRMProvider = {
-    ServiceTitan: 'service_titan'
+    ServiceTitan: 'service_titan',
+    MockCrm: 'mock_crm'
 } as const;
 
 export type CRMProvider = typeof CRMProvider[keyof typeof CRMProvider];
