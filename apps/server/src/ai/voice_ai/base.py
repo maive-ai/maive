@@ -77,7 +77,7 @@ class VoiceAIProvider(ABC):
         pass
 
     @abstractmethod
-    async def monitor_ongoing_call(self, call_id: str) -> None:
+    async def monitor_ongoing_call(self, call_id: str, request: CallRequest) -> None:
         """
         Monitor an ongoing call until it reaches a terminal state. Implementations
         should poll provider status at a reasonable interval and exit when the call

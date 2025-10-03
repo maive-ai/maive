@@ -75,7 +75,7 @@ class VapiClaimStatusData(BaseModel):
     payment_details: VapiPaymentDetails | None = Field(None, description="Payment details")
     required_actions: VapiRequiredActions | None = Field(None, description="Required actions")
     claim_update_summary: str | None = Field(None, description="Summary of the call for notes")
-
+    
 
 class VapiAnalysis(BaseModel):
     """Vapi analysis structure."""

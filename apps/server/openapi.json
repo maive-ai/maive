@@ -856,6 +856,30 @@
             "type": "object",
             "title": "Metadata",
             "description": "Additional metadata"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id",
+            "description": "Job ID"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant",
+            "description": "Tenant ID"
           }
         },
         "type": "object",

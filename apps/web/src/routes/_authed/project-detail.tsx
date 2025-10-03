@@ -79,6 +79,10 @@ function ProjectDetail() {
       insurance_agency: providerData?.insuranceAgency,
       adjuster_name: providerData?.adjusterName,
       adjuster_phone: providerData?.adjusterContact?.phone,
+      metadata: {
+        tenant: providerData?.metadata?.tenant,
+        job_id: providerData?.metadata?.job_id,
+      },
     });
   };
 
@@ -128,6 +132,7 @@ function ProjectDetail() {
                 </div>
               </div>
 
+              {/* Notes and Claim Number & Insurance */}
               <div className="border-t pt-6 space-y-4">
                 {/* Claim Number & Insurance */}
                 <div className="flex items-start gap-3">
@@ -141,6 +146,16 @@ function ProjectDetail() {
                       <p className="font-medium text-gray-700">Insurance Agency</p>
                       <p className="text-gray-600">{providerData?.insuranceAgency || 'Not available'}</p>
                     </div>
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
+                    Notes
+                  </p>
+                  <div className="space-y-3 pl-2">
+                    <p className="text-gray-600">{providerData?.notes || 'No notes'}</p>
                   </div>
                 </div>
               </div>

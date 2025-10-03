@@ -146,6 +146,18 @@ export interface CallRequest {
      * @memberof CallRequest
      */
     'metadata'?: { [key: string]: any; };
+    /**
+     * 
+     * @type {number}
+     * @memberof CallRequest
+     */
+    'job_id'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CallRequest
+     */
+    'tenant'?: number | null;
 }
 /**
  * Response model for call information.

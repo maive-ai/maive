@@ -6,7 +6,7 @@ This module implements the VoiceAIProvider interface for Vapi.
 
 import json
 from http import HTTPStatus
-from typing import Any
+from typing import Any, Optional
 import asyncio
 
 import httpx
@@ -194,7 +194,7 @@ class VapiProvider(VoiceAIProvider):
             logger.error(f"[Vapi Provider] {error_msg}")
             raise VoiceAIError(error_msg, error_code=VoiceAIErrorCode.HTTP_ERROR)
 
-    async def monitor_ongoing_call(self, call_id: str) -> None:
+    async def monitor_ongoing_call(self, call_id: str, call_request: CallRequest) -> None:
         """Poll call status every 10s up to 24h; on end, log structured data."""
         poll_interval_seconds = 10
         max_polling_duration = 60 * 60 * 24  # 24 hours
@@ -218,14 +218,16 @@ class VapiProvider(VoiceAIProvider):
                 # End condition
                 if CallStatus.is_call_ended(status.status):
                     # Log structured data if available
-                    self._log_structured_data_from_provider_data(call_id, status.provider_data or {})
+                    call_ended_response = self._handle_call_ended(call_id, status.provider_data or {})
+                    if call_ended_response:
+                        await self._update_crm_job_note(call_id, call_ended_response, call_request)
                     break
 
                 await asyncio.sleep(poll_interval_seconds)
         except asyncio.CancelledError:
             logger.info(f"[Vapi Provider] Monitoring task for call {call_id} canceled")
 
-    def _log_structured_data_from_provider_data(self, call_id: str, provider_data: dict[str, Any]) -> None:
+    def _handle_call_ended(self, call_id: str, provider_data: dict[str, Any]) -> Optional[VapiClaimStatusData]:
         """Extract and log structured data from provider response (if present)."""
         try:
             analysis = provider_data.get("analysis") or {}
@@ -233,10 +235,38 @@ class VapiProvider(VoiceAIProvider):
             if structured:
                 structured = VapiClaimStatusData(**structured)
                 logger.info(f"[Vapi Provider] Structured data for call {call_id}: {structured}")
+                return structured
             else:
                 logger.info(f"[Vapi Provider] No structured data found for call {call_id}")
+                return None
         except Exception as e:
             logger.error(f"[Vapi Provider] Error logging structured data for call {call_id}: {e}")
+            return None
+
+    async def _update_crm_job_note(self, call_id: str, provider_data: VapiClaimStatusData, call_request: CallRequest) -> None:
+        """Demo: POST structured data as a CRM job note to our own API if metadata has tenant/job_id."""
+        try:
+            logger.info(f"[Vapi Provider] Call Request for call {call_id}: {call_request}")
+            tenant = call_request.tenant
+            job_id = call_request.job_id
+            if tenant is None or job_id is None:
+                logger.info(f"[Vapi Provider] Missing tenant/job_id in metadata for call {call_id}; skipping CRM note")
+                return
+
+            # TODO: Change to production URL
+            base_url = "http://localhost:8080"
+
+            url = f"{base_url}/api/crm/{tenant}/jobs/{job_id}/notes"
+            params = {"text": json.dumps(provider_data.required_actions.next_steps, ensure_ascii=False)}
+
+            async with httpx.AsyncClient(timeout=self._voice_ai_settings.request_timeout) as client:
+                resp = await client.post(url, params=params)
+                if resp.status_code >= 300:
+                    logger.error(f"[Vapi Provider] Failed to add job note for job {job_id} (status {resp.status_code}): {resp.text}")
+                else:
+                    logger.info(f"[Vapi Provider] Added CRM job note for job {job_id}")
+        except Exception as e:
+            logger.error(f"[Vapi Provider] Error posting CRM job note for call {call_id}: {e}")
 
     def _build_headers(self) -> dict[str, str]:
         """Build HTTP headers for Vapi API requests."""
@@ -429,6 +459,10 @@ class VapiProvider(VoiceAIProvider):
             variable_values["adjuster_name"] = request.adjuster_name
         if request.adjuster_phone:
             variable_values["adjuster_phone"] = request.adjuster_phone
+        if request.job_id:
+            variable_values["job_id"] = request.job_id
+        if request.tenant:
+            variable_values["tenant"] = request.tenant
 
         return variable_values
 
