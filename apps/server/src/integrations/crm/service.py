@@ -12,6 +12,7 @@ from src.integrations.crm.schemas import (
     EstimateResponse,
     JobNoteResponse,
     JobResponse,
+    ProjectNoteResponse,
     ProjectStatusListResponse,
     ProjectStatusResponse,
 )
@@ -225,6 +226,43 @@ class CRMService:
             )
         except Exception as e:
             logger.error(f"Unexpected error adding note to job {job_id}: {e}")
+            return CRMErrorResponse(
+                error=f"Unexpected error: {str(e)}",
+                error_code="UNKNOWN_ERROR",
+                provider=getattr(self.crm_provider, 'provider_name', None)
+            )
+
+    async def add_project_note(
+        self,
+        project_id: int,
+        text: str,
+        pin_to_top: bool | None = None,
+    ) -> ProjectNoteResponse | CRMErrorResponse:
+        """
+        Add a note to a specific project.
+
+        Args:
+            project_id: The project identifier
+            text: The text content of the note
+            pin_to_top: Whether to pin the note to the top (optional)
+
+        Returns:
+            ProjectNoteResponse or CRMErrorResponse: The result of the operation
+        """
+        try:
+            logger.info(f"Adding note to project {project_id}")
+            result = await self.crm_provider.add_project_note(project_id, text, pin_to_top)
+            logger.info(f"Successfully added note to project {project_id}")
+            return result
+        except CRMError as e:
+            logger.error(f"CRM error adding note to project {project_id}: {e.message}")
+            return CRMErrorResponse(
+                error=e.message,
+                error_code=e.error_code,
+                provider=getattr(self.crm_provider, 'provider_name', None)
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error adding note to project {project_id}: {e}")
             return CRMErrorResponse(
                 error=f"Unexpected error: {str(e)}",
                 error_code="UNKNOWN_ERROR",
