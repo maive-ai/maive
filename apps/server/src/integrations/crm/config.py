@@ -5,11 +5,32 @@ This module handles environment variable configuration and validation
 for CRM integrations using Pydantic settings.
 """
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from src.integrations.crm.constants import CRMProvider
 from src.utils.logger import logger
+
+
+class ServiceTitanConfig(BaseSettings):
+    """Service Titan-specific configuration."""
+
+    model_config = SettingsConfigDict(
+        case_sensitive=False, extra="ignore", env_prefix="CRM_"
+    )
+
+    tenant_id: str = Field(description="Tenant ID")
+    client_id: str = Field(description="Client ID")
+    client_secret: str = Field(description="Client Secret")
+    app_key: str = Field(description="App Key")
+    base_api_url: str = Field(
+        default="https://api-integration.servicetitan.io",
+        description="API base URL for requests",
+    )
+    token_url: str = Field(
+        default="https://auth-integration.servicetitan.io/connect/token",
+        description="OAuth token endpoint URL",
+    )
 
 
 class CRMSettings(BaseSettings):
@@ -20,30 +41,53 @@ class CRMSettings(BaseSettings):
     )
 
     # Provider configuration
-    crm_provider: CRMProvider = Field(
+    provider: CRMProvider = Field(
         default=CRMProvider.SERVICE_TITAN, description="CRM provider to use"
     )
 
-    # Service Titan configuration
-    tenant_id: str = Field(description="Tenant ID")
-    client_id: str = Field(description="Client ID")
-    client_secret: str = Field(description="Client Secret")
-    app_key: str = Field(description="App Key")
-    base_api_url: str = Field(
-        default="https://api-integration.servicetitan.io", description="API base URL for requests"
-    )
-    token_url: str = Field(
-        default="https://auth-integration.servicetitan.io/connect/token",
-        description="OAuth token endpoint URL"
-    )
-
     # General CRM settings
-    crm_request_timeout: int = Field(
+    request_timeout: int = Field(
         default=30, description="HTTP request timeout in seconds"
     )
-    crm_max_retries: int = Field(
+    max_retries: int = Field(
         default=3, description="Maximum number of API request retries"
     )
+
+    # Provider-specific configurations (populated on demand)
+    _provider_config: ServiceTitanConfig | None = None
+
+    @model_validator(mode="after")
+    def validate_provider_config(self) -> "CRMSettings":
+        """Validate that required provider configuration is available."""
+        if self.provider == CRMProvider.SERVICE_TITAN:
+            # Load Service Titan config only if using that provider
+            try:
+                self._provider_config = ServiceTitanConfig()
+                logger.info("Service Titan configuration loaded")
+            except Exception as e:
+                raise ValueError(
+                    f"Service Titan configuration required when CRM_PROVIDER=service_titan. "
+                    f"Missing environment variables: {e}"
+                )
+        return self
+
+    @property
+    def provider_config(self) -> ServiceTitanConfig:
+        """
+        Get provider-specific configuration.
+        
+        Returns:
+            ServiceTitanConfig: Provider configuration instance
+            
+        Raises:
+            ValueError: If provider config is not loaded
+        """
+        if self._provider_config is None:
+            raise ValueError(
+                f"Provider configuration not loaded for {self.provider}. "
+                f"Ensure CRM_PROVIDER is set correctly."
+            )
+        return self._provider_config
 
 
 # Global settings instance
@@ -60,18 +104,18 @@ def get_crm_settings() -> CRMSettings:
     global _crm_settings
     if _crm_settings is None:
         _crm_settings = CRMSettings()
-        logger.info(f"CRMSettings loaded. Provider: {_crm_settings.crm_provider}")
-        if _crm_settings.tenant_id:
-            logger.info(f"Service Titan Tenant ID: {_crm_settings.tenant_id}")
-        if _crm_settings.client_id:
-            logger.info(f"Service Titan Client ID: {_crm_settings.client_id}")
-        if _crm_settings.client_secret:
+        logger.info(f"CRMSettings loaded. Provider: {_crm_settings.provider}")
+        
+        # Log provider-specific config if available
+        if _crm_settings.provider == CRMProvider.SERVICE_TITAN:
+            config = _crm_settings.provider_config
+            logger.info(f"Service Titan Tenant ID: {config.tenant_id}")
+            logger.info(f"Service Titan Client ID: {config.client_id}")
             logger.info(
-                f"Service Titan Client Secret (first 5 chars): {_crm_settings.client_secret[:5]}..."
+                f"Service Titan Client Secret (first 5 chars): {config.client_secret[:5]}..."
             )
-        if _crm_settings.app_key:
             logger.info(
-                f"Service Titan App Key (first 5 chars): {_crm_settings.app_key[:5]}..."
+                f"Service Titan App Key (first 5 chars): {config.app_key[:5]}..."
             )
     return _crm_settings
 

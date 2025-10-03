@@ -41,6 +41,15 @@ export async function fetchAllProjects(): Promise<ProjectStatusListResponse> {
 }
 
 /**
+ * Fetch a single project status by ID
+ */
+export async function fetchProjectStatus(projectId: string): Promise<ProjectStatusResponse> {
+  const api = await createCRMApi();
+  const response = await api.getProjectStatusApiCrmProjectsProjectIdStatusGet(projectId);
+  return response.data;
+}
+
+/**
  * React Query hook for fetching all projects
  * Polls every 30 seconds to keep data fresh
  */
@@ -51,6 +60,21 @@ export function useFetchProjects(): UseQueryResult<ProjectStatusListResponse, Er
     staleTime: 30 * 1000, // Data is fresh for 30 seconds
     refetchInterval: 30 * 1000, // Poll every 30 seconds
     refetchIntervalInBackground: true,
+  });
+}
+
+/**
+ * React Query hook for fetching a single project status
+ * Polls every 30 seconds to keep data fresh
+ */
+export function useFetchProject(projectId: string): UseQueryResult<ProjectStatusResponse, Error> {
+  return useQuery({
+    queryKey: ['project-status', projectId],
+    queryFn: () => fetchProjectStatus(projectId),
+    staleTime: 30 * 1000, // Data is fresh for 30 seconds
+    refetchInterval: 30 * 1000, // Poll every 30 seconds
+    refetchIntervalInBackground: true,
+    enabled: !!projectId, // Only run if projectId is provided
   });
 }
 

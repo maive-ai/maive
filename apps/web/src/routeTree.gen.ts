@@ -14,6 +14,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthSignupSuccessRouteImport } from './routes/auth/signup-success'
 import { Route as AuthErrorRouteImport } from './routes/auth/error'
 import { Route as AuthedProjectsRouteImport } from './routes/_authed/projects'
+import { Route as AuthedProjectDetailRouteImport } from './routes/_authed/project-detail'
 import { Route as AuthedPhoneInputRouteImport } from './routes/_authed/phone-input'
 import { Route as AuthedWorkflowsIndexRouteImport } from './routes/_authed/workflows/index'
 import { Route as AuthedVoiceAiIndexRouteImport } from './routes/_authed/voice-ai/index'
@@ -43,6 +44,11 @@ const AuthErrorRoute = AuthErrorRouteImport.update({
 const AuthedProjectsRoute = AuthedProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedProjectDetailRoute = AuthedProjectDetailRouteImport.update({
+  id: '/project-detail',
+  path: '/project-detail',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedPhoneInputRoute = AuthedPhoneInputRouteImport.update({
@@ -81,6 +87,7 @@ const AuthedVoiceAiCustomerIdRoute = AuthedVoiceAiCustomerIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/phone-input': typeof AuthedPhoneInputRoute
+  '/project-detail': typeof AuthedProjectDetailRoute
   '/projects': typeof AuthedProjectsRoute
   '/auth/error': typeof AuthErrorRoute
   '/auth/signup-success': typeof AuthSignupSuccessRoute
@@ -93,6 +100,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/phone-input': typeof AuthedPhoneInputRoute
+  '/project-detail': typeof AuthedProjectDetailRoute
   '/projects': typeof AuthedProjectsRoute
   '/auth/error': typeof AuthErrorRoute
   '/auth/signup-success': typeof AuthSignupSuccessRoute
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteWithChildren
   '/_authed/phone-input': typeof AuthedPhoneInputRoute
+  '/_authed/project-detail': typeof AuthedProjectDetailRoute
   '/_authed/projects': typeof AuthedProjectsRoute
   '/auth/error': typeof AuthErrorRoute
   '/auth/signup-success': typeof AuthSignupSuccessRoute
@@ -121,6 +130,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/phone-input'
+    | '/project-detail'
     | '/projects'
     | '/auth/error'
     | '/auth/signup-success'
@@ -133,6 +143,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/phone-input'
+    | '/project-detail'
     | '/projects'
     | '/auth/error'
     | '/auth/signup-success'
@@ -146,6 +157,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authed'
     | '/_authed/phone-input'
+    | '/_authed/project-detail'
     | '/_authed/projects'
     | '/auth/error'
     | '/auth/signup-success'
@@ -200,6 +212,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedProjectsRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/project-detail': {
+      id: '/_authed/project-detail'
+      path: '/project-detail'
+      fullPath: '/project-detail'
+      preLoaderRoute: typeof AuthedProjectDetailRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/phone-input': {
       id: '/_authed/phone-input'
       path: '/phone-input'
@@ -247,6 +266,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthedRouteChildren {
   AuthedPhoneInputRoute: typeof AuthedPhoneInputRoute
+  AuthedProjectDetailRoute: typeof AuthedProjectDetailRoute
   AuthedProjectsRoute: typeof AuthedProjectsRoute
   AuthedVoiceAiCustomerIdRoute: typeof AuthedVoiceAiCustomerIdRoute
   AuthedWorkflowsWorkflowIdRoute: typeof AuthedWorkflowsWorkflowIdRoute
@@ -257,6 +277,7 @@ interface AuthedRouteChildren {
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedPhoneInputRoute: AuthedPhoneInputRoute,
+  AuthedProjectDetailRoute: AuthedProjectDetailRoute,
   AuthedProjectsRoute: AuthedProjectsRoute,
   AuthedVoiceAiCustomerIdRoute: AuthedVoiceAiCustomerIdRoute,
   AuthedWorkflowsWorkflowIdRoute: AuthedWorkflowsWorkflowIdRoute,
