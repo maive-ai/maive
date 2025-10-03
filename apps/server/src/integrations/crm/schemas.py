@@ -8,7 +8,7 @@ project management, and status tracking across different CRM providers.
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.integrations.crm.constants import CRMProvider, EstimateReviewStatus, Status
 
@@ -48,8 +48,11 @@ class EstimateByIdRequest(BaseModel):
 class EstimatesRequest(BaseModel):
     """Request model for getting estimates with filters."""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     tenant: int = Field(..., description="Tenant ID")
     job_id: int | None = Field(None, description="Job ID to filter estimates", alias="jobId")
+    project_id: int | None = Field(None, description="Project ID to filter estimates", alias="projectId")
     page: int | None = Field(None, description="Page number for pagination")
     page_size: int | None = Field(None, description="Page size for pagination (max 50)", le=50, alias="pageSize")
     ids: str | None = Field(None, description="Comma separated string of estimate IDs")

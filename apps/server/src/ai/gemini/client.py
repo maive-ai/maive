@@ -96,6 +96,7 @@ class GeminiClient:
                 size_bytes=getattr(uploaded_file, 'size_bytes', None),
                 sha256_hash=getattr(uploaded_file, 'sha256_hash', None),
                 uri=getattr(uploaded_file, 'uri', None),
+                state=getattr(uploaded_file, 'state', None),
             )
 
             logger.info(f"File uploaded successfully: {metadata.name}")
@@ -148,6 +149,8 @@ class GeminiClient:
                 generation_config["temperature"] = temperature
             if request.response_schema:
                 generation_config["response_schema"] = request.response_schema
+                generation_config["response_mime_type"] = "application/json"
+                logger.debug(f"Response schema: {request.response_schema}")
 
             logger.info(f"Generating content with model: {model_name}")
 
@@ -209,10 +212,18 @@ class GeminiClient:
             import json
 
             try:
+                logger.debug(f"Response text: {response.text[:500]}")  # Log first 500 chars
+                if not response.text:
+                    logger.error("Response text is empty!")
+                    logger.error(f"Response usage: {response.usage}")
+                    logger.error(f"Response finish_reason: {response.finish_reason}")
+                    raise GeminiError("Empty response from Gemini API")
+
                 json_data = json.loads(response.text)
                 return request.response_model(**json_data)
             except (json.JSONDecodeError, ValueError) as e:
                 logger.error(f"Failed to parse structured response: {e}")
+                logger.error(f"Response text: {response.text}")
                 raise GeminiError(f"Failed to parse structured response: {e}")
 
         except Exception as e:
@@ -244,6 +255,7 @@ class GeminiClient:
                 size_bytes=getattr(file, 'size_bytes', None),
                 sha256_hash=getattr(file, 'sha256_hash', None),
                 uri=getattr(file, 'uri', None),
+                state=getattr(file, 'state', None),
             )
 
         except Exception as e:
