@@ -5,9 +5,11 @@ This provider uses in-memory data and requires no external dependencies,
 making it perfect for local development, demos, and testing.
 """
 
+from datetime import datetime
+
 from src.integrations.crm.base import CRMError, CRMProvider
 from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
-from src.integrations.crm.constants import ProjectStatus
+from src.integrations.crm.constants import Status
 from src.integrations.crm.provider_schemas import FormSubmissionListResponse
 from src.integrations.crm.providers.mock_data import MockProject, get_mock_projects
 from src.integrations.crm.schemas import (
@@ -62,7 +64,7 @@ class MockCRMProvider(CRMProvider):
 
         return ProjectStatusResponse(
             project_id=project.project_data.id,
-            status=ProjectStatus(project.status),
+            status=Status(project.status),
             provider=CRMProviderEnum.MOCK_CRM,
             updated_at=project.updated_at,
             provider_data=provider_data,
@@ -78,16 +80,18 @@ class MockCRMProvider(CRMProvider):
         logger.info(f"Getting all mock project statuses ({len(self._projects)} total)")
 
         # Convert all projects to ProjectStatusResponse
-        project_responses = [
-            ProjectStatusResponse(
-                project_id=project.project_data.id,
-                status=ProjectStatus(project.status),
-                provider=CRMProviderEnum.MOCK_CRM,
-                updated_at=project.updated_at,
-                provider_data=project.project_data.model_dump(exclude={"id"}, mode="json"),
+        project_responses = []
+        for project in self._projects:
+            provider_data = project.project_data.model_dump(exclude={"id"}, mode="json")
+            project_responses.append(
+                ProjectStatusResponse(
+                    project_id=project.project_data.id,
+                    status=Status(project.status),
+                    provider=CRMProviderEnum.MOCK_CRM,
+                    updated_at=project.updated_at,
+                    provider_data=provider_data,
+                )
             )
-            for project in self._projects
-        ]
 
         return ProjectStatusListResponse(
             projects=project_responses,
@@ -142,9 +146,18 @@ class MockCRMProvider(CRMProvider):
     async def add_job_note(
         self, job_id: int, text: str, pin_to_top: bool | None = None
     ) -> JobNoteResponse:
-        """Mock CRM does not support job notes."""
-        raise CRMError(
-            error_code="NOT_SUPPORTED",
-            message="Mock CRM does not support job note operations",
-        )
+        """Add a note to a job."""
+        logger.debug(f"[MockCRMProvider] Adding note to job {job_id}")
+
+        # Find job by ID
+        job = next((j for j in self._projects if j.project_data.id == job_id), None)
+        if job is None:
+            logger.debug(f"[MockCRMProvider] Job not found: {job_id}")
+            return JobNoteResponse(job_id=job_id, text=text)
+
+        # Add note to job
+        enhanced_text = f"{datetime.now().strftime('%Y-%m-%d %H:%M')}: {text}"
+        job.notes = enhanced_text + "\n\n" + job.notes
+        logger.debug(f"[MockCRMProvider] Added note to job: {text}")
+        return JobNoteResponse(job_id=job_id, text=text, pin_to_top=pin_to_top)
 

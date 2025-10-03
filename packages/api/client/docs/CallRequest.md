@@ -17,6 +17,8 @@ Name | Type | Description | Notes
 **adjuster_name** | **string** |  | [optional] [default to undefined]
 **adjuster_phone** | **string** |  | [optional] [default to undefined]
 **metadata** | **{ [key: string]: any; }** | Additional metadata | [optional] [default to undefined]
+**job_id** | **number** |  | [optional] [default to undefined]
+**tenant** | **number** |  | [optional] [default to undefined]
 
 ## Example
 
@@ -35,6 +37,8 @@ const instance: CallRequest = {
     adjuster_name,
     adjuster_phone,
     metadata,
+    job_id,
+    tenant,
 };
 ```
 

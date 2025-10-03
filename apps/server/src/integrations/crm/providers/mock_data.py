@@ -5,10 +5,12 @@ This file contains hardcoded project data that can be easily removed
 when switching to real CRM integrations.
 """
 
+from typing import Any
 import random
 from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
+from src.integrations.crm.constants import Status
 
 # Default phone number for all mock data
 DEFAULT_PHONE_NUMBER = "+1-703-268-1917"
@@ -49,20 +51,11 @@ class MockProject(BaseModel):
     project_data: MockProjectData
     status: str
     updated_at: str
+    metadata: dict[str, Any] | None = Field(None, description="Project metadata")
     
 
-# Project statuses and their distribution
-PROJECT_STATUSES = ["scheduled", "working", "dispatched", "hold", "done", "cancelled"]
-
-# Status distribution for 28 projects (for variety in demos)
-STATUS_DISTRIBUTION = (
-    ["scheduled"] * 8
-    + ["working"] * 6
-    + ["dispatched"] * 5
-    + ["hold"] * 4
-    + ["done"] * 4
-    + ["cancelled"] * 1
-)
+# Project statuses
+PROJECT_STATUSES = [status.value for status in Status]
 
 # Mock customer/project data using Pydantic models
 MOCK_PROJECTS_RAW: list[MockProjectData] = [
@@ -545,24 +538,43 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
 ]
 
 
+def _derive_numeric_job_id(project_id: str) -> int:
+    """Derive a numeric-like job_id from a project_id string for demo purposes.
+
+    Prefer digits in the id; fallback to a stable hash-based integer.
+    """
+    digits = "".join(ch for ch in project_id if ch.isdigit())
+    if digits:
+        try:
+            return int(digits)
+        except ValueError:
+            pass
+    # Stable positive int from hash
+    return abs(hash(project_id)) % 1_000_000
+
+
 def get_mock_projects() -> list[MockProject]:
     """
     Get mock projects with randomly assigned statuses.
 
     Returns a list of MockProject models with assigned statuses.
     """
-    # Shuffle status assignments for randomness
-    status_assignments = STATUS_DISTRIBUTION.copy()
-    random.shuffle(status_assignments)
-
     now = datetime.now(UTC).isoformat()
 
     projects = []
-    for idx, project_data in enumerate(MOCK_PROJECTS_RAW):
+    for project_data in MOCK_PROJECTS_RAW:
+
+        # Add Service Titan-like metadata with numeric tenant and job_id
+        metadata = {
+            "tenant": 1,
+            "job_id": _derive_numeric_job_id(project_data.id),
+        }
+
         project = MockProject(
             project_data=project_data,
-            status=status_assignments[idx],
+            status=random.choice(PROJECT_STATUSES),
             updated_at=now,
+            metadata=metadata,
         )
         projects.append(project)
 

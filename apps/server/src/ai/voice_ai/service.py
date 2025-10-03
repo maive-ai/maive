@@ -42,7 +42,7 @@ class VoiceAIService:
             logger.info(f"Successfully created call {result.call_id} with status: {result.status}")
             # Start background monitoring via provider
             try:
-                asyncio.create_task(self.voice_ai_provider.monitor_ongoing_call(result.call_id))
+                asyncio.create_task(self.voice_ai_provider.monitor_ongoing_call(result.call_id, request))
             except Exception as monitor_err:
                 logger.error(f"Failed to start call monitor task for {result.call_id}: {monitor_err}")
             return result

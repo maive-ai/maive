@@ -26,7 +26,9 @@ class CallRequest(BaseModel):
     adjuster_name: str | None = Field(None, description="Insurance adjuster name")
     adjuster_phone: str | None = Field(None, description="Insurance adjuster phone")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
-
+    job_id: int | None = Field(None, description="Job ID")
+    tenant: int | None = Field(None, description="Tenant ID")
+    
 
 class CallResponse(BaseModel):
     """Response model for call information."""
