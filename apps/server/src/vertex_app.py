@@ -1020,24 +1020,22 @@ class VertexTester:
                 form_id=2933,
                 page=1,
                 page_size=10,
-                status="Any"
+                status="Any",
+                owners=[{"type": "Job", "id": job_id}]
             )
 
-            # Find submission for this specific job
+            # Extract Notes to Production from the submission(s)
             notes_to_production = None
-            for submission in form_result.get("data", []):
-                owners = submission.get("owners", [])
-                for owner in owners:
-                    if owner.get("type") == "Job" and owner.get("id") == job_id:
-                        # Extract Notes to Production unit
-                        units = submission.get("units", [])
-                        for unit in units:
-                            if isinstance(unit, dict) and unit.get("name") == "Notes to Production":
-                                notes_to_production = unit
-                                break
+            submissions = form_result.get("data", [])
+
+            if submissions:
+                # Since we filtered by job owner, submissions should be for our job
+                submission = submissions[0]
+                units = submission.get("units", [])
+                for unit in units:
+                    if isinstance(unit, dict) and unit.get("name") == "Notes to Production":
+                        notes_to_production = unit
                         break
-                if notes_to_production:
-                    break
 
             if notes_to_production:
                 logger.info(f"✅ Found Notes to Production data")
@@ -1120,12 +1118,13 @@ Simply and concisely log what was not included in the estimate or form but state
                 await self.provider.update_project(update_request)
                 logger.info(f"✅ Project updated to HOLD status")
 
-                # Add note to project
+                # Add note to project with prefix
+                note_text = f"Maive AI - I detected job details discussed in sales call not being tracked in Service Titan: {review_result.hold_explanation}"
                 logger.info(f"   Adding note to project (pinned to top):")
-                logger.info(f"   Note content: {review_result.hold_explanation}")
+                logger.info(f"   Note content: {note_text}")
                 await self.provider.add_project_note(
                     project_id=project_id,
-                    text=review_result.hold_explanation,
+                    text=note_text,
                     pin_to_top=True
                 )
                 logger.info(f"✅ Note added to project")

@@ -934,6 +934,7 @@ class ServiceTitanProvider(CRMProvider):
         page: int = 1,
         page_size: int = 50,
         status: str | None = None,
+        owners: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """
         Get form submissions from Service Titan.
@@ -943,6 +944,7 @@ class ServiceTitanProvider(CRMProvider):
             page: Page number (default 1)
             page_size: Page size (default 50)
             status: Optional status filter (Started, Completed, Any)
+            owners: Optional list of owner objects to filter by, e.g. [{"type": "Job", "id": 123456}]
 
         Returns:
             dict: Form submissions data with pagination info
@@ -964,6 +966,13 @@ class ServiceTitanProvider(CRMProvider):
 
             if status is not None:
                 params["status"] = status
+
+            # Add owners filter if provided
+            # Format: owners[0].type=Job&owners[0].id=123456
+            if owners is not None:
+                for i, owner in enumerate(owners):
+                    params[f"owners[{i}].type"] = owner["type"]
+                    params[f"owners[{i}].id"] = owner["id"]
 
             logger.debug(f"Fetching form submissions with params: {params}")
 
