@@ -461,6 +461,88 @@
         }
       }
     },
+    "/api/crm/{tenant}/jobs/{job_id}/notes": {
+      "post": {
+        "tags": [
+          "CRM"
+        ],
+        "summary": "Add Job Note",
+        "description": "Add a note to a specific job.\n\nArgs:\n    tenant: The tenant ID\n    job_id: The unique identifier for the job\n    text: The text content of the note\n    pin_to_top: Whether to pin the note to the top (optional)\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    JobNoteResponse: The created note information\n\nRaises:\n    HTTPException: If the job is not found or an error occurs",
+        "operationId": "add_job_note_api_crm__tenant__jobs__job_id__notes_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "tenant",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Tenant"
+            }
+          },
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "text",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Text"
+            }
+          },
+          {
+            "name": "pin_to_top",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Pin To Top"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobNoteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/voice-ai/calls": {
       "post": {
         "tags": [
@@ -1308,6 +1390,47 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "JobNoteResponse": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "Text content of the note"
+          },
+          "isPinned": {
+            "type": "boolean",
+            "title": "Ispinned",
+            "description": "Whether the note is pinned to the top"
+          },
+          "createdById": {
+            "type": "integer",
+            "title": "Createdbyid",
+            "description": "ID of user who created this note"
+          },
+          "createdOn": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdon",
+            "description": "Date/time (in UTC) the note was created"
+          },
+          "modifiedOn": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Modifiedon",
+            "description": "Date/time (in UTC) the note was modified"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "isPinned",
+          "createdById",
+          "createdOn",
+          "modifiedOn"
+        ],
+        "title": "JobNoteResponse",
+        "description": "Response model for job note."
       },
       "JobResponse": {
         "properties": {
