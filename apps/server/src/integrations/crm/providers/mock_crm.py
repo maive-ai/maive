@@ -148,16 +148,27 @@ class MockCRMProvider(CRMProvider):
     ) -> JobNoteResponse:
         """Add a note to a job."""
         logger.debug(f"[MockCRMProvider] Adding note to job {job_id}")
+        
+        now = datetime.now()
+        text = text.strip('\"')
 
-        # Find job by ID
-        job = next((j for j in self._projects if j.project_data.id == job_id), None)
-        if job is None:
+        # Find job by job_id (already set in mock data)
+        job: MockProject | None = next((j for j in self._projects if j.project_data.job_id == job_id), None)
+        
+        if job:
+            # Add note to job
+            enhanced_text = f"{now.strftime('%Y-%m-%d %H:%M')}: {text}"
+            job.project_data.notes = enhanced_text + "\n\n" + job.project_data.notes
+            logger.debug(f"[MockCRMProvider] Added note to job: {text}")
+        else:
             logger.debug(f"[MockCRMProvider] Job not found: {job_id}")
-            return JobNoteResponse(job_id=job_id, text=text)
 
-        # Add note to job
-        enhanced_text = f"{datetime.now().strftime('%Y-%m-%d %H:%M')}: {text}"
-        job.notes = enhanced_text + "\n\n" + job.notes
-        logger.debug(f"[MockCRMProvider] Added note to job: {text}")
-        return JobNoteResponse(job_id=job_id, text=text, pin_to_top=pin_to_top)
+        # Return properly formatted response with all required fields
+        return JobNoteResponse(
+            text=text,
+            is_pinned=pin_to_top or False,
+            created_by_id=1,  # Mock user ID
+            created_on=now,
+            modified_on=now,
+        )
 

@@ -206,6 +206,8 @@ class AddJobNoteRequest(BaseModel):
 
 class JobNoteResponse(BaseModel):
     """Response model for job note."""
+    
+    model_config = {"populate_by_name": True}
 
     text: str = Field(..., description="Text content of the note")
     is_pinned: bool = Field(..., description="Whether the note is pinned to the top", alias="isPinned")

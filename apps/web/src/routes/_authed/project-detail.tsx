@@ -79,10 +79,8 @@ function ProjectDetail() {
       insurance_agency: providerData?.insuranceAgency,
       adjuster_name: providerData?.adjusterName,
       adjuster_phone: providerData?.adjusterContact?.phone,
-      metadata: {
-        tenant: providerData?.metadata?.tenant,
-        job_id: providerData?.metadata?.job_id,
-      },
+      tenant: providerData?.tenant,
+      job_id: providerData?.job_id,
     });
   };
 
@@ -155,7 +153,7 @@ function ProjectDetail() {
                     Notes
                   </p>
                   <div className="space-y-3 pl-2">
-                    <p className="text-gray-600">{providerData?.notes || 'No notes'}</p>
+                    <p className="text-gray-600 whitespace-pre-wrap">{providerData?.notes || 'No notes'}</p>
                   </div>
                 </div>
               </div>
