@@ -25,12 +25,16 @@ from src.integrations.crm.schemas import (
     EstimateResponse,
     EstimatesListResponse,
     EstimatesRequest,
+    FormSubmissionsRequest,
     JobHoldReasonsListResponse,
     JobNoteResponse,
     JobResponse,
+    ProjectByIdRequest,
     ProjectNoteResponse,
+    ProjectResponse,
     ProjectStatusListResponse,
     ProjectStatusResponse,
+    ProjectSubStatusesRequest,
     ProjectSubStatusListResponse,
     UpdateProjectRequest,
 )
@@ -43,7 +47,7 @@ class ServiceTitanProvider(CRMProvider):
     def __init__(self):
         """Initialize the Service Titan provider."""
         self.config = get_crm_settings()
-        self.settings = self.settings.provider_config
+        self.settings = self.config.provider_config
 
         # Configuration is validated in CRMSettings, so we can safely access these
         self.tenant_id = self.settings.tenant_id
@@ -55,7 +59,7 @@ class ServiceTitanProvider(CRMProvider):
 
         # HTTP client configuration
         self.client = httpx.AsyncClient(
-            timeout=httpx.Timeout(self.settings.request_timeout),
+            timeout=httpx.Timeout(self.config.request_timeout),
             headers={
                 "Content-Type": "application/json",
             },
@@ -482,6 +486,8 @@ class ServiceTitanProvider(CRMProvider):
             params = {}
             if request.job_id is not None:
                 params["jobId"] = request.job_id
+            if request.project_id is not None:
+                params["projectId"] = request.project_id
             if request.page is not None:
                 params["page"] = request.page
             if request.page_size is not None:
@@ -737,21 +743,13 @@ class ServiceTitanProvider(CRMProvider):
 
     async def get_project_substatuses(
         self,
-        name: str | None = None,
-        status_id: int | None = None,
-        active: str | None = "True",
-        page: int | None = None,
-        page_size: int | None = None,
+        request: ProjectSubStatusesRequest,
     ) -> ProjectSubStatusListResponse:
         """
         Get project sub statuses from Service Titan.
 
         Args:
-            name: Optional filter by project sub status name
-            status_id: Optional filter by parent project status id
-            active: Optional active status filter (True, False, Any)
-            page: Optional page number
-            page_size: Optional page size
+            request: ProjectSubStatusesRequest with filter and pagination parameters
 
         Returns:
             ProjectSubStatusListResponse: List of project sub statuses
@@ -763,16 +761,16 @@ class ServiceTitanProvider(CRMProvider):
             url = f"{self.base_api_url}{ServiceTitanEndpoints.PROJECT_SUBSTATUSES.format(tenant_id=self.tenant_id)}"
 
             params: dict[str, Any] = {}
-            if name is not None:
-                params["name"] = name
-            if status_id is not None:
-                params["statusId"] = status_id
-            if active is not None:
-                params["active"] = active
-            if page is not None:
-                params["page"] = page
-            if page_size is not None:
-                params["pageSize"] = page_size
+            if request.name is not None:
+                params["name"] = request.name
+            if request.status_id is not None:
+                params["statusId"] = request.status_id
+            if request.active is not None:
+                params["active"] = request.active
+            if request.page is not None:
+                params["page"] = request.page
+            if request.page_size is not None:
+                params["pageSize"] = request.page_size
 
             logger.debug(f"Fetching project substatuses with params: {params}")
 
@@ -791,43 +789,43 @@ class ServiceTitanProvider(CRMProvider):
             logger.error(f"Unexpected error fetching project substatuses: {e}")
             raise CRMError(f"Failed to fetch project substatuses: {str(e)}", "UNKNOWN_ERROR")
 
-    async def get_project_by_id(self, project_id: int) -> dict[str, Any]:
+    async def get_project_by_id(self, request: ProjectByIdRequest) -> ProjectResponse:
         """
         Get a project by ID from Service Titan.
 
         Args:
-            project_id: The Service Titan project ID
+            request: ProjectByIdRequest with project_id
 
         Returns:
-            dict: Project data
+            ProjectResponse: Project data
 
         Raises:
             CRMError: If the project is not found or an error occurs
         """
         try:
-            url = f"{self.base_api_url}{ServiceTitanEndpoints.PROJECT_BY_ID.format(tenant_id=self.tenant_id, id=project_id)}"
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.PROJECT_BY_ID.format(tenant_id=self.tenant_id, id=request.project_id)}"
 
-            logger.debug(f"Fetching project {project_id}")
+            logger.debug(f"Fetching project {request.project_id}")
 
             response = await self._make_authenticated_request("GET", url)
             response.raise_for_status()
 
             data = response.json()
-            logger.info(f"Successfully fetched project {project_id}")
+            logger.info(f"Successfully fetched project {request.project_id}")
 
-            return data
+            return ProjectResponse(**data)
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
-                raise CRMError(f"Project with ID {project_id} not found", "NOT_FOUND")
+                raise CRMError(f"Project with ID {request.project_id} not found", "NOT_FOUND")
             else:
-                logger.error(f"HTTP error fetching project {project_id}: {e}")
+                logger.error(f"HTTP error fetching project {request.project_id}: {e}")
                 raise CRMError(f"Failed to fetch project: {e}", "HTTP_ERROR")
         except Exception as e:
-            logger.error(f"Unexpected error fetching project {project_id}: {e}")
+            logger.error(f"Unexpected error fetching project {request.project_id}: {e}")
             raise CRMError(f"Failed to fetch project: {str(e)}", "UNKNOWN_ERROR")
 
-    async def update_project(self, request: UpdateProjectRequest) -> dict[str, Any]:
+    async def update_project(self, request: UpdateProjectRequest) -> ProjectResponse:
         """
         Update a project in Service Titan.
 
@@ -835,7 +833,7 @@ class ServiceTitanProvider(CRMProvider):
             request: Update project request with fields to update
 
         Returns:
-            dict: Updated project data
+            ProjectResponse: Updated project data
 
         Raises:
             CRMError: If the project is not found or an error occurs
@@ -867,7 +865,7 @@ class ServiceTitanProvider(CRMProvider):
             data = response.json()
             logger.info(f"Successfully updated project {request.project_id}")
 
-            return data
+            return ProjectResponse(**data)
 
         except httpx.HTTPStatusError as e:
             error_body = e.response.text
@@ -926,6 +924,62 @@ class ServiceTitanProvider(CRMProvider):
         except Exception as e:
             logger.error(f"Unexpected error adding note to project {project_id}: {e}")
             raise CRMError(f"Failed to add note to project: {str(e)}", "UNKNOWN_ERROR")
+
+    async def get_form_submissions(
+        self,
+        request: FormSubmissionsRequest,
+    ) -> FormSubmissionListResponse:
+        """
+        Get form submissions from Service Titan.
+
+        Args:
+            request: FormSubmissionsRequest with filter and pagination parameters
+
+        Returns:
+            FormSubmissionListResponse: Form submissions data with pagination info
+
+        Raises:
+            CRMError: If an error occurs fetching submissions
+        """
+        try:
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.FORM_SUBMISSIONS.format(tenant_id=self.tenant_id)}"
+
+            # Build query parameters
+            params: dict[str, Any] = {
+                "page": request.page,
+                "pageSize": request.page_size,
+            }
+
+            if request.form_id is not None:
+                params["formIds"] = str(request.form_id)
+
+            if request.status is not None:
+                params["status"] = request.status
+
+            # Add owners filter if provided
+            # Format: owners[0].type=Job&owners[0].id=123456
+            if request.owners is not None:
+                for i, owner in enumerate(request.owners):
+                    params[f"owners[{i}].type"] = owner.type
+                    params[f"owners[{i}].id"] = owner.id
+
+            logger.debug(f"Fetching form submissions with params: {params}")
+
+            response = await self._make_authenticated_request("GET", url, params=params)
+            response.raise_for_status()
+
+            data = response.json()
+            logger.info(f"Successfully fetched {len(data.get('data', []))} form submissions")
+
+            return FormSubmissionListResponse(**data)
+
+        except httpx.HTTPStatusError as e:
+            error_body = e.response.text
+            logger.error(f"HTTP error fetching form submissions: {error_body}")
+            raise CRMError(f"Failed to fetch form submissions: {error_body}", "HTTP_ERROR")
+        except Exception as e:
+            logger.error(f"Unexpected error fetching form submissions: {e}")
+            raise CRMError(f"Failed to fetch form submissions: {str(e)}", "UNKNOWN_ERROR")
 
     async def close(self):
         """Close the HTTP client."""

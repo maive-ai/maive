@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useState } from 'react';
-import { useCreateOutboundCall } from '@/clients/voice-ai';
+import { useCreateOutboundCall } from '@/clients/workflows';
 import { Button } from '@/components/ui/button';
 import {
   Card,
