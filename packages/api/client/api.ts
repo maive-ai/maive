@@ -67,10 +67,157 @@ export interface AuthResponse {
  */
 
 export const CRMProvider = {
-    ServiceTitan: 'service_titan'
+    ServiceTitan: 'service_titan',
+    MockCrm: 'mock_crm'
 } as const;
 
 export type CRMProvider = typeof CRMProvider[keyof typeof CRMProvider];
+
+
+/**
+ * Request model for creating an outbound call.
+ * @export
+ * @interface CallRequest
+ */
+export interface CallRequest {
+    /**
+     * Phone number to call
+     * @type {string}
+     * @memberof CallRequest
+     */
+    'phone_number': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CallRequest
+     */
+    'customer_id'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CallRequest
+     */
+    'customer_name'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CallRequest
+     */
+    'company_name'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CallRequest
+     */
+    'customer_address'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CallRequest
+     */
+    'claim_number'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CallRequest
+     */
+    'date_of_loss'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CallRequest
+     */
+    'insurance_agency'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CallRequest
+     */
+    'adjuster_name'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CallRequest
+     */
+    'adjuster_phone'?: string | null;
+    /**
+     * Additional metadata
+     * @type {{ [key: string]: any; }}
+     * @memberof CallRequest
+     */
+    'metadata'?: { [key: string]: any; };
+    /**
+     * 
+     * @type {number}
+     * @memberof CallRequest
+     */
+    'job_id'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CallRequest
+     */
+    'tenant'?: number | null;
+}
+/**
+ * Response model for call information.
+ * @export
+ * @interface CallResponse
+ */
+export interface CallResponse {
+    /**
+     * Unique call identifier
+     * @type {string}
+     * @memberof CallResponse
+     */
+    'call_id': string;
+    /**
+     * Current call status
+     * @type {CallStatus}
+     * @memberof CallResponse
+     */
+    'status': CallStatus;
+    /**
+     * Voice AI provider
+     * @type {VoiceAIProvider}
+     * @memberof CallResponse
+     */
+    'provider': VoiceAIProvider;
+    /**
+     * 
+     * @type {string}
+     * @memberof CallResponse
+     */
+    'created_at'?: string | null;
+    /**
+     * 
+     * @type {{ [key: string]: any; }}
+     * @memberof CallResponse
+     */
+    'provider_data'?: { [key: string]: any; } | null;
+}
+
+
+/**
+ * Call status values across Voice AI systems.
+ * @export
+ * @enum {string}
+ */
+
+export const CallStatus = {
+    Queued: 'queued',
+    Ringing: 'ringing',
+    InProgress: 'in_progress',
+    Forwarding: 'forwarding',
+    Ended: 'ended',
+    Busy: 'busy',
+    NoAnswer: 'no_answer',
+    Failed: 'failed',
+    Canceled: 'canceled',
+    EndedFailedCanceledBusyNoAnswer: '[\'ended\', \'failed\', \'canceled\', \'busy\', \'no_answer\']'
+} as const;
+
+export type CallStatus = typeof CallStatus[keyof typeof CallStatus];
 
 
 /**
@@ -863,6 +1010,19 @@ export interface ValidationError {
  */
 export interface ValidationErrorLocInner {
 }
+/**
+ * Available Voice AI providers.
+ * @export
+ * @enum {string}
+ */
+
+export const VoiceAIProvider = {
+    Vapi: 'vapi'
+} as const;
+
+export type VoiceAIProvider = typeof VoiceAIProvider[keyof typeof VoiceAIProvider];
+
+
 
 /**
  * AuthenticationApi - axios parameter creator
@@ -1882,6 +2042,193 @@ export class DefaultApi extends BaseAPI {
      */
     public rootGet(options?: RawAxiosRequestConfig) {
         return DefaultApiFp(this.configuration).rootGet(options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+
+/**
+ * VoiceAIApi - axios parameter creator
+ * @export
+ */
+export const VoiceAIApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * Create an outbound call.  Args:     request: The call request with phone number and context     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection  Returns:     CallResponse: The call information  Raises:     HTTPException: If call creation fails
+         * @summary Create Outbound Call
+         * @param {CallRequest} callRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createOutboundCallApiVoiceAiCallsPost: async (callRequest: CallRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'callRequest' is not null or undefined
+            assertParamExists('createOutboundCallApiVoiceAiCallsPost', 'callRequest', callRequest)
+            const localVarPath = `/api/voice-ai/calls`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(callRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Get the status of a specific call by ID.  Args:     call_id: The unique identifier for the call     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection  Returns:     CallResponse: The call status information  Raises:     HTTPException: If the call is not found or an error occurs
+         * @summary Get Call Status
+         * @param {string} callId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getCallStatusApiVoiceAiCallsCallIdGet: async (callId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'callId' is not null or undefined
+            assertParamExists('getCallStatusApiVoiceAiCallsCallIdGet', 'callId', callId)
+            const localVarPath = `/api/voice-ai/calls/{call_id}`
+                .replace(`{${"call_id"}}`, encodeURIComponent(String(callId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * VoiceAIApi - functional programming interface
+ * @export
+ */
+export const VoiceAIApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = VoiceAIApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * Create an outbound call.  Args:     request: The call request with phone number and context     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection  Returns:     CallResponse: The call information  Raises:     HTTPException: If call creation fails
+         * @summary Create Outbound Call
+         * @param {CallRequest} callRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async createOutboundCallApiVoiceAiCallsPost(callRequest: CallRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CallResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.createOutboundCallApiVoiceAiCallsPost(callRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['VoiceAIApi.createOutboundCallApiVoiceAiCallsPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Get the status of a specific call by ID.  Args:     call_id: The unique identifier for the call     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection  Returns:     CallResponse: The call status information  Raises:     HTTPException: If the call is not found or an error occurs
+         * @summary Get Call Status
+         * @param {string} callId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getCallStatusApiVoiceAiCallsCallIdGet(callId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CallResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getCallStatusApiVoiceAiCallsCallIdGet(callId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['VoiceAIApi.getCallStatusApiVoiceAiCallsCallIdGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+    }
+};
+
+/**
+ * VoiceAIApi - factory interface
+ * @export
+ */
+export const VoiceAIApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = VoiceAIApiFp(configuration)
+    return {
+        /**
+         * Create an outbound call.  Args:     request: The call request with phone number and context     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection  Returns:     CallResponse: The call information  Raises:     HTTPException: If call creation fails
+         * @summary Create Outbound Call
+         * @param {CallRequest} callRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createOutboundCallApiVoiceAiCallsPost(callRequest: CallRequest, options?: RawAxiosRequestConfig): AxiosPromise<CallResponse> {
+            return localVarFp.createOutboundCallApiVoiceAiCallsPost(callRequest, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Get the status of a specific call by ID.  Args:     call_id: The unique identifier for the call     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection  Returns:     CallResponse: The call status information  Raises:     HTTPException: If the call is not found or an error occurs
+         * @summary Get Call Status
+         * @param {string} callId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getCallStatusApiVoiceAiCallsCallIdGet(callId: string, options?: RawAxiosRequestConfig): AxiosPromise<CallResponse> {
+            return localVarFp.getCallStatusApiVoiceAiCallsCallIdGet(callId, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * VoiceAIApi - object-oriented interface
+ * @export
+ * @class VoiceAIApi
+ * @extends {BaseAPI}
+ */
+export class VoiceAIApi extends BaseAPI {
+    /**
+     * Create an outbound call.  Args:     request: The call request with phone number and context     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection  Returns:     CallResponse: The call information  Raises:     HTTPException: If call creation fails
+     * @summary Create Outbound Call
+     * @param {CallRequest} callRequest 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof VoiceAIApi
+     */
+    public createOutboundCallApiVoiceAiCallsPost(callRequest: CallRequest, options?: RawAxiosRequestConfig) {
+        return VoiceAIApiFp(this.configuration).createOutboundCallApiVoiceAiCallsPost(callRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Get the status of a specific call by ID.  Args:     call_id: The unique identifier for the call     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection  Returns:     CallResponse: The call status information  Raises:     HTTPException: If the call is not found or an error occurs
+     * @summary Get Call Status
+     * @param {string} callId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof VoiceAIApi
+     */
+    public getCallStatusApiVoiceAiCallsCallIdGet(callId: string, options?: RawAxiosRequestConfig) {
+        return VoiceAIApiFp(this.configuration).getCallStatusApiVoiceAiCallsCallIdGet(callId, options).then((request) => request(this.axios, this.basePath));
     }
 }
 

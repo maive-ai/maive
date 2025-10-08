@@ -12,6 +12,7 @@ class CRMProvider(str, Enum):
     """Available CRM providers."""
 
     SERVICE_TITAN = "service_titan"
+    MOCK_CRM = "mock_crm"
 
 
 class OwnerType(str, Enum):

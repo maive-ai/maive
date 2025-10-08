@@ -42,7 +42,8 @@ class ServiceTitanProvider(CRMProvider):
 
     def __init__(self):
         """Initialize the Service Titan provider."""
-        self.settings = get_crm_settings()
+        self.config = get_crm_settings()
+        self.settings = self.settings.provider_config
 
         # Configuration is validated in CRMSettings, so we can safely access these
         self.tenant_id = self.settings.tenant_id
@@ -54,7 +55,7 @@ class ServiceTitanProvider(CRMProvider):
 
         # HTTP client configuration
         self.client = httpx.AsyncClient(
-            timeout=httpx.Timeout(self.settings.crm_request_timeout),
+            timeout=httpx.Timeout(self.settings.request_timeout),
             headers={
                 "Content-Type": "application/json",
             },
