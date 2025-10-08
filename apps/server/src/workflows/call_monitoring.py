@@ -6,11 +6,14 @@ voice AI calls, and updating CRM systems with call results.
 """
 
 import asyncio
-import json
-from typing import Any
 
 from src.ai.voice_ai.constants import CallStatus
-from src.ai.voice_ai.schemas import CallRequest, CallResponse, VoiceAIErrorResponse
+from src.ai.voice_ai.schemas import (
+    CallRequest,
+    CallResponse,
+    ClaimStatusData,
+    VoiceAIErrorResponse,
+)
 from src.ai.voice_ai.service import VoiceAIService
 from src.integrations.crm.service import CRMService
 from src.utils.logger import logger
@@ -165,10 +168,10 @@ class CallMonitoringWorkflow:
             user_id: The ID of the user who created the call
         """
         try:
-            # Extract structured data from provider response
-            structured_data = self._extract_structured_data(call_response.provider_data)
+            # Extract typed analysis data from provider response
+            analysis = call_response.extract_analysis()
 
-            if not structured_data:
+            if not analysis or not analysis.structured_data:
                 logger.info(
                     f"[Call Monitoring Workflow] No structured data found for call {call_id}"
                 )
@@ -189,14 +192,13 @@ class CallMonitoringWorkflow:
                 return
 
             # Format note text from structured data
-            note_text = self._format_crm_note(structured_data)
+            note_text = self._format_crm_note(analysis.structured_data)
 
             # Add note to CRM job via service (no HTTP!)
             crm_result = await self.crm_service.add_job_note(
                 job_id=job_id,
                 text=note_text,
                 pin_to_top=True,  # Pin important call results
-                user_id=None,  # System-generated note
             )
 
             if hasattr(crm_result, "error"):
@@ -213,95 +215,61 @@ class CallMonitoringWorkflow:
                 f"[Call Monitoring Workflow] Error processing completed call {call_id}: {e}"
             )
 
-    def _extract_structured_data(
-        self, provider_data: dict[str, Any] | None
-    ) -> dict[str, Any] | None:
-        """
-        Extract structured data from provider response.
-
-        This handles provider-specific data extraction. Currently supports Vapi format.
-
-        Args:
-            provider_data: Raw provider response data
-
-        Returns:
-            Extracted structured data or None if not found
-        """
-        if not provider_data:
-            return None
-
-        try:
-            # Vapi format: analysis.structuredData
-            analysis = provider_data.get("analysis") or {}
-            structured = analysis.get("structuredData")
-
-            if structured:
-                logger.debug(
-                    f"[Call Monitoring Workflow] Found structured data: {structured}"
-                )
-                return structured
-
-            return None
-
-        except Exception as e:
-            logger.error(
-                f"[Call Monitoring Workflow] Error extracting structured data: {e}"
-            )
-            return None
-
-    def _format_crm_note(self, structured_data: dict[str, Any]) -> str:
+    def _format_crm_note(self, structured_data: ClaimStatusData) -> str:
         """
         Format structured data into a CRM note.
 
         Args:
-            structured_data: The extracted structured data
+            structured_data: The extracted typed structured data
 
         Returns:
             Formatted note text
         """
         try:
-            # Extract key fields
-            call_outcome = structured_data.get("call_outcome", "unknown")
-            claim_status = structured_data.get("claim_status", "unknown")
-            required_actions = structured_data.get("required_actions", {})
-            next_steps = required_actions.get("next_steps", "")
-
             # Build formatted note
             note_lines = [
                 "🤖 Voice AI Call Summary",
                 "",
-                f"**Call Outcome:** {call_outcome}",
-                f"**Claim Status:** {claim_status}",
+                f"Call Outcome: {structured_data.call_outcome}",
+                f"Claim Status: {structured_data.claim_status}",
             ]
 
-            if next_steps:
-                note_lines.extend(["", "**Next Steps:**", next_steps])
+            # Add next steps if available
+            if (
+                structured_data.required_actions
+                and structured_data.required_actions.next_steps
+            ):
+                note_lines.extend(
+                    ["", "Next Steps:", structured_data.required_actions.next_steps]
+                )
 
             # Add payment details if available
-            payment = structured_data.get("payment_details")
-            if payment and payment.get("status") == "issued":
+            if (
+                structured_data.payment_details
+                and structured_data.payment_details.status == "issued"
+            ):
                 note_lines.extend(
                     [
                         "",
-                        "**Payment Information:**",
-                        f"- Amount: ${payment.get('amount', 'N/A')}",
-                        f"- Issue Date: {payment.get('issue_date', 'N/A')}",
-                        f"- Check Number: {payment.get('check_number', 'N/A')}",
+                        "Payment Information:",
+                        f"- Amount: ${structured_data.payment_details.amount or 'N/A'}",
+                        f"- Issue Date: {structured_data.payment_details.issue_date or 'N/A'}",
+                        f"- Check Number: {structured_data.payment_details.check_number or 'N/A'}",
                     ]
                 )
 
             # Add required documents if any
-            documents = required_actions.get("documents_needed", [])
-            if documents:
-                note_lines.extend(["", "**Required Documents:**"])
-                for doc in documents:
+            if (
+                structured_data.required_actions
+                and structured_data.required_actions.documents_needed
+            ):
+                note_lines.extend(["", "Required Documents:"])
+                for doc in structured_data.required_actions.documents_needed:
                     note_lines.append(f"- {doc}")
 
             return "\n".join(note_lines)
 
         except Exception as e:
-            logger.error(
-                f"[Call Monitoring Workflow] Error formatting CRM note: {e}"
-            )
-            # Fallback: return raw JSON
-            return f"Voice AI Call Results:\n\n```json\n{json.dumps(structured_data, indent=2)}\n```"
+            logger.error(f"[Call Monitoring Workflow] Error formatting CRM note: {e}")
+            # Fallback: return model as JSON
+            return f"Voice AI Call Results:\n\n```json\n{structured_data.model_dump_json(indent=2)}\n```"
