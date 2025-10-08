@@ -225,7 +225,7 @@
           "CRM"
         ],
         "summary": "Create Project",
-        "description": "Create a new demo project (Mock CRM only).\n\nThis endpoint is only available when using the Mock CRM provider\nand is intended for demo and testing purposes only.\n\nNote: The `id`, `tenant`, and `job_id` fields in the request will be\nauto-generated and any provided values will be ignored.\n\nArgs:\n    project_data: The project data (ProjectData model)\n    crm_service: The CRM service instance from dependency injection\n\nRaises:\n    HTTPException: If the provider doesn't support project creation or an error occurs",
+        "description": "Create a new project in the CRM provider.\n\nNote: The `id`, `tenant`, and `job_id` fields in the request will be\nauto-generated and any provided values will be ignored.\n\nArgs:\n    project_data: The project data (ProjectData model)\n    crm_service: The CRM service instance from dependency injection\n\nRaises:\n    HTTPException: If the provider doesn't support project creation or an error occurs",
         "operationId": "create_project_api_crm_projects_post",
         "requestBody": {
           "content": {
