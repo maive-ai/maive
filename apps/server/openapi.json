@@ -219,6 +219,51 @@
         ]
       }
     },
+    "/api/crm/projects": {
+      "post": {
+        "tags": [
+          "CRM"
+        ],
+        "summary": "Create Project",
+        "description": "Create a new demo project (Mock CRM only).\n\nThis endpoint is only available when using the Mock CRM provider\nand is intended for demo and testing purposes only.\n\nNote: The `id`, `tenant`, and `job_id` fields in the request will be\nauto-generated and any provided values will be ignored.\n\nArgs:\n    project_data: The project data (ProjectData model)\n    crm_service: The CRM service instance from dependency injection\n\nRaises:\n    HTTPException: If the provider doesn't support project creation or an error occurs",
+        "operationId": "create_project_api_crm_projects_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectData"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/crm/{tenant}/estimates/{estimate_id}": {
       "get": {
         "tags": [
@@ -956,6 +1001,30 @@
         "title": "CallStatus",
         "description": "Call status values across Voice AI systems."
       },
+      "ContactInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "phone": {
+            "type": "string",
+            "title": "Phone"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "phone",
+          "email"
+        ],
+        "title": "ContactInfo",
+        "description": "Contact information model."
+      },
       "EstimateItemResponse": {
         "properties": {
           "id": {
@@ -1676,6 +1745,157 @@
         ],
         "title": "JobResponse",
         "description": "Response model for Service Titan job information."
+      },
+      "ProjectData": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Project ID"
+          },
+          "customerName": {
+            "type": "string",
+            "title": "Customername",
+            "description": "Customer/homeowner name"
+          },
+          "address": {
+            "type": "string",
+            "title": "Address",
+            "description": "Property address"
+          },
+          "phone": {
+            "type": "string",
+            "title": "Phone",
+            "description": "Customer phone number"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email",
+            "description": "Customer email"
+          },
+          "claimNumber": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimnumber",
+            "description": "Insurance claim number"
+          },
+          "dateOfLoss": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dateofloss",
+            "description": "Date of loss (ISO format)"
+          },
+          "insuranceAgency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Insuranceagency",
+            "description": "Insurance company name"
+          },
+          "insuranceAgencyContact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContactInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Insurance agency contact"
+          },
+          "adjusterName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjustername",
+            "description": "Insurance adjuster name"
+          },
+          "adjusterContact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContactInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Insurance adjuster contact"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "Project notes"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant",
+            "description": "Tenant ID"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id",
+            "description": "Job ID"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "customerName",
+          "address",
+          "phone"
+        ],
+        "title": "ProjectData",
+        "description": "Mock project data model with all customer and claim information."
       },
       "ProjectStatusListResponse": {
         "properties": {
