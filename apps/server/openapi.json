@@ -543,53 +543,6 @@
         }
       }
     },
-    "/api/voice-ai/calls": {
-      "post": {
-        "tags": [
-          "Voice AI"
-        ],
-        "summary": "Create Outbound Call",
-        "description": "Create an outbound call.\n\nArgs:\n    request: The call request with phone number and context\n    current_user: The authenticated user\n    voice_ai_service: The Voice AI service instance from dependency injection\n\nReturns:\n    CallResponse: The call information\n\nRaises:\n    HTTPException: If call creation fails",
-        "operationId": "create_outbound_call_api_voice_ai_calls_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CallRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CallResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
     "/api/voice-ai/calls/{call_id}": {
       "get": {
         "tags": [
@@ -636,6 +589,53 @@
             }
           }
         }
+      }
+    },
+    "/api/workflows/monitored-call": {
+      "post": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Create Monitored Call",
+        "description": "Create an outbound call with monitoring and CRM integration.\n\nThis workflow endpoint orchestrates:\n1. Creating the call via Voice AI provider\n2. Starting background call monitoring\n3. Updating CRM with call results when complete\n\nArgs:\n    request: The call request with phone number and context\n    current_user: The authenticated user\n    workflow: The call monitoring workflow from dependency injection\n\nReturns:\n    CallResponse: The call information\n\nRaises:\n    HTTPException: If call creation fails",
+        "operationId": "create_monitored_call_api_workflows_monitored_call_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CallRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/": {

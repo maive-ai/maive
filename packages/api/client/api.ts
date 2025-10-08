@@ -2054,46 +2054,6 @@ export class DefaultApi extends BaseAPI {
 export const VoiceAIApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
         /**
-         * Create an outbound call.  Args:     request: The call request with phone number and context     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection  Returns:     CallResponse: The call information  Raises:     HTTPException: If call creation fails
-         * @summary Create Outbound Call
-         * @param {CallRequest} callRequest 
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        createOutboundCallApiVoiceAiCallsPost: async (callRequest: CallRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'callRequest' is not null or undefined
-            assertParamExists('createOutboundCallApiVoiceAiCallsPost', 'callRequest', callRequest)
-            const localVarPath = `/api/voice-ai/calls`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-            // authentication HTTPBearer required
-            // http bearer authentication required
-            await setBearerAuthToObject(localVarHeaderParameter, configuration)
-
-
-    
-            localVarHeaderParameter['Content-Type'] = 'application/json';
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            localVarRequestOptions.data = serializeDataIfNeeded(callRequest, localVarRequestOptions, configuration)
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
          * Get the status of a specific call by ID.  Args:     call_id: The unique identifier for the call     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection  Returns:     CallResponse: The call status information  Raises:     HTTPException: If the call is not found or an error occurs
          * @summary Get Call Status
          * @param {string} callId 
@@ -2142,19 +2102,6 @@ export const VoiceAIApiFp = function(configuration?: Configuration) {
     const localVarAxiosParamCreator = VoiceAIApiAxiosParamCreator(configuration)
     return {
         /**
-         * Create an outbound call.  Args:     request: The call request with phone number and context     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection  Returns:     CallResponse: The call information  Raises:     HTTPException: If call creation fails
-         * @summary Create Outbound Call
-         * @param {CallRequest} callRequest 
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async createOutboundCallApiVoiceAiCallsPost(callRequest: CallRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CallResponse>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.createOutboundCallApiVoiceAiCallsPost(callRequest, options);
-            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['VoiceAIApi.createOutboundCallApiVoiceAiCallsPost']?.[localVarOperationServerIndex]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
-        },
-        /**
          * Get the status of a specific call by ID.  Args:     call_id: The unique identifier for the call     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection  Returns:     CallResponse: The call status information  Raises:     HTTPException: If the call is not found or an error occurs
          * @summary Get Call Status
          * @param {string} callId 
@@ -2178,16 +2125,6 @@ export const VoiceAIApiFactory = function (configuration?: Configuration, basePa
     const localVarFp = VoiceAIApiFp(configuration)
     return {
         /**
-         * Create an outbound call.  Args:     request: The call request with phone number and context     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection  Returns:     CallResponse: The call information  Raises:     HTTPException: If call creation fails
-         * @summary Create Outbound Call
-         * @param {CallRequest} callRequest 
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        createOutboundCallApiVoiceAiCallsPost(callRequest: CallRequest, options?: RawAxiosRequestConfig): AxiosPromise<CallResponse> {
-            return localVarFp.createOutboundCallApiVoiceAiCallsPost(callRequest, options).then((request) => request(axios, basePath));
-        },
-        /**
          * Get the status of a specific call by ID.  Args:     call_id: The unique identifier for the call     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection  Returns:     CallResponse: The call status information  Raises:     HTTPException: If the call is not found or an error occurs
          * @summary Get Call Status
          * @param {string} callId 
@@ -2208,18 +2145,6 @@ export const VoiceAIApiFactory = function (configuration?: Configuration, basePa
  */
 export class VoiceAIApi extends BaseAPI {
     /**
-     * Create an outbound call.  Args:     request: The call request with phone number and context     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection  Returns:     CallResponse: The call information  Raises:     HTTPException: If call creation fails
-     * @summary Create Outbound Call
-     * @param {CallRequest} callRequest 
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof VoiceAIApi
-     */
-    public createOutboundCallApiVoiceAiCallsPost(callRequest: CallRequest, options?: RawAxiosRequestConfig) {
-        return VoiceAIApiFp(this.configuration).createOutboundCallApiVoiceAiCallsPost(callRequest, options).then((request) => request(this.axios, this.basePath));
-    }
-
-    /**
      * Get the status of a specific call by ID.  Args:     call_id: The unique identifier for the call     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection  Returns:     CallResponse: The call status information  Raises:     HTTPException: If the call is not found or an error occurs
      * @summary Get Call Status
      * @param {string} callId 
@@ -2229,6 +2154,120 @@ export class VoiceAIApi extends BaseAPI {
      */
     public getCallStatusApiVoiceAiCallsCallIdGet(callId: string, options?: RawAxiosRequestConfig) {
         return VoiceAIApiFp(this.configuration).getCallStatusApiVoiceAiCallsCallIdGet(callId, options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+
+/**
+ * WorkflowsApi - axios parameter creator
+ * @export
+ */
+export const WorkflowsApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * Create an outbound call with monitoring and CRM integration.  This workflow endpoint orchestrates: 1. Creating the call via Voice AI provider 2. Starting background call monitoring 3. Updating CRM with call results when complete  Args:     request: The call request with phone number and context     current_user: The authenticated user     workflow: The call monitoring workflow from dependency injection  Returns:     CallResponse: The call information  Raises:     HTTPException: If call creation fails
+         * @summary Create Monitored Call
+         * @param {CallRequest} callRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createMonitoredCallApiWorkflowsMonitoredCallPost: async (callRequest: CallRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'callRequest' is not null or undefined
+            assertParamExists('createMonitoredCallApiWorkflowsMonitoredCallPost', 'callRequest', callRequest)
+            const localVarPath = `/api/workflows/monitored-call`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(callRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * WorkflowsApi - functional programming interface
+ * @export
+ */
+export const WorkflowsApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = WorkflowsApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * Create an outbound call with monitoring and CRM integration.  This workflow endpoint orchestrates: 1. Creating the call via Voice AI provider 2. Starting background call monitoring 3. Updating CRM with call results when complete  Args:     request: The call request with phone number and context     current_user: The authenticated user     workflow: The call monitoring workflow from dependency injection  Returns:     CallResponse: The call information  Raises:     HTTPException: If call creation fails
+         * @summary Create Monitored Call
+         * @param {CallRequest} callRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async createMonitoredCallApiWorkflowsMonitoredCallPost(callRequest: CallRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CallResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.createMonitoredCallApiWorkflowsMonitoredCallPost(callRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['WorkflowsApi.createMonitoredCallApiWorkflowsMonitoredCallPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+    }
+};
+
+/**
+ * WorkflowsApi - factory interface
+ * @export
+ */
+export const WorkflowsApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = WorkflowsApiFp(configuration)
+    return {
+        /**
+         * Create an outbound call with monitoring and CRM integration.  This workflow endpoint orchestrates: 1. Creating the call via Voice AI provider 2. Starting background call monitoring 3. Updating CRM with call results when complete  Args:     request: The call request with phone number and context     current_user: The authenticated user     workflow: The call monitoring workflow from dependency injection  Returns:     CallResponse: The call information  Raises:     HTTPException: If call creation fails
+         * @summary Create Monitored Call
+         * @param {CallRequest} callRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createMonitoredCallApiWorkflowsMonitoredCallPost(callRequest: CallRequest, options?: RawAxiosRequestConfig): AxiosPromise<CallResponse> {
+            return localVarFp.createMonitoredCallApiWorkflowsMonitoredCallPost(callRequest, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * WorkflowsApi - object-oriented interface
+ * @export
+ * @class WorkflowsApi
+ * @extends {BaseAPI}
+ */
+export class WorkflowsApi extends BaseAPI {
+    /**
+     * Create an outbound call with monitoring and CRM integration.  This workflow endpoint orchestrates: 1. Creating the call via Voice AI provider 2. Starting background call monitoring 3. Updating CRM with call results when complete  Args:     request: The call request with phone number and context     current_user: The authenticated user     workflow: The call monitoring workflow from dependency injection  Returns:     CallResponse: The call information  Raises:     HTTPException: If call creation fails
+     * @summary Create Monitored Call
+     * @param {CallRequest} callRequest 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof WorkflowsApi
+     */
+    public createMonitoredCallApiWorkflowsMonitoredCallPost(callRequest: CallRequest, options?: RawAxiosRequestConfig) {
+        return WorkflowsApiFp(this.configuration).createMonitoredCallApiWorkflowsMonitoredCallPost(callRequest, options).then((request) => request(this.axios, this.basePath));
     }
 }
 

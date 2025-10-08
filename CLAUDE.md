@@ -109,3 +109,14 @@ When adding new APIs:
 - UV for Python dependency management
 - AWS CLI configured for infrastructure deployment
 - Pulumi CLI for infrastructure management
+
+## Relevant Docs
+
+### OpenAI AgentKit Docs
+- We use OpenAI's AgentKit for orchestrating workflows in `apps/server/src/workflows/`
+- Here are the docs: https://platform.openai.com/docs/guides/agents
+
+### Vapi
+- We use Vapi for our Voice AI orchestration platform
+- Here are their docs: https://docs.vapi.ai/api-reference/assistants/list
+- You have their service available as an MCP server here: 
