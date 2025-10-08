@@ -932,7 +932,7 @@ class VertexTester:
         """Complete workflow: fetch project, estimate, form, analyze audio for discrepancies."""
         try:
             project_id = 261980979
-            audio_path = "/Users/willcray/maive/vertex-demo-convo.mp3"
+            audio_path = "./vertex-demo-convo.mp3"
             # Set to None to attempt auto-discovery, or provide a known estimate ID from the GUI
             known_sold_estimate_id = None  # TODO: Set this if auto-discovery fails
 
