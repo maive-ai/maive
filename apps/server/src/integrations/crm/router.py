@@ -5,18 +5,18 @@ This module contains all the API endpoints for CRM operations,
 including project status retrieval and management.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.auth.dependencies import get_current_user, get_current_user_optional
 from src.auth.schemas import User
 from src.integrations.crm.dependencies import get_crm_service
 from src.integrations.crm.schemas import (
-    AddJobNoteRequest,
     CRMErrorResponse,
     EstimateItemsResponse,
     EstimateResponse,
     JobNoteResponse,
     JobResponse,
+    ProjectData,
     ProjectStatusListResponse,
     ProjectStatusResponse,
 )
@@ -48,9 +48,13 @@ async def get_project_status(
 
     if isinstance(result, CRMErrorResponse):
         if result.error_code == "NOT_FOUND":
-            raise HTTPException(status_code=404, detail=result.error)
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=result.error
+            )
         else:
-            raise HTTPException(status_code=500, detail=result.error)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result.error
+            )
 
     return result
 
@@ -75,9 +79,43 @@ async def get_all_project_statuses(
     result = await crm_service.get_all_project_statuses()
 
     if isinstance(result, CRMErrorResponse):
-        raise HTTPException(status_code=500, detail=result.error)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result.error
+        )
 
     return result
+
+
+@router.post("/projects", status_code=status.HTTP_201_CREATED)
+async def create_project(
+    project_data: ProjectData,
+    current_user: User = Depends(get_current_user),
+    crm_service: CRMService = Depends(get_crm_service),
+) -> None:
+    """
+    Create a new project in the CRM provider.
+
+    Note: The `id`, `tenant`, and `job_id` fields in the request will be
+    auto-generated and any provided values will be ignored.
+
+    Args:
+        project_data: The project data (ProjectData model)
+        crm_service: The CRM service instance from dependency injection
+
+    Raises:
+        HTTPException: If the provider doesn't support project creation or an error occurs
+    """
+    result = await crm_service.create_project(project_data)
+
+    if isinstance(result, CRMErrorResponse):
+        if result.error_code == "NOT_SUPPORTED":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail=result.error
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result.error
+            )
 
 
 @router.get("/{tenant}/estimates/{estimate_id}", response_model=EstimateResponse)
@@ -105,9 +143,13 @@ async def get_estimate(
 
     if isinstance(result, CRMErrorResponse):
         if result.error_code == "NOT_FOUND":
-            raise HTTPException(status_code=404, detail=result.error)
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=result.error
+            )
         else:
-            raise HTTPException(status_code=500, detail=result.error)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result.error
+            )
 
     return result
 
@@ -137,9 +179,13 @@ async def get_job(
 
     if isinstance(result, CRMErrorResponse):
         if result.error_code == "NOT_FOUND":
-            raise HTTPException(status_code=404, detail=result.error)
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=result.error
+            )
         else:
-            raise HTTPException(status_code=500, detail=result.error)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result.error
+            )
 
     return result
 
@@ -182,7 +228,9 @@ async def get_estimate_items(
     )
 
     if isinstance(result, CRMErrorResponse):
-        raise HTTPException(status_code=500, detail=result.error)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result.error
+        )
 
     return result
 
@@ -216,8 +264,12 @@ async def add_job_note(
 
     if isinstance(result, CRMErrorResponse):
         if result.error_code == "NOT_FOUND":
-            raise HTTPException(status_code=404, detail=result.error)
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=result.error
+            )
         else:
-            raise HTTPException(status_code=500, detail=result.error)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result.error
+            )
 
     return result
