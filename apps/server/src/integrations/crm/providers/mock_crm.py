@@ -117,7 +117,7 @@ class MockCRMProvider(CRMProvider):
         logger.info(f"Creating mock project with ID: {project_id}")
 
         # Override id, tenant, and job_id with generated values
-        project_data.id = project_id
+        project_data.id = str(project_id)
         project_data.tenant = 1
         project_data.job_id = random.randint(1, 1000000)
 

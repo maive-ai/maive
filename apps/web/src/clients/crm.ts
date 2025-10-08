@@ -3,16 +3,17 @@
 import {
   CRMApi,
   Configuration,
+  type ProjectData,
   type ProjectStatusListResponse,
   type ProjectStatusResponse,
 } from '@maive/api/client';
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 
 import { getIdToken } from '@/auth';
 import { env } from '@/env';
 
 // Re-export types from the generated client
-export type { ProjectStatusListResponse, ProjectStatusResponse };
+export type { ProjectData, ProjectStatusListResponse, ProjectStatusResponse };
 
 /**
  * Create a configured CRM API instance
@@ -78,3 +79,26 @@ export function useFetchProject(projectId: string): UseQueryResult<ProjectStatus
   });
 }
 
+/**
+ * Create a new project in the CRM (Mock CRM only)
+ */
+export async function createProject(projectData: ProjectData): Promise<void> {
+  const api = await createCRMApi();
+  await api.createProjectApiCrmProjectsPost(projectData);
+}
+
+/**
+ * React Query mutation hook for creating a new project
+ * Invalidates projects query on success to refresh the list
+ */
+export function useCreateProject() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: createProject,
+    onSuccess: () => {
+      // Invalidate projects query to refetch the list
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
+  });
+}
