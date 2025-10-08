@@ -132,6 +132,10 @@ class CallMonitoringWorkflow:
                     )
 
                     # Extract structured data and update CRM
+                    # At this point, status_result is guaranteed to be CallResponse due to the isinstance check above
+                    assert isinstance(status_result, CallResponse), (
+                        "status_result should be CallResponse at this point"
+                    )
                     await self._process_completed_call(
                         call_id=call_id,
                         call_response=status_result,
