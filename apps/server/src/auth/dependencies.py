@@ -93,6 +93,40 @@ async def get_current_user(
     return session.user
 
 
+async def get_current_user_optional(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+    auth_provider: AuthProvider = Depends(get_auth_provider_dependency),
+) -> schemas.User | None:
+    """
+    Get the current user from the session, but return None if not authenticated.
+    Useful for endpoints that can be called both authenticated and unauthenticated.
+
+    Args:
+        request: The HTTP request
+        credentials: The HTTP authorization credentials (optional)
+        auth_provider: The configured auth provider
+
+    Returns:
+        User | None: The current user or None if not authenticated
+    """
+    # First try to get token from cookies (for web clients)
+    session_token = request.cookies.get(CookieNames.SESSION_TOKEN.value)
+
+    # Fallback to Bearer token (for API clients)
+    if not session_token and credentials:
+        session_token = credentials.credentials
+
+    if not session_token:
+        return None
+
+    try:
+        session = await auth_provider.get_session(session_token)
+        return session.user if session else None
+    except Exception:
+        return None
+
+
 async def require_permission(
     permission: Permission,
     user: schemas.User = Depends(get_current_user),

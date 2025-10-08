@@ -9,6 +9,7 @@ dependencies = [
     "pydantic-settings>=2.10.1",
     "boto3>=1.39.3",
     "cryptography>=45.0.5",
+    "phonenumbers>=9.0.15",
     "google-genai>=1.39.1",
 ]
 
