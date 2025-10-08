@@ -85,7 +85,7 @@ function ProjectDetail() {
   };
 
   return (
-    <div className="flex h-full bg-gradient-to-b from-amber-50 to-white p-6">
+    <div className="flex h-full bg-white p-6">
       <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
         
         {/* Left Column: Project Details */}
