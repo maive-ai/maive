@@ -200,6 +200,7 @@ class CRMService:
         job_id: int,
         text: str,
         pin_to_top: bool | None = None,
+        user_id: str | None = None,
     ) -> JobNoteResponse | CRMErrorResponse:
         """
         Add a note to a specific job.
@@ -208,12 +209,16 @@ class CRMService:
             job_id: The job identifier
             text: The text content of the note
             pin_to_top: Whether to pin the note to the top (optional)
+            user_id: The ID of the user adding the note (optional, for audit trails)
 
         Returns:
             JobNoteResponse or CRMErrorResponse: The result of the operation
         """
         try:
-            logger.info(f"Adding note to job {job_id}")
+            if user_id:
+                logger.info(f"User {user_id} adding note to job {job_id}")
+            else:
+                logger.info(f"System adding note to job {job_id}")
             result = await self.crm_provider.add_job_note(job_id, text, pin_to_top)
             logger.info(f"Successfully added note to job {job_id}")
             return result

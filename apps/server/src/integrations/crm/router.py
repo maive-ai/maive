@@ -7,7 +7,7 @@ including project status retrieval and management.
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from src.auth.dependencies import get_current_user, get_current_user_optional
+from src.auth.dependencies import get_current_user
 from src.auth.schemas import User
 from src.integrations.crm.dependencies import get_crm_service
 from src.integrations.crm.schemas import (
@@ -193,7 +193,7 @@ async def add_job_note(
     job_id: int,
     text: str,
     pin_to_top: bool | None = None,
-    current_user: User | None = Depends(get_current_user_optional),
+    current_user: User = Depends(get_current_user),
     crm_service: CRMService = Depends(get_crm_service),
 ) -> JobNoteResponse:
     """
@@ -212,7 +212,12 @@ async def add_job_note(
     Raises:
         HTTPException: If the job is not found or an error occurs
     """
-    result = await crm_service.add_job_note(job_id, text, pin_to_top)
+    result = await crm_service.add_job_note(
+        job_id=job_id,
+        text=text,
+        pin_to_top=pin_to_top,
+        user_id=current_user.id,
+    )
 
     if isinstance(result, CRMErrorResponse):
         if result.error_code == "NOT_FOUND":
