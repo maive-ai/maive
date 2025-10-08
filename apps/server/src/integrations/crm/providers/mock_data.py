@@ -5,63 +5,24 @@ This file contains hardcoded project data that can be easily removed
 when switching to real CRM integrations.
 """
 
-from typing import Any
 import random
 from datetime import UTC, datetime
 
-from pydantic import BaseModel, Field
 from src.integrations.crm.constants import Status
+from src.integrations.crm.schemas import ProjectData, ContactInfo, Project
+
 
 # Default phone number for all mock data
 DEFAULT_PHONE_NUMBER = "+1-703-268-1917"
-
-
-class ContactInfo(BaseModel):
-    """Contact information model."""
-
-    name: str
-    phone: str
-    email: str
-
-
-class MockProjectData(BaseModel):
-    """Mock project data model with all customer and claim information."""
-
-    id: str = Field(..., description="Project ID")
-    customerName: str = Field(..., description="Customer/homeowner name")
-    address: str = Field(..., description="Property address")
-    phone: str = Field(..., description="Customer phone number")
-    email: str | None = Field(None, description="Customer email")
-    claimNumber: str | None = Field(None, description="Insurance claim number")
-    dateOfLoss: str | None = Field(None, description="Date of loss (ISO format)")
-    insuranceAgency: str | None = Field(None, description="Insurance company name")
-    insuranceAgencyContact: ContactInfo | None = Field(
-        None, description="Insurance agency contact"
-    )
-    adjusterName: str | None = Field(None, description="Insurance adjuster name")
-    adjusterContact: ContactInfo | None = Field(
-        None, description="Insurance adjuster contact"
-    )
-    notes: str | None = Field(None, description="Project notes")
-    tenant: int | None = Field(None, description="Tenant ID")
-    job_id: int | None = Field(None, description="Job ID")
-
-
-class MockProject(BaseModel):
-    """Mock project with status and metadata."""
-
-    project_data: MockProjectData
-    status: str
-    updated_at: str
-    metadata: dict[str, Any] | None = Field(None, description="Project metadata")
     
 
 # Project statuses
 PROJECT_STATUSES = [status.value for status in Status]
 
+
 # Mock customer/project data using Pydantic models
-MOCK_PROJECTS_RAW: list[MockProjectData] = [
-    MockProjectData(
+MOCK_PROJECTS_RAW: list[ProjectData] = [
+    ProjectData(
         id="st_001",
         customerName="John Smith",
         address="123 Main St, Austin, TX 78701",
@@ -83,7 +44,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         ),
         notes="Roof damage from hail storm. Customer prefers morning appointments.",
     ),
-    MockProjectData(
+    ProjectData(
         id="jn_002",
         customerName="Emily Davis",
         address="456 Oak Avenue, Dallas, TX 75201",
@@ -105,7 +66,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         ),
         notes="Wind damage to gutters and siding. Emergency tarp installed.",
     ),
-    MockProjectData(
+    ProjectData(
         id="al_003",
         customerName="Michael Thompson",
         address="789 Pine Street, Houston, TX 77001",
@@ -127,7 +88,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         ),
         notes="Multiple shingle damage areas. Customer has military discount.",
     ),
-    MockProjectData(
+    ProjectData(
         id="md_004",
         customerName="Sarah Wilson",
         address="321 Elm Drive, San Antonio, TX 78201",
@@ -149,7 +110,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         ),
         notes="Storm damage claim pending. Customer needs quick turnaround.",
     ),
-    MockProjectData(
+    ProjectData(
         id="st_005",
         customerName="Robert Johnson",
         address="654 Cedar Lane, Fort Worth, TX 76101",
@@ -157,7 +118,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         email="robert.johnson@email.com",
         notes="Maintenance customer. No insurance claim.",
     ),
-    MockProjectData(
+    ProjectData(
         id="st_006",
         customerName="Jennifer Martinez",
         address="987 Maple Avenue, Plano, TX 75023",
@@ -179,7 +140,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         ),
         notes="Hail damage to roof and gutters. Urgent repair needed.",
     ),
-    MockProjectData(
+    ProjectData(
         id="st_007",
         customerName="David Chen",
         address="456 Willow Street, Richardson, TX 75080",
@@ -201,7 +162,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         ),
         notes="Wind damage from storm. Customer has high deductible.",
     ),
-    MockProjectData(
+    ProjectData(
         id="jn_008",
         customerName="Lisa Anderson",
         address="321 Sunset Drive, Garland, TX 75040",
@@ -223,7 +184,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         ),
         notes="Multiple shingle replacement needed. Customer prefers afternoon appointments.",
     ),
-    MockProjectData(
+    ProjectData(
         id="jn_009",
         customerName="Mark Wilson",
         address="789 Oak Hill Lane, Irving, TX 75061",
@@ -231,7 +192,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         email="mark.wilson@email.com",
         notes="Routine maintenance check. Long-term customer.",
     ),
-    MockProjectData(
+    ProjectData(
         id="jn_010",
         customerName="Amanda Foster",
         address="654 Pine Ridge Court, Mesquite, TX 75149",
@@ -253,7 +214,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         ),
         notes="Storm damage claim. Customer needs quick resolution.",
     ),
-    MockProjectData(
+    ProjectData(
         id="jn_011",
         customerName="Christopher Davis",
         address="123 Cedar Creek Drive, Grand Prairie, TX 75050",
@@ -275,7 +236,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         ),
         notes="Hail damage assessment needed. Customer works from home.",
     ),
-    MockProjectData(
+    ProjectData(
         id="jn_012",
         customerName="Rebecca Martinez",
         address="987 Elm Street, Carrollton, TX 75006",
@@ -283,7 +244,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         email="rebecca.martinez@email.com",
         notes="Preventive maintenance customer. Annual inspection due.",
     ),
-    MockProjectData(
+    ProjectData(
         id="jn_013",
         customerName="Daniel Rodriguez",
         address="456 Birch Lane, Lewisville, TX 75057",
@@ -305,7 +266,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         ),
         notes="Wind and hail damage. Emergency tarp installed.",
     ),
-    MockProjectData(
+    ProjectData(
         id="jn_014",
         customerName="Stephanie White",
         address="321 Valley View Road, Flower Mound, TX 75022",
@@ -313,7 +274,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         email="stephanie.white@email.com",
         notes="New customer referral. Interested in full roof replacement.",
     ),
-    MockProjectData(
+    ProjectData(
         id="al_015",
         customerName="Thomas Brown",
         address="789 Highland Park Drive, Arlington, TX 76010",
@@ -335,7 +296,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         ),
         notes="Large commercial claim. Multiple building assessment needed.",
     ),
-    MockProjectData(
+    ProjectData(
         id="al_016",
         customerName="Patricia Garcia",
         address="654 Mountain View Circle, Euless, TX 76039",
@@ -343,7 +304,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         email="patricia.garcia@email.com",
         notes="Maintenance customer. Gutter cleaning and inspection.",
     ),
-    MockProjectData(
+    ProjectData(
         id="al_017",
         customerName="William Lee",
         address="123 Riverside Drive, Bedford, TX 76021",
@@ -365,7 +326,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         ),
         notes="Storm damage to shingles and flashing. Veteran discount applied.",
     ),
-    MockProjectData(
+    ProjectData(
         id="al_018",
         customerName="Michelle Taylor",
         address="987 Forest Glen Way, Hurst, TX 76053",
@@ -387,7 +348,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         ),
         notes="High-value home. Premium materials required.",
     ),
-    MockProjectData(
+    ProjectData(
         id="al_019",
         customerName="Joseph Martinez",
         address="456 Creekside Lane, Colleyville, TX 76034",
@@ -395,7 +356,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         email="joseph.martinez@email.com",
         notes="Regular maintenance customer. Quarterly inspections.",
     ),
-    MockProjectData(
+    ProjectData(
         id="al_020",
         customerName="Karen Anderson",
         address="321 Oakwood Drive, Grapevine, TX 76051",
@@ -417,7 +378,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         ),
         notes="Wind damage from recent storm. Customer needs quick estimate.",
     ),
-    MockProjectData(
+    ProjectData(
         id="al_021",
         customerName="Steven Wilson",
         address="789 Meadowbrook Lane, Southlake, TX 76092",
@@ -425,7 +386,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         email="steven.wilson@email.com",
         notes="New construction inspection. High-end residential project.",
     ),
-    MockProjectData(
+    ProjectData(
         id="md_022",
         customerName="Nancy Rodriguez",
         address="654 Sunset Boulevard, Mansfield, TX 76063",
@@ -447,7 +408,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         ),
         notes="Hail damage assessment. Customer has elderly parents living with them.",
     ),
-    MockProjectData(
+    ProjectData(
         id="md_023",
         customerName="Richard Davis",
         address="123 Prairie View Drive, Cedar Hill, TX 75104",
@@ -455,7 +416,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         email="richard.davis@email.com",
         notes="Routine maintenance customer. Annual roof cleaning.",
     ),
-    MockProjectData(
+    ProjectData(
         id="md_024",
         customerName="Helen Garcia",
         address="987 Hillside Avenue, DeSoto, TX 75115",
@@ -477,7 +438,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         ),
         notes="Storm damage to multiple areas. Complex claim requiring detailed assessment.",
     ),
-    MockProjectData(
+    ProjectData(
         id="md_025",
         customerName="Paul Thompson",
         address="456 Garden Valley Road, Lancaster, TX 75146",
@@ -499,7 +460,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         ),
         notes="Wind and hail damage. Customer works night shift, prefers daytime appointments.",
     ),
-    MockProjectData(
+    ProjectData(
         id="md_026",
         customerName="Dorothy Lee",
         address="321 Brookside Drive, Duncanville, TX 75116",
@@ -507,7 +468,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         email="dorothy.lee@email.com",
         notes="Senior citizen customer. Preventive maintenance and inspection.",
     ),
-    MockProjectData(
+    ProjectData(
         id="md_027",
         customerName="Kenneth Martinez",
         address="789 Woodland Trail, Glenn Heights, TX 75154",
@@ -529,7 +490,7 @@ MOCK_PROJECTS_RAW: list[MockProjectData] = [
         ),
         notes="Large residential property. Multiple damage areas from recent storm.",
     ),
-    MockProjectData(
+    ProjectData(
         id="md_028",
         customerName="Betty Anderson",
         address="654 Maple Ridge Circle, Red Oak, TX 75154",
@@ -555,7 +516,7 @@ def _derive_numeric_job_id(project_id: str) -> int:
     return abs(hash(project_id)) % 1_000_000
 
 
-def get_mock_projects() -> list[MockProject]:
+def get_mock_projects() -> list[Project]:
     """
     Get mock projects with randomly assigned statuses.
 
@@ -570,7 +531,7 @@ def get_mock_projects() -> list[MockProject]:
         project_data.tenant = 1
         project_data.job_id = _derive_numeric_job_id(project_data.id)
 
-        project = MockProject(
+        project = Project(
             project_data=project_data,
             status=random.choice(PROJECT_STATUSES),
             updated_at=now,

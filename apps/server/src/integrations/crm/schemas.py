@@ -373,3 +373,43 @@ class UpdateProjectRequest(BaseModel):
     name: str | None = Field(None, description="Project name")
     summary: str | None = Field(None, description="Project summary (HTML)")
     external_data: list[ExternalDataItem] | None = Field(None, description="External data to attach to project", alias="externalData")
+
+
+class ContactInfo(BaseModel):
+    """Contact information model."""
+
+    name: str
+    phone: str
+    email: str
+
+
+class ProjectData(BaseModel):
+    """Mock project data model with all customer and claim information."""
+
+    id: str = Field(..., description="Project ID")
+    customerName: str = Field(..., description="Customer/homeowner name")
+    address: str = Field(..., description="Property address")
+    phone: str = Field(..., description="Customer phone number")
+    email: str | None = Field(None, description="Customer email")
+    claimNumber: str | None = Field(None, description="Insurance claim number")
+    dateOfLoss: str | None = Field(None, description="Date of loss (ISO format)")
+    insuranceAgency: str | None = Field(None, description="Insurance company name")
+    insuranceAgencyContact: ContactInfo | None = Field(
+        None, description="Insurance agency contact"
+    )
+    adjusterName: str | None = Field(None, description="Insurance adjuster name")
+    adjusterContact: ContactInfo | None = Field(
+        None, description="Insurance adjuster contact"
+    )
+    notes: str | None = Field(None, description="Project notes")
+    tenant: int | None = Field(None, description="Tenant ID")
+    job_id: int | None = Field(None, description="Job ID")
+
+
+class Project(BaseModel):
+    """Mock project with status and metadata."""
+
+    project_data: ProjectData
+    status: str
+    updated_at: str
+    metadata: dict[str, Any] | None = Field(None, description="Project metadata")

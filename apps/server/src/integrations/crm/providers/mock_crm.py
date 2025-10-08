@@ -5,13 +5,19 @@ This provider uses in-memory data and requires no external dependencies,
 making it perfect for local development, demos, and testing.
 """
 
-from datetime import datetime
+import random
+import uuid
+from datetime import UTC, datetime
 
 from src.integrations.crm.base import CRMError, CRMProvider
 from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
 from src.integrations.crm.constants import Status
 from src.integrations.crm.provider_schemas import FormSubmissionListResponse
-from src.integrations.crm.providers.mock_data import MockProject, get_mock_projects
+from src.integrations.crm.providers.mock_data import (
+    Project,
+    ProjectData,
+    get_mock_projects,
+)
 from src.integrations.crm.schemas import (
     EstimateResponse,
     JobNoteResponse,
@@ -27,7 +33,7 @@ class MockCRMProvider(CRMProvider):
 
     def __init__(self):
         """Initialize the Mock CRM provider with in-memory data."""
-        self._projects: list[MockProject] = get_mock_projects()
+        self._projects: list[Project] = get_mock_projects()
         logger.info(
             f"MockCRMProvider initialized with {len(self._projects)} mock projects"
         )
@@ -99,6 +105,34 @@ class MockCRMProvider(CRMProvider):
             provider=CRMProviderEnum.MOCK_CRM,
         )
 
+    async def create_project(self, project_data: ProjectData) -> None:
+        """
+        Create a new demo project (Mock CRM only).
+
+        Args:
+            project_data: The project data (id will be overridden with generated value)
+        """
+        # Generate random project ID and override the provided one
+        project_id = uuid.uuid4()
+        logger.info(f"Creating mock project with ID: {project_id}")
+
+        # Override id, tenant, and job_id with generated values
+        project_data.id = str(project_id)
+        project_data.tenant = 1
+        project_data.job_id = random.randint(1, 1000000)
+
+        # Create mock project
+        now = datetime.now(UTC).isoformat()
+        mock_project = Project(
+            project_data=project_data,
+            status=Status.IN_PROGRESS,
+            updated_at=now,
+        )
+
+        # Add to in-memory projects list
+        self._projects.append(mock_project)
+        logger.info(f"Successfully created mock project {project_id}")
+
     # Stub implementations for unsupported operations
 
     async def get_appointment_status(
@@ -153,7 +187,7 @@ class MockCRMProvider(CRMProvider):
         text = text.strip('\"')
 
         # Find job by job_id (already set in mock data)
-        job: MockProject | None = next((j for j in self._projects if j.project_data.job_id == job_id), None)
+        job: Project | None = next((j for j in self._projects if j.project_data.job_id == job_id), None)
         
         if job:
             # Add note to job

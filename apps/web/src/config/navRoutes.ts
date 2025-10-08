@@ -1,7 +1,8 @@
-import { FolderKanban, Phone, SquarePlus, Workflow } from 'lucide-react';
+import { FilePlus, FolderKanban, Phone, SquarePlus, Workflow } from 'lucide-react';
 import type { AnyRoute } from '@tanstack/react-router';
 import type { LucideIcon } from 'lucide-react';
 import { env } from '../env';
+import { Route as CreateProjectRoute } from '../routes/_authed/create-project.tsx';
 import { Route as PhoneInputRoute } from '../routes/_authed/phone-input.tsx';
 import { Route as ProjectsRoute } from '../routes/_authed/projects.tsx';
 import { Route as WorkflowsRoute } from '../routes/_authed/workflows/index.tsx';
@@ -31,6 +32,11 @@ const allNavItems: NavItem[] = [
     icon: FolderKanban,
   },
   {
+    label: 'Create Project',
+    route: CreateProjectRoute,
+    icon: FilePlus,
+  },
+  {
     label: 'Phone Input',
     route: PhoneInputRoute,
     icon: Phone,
@@ -40,7 +46,17 @@ const allNavItems: NavItem[] = [
 export const navItems: NavItem[] = allNavItems.filter((item) => {
   // Filter out workflow items if workflows are disabled
   if (!env.PUBLIC_ENABLE_WORKFLOWS) {
-    return !['New Workflow', 'Workflows'].includes(item.label);
+    if (['New Workflow', 'Workflows'].includes(item.label)) {
+      return false;
+    }
   }
+
+  // Filter out create project if demo project creation is disabled
+  if (!env.PUBLIC_ENABLE_DEMO_PROJECT_CREATION) {
+    if (item.label === 'Create Project') {
+      return false;
+    }
+  }
+
   return true;
 });

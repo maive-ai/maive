@@ -41,9 +41,20 @@ export const envSchema = v.object({
   PUBLIC_ENABLE_WORKFLOWS: v.optional(
     v.pipe(
       v.string(),
-      v.transform((s) => s.toLowerCase() === 'false'),
+      v.transform((s) => s.toLowerCase() !== 'false'),
     ),
-    'true',
+    'false',
+  ),
+
+  /**
+   * Feature flag to enable/disable demo project creation (Mock CRM only)
+   */
+  PUBLIC_ENABLE_DEMO_PROJECT_CREATION: v.optional(
+    v.pipe(
+      v.string(),
+      v.transform((s) => s.toLowerCase() === 'true'),
+    ),
+    'false',
   ),
 });
 
