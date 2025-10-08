@@ -543,6 +543,101 @@
         }
       }
     },
+    "/api/voice-ai/calls": {
+      "post": {
+        "tags": [
+          "Voice AI"
+        ],
+        "summary": "Create Outbound Call",
+        "description": "Create an outbound call.\n\nArgs:\n    request: The call request with phone number and context\n    current_user: The authenticated user\n    voice_ai_service: The Voice AI service instance from dependency injection\n\nReturns:\n    CallResponse: The call information\n\nRaises:\n    HTTPException: If call creation fails",
+        "operationId": "create_outbound_call_api_voice_ai_calls_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CallRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/voice-ai/calls/{call_id}": {
+      "get": {
+        "tags": [
+          "Voice AI"
+        ],
+        "summary": "Get Call Status",
+        "description": "Get the status of a specific call by ID.\n\nArgs:\n    call_id: The unique identifier for the call\n    current_user: The authenticated user\n    voice_ai_service: The Voice AI service instance from dependency injection\n\nReturns:\n    CallResponse: The call status information\n\nRaises:\n    HTTPException: If the call is not found or an error occurs",
+        "operationId": "get_call_status_api_voice_ai_calls__call_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "call_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Call Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "summary": "Root",
@@ -635,10 +730,231 @@
       "CRMProvider": {
         "type": "string",
         "enum": [
-          "service_titan"
+          "service_titan",
+          "mock_crm"
         ],
         "title": "CRMProvider",
         "description": "Available CRM providers."
+      },
+      "CallRequest": {
+        "properties": {
+          "phone_number": {
+            "type": "string",
+            "title": "Phone Number",
+            "description": "Phone number to call"
+          },
+          "customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Id",
+            "description": "Customer identifier"
+          },
+          "customer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Name",
+            "description": "Customer name"
+          },
+          "company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name",
+            "description": "Company name"
+          },
+          "customer_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Address",
+            "description": "Customer address"
+          },
+          "claim_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claim Number",
+            "description": "Insurance claim number"
+          },
+          "date_of_loss": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Of Loss",
+            "description": "Date of loss for insurance claim"
+          },
+          "insurance_agency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Insurance Agency",
+            "description": "Insurance agency name"
+          },
+          "adjuster_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjuster Name",
+            "description": "Insurance adjuster name"
+          },
+          "adjuster_phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjuster Phone",
+            "description": "Insurance adjuster phone"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "Additional metadata"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id",
+            "description": "Job ID"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant",
+            "description": "Tenant ID"
+          }
+        },
+        "type": "object",
+        "required": [
+          "phone_number"
+        ],
+        "title": "CallRequest",
+        "description": "Request model for creating an outbound call."
+      },
+      "CallResponse": {
+        "properties": {
+          "call_id": {
+            "type": "string",
+            "title": "Call Id",
+            "description": "Unique call identifier"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CallStatus",
+            "description": "Current call status"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/VoiceAIProvider",
+            "description": "Voice AI provider"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At",
+            "description": "Call creation timestamp"
+          },
+          "provider_data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Data",
+            "description": "Provider-specific data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "call_id",
+          "status",
+          "provider"
+        ],
+        "title": "CallResponse",
+        "description": "Response model for call information."
+      },
+      "CallStatus": {
+        "type": "string",
+        "enum": [
+          "queued",
+          "ringing",
+          "in_progress",
+          "forwarding",
+          "ended",
+          "busy",
+          "no_answer",
+          "failed",
+          "canceled",
+          "['ended', 'failed', 'canceled', 'busy', 'no_answer']"
+        ],
+        "title": "CallStatus",
+        "description": "Call status values across Voice AI systems."
       },
       "EstimateItemResponse": {
         "properties": {
@@ -1662,6 +1978,14 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VoiceAIProvider": {
+        "type": "string",
+        "enum": [
+          "vapi"
+        ],
+        "title": "VoiceAIProvider",
+        "description": "Available Voice AI providers."
       }
     },
     "securitySchemes": {
