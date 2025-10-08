@@ -224,6 +224,9 @@ class UserBase(BaseModel):
     favorite_band: MusicBand | None = None  # only "AEROSMITH", "QUEEN", "AC/DC" values are allowed to be inputted
     website: AnyUrl | None = None
 ```
+### Use Pydantic for Request / Response Objects
+For a router or service layer function, use a pydantic model for both the input and return type object.
+
 ### Custom Base Model
 Having a controllable global base model allows us to customize all the models within the app. For instance, we can enforce a standard datetime format or introduce a common method for all subclasses of the base model.
 ```python
