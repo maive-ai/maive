@@ -15,3 +15,6 @@ mock-data/
 
 # OpenAPI Generator generated files
 packages/api/client/.openapi-generator/
+
+# Cursor external docs
+.cursor/external_docs/
