@@ -76,7 +76,7 @@ const { status, data } = await apiInstance.addJobNoteApiCrmTenantJobsJobIdNotesP
 # **createProjectApiCrmProjectsPost**
 > any createProjectApiCrmProjectsPost(projectData)
 
-Create a new demo project (Mock CRM only).  This endpoint is only available when using the Mock CRM provider and is intended for demo and testing purposes only.  Note: The `id`, `tenant`, and `job_id` fields in the request will be auto-generated and any provided values will be ignored.  Args:     project_data: The project data (ProjectData model)     crm_service: The CRM service instance from dependency injection  Raises:     HTTPException: If the provider doesn\'t support project creation or an error occurs
+Create a new project in the CRM provider.  Note: The `id`, `tenant`, and `job_id` fields in the request will be auto-generated and any provided values will be ignored.  Args:     project_data: The project data (ProjectData model)     crm_service: The CRM service instance from dependency injection  Raises:     HTTPException: If the provider doesn\'t support project creation or an error occurs
 
 ### Example
 
