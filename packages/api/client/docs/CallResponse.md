@@ -11,6 +11,7 @@ Name | Type | Description | Notes
 **provider** | [**VoiceAIProvider**](VoiceAIProvider.md) | Voice AI provider | [default to undefined]
 **created_at** | **string** |  | [optional] [default to undefined]
 **provider_data** | **{ [key: string]: any; }** |  | [optional] [default to undefined]
+**analysis** | [**AnalysisData**](AnalysisData.md) |  | [optional] [default to undefined]
 
 ## Example
 
@@ -23,6 +24,7 @@ const instance: CallResponse = {
     provider,
     created_at,
     provider_data,
+    analysis,
 };
 ```
 

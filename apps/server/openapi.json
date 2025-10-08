@@ -588,53 +588,6 @@
         }
       }
     },
-    "/api/voice-ai/calls": {
-      "post": {
-        "tags": [
-          "Voice AI"
-        ],
-        "summary": "Create Outbound Call",
-        "description": "Create an outbound call.\n\nArgs:\n    request: The call request with phone number and context\n    current_user: The authenticated user\n    voice_ai_service: The Voice AI service instance from dependency injection\n\nReturns:\n    CallResponse: The call information\n\nRaises:\n    HTTPException: If call creation fails",
-        "operationId": "create_outbound_call_api_voice_ai_calls_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CallRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CallResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
     "/api/voice-ai/calls/{call_id}": {
       "get": {
         "tags": [
@@ -683,6 +636,53 @@
         }
       }
     },
+    "/api/workflows/monitored-call": {
+      "post": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Create Monitored Call",
+        "description": "Create an outbound call with monitoring and CRM integration.\n\nThis workflow endpoint orchestrates:\n1. Creating the call via Voice AI provider\n2. Starting background call monitoring\n3. Updating CRM with call results when complete\n\nArgs:\n    request: The call request with phone number and context\n    current_user: The authenticated user\n    workflow: The call monitoring workflow from dependency injection\n\nReturns:\n    CallResponse: The call information\n\nRaises:\n    HTTPException: If call creation fails",
+        "operationId": "create_monitored_call_api_workflows_monitored_call_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CallRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/": {
       "get": {
         "summary": "Root",
@@ -720,6 +720,48 @@
   },
   "components": {
     "schemas": {
+      "AnalysisData": {
+        "properties": {
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary",
+            "description": "Call summary"
+          },
+          "structured_data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClaimStatusData"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Structured data extraction"
+          },
+          "success_evaluation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Success Evaluation",
+            "description": "Success evaluation"
+          }
+        },
+        "type": "object",
+        "title": "AnalysisData",
+        "description": "Provider-agnostic analysis data from completed calls."
+      },
       "AuthResponse": {
         "properties": {
           "success": {
@@ -973,6 +1015,17 @@
             ],
             "title": "Provider Data",
             "description": "Provider-specific data"
+          },
+          "analysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnalysisData"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Typed analysis data (extracted from provider_data)"
           }
         },
         "type": "object",
@@ -1000,6 +1053,59 @@
         ],
         "title": "CallStatus",
         "description": "Call status values across Voice AI systems."
+      },
+      "ClaimStatusData": {
+        "properties": {
+          "call_outcome": {
+            "type": "string",
+            "title": "Call Outcome",
+            "description": "Call outcome: success, voicemail, gatekeeper, failed",
+            "default": "unknown"
+          },
+          "claim_status": {
+            "type": "string",
+            "title": "Claim Status",
+            "description": "Claim status: approved, denied, pending_review, etc.",
+            "default": "unknown"
+          },
+          "payment_details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaymentDetails"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Payment details"
+          },
+          "required_actions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RequiredActions"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Required actions"
+          },
+          "claim_update_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claim Update Summary",
+            "description": "Summary of the call for notes"
+          }
+        },
+        "type": "object",
+        "title": "ClaimStatusData",
+        "description": "Provider-agnostic structured data from insurance claim status calls."
       },
       "ContactInfo": {
         "properties": {
@@ -1746,6 +1852,61 @@
         "title": "JobResponse",
         "description": "Response model for Service Titan job information."
       },
+      "PaymentDetails": {
+        "properties": {
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status",
+            "description": "Payment status: issued, not_issued, pending"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount",
+            "description": "Payment amount"
+          },
+          "issue_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issue Date",
+            "description": "Date payment was issued"
+          },
+          "check_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Check Number",
+            "description": "Check number"
+          }
+        },
+        "type": "object",
+        "title": "PaymentDetails",
+        "description": "Provider-agnostic payment information from claim status calls."
+      },
       "ProjectData": {
         "properties": {
           "id": {
@@ -1976,6 +2137,45 @@
         ],
         "title": "ProjectStatusResponse",
         "description": "Response model for project status information."
+      },
+      "RequiredActions": {
+        "properties": {
+          "documents_needed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Documents Needed",
+            "description": "List of required documents"
+          },
+          "submission_method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submission Method",
+            "description": "Document submission method: email, portal, mail"
+          },
+          "next_steps": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Steps",
+            "description": "Summary of next actions"
+          }
+        },
+        "type": "object",
+        "title": "RequiredActions",
+        "description": "Provider-agnostic required actions from claim status calls."
       },
       "Role": {
         "type": "string",
