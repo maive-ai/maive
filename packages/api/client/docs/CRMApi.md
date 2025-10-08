@@ -5,6 +5,7 @@ All URIs are relative to *http://localhost*
 |Method | HTTP request | Description|
 |------------- | ------------- | -------------|
 |[**addJobNoteApiCrmTenantJobsJobIdNotesPost**](#addjobnoteapicrmtenantjobsjobidnotespost) | **POST** /api/crm/{tenant}/jobs/{job_id}/notes | Add Job Note|
+|[**createProjectApiCrmProjectsPost**](#createprojectapicrmprojectspost) | **POST** /api/crm/projects | Create Project|
 |[**getAllProjectStatusesApiCrmProjectsStatusGet**](#getallprojectstatusesapicrmprojectsstatusget) | **GET** /api/crm/projects/status | Get All Project Statuses|
 |[**getEstimateApiCrmTenantEstimatesEstimateIdGet**](#getestimateapicrmtenantestimatesestimateidget) | **GET** /api/crm/{tenant}/estimates/{estimate_id} | Get Estimate|
 |[**getEstimateItemsApiCrmTenantEstimatesItemsGet**](#getestimateitemsapicrmtenantestimatesitemsget) | **GET** /api/crm/{tenant}/estimates/items | Get Estimate Items|
@@ -68,6 +69,59 @@ const { status, data } = await apiInstance.addJobNoteApiCrmTenantJobsJobIdNotesP
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 |**200** | Successful Response |  -  |
+|**422** | Validation Error |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **createProjectApiCrmProjectsPost**
+> any createProjectApiCrmProjectsPost(projectData)
+
+Create a new demo project (Mock CRM only).  This endpoint is only available when using the Mock CRM provider and is intended for demo and testing purposes only.  Note: The `id`, `tenant`, and `job_id` fields in the request will be auto-generated and any provided values will be ignored.  Args:     project_data: The project data (ProjectData model)     crm_service: The CRM service instance from dependency injection  Raises:     HTTPException: If the provider doesn\'t support project creation or an error occurs
+
+### Example
+
+```typescript
+import {
+    CRMApi,
+    Configuration,
+    ProjectData
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new CRMApi(configuration);
+
+let projectData: ProjectData; //
+
+const { status, data } = await apiInstance.createProjectApiCrmProjectsPost(
+    projectData
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **projectData** | **ProjectData**|  | |
+
+
+### Return type
+
+**any**
+
+### Authorization
+
+[HTTPBearer](../README.md#HTTPBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**201** | Successful Response |  -  |
 |**422** | Validation Error |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
