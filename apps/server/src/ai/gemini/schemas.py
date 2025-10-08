@@ -27,6 +27,7 @@ class FileMetadata(BaseModel):
     size_bytes: Optional[int] = Field(default=None, description="Size of the file in bytes")
     sha256_hash: Optional[str] = Field(default=None, description="SHA256 hash of the file")
     uri: Optional[str] = Field(default=None, description="URI of the uploaded file")
+    state: Optional[str] = Field(default=None, description="Processing state of the file (e.g., ACTIVE, PROCESSING)")
 
 
 class GenerateContentRequest(BaseModel):

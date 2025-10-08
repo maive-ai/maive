@@ -42,7 +42,7 @@ def get_gemini_settings() -> GeminiSettings:
     global _gemini_settings
     if _gemini_settings is None:
         _gemini_settings = GeminiSettings()
-        logger.info("GeminiSettings loaded")
+        logger.info("Settings loaded")
     return _gemini_settings
 
 
