@@ -195,7 +195,12 @@ class VapiProvider(VoiceAIProvider):
             raise VoiceAIError(error_msg, error_code=VoiceAIErrorCode.HTTP_ERROR)
 
     async def monitor_ongoing_call(self, call_id: str, call_request: CallRequest) -> None:
-        """Poll call status every 10s up to 24h; on end, log structured data."""
+        """
+        Poll call status every 10s up to 24h; log structured data when call ends.
+
+        Note: This method is deprecated and will be removed in a future version.
+        Use the CallMonitoringWorkflow instead for proper orchestration.
+        """
         poll_interval_seconds = 10
         max_polling_duration = 60 * 60 * 24  # 24 hours
         start_time = asyncio.get_event_loop().time()
@@ -218,9 +223,7 @@ class VapiProvider(VoiceAIProvider):
                 # End condition
                 if CallStatus.is_call_ended(status.status):
                     # Log structured data if available
-                    call_ended_response = self._handle_call_ended(call_id, status.provider_data or {})
-                    if call_ended_response:
-                        await self._update_crm_job_note(call_id, call_ended_response, call_request)
+                    self._handle_call_ended(call_id, status.provider_data or {})
                     break
 
                 await asyncio.sleep(poll_interval_seconds)
@@ -242,31 +245,6 @@ class VapiProvider(VoiceAIProvider):
         except Exception as e:
             logger.error(f"[Vapi Provider] Error logging structured data for call {call_id}: {e}")
             return None
-
-    async def _update_crm_job_note(self, call_id: str, provider_data: VapiClaimStatusData, call_request: CallRequest) -> None:
-        """Demo: POST structured data as a CRM job note to our own API if metadata has tenant/job_id."""
-        try:
-            logger.info(f"[Vapi Provider] Call Request for call {call_id}: {call_request}")
-            tenant = call_request.tenant
-            job_id = call_request.job_id
-            if tenant is None or job_id is None:
-                logger.info(f"[Vapi Provider] Missing tenant/job_id in metadata for call {call_id}; skipping CRM note")
-                return
-
-            # TODO: Change to production URL
-            base_url = "http://localhost:8080"
-
-            url = f"{base_url}/api/crm/{tenant}/jobs/{job_id}/notes"
-            params = {"text": json.dumps(provider_data.required_actions.next_steps, ensure_ascii=False)}
-
-            async with httpx.AsyncClient(timeout=self._voice_ai_settings.request_timeout) as client:
-                resp = await client.post(url, params=params)
-                if resp.status_code >= 300:
-                    logger.error(f"[Vapi Provider] Failed to add job note for job {job_id} (status {resp.status_code}): {resp.text}")
-                else:
-                    logger.info(f"[Vapi Provider] Added CRM job note for job {job_id}")
-        except Exception as e:
-            logger.error(f"[Vapi Provider] Error posting CRM job note for call {call_id}: {e}")
 
     def _build_headers(self) -> dict[str, str]:
         """Build HTTP headers for Vapi API requests."""
