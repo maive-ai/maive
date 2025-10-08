@@ -15,6 +15,7 @@ from src.integrations.crm.schemas import (
     ProjectNoteResponse,
     ProjectStatusListResponse,
     ProjectStatusResponse,
+    ProjectData,
 )
 from src.utils.logger import logger
 
@@ -82,6 +83,43 @@ class CRMService:
             )
         except Exception as e:
             logger.error(f"Unexpected error getting all projects: {e}")
+            return CRMErrorResponse(
+                error=f"Unexpected error: {str(e)}",
+                error_code="UNKNOWN_ERROR",
+                provider=getattr(self.crm_provider, 'provider_name', None)
+            )
+
+    async def create_project(self, project_data: ProjectData) -> CRMErrorResponse | None:
+        """
+        Create a new demo project (Mock CRM only).
+
+        Args:
+            project_data: The project data to create
+
+        Returns:
+            CRMErrorResponse if error occurs, None on success
+        """
+        try:
+            # Check if provider supports project creation
+            if not hasattr(self.crm_provider, 'create_project'):
+                logger.warning("CRM provider does not support project creation")
+                return CRMErrorResponse(
+                    error="Project creation is only supported in demo/mock mode",
+                    error_code="NOT_SUPPORTED",
+                    provider=getattr(self.crm_provider, 'provider_name', None)
+                )
+
+            await self.crm_provider.create_project(project_data)
+            
+        except CRMError as e:
+            logger.error(f"CRM error creating project: {e.message}")
+            return CRMErrorResponse(
+                error=e.message,
+                error_code=e.error_code,
+                provider=getattr(self.crm_provider, 'provider_name', None)
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error creating project: {e}")
             return CRMErrorResponse(
                 error=f"Unexpected error: {str(e)}",
                 error_code="UNKNOWN_ERROR",
