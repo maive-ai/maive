@@ -8,42 +8,11 @@ across the CRM integration system.
 from enum import Enum
 
 
-class ProjectStatus(str, Enum):
-    """Project status values across CRM systems."""
-
-    HOLD = "hold"
-    DISPATCHED = "dispatched"
-    DONE = "done"
-    CANCELLED = "cancelled"
-    SCHEDULED = "scheduled"
-    WORKING = "working"
-
-    @classmethod
-    def from_service_titan(cls, status: str) -> "ProjectStatus":
-        """
-        Convert Service Titan status to ProjectStatus enum.
-
-        Args:
-            status: Service Titan status string
-
-        Returns:
-            ProjectStatus: Mapped status enum value
-        """
-        service_titan_mapping = {
-            "scheduled": cls.SCHEDULED,
-            "dispatched": cls.DISPATCHED,
-            "working": cls.WORKING,
-            "hold": cls.HOLD,
-            "done": cls.DONE,
-            "canceled": cls.CANCELLED,
-        }
-        return service_titan_mapping.get(status.lower(), cls.DISPATCHED)
-
-
 class CRMProvider(str, Enum):
     """Available CRM providers."""
 
     SERVICE_TITAN = "service_titan"
+    MOCK_CRM = "mock_crm"
 
 
 class OwnerType(str, Enum):
@@ -77,8 +46,8 @@ class EstimateReviewStatus(str, Enum):
     NOT_APPROVED = "NotApproved"
 
 
-class JobStatus(str, Enum):
-    """Job status values for Service Titan jobs."""
+class Status(str, Enum):
+    """Status values for Service Titan jobs and projects."""
 
     SCHEDULED = "Scheduled"
     DISPATCHED = "Dispatched"
@@ -86,6 +55,50 @@ class JobStatus(str, Enum):
     HOLD = "Hold"
     COMPLETED = "Completed"
     CANCELED = "Canceled"
+
+
+class SubStatus(int, Enum):
+    """SubStatus IDs for Service Titan projects."""
+
+    # Status ID 379 - Sold substatuses
+    ADMIN_READY_FOR_PRODUCTION = 19567820
+    ADMIN_PENDING_SCHEDULING = 19567821
+    ADMIN_READY_FOR_ORDER_BUILDING = 19567822
+    ADMIN_PRODUCTION_HOLD = 95116604
+    ADMIN_PENDING_MATERIALS = 106033909
+    ADMIN_PENDING_PERMIT = 106033910
+    ADMIN_HOA_HOLD = 139645442
+    ADMIN_SALES_HOLD = 200206332
+
+    # Status ID 380 - In Production substatuses
+    ADMIN_PENDING_MATERIALS_RECEIPT = 19567823
+    IM_WAITING_FOR_INSTALL = 19567824
+
+    # Status ID 381 - Work Started substatuses
+    IM_WORK_STARTED = 19567825
+    IM_WAITING_FOR_OTHER_TRADES = 106033911
+
+    # Status ID 382 - Ready for Final substatuses
+    ADMIN_READY_FOR_ADMIN = 19567827
+    OPS_PENDING_READY_TO_COLLECT = 19567828
+    FINANCE_READY_TO_INVOICE = 19567829
+    IM_WAITING_TO_RESOLVE_ISSUES = 19567830
+    SA_INVOICE_PAID_READY_FOR_COMMISSION = 19567831
+    GM_REVIEW = 139645443
+    JOB_CLOSED = 139645444
+
+    # Status ID 383 - Ready for Invoicing substatuses
+    PENDING_APPROVAL = 19567832
+    FINANCE_WORKING = 19567833
+    FINANCE_READY_FOR_REVIEW = 19567834
+    ADMIN_PENDING_INSURANCE = 19567835
+    SALES_SALES_HOLD = 97988111
+
+    # Status ID 384 - Cancelled substatuses
+    FINANCE_DECLINE = 19567837
+    CUSTOMER_CANCELLATION = 19567838
+    REFUND_REQUIRED = 139645445
+    DUPLICATE = 200206333
 
 
 class JobHoldReasonId(int, Enum):
@@ -132,6 +145,11 @@ class ServiceTitanEndpoints:
     JOB_HOLD = "/jpm/v2/tenant/{tenant_id}/jobs/{id}/hold"
     JOB_HOLD_REASONS = "/jpm/v2/tenant/{tenant_id}/job-hold-reasons"
     JOB_REMOVE_CANCELLATION = "/jpm/v2/tenant/{tenant_id}/jobs/{id}/remove-cancellation"
+
+    # Project endpoints
+    PROJECT_SUBSTATUSES = "/jpm/v2/tenant/{tenant_id}/project-substatuses"
+    PROJECT_UPDATE = "/jpm/v2/tenant/{tenant_id}/projects/{id}"
+    PROJECT_NOTES = "/jpm/v2/tenant/{tenant_id}/projects/{id}/notes"
 
     # Estimates endpoints
     ESTIMATES = "/sales/v2/tenant/{tenant_id}/estimates"
