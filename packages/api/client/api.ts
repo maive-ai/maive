@@ -24,6 +24,31 @@ import type { RequestArgs } from './base';
 import { BASE_PATH, COLLECTION_FORMATS, BaseAPI, RequiredError, operationServerMap } from './base';
 
 /**
+ * Provider-agnostic analysis data from completed calls.
+ * @export
+ * @interface AnalysisData
+ */
+export interface AnalysisData {
+    /**
+     * 
+     * @type {string}
+     * @memberof AnalysisData
+     */
+    'summary'?: string | null;
+    /**
+     * 
+     * @type {ClaimStatusData}
+     * @memberof AnalysisData
+     */
+    'structured_data'?: ClaimStatusData | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof AnalysisData
+     */
+    'success_evaluation'?: string | null;
+}
+/**
  * Schema for authentication responses.
  * @export
  * @interface AuthResponse
@@ -195,6 +220,12 @@ export interface CallResponse {
      * @memberof CallResponse
      */
     'provider_data'?: { [key: string]: any; } | null;
+    /**
+     * 
+     * @type {AnalysisData}
+     * @memberof CallResponse
+     */
+    'analysis'?: AnalysisData | null;
 }
 
 
@@ -220,6 +251,43 @@ export const CallStatus = {
 export type CallStatus = typeof CallStatus[keyof typeof CallStatus];
 
 
+/**
+ * Provider-agnostic structured data from insurance claim status calls.
+ * @export
+ * @interface ClaimStatusData
+ */
+export interface ClaimStatusData {
+    /**
+     * Call outcome: success, voicemail, gatekeeper, failed
+     * @type {string}
+     * @memberof ClaimStatusData
+     */
+    'call_outcome'?: string;
+    /**
+     * Claim status: approved, denied, pending_review, etc.
+     * @type {string}
+     * @memberof ClaimStatusData
+     */
+    'claim_status'?: string;
+    /**
+     * 
+     * @type {PaymentDetails}
+     * @memberof ClaimStatusData
+     */
+    'payment_details'?: PaymentDetails | null;
+    /**
+     * 
+     * @type {RequiredActions}
+     * @memberof ClaimStatusData
+     */
+    'required_actions'?: RequiredActions | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ClaimStatusData
+     */
+    'claim_update_summary'?: string | null;
+}
 /**
  * Response model for estimate item information.
  * @export
@@ -756,6 +824,37 @@ export interface JobResponse {
     'summary'?: string | null;
 }
 /**
+ * Provider-agnostic payment information from claim status calls.
+ * @export
+ * @interface PaymentDetails
+ */
+export interface PaymentDetails {
+    /**
+     * 
+     * @type {string}
+     * @memberof PaymentDetails
+     */
+    'status'?: string | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof PaymentDetails
+     */
+    'amount'?: number | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof PaymentDetails
+     */
+    'issue_date'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof PaymentDetails
+     */
+    'check_number'?: string | null;
+}
+/**
  * Response model for multiple project statuses.
  * @export
  * @interface ProjectStatusListResponse
@@ -821,6 +920,31 @@ export interface ProjectStatusResponse {
 }
 
 
+/**
+ * Provider-agnostic required actions from claim status calls.
+ * @export
+ * @interface RequiredActions
+ */
+export interface RequiredActions {
+    /**
+     * List of required documents
+     * @type {Array<string>}
+     * @memberof RequiredActions
+     */
+    'documents_needed'?: Array<string>;
+    /**
+     * 
+     * @type {string}
+     * @memberof RequiredActions
+     */
+    'submission_method'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof RequiredActions
+     */
+    'next_steps'?: string | null;
+}
 /**
  * User roles in the system.
  * @export
