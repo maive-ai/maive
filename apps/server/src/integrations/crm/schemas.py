@@ -295,6 +295,72 @@ class ExternalDataItem(BaseModel):
     value: str | None = Field(None, description="External data value")
 
 
+class ProjectByIdRequest(BaseModel):
+    """Request model for getting a project by ID."""
+
+    tenant: int = Field(..., description="Tenant ID")
+    project_id: int = Field(..., description="ID of the project to retrieve", alias="projectId")
+
+
+class ProjectResponse(BaseModel):
+    """Response model for Service Titan project information."""
+
+    model_config = {"populate_by_name": True}
+
+    id: int = Field(..., description="ID of the project")
+    number: str | None = Field(None, description="Project number")
+    name: str | None = Field(None, description="Project name")
+    status: str | None = Field(None, description="Project status name")
+    status_id: int | None = Field(None, description="Project status ID", alias="statusId")
+    sub_status: str | None = Field(None, description="Project sub status name", alias="subStatus")
+    sub_status_id: int | None = Field(None, description="Project sub status ID", alias="subStatusId")
+    summary: str | None = Field(None, description="Project summary")
+    customer_id: int | None = Field(None, description="Customer ID", alias="customerId")
+    location_id: int | None = Field(None, description="Location ID", alias="locationId")
+    business_unit_id: int | None = Field(None, description="Business unit ID", alias="businessUnitId")
+    project_manager_id: int | None = Field(None, description="Project manager ID", alias="projectManagerId")
+    start_date: datetime | None = Field(None, description="Project start date", alias="startDate")
+    target_completion_date: datetime | None = Field(None, description="Target completion date", alias="targetCompletionDate")
+    actual_completion_date: datetime | None = Field(None, description="Actual completion date", alias="actualCompletionDate")
+    created_on: datetime | None = Field(None, description="Date/time (in UTC) when created", alias="createdOn")
+    created_by_id: int | None = Field(None, description="ID of user who created the project", alias="createdById")
+    modified_on: datetime | None = Field(None, description="Date/time (in UTC) when last modified", alias="modifiedOn")
+    external_data: list[dict[str, Any]] | None = Field(None, description="External data", alias="externalData")
+
+
+class FormSubmissionOwnerFilter(BaseModel):
+    """Owner filter for form submissions request."""
+
+    type: str = Field(..., description="Owner type (e.g., 'Job', 'Project')")
+    id: int = Field(..., description="Owner ID")
+
+
+class FormSubmissionsRequest(BaseModel):
+    """Request model for getting form submissions."""
+
+    model_config = {"populate_by_name": True}
+
+    tenant: int = Field(..., description="Tenant ID")
+    form_id: int | None = Field(None, description="Form ID to filter by", alias="formId")
+    page: int = Field(default=1, description="Page number for pagination")
+    page_size: int = Field(default=50, description="Page size for pagination", alias="pageSize")
+    status: str | None = Field(None, description="Status filter (Started, Completed, Any)")
+    owners: list[FormSubmissionOwnerFilter] | None = Field(None, description="List of owner filters")
+
+
+class ProjectSubStatusesRequest(BaseModel):
+    """Request model for getting project sub statuses."""
+
+    model_config = {"populate_by_name": True}
+
+    tenant: int = Field(..., description="Tenant ID")
+    name: str | None = Field(None, description="Filter by sub status name")
+    status_id: int | None = Field(None, description="Filter by parent status ID", alias="statusId")
+    active: str | None = Field(default="True", description="Active status filter (True, False, Any)")
+    page: int | None = Field(None, description="Page number for pagination")
+    page_size: int | None = Field(None, description="Page size for pagination", alias="pageSize")
+
+
 class UpdateProjectRequest(BaseModel):
     """Request model for updating a project."""
 

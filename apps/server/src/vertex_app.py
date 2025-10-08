@@ -25,6 +25,10 @@ from src.integrations.crm.schemas import (
     EstimateItemsRequest,
     EstimatesRequest,
     ExternalDataItem,
+    FormSubmissionOwnerFilter,
+    FormSubmissionsRequest,
+    ProjectByIdRequest,
+    ProjectSubStatusesRequest,
     UpdateProjectRequest,
 )
 from src.integrations.rilla.client import RillaClient
@@ -555,8 +559,12 @@ class VertexTester:
             # Step 0: Fetch project substatuses
             logger.info("\nStep 0: Fetching all project substatuses")
             try:
-                substatuses_response = await self.provider.get_project_substatuses(
+                substatuses_request = ProjectSubStatusesRequest(
+                    tenant=int(self.provider.tenant_id),
                     active="True"
+                )
+                substatuses_response = await self.provider.get_project_substatuses(
+                    substatuses_request
                 )
                 logger.info(
                     f"✅ Found {len(substatuses_response.data)} active project substatuses:"
@@ -762,14 +770,18 @@ class VertexTester:
             # Step 1: Get the current project details
             logger.info(f"\nStep 1: Fetching project {project_id}")
             try:
-                project = await self.provider.get_project_by_id(project_id)
+                project_request = ProjectByIdRequest(
+                    tenant=int(self.provider.tenant_id),
+                    project_id=project_id
+                )
+                project = await self.provider.get_project_by_id(project_request)
                 logger.info("✅ Current Project Details:")
-                logger.info(f"   Project ID: {project.get('id')}")
-                logger.info(f"   Project Number: {project.get('number')}")
-                logger.info(f"   Status: {project.get('status')}")
-                logger.info(f"   Status ID: {project.get('statusId')}")
-                logger.info(f"   SubStatus: {project.get('subStatus')}")
-                logger.info(f"   SubStatus ID: {project.get('subStatusId')}")
+                logger.info(f"   Project ID: {project.id}")
+                logger.info(f"   Project Number: {project.number}")
+                logger.info(f"   Status: {project.status}")
+                logger.info(f"   Status ID: {project.status_id}")
+                logger.info(f"   SubStatus: {project.sub_status}")
+                logger.info(f"   SubStatus ID: {project.sub_status_id}")
             except Exception as e:
                 logger.info(f"⚠️ Could not fetch project details: {e}")
 
@@ -795,9 +807,9 @@ class VertexTester:
 
             result = await self.provider.update_project(update_request)
             logger.info("✅ Project updated successfully!")
-            logger.info(f"   New Status: {result.get('status')}")
-            logger.info(f"   New SubStatus: {result.get('subStatus')}")
-            logger.info(f"   External Data: {result.get('externalData', [])}")
+            logger.info(f"   New Status: {result.status}")
+            logger.info(f"   New SubStatus: {result.sub_status}")
+            logger.info(f"   External Data: {result.external_data or []}")
 
             # Step 3: Add a note to the project
             logger.info(f"\nStep 3: Adding note to project {project_id}")
@@ -839,11 +851,16 @@ class VertexTester:
             for page in range(1, max_pages + 1):
                 logger.info(f"\nFetching submissions page {page}...")
 
-                result = await self.provider.get_form_submissions(
-                    form_id=form_id, page=page, page_size=50, status="Any"
+                form_request = FormSubmissionsRequest(
+                    tenant=int(self.provider.tenant_id),
+                    form_id=form_id,
+                    page=page,
+                    page_size=50,
+                    status="Any"
                 )
+                result = await self.provider.get_form_submissions(form_request)
 
-                submissions = result.get("data", [])
+                submissions = result.data
                 if not submissions:
                     logger.info(f"No more submissions found on page {page}")
                     break
@@ -882,7 +899,7 @@ class VertexTester:
                                             or section.get("values"),
                                         }
 
-                if not result.get("hasMore", False):
+                if not result.has_more:
                     logger.info("No more pages available")
                     break
 
@@ -942,8 +959,12 @@ class VertexTester:
 
             # Step 1: Fetch project details
             logger.info(f"\nStep 1: Fetching project {project_id}")
-            project = await self.provider.get_project_by_id(project_id)
-            logger.info(f"✅ Project fetched: {project.get('number')}")
+            project_request = ProjectByIdRequest(
+                tenant=int(self.provider.tenant_id),
+                project_id=project_id
+            )
+            project = await self.provider.get_project_by_id(project_request)
+            logger.info(f"✅ Project fetched: {project.number}")
 
             # Step 2: Get the sold estimate
             logger.info("\nStep 2: Getting sold estimate")
@@ -1052,17 +1073,19 @@ class VertexTester:
 
             # Step 3: Get form submission (Notes to Production)
             logger.info(f"\nStep 3: Fetching form 2933 submission for job {job_id}")
-            form_result = await self.provider.get_form_submissions(
+            form_request = FormSubmissionsRequest(
+                tenant=int(self.provider.tenant_id),
                 form_id=2933,
                 page=1,
                 page_size=10,
                 status="Any",
-                owners=[{"type": "Job", "id": job_id}],
+                owners=[FormSubmissionOwnerFilter(type="Job", id=job_id)],
             )
+            form_result = await self.provider.get_form_submissions(form_request)
 
             # Extract Notes to Production from the submission(s)
             notes_to_production = None
-            submissions = form_result.get("data", [])
+            submissions = form_result.data
 
             if submissions:
                 # Since we filtered by job owner, submissions should be for our job
