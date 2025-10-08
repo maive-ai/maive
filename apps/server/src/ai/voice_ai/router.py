@@ -13,38 +13,10 @@ from src.auth.dependencies import get_current_user
 from src.auth.schemas import User
 from src.ai.voice_ai.constants import VoiceAIErrorCode
 from src.ai.voice_ai.dependencies import get_voice_ai_service
-from src.ai.voice_ai.schemas import CallRequest, CallResponse, VoiceAIErrorResponse
+from src.ai.voice_ai.schemas import CallResponse, VoiceAIErrorResponse
 from src.ai.voice_ai.service import VoiceAIService
 
 router = APIRouter(prefix="/voice-ai", tags=["Voice AI"])
-
-
-@router.post("/calls", response_model=CallResponse, status_code=201)
-async def create_outbound_call(
-    request: CallRequest,
-    current_user: User = Depends(get_current_user),
-    voice_ai_service: VoiceAIService = Depends(get_voice_ai_service),
-) -> CallResponse:
-    """
-    Create an outbound call.
-
-    Args:
-        request: The call request with phone number and context
-        current_user: The authenticated user
-        voice_ai_service: The Voice AI service instance from dependency injection
-
-    Returns:
-        CallResponse: The call information
-
-    Raises:
-        HTTPException: If call creation fails
-    """
-    result = await voice_ai_service.create_outbound_call(request)
-
-    if isinstance(result, VoiceAIErrorResponse):
-        raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail=result.error)
-
-    return result
 
 
 @router.get("/calls/{call_id}", response_model=CallResponse)

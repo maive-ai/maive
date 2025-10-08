@@ -1,71 +1,101 @@
-// import {
-//   Configuration,
-//   WorkflowsApi,
-//   type Workflow,
-//   type WorkflowRequest,
-// } from '@maive/api/client';
+// Workflows client - orchestrates voice AI calls with monitoring and CRM integration
 
-// import { getIdToken } from '@/auth';
-// import { env } from '@/env';
+import {
+  Configuration,
+  VoiceAIApi,
+  WorkflowsApi,
+  type CallRequest,
+  type CallResponse,
+} from '@maive/api/client';
+import { useMutation, useQuery, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query';
 
-// // Create a configured workflows API instance
-// const createWorkflowsApi = async (): Promise<WorkflowsApi> => {
-//   const token = await getIdToken();
-//   if (!token) throw new Error('Not authenticated');
+import { getIdToken } from '@/auth';
+import { env } from '@/env';
 
-//   return new WorkflowsApi(
-//     new Configuration({
-//       accessToken: token,
-//       basePath: env.PUBLIC_SERVER_URL,
-//     }),
-//   );
-// };
+// Re-export types from the generated client
+export type { CallRequest, CallResponse };
 
-// /**
-//  * Fetch all workflows for the current user
-//  */
-// export const fetchWorkflows = async (): Promise<Workflow[]> => {
-//   const api = await createWorkflowsApi();
-//   const response = await api.listWorkflows();
-//   return response.data;
-// };
+/**
+ * Create a configured Voice AI API instance
+ */
+const createVoiceAIApi = async (): Promise<VoiceAIApi> => {
+  const token = await getIdToken();
+  if (!token) throw new Error('Not authenticated');
 
-// /**
-//  * Fetch a specific workflow by ID
-//  */
-// export const fetchWorkflow = async (workflowId: string): Promise<Workflow> => {
-//   const api = await createWorkflowsApi();
-//   const response = await api.getWorkflow(workflowId);
-//   return response.data;
-// };
+  return new VoiceAIApi(
+    new Configuration({
+      accessToken: token,
+      basePath: env.PUBLIC_SERVER_URL,
+      baseOptions: { withCredentials: true },
+    }),
+  );
+};
 
-// /**
-//  * Create a new workflow
-//  */
-// export const createWorkflow = async (
-//   workflowData: WorkflowRequest,
-// ): Promise<Workflow> => {
-//   const api = await createWorkflowsApi();
-//   const response = await api.createWorkflow(workflowData);
-//   return response.data;
-// };
+/**
+ * Create a configured Workflows API instance
+ */
+const createWorkflowsApi = async (): Promise<WorkflowsApi> => {
+  const token = await getIdToken();
+  if (!token) throw new Error('Not authenticated');
 
-// /**
-//  * Update an existing workflow
-//  */
-// export const updateWorkflow = async (
-//   workflowId: string,
-//   workflowData: WorkflowRequest,
-// ): Promise<Workflow> => {
-//   const api = await createWorkflowsApi();
-//   const response = await api.updateWorkflow(workflowId, workflowData);
-//   return response.data;
-// };
+  return new WorkflowsApi(
+    new Configuration({
+      accessToken: token,
+      basePath: env.PUBLIC_SERVER_URL,
+      baseOptions: { withCredentials: true },
+    }),
+  );
+};
 
-// /**
-//  * Delete a workflow by ID
-//  */
-// export const deleteWorkflow = async (workflowId: string): Promise<void> => {
-//   const api = await createWorkflowsApi();
-//   await api.deleteWorkflow(workflowId);
-// };
+/**
+ * Create an outbound voice AI call with monitoring and CRM integration
+ */
+export async function createOutboundCall(
+  request: CallRequest,
+): Promise<CallResponse> {
+  const api = await createWorkflowsApi();
+
+  const response = await api.createMonitoredCallApiWorkflowsMonitoredCallPost(request);
+  return response.data;
+}
+
+/**
+ * Get call status by call ID
+ */
+export async function getCallStatus(callId: string): Promise<CallResponse> {
+  const api = await createVoiceAIApi();
+
+  const response = await api.getCallStatusApiVoiceAiCallsCallIdGet(callId);
+  return response.data;
+}
+
+/**
+ * React Query mutation hook for creating outbound calls
+ */
+export function useCreateOutboundCall(): UseMutationResult<CallResponse, Error, CallRequest> {
+  return useMutation({
+    mutationFn: createOutboundCall,
+    onSuccess: (callResponse) => {
+      console.log(`Voice AI call created: ${callResponse.call_id}`);
+    },
+    onError: (error) => {
+      console.error('Failed to create voice AI call:', error);
+    },
+  });
+}
+
+/**
+ * React Query hook for polling call status
+ */
+export function useCallStatus(
+  callId: string | null,
+  options?: { enabled?: boolean; refetchInterval?: number }
+): UseQueryResult<CallResponse, Error> {
+  return useQuery({
+    queryKey: ['call-status', callId],
+    queryFn: () => getCallStatus(callId!),
+    enabled: options?.enabled !== false && callId !== null,
+    refetchInterval: options?.refetchInterval ?? 3000, // Poll every 3 seconds by default
+    refetchIntervalInBackground: true,
+  });
+}
