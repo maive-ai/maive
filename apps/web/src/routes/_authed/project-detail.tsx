@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { AlertCircle, CheckCircle2, Loader2, MapPin, Phone, Mail, FileText, Building2, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useFetchProject } from '@/clients/crm';
-import { useCreateOutboundCall } from '@/clients/voice-ai';
+import { useCreateOutboundCall } from '@/clients/workflows';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
