@@ -109,3 +109,9 @@ When adding new APIs:
 - UV for Python dependency management
 - AWS CLI configured for infrastructure deployment
 - Pulumi CLI for infrastructure management
+
+## Coding Preferences
+
+### Backend / Server Development
+- For FastAPI best practices, please reference .cursor/rules/fastapi.mdc
+- For python code quality best practices, please reference .cursor/rules/python.mdc
