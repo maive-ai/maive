@@ -30,7 +30,7 @@ def create_ai_provider(
         ValueError: If provider type is not supported
     """
     if provider_type is None:
-        provider_type = os.getenv("AI_PROVIDER", AIProviderType.OPENAI.value)
+        provider_type = os.getenv("AI_PROVIDER", AIProviderType.GEMINI.value)
 
     if isinstance(provider_type, str):
         provider_type = AIProviderType(provider_type.lower())
