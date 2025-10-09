@@ -1105,6 +1105,7 @@ dependencies = [
     { name = "openai" },
     { name = "phonenumbers" },
     { name = "pydantic-settings" },
+    { name = "tqdm" },
 ]
 
 [package.dev-dependencies]
@@ -1132,6 +1133,7 @@ requires-dist = [
     { name = "openai", specifier = ">=1.59.7" },
     { name = "phonenumbers", specifier = ">=9.0.15" },
     { name = "pydantic-settings", specifier = ">=2.10.1" },
+    { name = "tqdm", specifier = ">=4.67.1" },
 ]
 
 [package.metadata.requires-dev]

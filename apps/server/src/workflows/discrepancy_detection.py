@@ -9,11 +9,13 @@ This workflow analyzes sales calls for discrepancies between:
 Uses the AI provider abstraction, defaulting to Gemini but configurable via AI_PROVIDER env var.
 """
 
+import argparse
 import asyncio
 import json
 from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
+from tqdm.asyncio import tqdm
 
 from src.ai.base import AudioAnalysisRequest
 from src.ai.providers import get_ai_provider
@@ -51,18 +53,18 @@ class DiscrepancyDetectionWorkflow:
         self.ai_provider = get_ai_provider()
         self.crm_provider = get_crm_provider()
 
-    async def execute(
+    async def execute_for_job(
         self,
-        project_id: int,
+        job_id: int,
         audio_path: str,
-        known_sold_estimate_id: int | None = None,
+        form_submission: dict | None = None,
     ) -> dict:
-        """Execute the discrepancy detection workflow.
+        """Execute the discrepancy detection workflow for a single job.
 
         Args:
-            project_id: Project ID to analyze
+            job_id: Job ID to analyze
             audio_path: Path to the audio file of the sales call
-            known_sold_estimate_id: Optional known estimate ID (for manual override)
+            form_submission: Optional form submission data (if already fetched)
 
         Returns:
             dict: Workflow result with status and details
@@ -73,35 +75,25 @@ class DiscrepancyDetectionWorkflow:
         """
         try:
             logger.info("=" * 60)
-            logger.info(f"DISCREPANCY DETECTION WORKFLOW - Project {project_id}")
+            logger.info(f"DISCREPANCY DETECTION WORKFLOW - Job {job_id}")
             logger.info("=" * 60)
 
-            # Step 1: Fetch project details
-            logger.info(f"\nStep 1: Fetching project {project_id}")
-            project = await self._fetch_project(project_id)
-            logger.info(f"✅ Project fetched: {project.number}")
+            # Step 1: Get the job details
+            logger.info(f"\nStep 1: Fetching job {job_id}")
+            job = await self.crm_provider.get_job(job_id)
+            logger.info(f"✅ Job fetched: {job.job_number}")
 
-            # Step 2: Get the sold estimate
+            project_id = job.project_id
+            if not project_id:
+                raise CRMError(f"Job {job_id} has no associated project", "NO_PROJECT")
+
+            # Step 2: Get the sold estimate (try job first, then project)
             logger.info("\nStep 2: Getting sold estimate")
-            if known_sold_estimate_id:
-                logger.info(f"   Using known estimate ID: {known_sold_estimate_id}")
-                selected_estimate = await self.crm_provider.get_estimate(
-                    known_sold_estimate_id
-                )
-            else:
-                logger.info("   Auto-discovering sold estimate...")
-                selected_estimate = await self._find_sold_estimate(project_id)
+            selected_estimate = await self._find_sold_estimate(job_id, project_id)
 
             logger.info(f"✅ Selected estimate: {selected_estimate.id}")
             logger.info(f"   Name: {selected_estimate.name or '(no name)'}")
             logger.info(f"   Total: ${selected_estimate.subtotal + selected_estimate.tax:,.2f}")
-
-            job_id = selected_estimate.job_id
-            if not job_id:
-                raise CRMError(
-                    f"Selected estimate {selected_estimate.id} has no associated job",
-                    "NO_JOB",
-                )
 
             # Step 3: Get estimate items
             logger.info(f"\nStep 3: Fetching estimate items for estimate {selected_estimate.id}")
@@ -109,8 +101,12 @@ class DiscrepancyDetectionWorkflow:
             logger.info(f"✅ Found {len(items_result.items)} items")
 
             # Step 4: Get form submission (Notes to Production)
-            logger.info(f"\nStep 4: Fetching form submission for job {job_id}")
-            notes_to_production = await self._fetch_form_submission(job_id)
+            if form_submission:
+                logger.info(f"\nStep 4: Using provided form submission")
+                notes_to_production = self._extract_notes_from_submission(form_submission)
+            else:
+                logger.info(f"\nStep 4: Fetching form submission for job {job_id}")
+                notes_to_production = await self._fetch_form_submission(job_id)
 
             if notes_to_production:
                 logger.info("✅ Found Notes to Production data")
@@ -143,6 +139,7 @@ class DiscrepancyDetectionWorkflow:
 
             return {
                 "status": "success",
+                "job_id": job_id,
                 "project_id": project_id,
                 "estimate_id": selected_estimate.id,
                 "needs_review": review_result.needs_review,
@@ -171,49 +168,69 @@ class DiscrepancyDetectionWorkflow:
         )
         return await self.crm_provider.get_project_by_id(project_request)
 
-    async def _find_sold_estimate(self, project_id: int):
-        """Find the sold estimate for a project."""
-        logger.info(f"   Querying estimates by project ID: {project_id}")
+    async def _find_sold_estimate(self, job_id: int, project_id: int):
+        """Find the sold estimate for a job, with fallback to project-level search.
 
+        Strategy:
+        1. Check if the job has a sold estimate
+        2. If not, query all estimates for the project and find the sold one
+        3. If multiple sold estimates, take the most recent
+        """
         tenant_id = getattr(self.crm_provider, "tenant_id", 0)
-        estimates_request = EstimatesRequest(
+
+        # Step 1: Try to find sold estimate for this specific job
+        logger.info(f"   Querying estimates for job {job_id}")
+        job_estimates_request = EstimatesRequest(
+            tenant=int(tenant_id),
+            job_id=job_id,
+            page=1,
+            page_size=50,
+        )
+        job_estimates_response = await self.crm_provider.get_estimates(job_estimates_request)
+        logger.info(f"   Found {len(job_estimates_response.estimates)} estimates for job {job_id}")
+
+        # Check for sold estimates on this job
+        job_sold_estimates = [e for e in job_estimates_response.estimates if e.sold_on is not None]
+
+        if len(job_sold_estimates) > 0:
+            logger.info(f"   ✅ Found {len(job_sold_estimates)} sold estimate(s) on job {job_id}")
+            if len(job_sold_estimates) > 1:
+                estimate_list = ", ".join([str(e.id) for e in job_sold_estimates])
+                logger.warning(f"   Multiple sold estimates found: {estimate_list}. Using most recent.")
+                job_sold_estimates.sort(key=lambda e: e.sold_on, reverse=True)
+            return job_sold_estimates[0]
+
+        # Step 2: No sold estimate on job, search at project level
+        logger.info(f"   No sold estimate found for job {job_id}")
+        logger.info(f"   Searching for sold estimates across project {project_id}")
+
+        project_estimates_request = EstimatesRequest(
             tenant=int(tenant_id),
             project_id=project_id,
             page=1,
             page_size=50,
         )
+        project_estimates_response = await self.crm_provider.get_estimates(project_estimates_request)
+        logger.info(f"   Found {len(project_estimates_response.estimates)} total estimates for project {project_id}")
 
-        estimates_response = await self.crm_provider.get_estimates(estimates_request)
-        logger.info(
-            f"   Found {len(estimates_response.estimates)} estimates for project {project_id}"
-        )
+        # Filter for sold estimates
+        project_sold_estimates = [e for e in project_estimates_response.estimates if e.sold_on is not None]
 
-        # Filter for sold estimates (has sold_on date)
-        sold_estimates = [e for e in estimates_response.estimates if e.sold_on is not None]
-
-        for estimate in estimates_response.estimates:
-            status_info = f"sold_on={estimate.sold_on}"
-            if estimate.sold_on:
-                logger.info(
-                    f"   - Estimate {estimate.id}: {estimate.name or '(no name)'} - SOLD ({status_info})"
-                )
-            else:
-                logger.info(
-                    f"   - Estimate {estimate.id}: {estimate.name or '(no name)'} - NOT SOLD ({status_info})"
-                )
-
-        if len(sold_estimates) == 0:
-            error_msg = (
-                f"No sold estimates found for project {project_id}. "
-                f"Found {len(estimates_response.estimates)} total estimates, but none are marked as sold."
+        if len(project_sold_estimates) == 0:
+            raise CRMError(
+                f"No sold estimates found for job {job_id} or project {project_id}. "
+                f"Found {len(project_estimates_response.estimates)} total estimates at project level, but none are sold.",
+                "NO_SOLD_ESTIMATE"
             )
-            raise CRMError(error_msg, "NO_SOLD_ESTIMATE")
-        elif len(sold_estimates) > 1:
-            estimate_list = ", ".join([str(e.id) for e in sold_estimates])
-            error_msg = f"Multiple sold estimates found for project {project_id}: {estimate_list}"
-            raise CRMError(error_msg, "MULTIPLE_SOLD_ESTIMATES")
 
-        return sold_estimates[0]
+        logger.info(f"   ✅ Found {len(project_sold_estimates)} sold estimate(s) at project level")
+
+        if len(project_sold_estimates) > 1:
+            estimate_list = ", ".join([str(e.id) for e in project_sold_estimates])
+            logger.warning(f"   Multiple sold estimates found: {estimate_list}. Using most recent.")
+            project_sold_estimates.sort(key=lambda e: e.sold_on, reverse=True)
+
+        return project_sold_estimates[0]
 
     async def _fetch_estimate_items(self, estimate_id: int):
         """Fetch items for an estimate."""
@@ -244,11 +261,20 @@ class DiscrepancyDetectionWorkflow:
         if not submissions:
             return None
 
-        submission = submissions[0]
-        units = submission.get("units", [])
+        submission = submissions[0] if isinstance(submissions[0], dict) else submissions[0].__dict__
+        return self._extract_notes_from_submission(submission)
+
+    def _extract_notes_from_submission(self, submission):
+        """Extract Notes to Production from a form submission."""
+        if hasattr(submission, "units"):
+            units = submission.units
+        else:
+            units = submission.get("units", [])
+
         for unit in units:
-            if isinstance(unit, dict) and unit.get("name") == "Notes to Production":
-                return unit
+            unit_dict = unit if isinstance(unit, dict) else unit.__dict__ if hasattr(unit, "__dict__") else {}
+            if unit_dict.get("name") == "Notes to Production":
+                return unit_dict
 
         return None
 
@@ -337,30 +363,123 @@ Simply and concisely log what was not included in the estimate or form but state
 
 async def main():
     """Main entry point for standalone execution."""
-    import sys
-
-    if len(sys.argv) < 3:
-        print("Usage: python -m src.workflows.discrepancy_detection <project_id> <audio_path> [estimate_id]")
-        print("\nExample:")
-        print("  python -m src.workflows.discrepancy_detection 261980979 ./audio.mp3")
-        print("  python -m src.workflows.discrepancy_detection 261980979 ./audio.mp3 12345")
-        sys.exit(1)
-
-    project_id = int(sys.argv[1])
-    audio_path = sys.argv[2]
-    estimate_id = int(sys.argv[3]) if len(sys.argv) > 3 else None
-
-    workflow = DiscrepancyDetectionWorkflow()
-    result = await workflow.execute(
-        project_id=project_id,
-        audio_path=audio_path,
-        known_sold_estimate_id=estimate_id,
+    parser = argparse.ArgumentParser(
+        description="Analyze sales calls for discrepancies in form submissions within a time range"
+    )
+    parser.add_argument(
+        "audio_path",
+        help="Path to the audio file of the sales call",
+    )
+    parser.add_argument(
+        "--start-time",
+        default="2025-07-03T12:25:00-07:00",
+        help="Start time for form submissions (ISO format with timezone: YYYY-MM-DDTHH:MM:SS±HH:MM). Default: 2025-07-03T12:25:00-07:00 (PDT)",
+    )
+    parser.add_argument(
+        "--end-time",
+        default="2025-07-03T12:30:00-07:00",
+        help="End time for form submissions (ISO format with timezone: YYYY-MM-DDTHH:MM:SS±HH:MM). Default: 2025-07-03T12:30:00-07:00 (PDT)",
     )
 
+    args = parser.parse_args()
+
+    # Parse timestamps (will include timezone if provided, otherwise assume UTC)
+    start_time = datetime.fromisoformat(args.start_time)
+    if start_time.tzinfo is None:
+        start_time = start_time.replace(tzinfo=UTC)
+    end_time = datetime.fromisoformat(args.end_time)
+    if end_time.tzinfo is None:
+        end_time = end_time.replace(tzinfo=UTC)
+
+    logger.info("=" * 60)
+    logger.info("BATCH DISCREPANCY DETECTION WORKFLOW")
+    logger.info("=" * 60)
+    logger.info(f"Time range: {start_time} to {end_time}")
+    logger.info(f"Audio file: {args.audio_path}")
+    logger.info("")
+
+    workflow = DiscrepancyDetectionWorkflow()
+
+    # Step 1: Fetch all form submissions in the time range
+    logger.info("Fetching form submissions in time range...")
+    tenant_id = getattr(workflow.crm_provider, "tenant_id", 0)
+
+    # Note: ServiceTitan API doesn't support time-based filtering directly,
+    # so we'll fetch recent submissions and filter by submitted_on
+    form_request = FormSubmissionsRequest(
+        tenant=int(tenant_id),
+        form_id=2933,  # Appointment Result V2
+        page=1,
+        page_size=200,  # Fetch more to ensure we get all in the time range
+        status="Any",
+    )
+
+    form_result = await workflow.crm_provider.get_form_submissions(form_request)
+
+    # Filter submissions by time range
+    submissions_in_range = []
+    for submission in form_result.data:
+        submitted_on = submission.submitted_on if hasattr(submission, "submitted_on") else submission.get("submitted_on")
+        if submitted_on and start_time <= submitted_on <= end_time:
+            submissions_in_range.append(submission)
+
+    logger.info(f"Found {len(submissions_in_range)} form submissions in time range")
+
+    if not submissions_in_range:
+        logger.warning("No form submissions found in the specified time range")
+        return
+
+    # Step 2: Extract job IDs from submissions
+    job_ids = []
+    submission_by_job = {}
+
+    for submission in submissions_in_range:
+        owners = submission.owners if hasattr(submission, "owners") else submission.get("owners", [])
+        for owner in owners:
+            owner_dict = owner if isinstance(owner, dict) else owner.__dict__ if hasattr(owner, "__dict__") else {}
+            if owner_dict.get("type") == "Job":
+                job_id = owner_dict.get("id")
+                if job_id:
+                    job_ids.append(job_id)
+                    submission_by_job[job_id] = submission
+
+    logger.info(f"Found {len(job_ids)} unique jobs to process")
+    logger.info("")
+
+    # Step 3: Process each job
+    results = []
+    failed_jobs = []
+
+    for job_id in tqdm(job_ids, desc="Processing jobs"):
+        try:
+            result = await workflow.execute_for_job(
+                job_id=job_id,
+                audio_path=args.audio_path,
+                form_submission=submission_by_job.get(job_id),
+            )
+            results.append(result)
+        except Exception as e:
+            logger.error(f"Failed to process job {job_id}: {e}")
+            failed_jobs.append({"job_id": job_id, "error": str(e)})
+
+    # Step 4: Summary
     print("\n" + "=" * 60)
-    print("WORKFLOW RESULT")
+    print("BATCH WORKFLOW RESULTS")
     print("=" * 60)
-    print(json.dumps(result, indent=2))
+    print(f"Total jobs processed: {len(results)}")
+    print(f"Failed jobs: {len(failed_jobs)}")
+
+    needs_review_count = sum(1 for r in results if r.get("needs_review"))
+    print(f"Jobs needing review: {needs_review_count}")
+    print("")
+
+    if results:
+        print("Successful results:")
+        print(json.dumps(results, indent=2, default=str))
+
+    if failed_jobs:
+        print("\nFailed jobs:")
+        print(json.dumps(failed_jobs, indent=2))
 
 
 if __name__ == "__main__":
