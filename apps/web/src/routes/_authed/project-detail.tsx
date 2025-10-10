@@ -1,7 +1,7 @@
 import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
 
 import { createFileRoute } from '@tanstack/react-router';
-import { AlertCircle, Building2, CheckCircle2, FileText, Loader2, Mail, MapPin, Phone, User } from 'lucide-react';
+import { AlertCircle, Building2, FileText, Loader2, Mail, MapPin, Phone, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { Country, Value as E164Number } from 'react-phone-number-input';
 import { isValidPhoneNumber, parsePhoneNumber } from 'react-phone-number-input';
@@ -283,24 +283,6 @@ function ProjectDetail() {
                   </p>
                 )}
               </div>
-
-              {/* Success Message */}
-              {callAndWritetoCrmMutation.isSuccess && callAndWritetoCrmMutation.data && (
-                <div className="flex items-start gap-3 rounded-lg bg-green-50 border border-green-200 p-4">
-                  <CheckCircle2 className="size-5 text-green-600 mt-0.5" />
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium text-green-900">
-                      Call started!
-                    </p>
-                    <p className="text-sm text-green-700">
-                      Call ID: {callAndWritetoCrmMutation.data.call_id}
-                    </p>
-                    <p className="text-xs text-green-600">
-                      Status: {callAndWritetoCrmMutation.data.status}
-                    </p>
-                  </div>
-                </div>
-              )}
 
               {/* Error Message */}
               {callAndWritetoCrmMutation.isError && (
