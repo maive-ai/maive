@@ -19,7 +19,7 @@ from src.integrations.crm.service import CRMService
 from src.utils.logger import logger
 
 
-class CallMonitoringWorkflow:
+class CallAndWriteToCRMWorkflow:
     """Orchestrates Voice AI call creation and CRM updates."""
 
     def __init__(
@@ -37,17 +37,17 @@ class CallMonitoringWorkflow:
         self.voice_ai_service = voice_ai_service
         self.crm_service = crm_service
 
-    async def create_and_monitor_call(
+    async def call_and_write_results_to_crm(
         self,
         request: CallRequest,
         user_id: str | None = None,
     ) -> CallResponse | VoiceAIErrorResponse:
         """
-        Create an outbound call and start monitoring it.
+        Create an outbound call and start monitoring it and writing results to CRM.
 
         This method orchestrates:
         1. Creating the call via Voice AI service
-        2. Starting background monitoring
+        2. Starting background monitoring and writing results to CRM
         3. Updating CRM when call completes
 
         Args:

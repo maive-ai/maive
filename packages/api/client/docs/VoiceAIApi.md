@@ -4,7 +4,60 @@ All URIs are relative to *http://localhost*
 
 |Method | HTTP request | Description|
 |------------- | ------------- | -------------|
+|[**endCallApiVoiceAiCallsCallIdDelete**](#endcallapivoiceaicallscalliddelete) | **DELETE** /api/voice-ai/calls/{call_id} | End Call|
 |[**getCallStatusApiVoiceAiCallsCallIdGet**](#getcallstatusapivoiceaicallscallidget) | **GET** /api/voice-ai/calls/{call_id} | Get Call Status|
+
+# **endCallApiVoiceAiCallsCallIdDelete**
+> endCallApiVoiceAiCallsCallIdDelete()
+
+End an ongoing call programmatically.  Args:     call_id: The unique identifier for the call to end     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection      Raises:     HTTPException: If the call is not found or cannot be ended
+
+### Example
+
+```typescript
+import {
+    VoiceAIApi,
+    Configuration
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new VoiceAIApi(configuration);
+
+let callId: string; // (default to undefined)
+
+const { status, data } = await apiInstance.endCallApiVoiceAiCallsCallIdDelete(
+    callId
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **callId** | [**string**] |  | defaults to undefined|
+
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[HTTPBearer](../README.md#HTTPBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**204** | Successful Response |  -  |
+|**422** | Validation Error |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **getCallStatusApiVoiceAiCallsCallIdGet**
 > CallResponse getCallStatusApiVoiceAiCallsCallIdGet()
