@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 
+const SAMPLE_RATE = 48000;
+const FFT_SIZE = 256;
+const UINT8_MAX_VALUE = 255;
 interface AudioStreamState {
   isConnected: boolean;
   isPlaying: boolean;
@@ -26,7 +29,6 @@ export function useCallAudioStream(listenUrl: string | null) {
     const audioContext = audioContextRef.current;
     if (!audioContext) return null;
     
-    const SAMPLE_RATE = 48000;
     const pcmData = new Int16Array(arrayBuffer);
     const audioBuffer = audioContext.createBuffer(1, pcmData.length, SAMPLE_RATE);
     const channelData = audioBuffer.getChannelData(0);
@@ -75,7 +77,7 @@ export function useCallAudioStream(listenUrl: string | null) {
     audioContextRef.current = audioContext;
     
     const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 256;
+    analyser.fftSize = FFT_SIZE;
     analyserRef.current = analyser;
     
     startVolumeMonitoring();
@@ -145,7 +147,7 @@ export function useCallAudioStream(listenUrl: string | null) {
       const average = sum / dataArray.length;
       
       // Normalize to 0-1 range
-      const normalizedVolume = average / 255;
+      const normalizedVolume = average / UINT8_MAX_VALUE;
       
       setState(prev => ({ ...prev, volumeLevel: normalizedVolume }));
     };
