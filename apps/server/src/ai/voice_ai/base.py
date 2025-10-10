@@ -88,6 +88,22 @@ class VoiceAIProvider(ABC):
         """
         pass
 
+    @abstractmethod
+    async def end_call(self, call_id: str) -> bool:
+        """
+        End an ongoing call programmatically.
+
+        Args:
+            call_id: The unique identifier for the call
+
+        Returns:
+            bool: True if call was successfully ended
+
+        Raises:
+            VoiceAIError: If the call is not found or cannot be ended
+        """
+        pass
+
 
 class VoiceAIError(Exception):
     """Base exception for Voice AI-related errors."""
