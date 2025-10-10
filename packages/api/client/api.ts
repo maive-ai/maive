@@ -2554,16 +2554,16 @@ export class VoiceAIApi extends BaseAPI {
 export const WorkflowsApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
         /**
-         * Create an outbound call with monitoring and CRM integration.  This workflow endpoint orchestrates: 1. Creating the call via Voice AI provider 2. Starting background call monitoring 3. Updating CRM with call results when complete  Args:     request: The call request with phone number and context     current_user: The authenticated user     workflow: The call monitoring workflow from dependency injection  Returns:     CallResponse: The call information  Raises:     HTTPException: If call creation fails
-         * @summary Create Monitored Call
+         * Create an outbound call with monitoring and write results to CRM.  This workflow endpoint orchestrates: 1. Creating the call via Voice AI provider 2. Starting background call monitoring and writing results to CRM 3. Updating CRM with call results when complete  Args:     request: The call request with phone number and context     current_user: The authenticated user     workflow: The call monitoring and CRM writing workflow from dependency injection  Returns:     CallResponse: The call information  Raises:     HTTPException: If call creation fails
+         * @summary Call And Write Results To Crm
          * @param {CallRequest} callRequest 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        createMonitoredCallApiWorkflowsMonitoredCallPost: async (callRequest: CallRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        callAndWriteResultsToCrmApiWorkflowsCallAndWriteResultsToCrmPost: async (callRequest: CallRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'callRequest' is not null or undefined
-            assertParamExists('createMonitoredCallApiWorkflowsMonitoredCallPost', 'callRequest', callRequest)
-            const localVarPath = `/api/workflows/monitored-call`;
+            assertParamExists('callAndWriteResultsToCrmApiWorkflowsCallAndWriteResultsToCrmPost', 'callRequest', callRequest)
+            const localVarPath = `/api/workflows/call-and-write-results-to-crm`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
             let baseOptions;
@@ -2604,16 +2604,16 @@ export const WorkflowsApiFp = function(configuration?: Configuration) {
     const localVarAxiosParamCreator = WorkflowsApiAxiosParamCreator(configuration)
     return {
         /**
-         * Create an outbound call with monitoring and CRM integration.  This workflow endpoint orchestrates: 1. Creating the call via Voice AI provider 2. Starting background call monitoring 3. Updating CRM with call results when complete  Args:     request: The call request with phone number and context     current_user: The authenticated user     workflow: The call monitoring workflow from dependency injection  Returns:     CallResponse: The call information  Raises:     HTTPException: If call creation fails
-         * @summary Create Monitored Call
+         * Create an outbound call with monitoring and write results to CRM.  This workflow endpoint orchestrates: 1. Creating the call via Voice AI provider 2. Starting background call monitoring and writing results to CRM 3. Updating CRM with call results when complete  Args:     request: The call request with phone number and context     current_user: The authenticated user     workflow: The call monitoring and CRM writing workflow from dependency injection  Returns:     CallResponse: The call information  Raises:     HTTPException: If call creation fails
+         * @summary Call And Write Results To Crm
          * @param {CallRequest} callRequest 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async createMonitoredCallApiWorkflowsMonitoredCallPost(callRequest: CallRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CallResponse>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.createMonitoredCallApiWorkflowsMonitoredCallPost(callRequest, options);
+        async callAndWriteResultsToCrmApiWorkflowsCallAndWriteResultsToCrmPost(callRequest: CallRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CallResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.callAndWriteResultsToCrmApiWorkflowsCallAndWriteResultsToCrmPost(callRequest, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['WorkflowsApi.createMonitoredCallApiWorkflowsMonitoredCallPost']?.[localVarOperationServerIndex]?.url;
+            const localVarOperationServerBasePath = operationServerMap['WorkflowsApi.callAndWriteResultsToCrmApiWorkflowsCallAndWriteResultsToCrmPost']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
@@ -2627,14 +2627,14 @@ export const WorkflowsApiFactory = function (configuration?: Configuration, base
     const localVarFp = WorkflowsApiFp(configuration)
     return {
         /**
-         * Create an outbound call with monitoring and CRM integration.  This workflow endpoint orchestrates: 1. Creating the call via Voice AI provider 2. Starting background call monitoring 3. Updating CRM with call results when complete  Args:     request: The call request with phone number and context     current_user: The authenticated user     workflow: The call monitoring workflow from dependency injection  Returns:     CallResponse: The call information  Raises:     HTTPException: If call creation fails
-         * @summary Create Monitored Call
+         * Create an outbound call with monitoring and write results to CRM.  This workflow endpoint orchestrates: 1. Creating the call via Voice AI provider 2. Starting background call monitoring and writing results to CRM 3. Updating CRM with call results when complete  Args:     request: The call request with phone number and context     current_user: The authenticated user     workflow: The call monitoring and CRM writing workflow from dependency injection  Returns:     CallResponse: The call information  Raises:     HTTPException: If call creation fails
+         * @summary Call And Write Results To Crm
          * @param {CallRequest} callRequest 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        createMonitoredCallApiWorkflowsMonitoredCallPost(callRequest: CallRequest, options?: RawAxiosRequestConfig): AxiosPromise<CallResponse> {
-            return localVarFp.createMonitoredCallApiWorkflowsMonitoredCallPost(callRequest, options).then((request) => request(axios, basePath));
+        callAndWriteResultsToCrmApiWorkflowsCallAndWriteResultsToCrmPost(callRequest: CallRequest, options?: RawAxiosRequestConfig): AxiosPromise<CallResponse> {
+            return localVarFp.callAndWriteResultsToCrmApiWorkflowsCallAndWriteResultsToCrmPost(callRequest, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -2647,15 +2647,15 @@ export const WorkflowsApiFactory = function (configuration?: Configuration, base
  */
 export class WorkflowsApi extends BaseAPI {
     /**
-     * Create an outbound call with monitoring and CRM integration.  This workflow endpoint orchestrates: 1. Creating the call via Voice AI provider 2. Starting background call monitoring 3. Updating CRM with call results when complete  Args:     request: The call request with phone number and context     current_user: The authenticated user     workflow: The call monitoring workflow from dependency injection  Returns:     CallResponse: The call information  Raises:     HTTPException: If call creation fails
-     * @summary Create Monitored Call
+     * Create an outbound call with monitoring and write results to CRM.  This workflow endpoint orchestrates: 1. Creating the call via Voice AI provider 2. Starting background call monitoring and writing results to CRM 3. Updating CRM with call results when complete  Args:     request: The call request with phone number and context     current_user: The authenticated user     workflow: The call monitoring and CRM writing workflow from dependency injection  Returns:     CallResponse: The call information  Raises:     HTTPException: If call creation fails
+     * @summary Call And Write Results To Crm
      * @param {CallRequest} callRequest 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof WorkflowsApi
      */
-    public createMonitoredCallApiWorkflowsMonitoredCallPost(callRequest: CallRequest, options?: RawAxiosRequestConfig) {
-        return WorkflowsApiFp(this.configuration).createMonitoredCallApiWorkflowsMonitoredCallPost(callRequest, options).then((request) => request(this.axios, this.basePath));
+    public callAndWriteResultsToCrmApiWorkflowsCallAndWriteResultsToCrmPost(callRequest: CallRequest, options?: RawAxiosRequestConfig) {
+        return WorkflowsApiFp(this.configuration).callAndWriteResultsToCrmApiWorkflowsCallAndWriteResultsToCrmPost(callRequest, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
