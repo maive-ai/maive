@@ -1,6 +1,6 @@
 import { useEndCall } from '@/clients/ai/voice';
 import { useFetchProject } from '@/clients/crm';
-import { useCreateOutboundCall } from '@/clients/workflows';
+import { useCallAndWriteResultsToCrm } from '@/clients/workflows';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -29,7 +29,7 @@ function ProjectDetail() {
   const providerData = project?.provider_data as any;
   const [phoneNumber, setPhoneNumber] = useState<E164Number | ''>('');
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
-  const createCallMutation = useCreateOutboundCall();
+  const createCallMutation = useCallAndWriteResultsToCrm();
   const endCallMutation = useEndCall();
 
   const isValid = phoneNumber ? isValidPhoneNumber(phoneNumber) : false;
