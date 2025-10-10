@@ -1,4 +1,5 @@
 import { useCallAndWriteToCrm } from '@/clients/workflows';
+import { E164PhoneInput } from '@/components/E164PhoneInput';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -8,7 +9,6 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { PhoneInput } from '@/components/ui/phone-input';
 import { createFileRoute } from '@tanstack/react-router';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useState } from 'react';
@@ -57,12 +57,11 @@ function SimplePhoneInput() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="phone-number">Phone Number</Label>
-              <PhoneInput
+              <E164PhoneInput
                 id="phone-number"
                 placeholder="Enter phone number"
                 value={phoneNumber}
                 onChange={(value) => setPhoneNumber(value || '')}
-                defaultCountry="US"
                 disabled={createCallMutation.isPending}
               />
               {phoneNumber && !isValid && (

@@ -3,17 +3,17 @@ import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
 import { createFileRoute } from '@tanstack/react-router';
 import { AlertCircle, Building2, FileText, Loader2, Mail, MapPin, Phone, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import type { Country, Value as E164Number } from 'react-phone-number-input';
+import type { Value as E164Number } from 'react-phone-number-input';
 import { isValidPhoneNumber, parsePhoneNumber } from 'react-phone-number-input';
 
 import { useEndCall } from '@/clients/ai/voice';
 import { useFetchProject } from '@/clients/crm';
 import { useCallAndWriteToCrm } from '@/clients/workflows';
+import { E164PhoneInput } from '@/components/E164PhoneInput';
 import { CallAudioVisualizer } from '@/components/call/CallAudioVisualizer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { PhoneInput } from '@/components/ui/phone-input';
 import { getStatusColor } from '@/lib/utils';
 
 export const Route = createFileRoute('/_authed/project-detail')({
@@ -32,7 +32,7 @@ function ProjectDetail() {
   // Initialize hooks before any early returns
   const providerData = project?.provider_data as any;
   const [phoneNumber, setPhoneNumber] = useState<E164Number | ''>('');
-  const [selectedCountry, setSelectedCountry] = useState<Country>('US');
+  // Country parsing handled by E164PhoneInput
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
   const [listenUrl, setListenUrl] = useState<string | null>(null);
   const callAndWritetoCrmMutation = useCallAndWriteToCrm();
@@ -52,7 +52,7 @@ function ProjectDetail() {
           if (parsedPhone) {
             // Set the full E.164 number - the component will auto-detect country and format
             setPhoneNumber(parsedPhone.number as E164Number);
-            setSelectedCountry(parsedPhone.country || 'US');
+            // Country handled by E164PhoneInput
           } else {
             // If parsing fails, just set the phone number as-is
             setPhoneNumber(insurancePhone as E164Number);
@@ -268,13 +268,11 @@ function ProjectDetail() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="phone-number">Phone Number</Label>
-                <PhoneInput
+                <E164PhoneInput
                   id="phone-number"
                   placeholder="Enter phone number"
                   value={phoneNumber}
                   onChange={(value) => setPhoneNumber(value || '')}
-                  defaultCountry={selectedCountry}
-                  displayInitialValueAsLocalNumber
                   disabled={callAndWritetoCrmMutation.isPending}
                 />
                 {phoneNumber && !isValid && (
