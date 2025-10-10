@@ -1,4 +1,4 @@
-import { useCallAndWriteResultsToCrm } from '@/clients/workflows';
+import { useCallAndWriteToCrm } from '@/clients/workflows';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -21,7 +21,7 @@ export const Route = createFileRoute('/_authed/simple-phone-input')({
 
 function SimplePhoneInput() {
   const [phoneNumber, setPhoneNumber] = useState<E164Number | ''>('');
-  const createCallMutation = useCallAndWriteResultsToCrm();
+  const createCallMutation = useCallAndWriteToCrm();
 
   const isValid = phoneNumber ? isValidPhoneNumber(phoneNumber) : false;
 

@@ -46,7 +46,7 @@ export async function callAndWriteToCrm(
 /**
  * React Query mutation hook for creating outbound calls
  */
-export function useCallAndWriteResultsToCrm(): UseMutationResult<CallResponse, Error, CallRequest> {
+export function useCallAndWriteToCrm(): UseMutationResult<CallResponse, Error, CallRequest> {
   return useMutation({
     mutationFn: callAndWriteToCrm,
     onSuccess: (callResponse) => {
