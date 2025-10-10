@@ -1,3 +1,11 @@
+import { createFileRoute } from '@tanstack/react-router';
+import { AlertCircle, Building2, CheckCircle2, FileText, Loader2, Mail, MapPin, Phone, User } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import type { Value as E164Number } from 'react-phone-number-input';
+import { isValidPhoneNumber } from 'react-phone-number-input';
+
+import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
+
 import { useEndCall } from '@/clients/ai/voice';
 import { useFetchProject } from '@/clients/crm';
 import { useCallAndWriteToCrm } from '@/clients/workflows';
@@ -6,12 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/ui/phone-input';
-import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
-import { createFileRoute } from '@tanstack/react-router';
-import { AlertCircle, Building2, CheckCircle2, FileText, Loader2, Mail, MapPin, Phone, User } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import type { Value as E164Number } from 'react-phone-number-input';
-import { isValidPhoneNumber } from 'react-phone-number-input';
+import { getStatusColor } from '@/lib/utils';
 
 export const Route = createFileRoute('/_authed/project-detail')({
   component: ProjectDetail,
@@ -134,8 +137,11 @@ function ProjectDetail() {
                 <div className="size-10 rounded-lg bg-gradient-to-br from-orange-400 to-pink-400 flex items-center justify-center">
                   <Building2 className="size-6 text-white" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <CardTitle className="text-2xl">{providerData?.customerName || 'Customer Name'}</CardTitle>
+                </div>
+                <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
+                  {project.status}
                 </div>
               </div>
             </CardHeader>
