@@ -70,6 +70,15 @@ export async function getCallStatus(callId: string): Promise<CallResponse> {
 }
 
 /**
+ * End an ongoing call by call ID
+ */
+export async function endCall(callId: string): Promise<void> {
+  const api = await createVoiceAIApi();
+  
+  await api.endCallApiVoiceAiCallsCallIdDelete(callId);
+}
+
+/**
  * React Query mutation hook for creating outbound calls
  */
 export function useCreateOutboundCall(): UseMutationResult<CallResponse, Error, CallRequest> {
@@ -97,5 +106,20 @@ export function useCallStatus(
     enabled: options?.enabled !== false && callId !== null,
     refetchInterval: options?.refetchInterval ?? 3000, // Poll every 3 seconds by default
     refetchIntervalInBackground: true,
+  });
+}
+
+/**
+ * React Query mutation hook for ending calls
+ */
+export function useEndCall(): UseMutationResult<void, Error, string> {
+  return useMutation({
+    mutationFn: endCall,
+    onSuccess: () => {
+      console.log('Voice AI call ended successfully');
+    },
+    onError: (error) => {
+      console.error('Failed to end voice AI call:', error);
+    },
   });
 }
