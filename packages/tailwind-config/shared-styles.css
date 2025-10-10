@@ -55,6 +55,20 @@
   --color-neutral-900: #784517;
   --color-neutral-950: #422306;
 
+  /* Destructive color - Darker red for dangerous actions */
+  --color-destructive: #b91c1c; /* Base destructive color - darker, more muted */
+  --color-destructive-50: #fef2f2;
+  --color-destructive-100: #fee2e2;
+  --color-destructive-200: #fecaca;
+  --color-destructive-300: #fca5a5;
+  --color-destructive-400: #f87171;
+  --color-destructive-500: #dc2626; /* Main red - darker tone */
+  --color-destructive-600: #b91c1c; /* Darker, more consistent with theme */
+  --color-destructive-700: #991b1b;
+  --color-destructive-800: #7f1d1d;
+  --color-destructive-900: #5f1515;
+  --color-destructive-950: #450a0a;
+
   /* Font families */
   --font-family-sans: MonaSans, Inter, system-ui, sans-serif;
   --font-family-mono: 'JetBrains Mono', Consolas, monospace;
