@@ -1,15 +1,16 @@
-import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
-import { createFileRoute } from '@tanstack/react-router';
-import { AlertCircle, CheckCircle2, Loader2, MapPin, Phone, Mail, FileText, Building2, User } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { isValidPhoneNumber } from 'react-phone-number-input';
-import type { Value as E164Number } from 'react-phone-number-input';
+import { useEndCall } from '@/clients/ai/voice';
 import { useFetchProject } from '@/clients/crm';
-import { useCreateOutboundCall, useEndCall } from '@/clients/workflows';
+import { useCreateOutboundCall } from '@/clients/workflows';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/ui/phone-input';
+import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
+import { createFileRoute } from '@tanstack/react-router';
+import { AlertCircle, Building2, CheckCircle2, FileText, Loader2, Mail, MapPin, Phone, User } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import type { Value as E164Number } from 'react-phone-number-input';
+import { isValidPhoneNumber } from 'react-phone-number-input';
 
 export const Route = createFileRoute('/_authed/project-detail')({
   component: ProjectDetail,
