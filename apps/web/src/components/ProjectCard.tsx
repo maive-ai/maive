@@ -1,7 +1,8 @@
+import { Building2, Mail, MapPin, Phone } from 'lucide-react';
+
 import type { ProjectStatusResponse } from '@/clients/crm';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { getStatusColor } from '@/lib/utils';
-import { Building2, Mail, MapPin, Phone } from 'lucide-react';
 
 interface ProjectCardProps {
   project: ProjectStatusResponse;

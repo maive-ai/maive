@@ -190,16 +190,6 @@ function ProjectDetail() {
                     </div>
                   </div>
                 </div>
-
-                {/* Notes */}
-                <div>
-                  <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
-                    Notes
-                  </p>
-                  <div className="space-y-3 pl-2">
-                    <p className="text-gray-600 whitespace-pre-wrap">{providerData?.notes || 'No notes'}</p>
-                  </div>
-                </div>
               </div>
 
               {/* Adjuster Contact */}
@@ -222,6 +212,16 @@ function ProjectDetail() {
                   </div>
                 </div>
               </div>
+
+              {/* Notes */}
+              <div className="border-t pt-6">
+                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
+                  Notes
+                </p>
+                <div className="space-y-3 pl-2">
+                  <p className="text-gray-600 whitespace-pre-wrap">{providerData?.notes || 'No notes'}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -240,7 +240,7 @@ function ProjectDetail() {
                 </div>
                 <div>
                   <CardTitle className="text-xl">Maive Assistant AI</CardTitle>
-                  <p className="text-sm text-gray-600">Let your AI Assistant Riley check on a claim.</p>
+                  <p className="text-sm text-gray-600">Initiate a call with your AI Assistant to check on a claim.</p>
                 </div>
               </div>
             </CardHeader>
