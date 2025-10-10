@@ -151,7 +151,7 @@ version = "0.1.0"
 source = { virtual = "." }
 
 [package.dev-dependencies]
-download-audio-transcripts = [
+rilla = [
     { name = "openpyxl" },
     { name = "pandas" },
     { name = "tqdm" },
@@ -160,7 +160,7 @@ download-audio-transcripts = [
 [package.metadata]
 
 [package.metadata.requires-dev]
-download-audio-transcripts = [
+rilla = [
     { name = "openpyxl", specifier = ">=3.1.5" },
     { name = "pandas", specifier = ">=2.3.3" },
     { name = "tqdm", specifier = ">=4.67.1" },
