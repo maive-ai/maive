@@ -102,6 +102,11 @@ When adding new APIs:
 - Uses pnpm workspaces with central catalog in pnpm-workspace.yaml
 - Shared tooling configs in tools/ directory
 - Internal packages prefixed with @maive/
+- We use the 'uv' package manager for python
+- We use pnpm for node packages
+
+### Web Development
+- We use tailwind css v4 in packages/tailwind-config. Use its styles when coloring things.
 
 ## Environment Setup Requirements
 - Node.js 22.10.0+ (see .nvmrc)
@@ -109,6 +114,9 @@ When adding new APIs:
 - UV for Python dependency management
 - AWS CLI configured for infrastructure deployment
 - Pulumi CLI for infrastructure management
+
+## Running with Environment Variables
+- When executing scripts that require environment variables, prefix the script with `esc run <current pulumi esc env> -- <script>`
 
 ## Coding Preferences
 
@@ -121,8 +129,10 @@ When adding new APIs:
 ### OpenAI AgentKit Docs
 - We use OpenAI's AgentKit for orchestrating workflows in `apps/server/src/workflows/`
 - Here are the docs: https://platform.openai.com/docs/guides/agents
+- And the docs for the underlying Agents SDK, which enables agents to be built in Python: https://openai.github.io/openai-agents-python/
 
 ### Vapi
 - We use Vapi for our Voice AI orchestration platform
-- Here are their docs: https://docs.vapi.ai/api-reference/assistants/list
-- You have their service available as an MCP server here: 
+- Their docs: https://docs.vapi.ai/quickstart/introduction
+- You have an mcp server to manage our platform instance for vapi available called 'vapi-mcp'
+- Open source UI components from Vapi are available at https://github.com/cameronking4/VapiBlocks/tree/master with docs at https://www.vapiblocks.com/docs
