@@ -1,10 +1,10 @@
-import { FilePlus, FolderKanban, Phone, SquarePlus, Workflow } from 'lucide-react';
 import type { AnyRoute } from '@tanstack/react-router';
 import type { LucideIcon } from 'lucide-react';
+import { FilePlus, FolderKanban, Phone, SquarePlus, Workflow } from 'lucide-react';
 import { env } from '../env';
 import { Route as CreateProjectRoute } from '../routes/_authed/create-project.tsx';
-import { Route as PhoneInputRoute } from '../routes/_authed/phone-input.tsx';
 import { Route as ProjectsRoute } from '../routes/_authed/projects.tsx';
+import { Route as SimplePhoneInputRoute } from '../routes/_authed/simple-phone-input.tsx';
 import { Route as WorkflowsRoute } from '../routes/_authed/workflows/index.tsx';
 import { Route as BuilderRoute } from '../routes/_authed/workflows/new_workflow.tsx';
 
@@ -38,7 +38,7 @@ const allNavItems: NavItem[] = [
   },
   {
     label: 'Phone Input',
-    route: PhoneInputRoute,
+    route: SimplePhoneInputRoute,
     icon: Phone,
   },
 ];

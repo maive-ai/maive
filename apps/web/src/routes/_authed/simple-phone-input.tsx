@@ -1,6 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import type { E164Number } from 'react-phone-number-input';
+import { isValidPhoneNumber } from 'react-phone-number-input';
 import { useCreateOutboundCall } from '@/clients/workflows';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,19 +12,21 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PhoneInput } from '@/components/ui/phone-input';
 
-export const Route = createFileRoute('/_authed/phone-input')({
-  component: PhoneInput,
+export const Route = createFileRoute('/_authed/simple-phone-input')({
+  component: SimplePhoneInput,
 });
 
-function PhoneInput() {
-  const [phoneNumber, setPhoneNumber] = useState<string>('');
+function SimplePhoneInput() {
+  const [phoneNumber, setPhoneNumber] = useState<E164Number | ''>('');
   const createCallMutation = useCreateOutboundCall();
 
+  const isValid = phoneNumber ? isValidPhoneNumber(phoneNumber) : false;
+
   const handleStartCall = (): void => {
-    if (!phoneNumber.trim()) {
+    if (!phoneNumber || !isValid) {
       return;
     }
 
@@ -32,7 +36,7 @@ function PhoneInput() {
   };
 
   return (
-    <div className="flex h-full justify-center bg-gradient-to-b from-amber-50 to-white p-6">
+    <div className="flex h-full justify-center bg-white p-6">
       <div className="w-full max-w-2xl space-y-6">
         {/* Page Header */}
         <div className="text-center">
@@ -53,14 +57,19 @@ function PhoneInput() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="phone-number">Phone Number</Label>
-              <Input
+              <PhoneInput
                 id="phone-number"
-                type="tel"
                 placeholder="Enter phone number"
                 value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
+                onChange={(value) => setPhoneNumber(value || '')}
+                defaultCountry="US"
                 disabled={createCallMutation.isPending}
               />
+              {phoneNumber && !isValid && (
+                <p className="text-sm text-red-600">
+                  Please enter a valid phone number
+                </p>
+              )}
             </div>
 
             {/* Success Message */}
@@ -100,7 +109,7 @@ function PhoneInput() {
               onClick={handleStartCall}
               className="w-full"
               size="lg"
-              disabled={createCallMutation.isPending || !phoneNumber.trim()}
+              disabled={createCallMutation.isPending || !phoneNumber || !isValid}
             >
               {createCallMutation.isPending ? (
                 <>

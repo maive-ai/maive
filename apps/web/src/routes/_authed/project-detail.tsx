@@ -2,12 +2,14 @@ import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
 import { createFileRoute } from '@tanstack/react-router';
 import { AlertCircle, CheckCircle2, Loader2, MapPin, Phone, Mail, FileText, Building2, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import type { E164Number } from 'react-phone-number-input';
+import { isValidPhoneNumber } from 'react-phone-number-input';
 import { useFetchProject } from '@/clients/crm';
 import { useCreateOutboundCall } from '@/clients/workflows';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PhoneInput } from '@/components/ui/phone-input';
 
 export const Route = createFileRoute('/_authed/project-detail')({
   component: ProjectDetail,
@@ -24,14 +26,16 @@ function ProjectDetail() {
   
   // Initialize hooks before any early returns
   const providerData = project?.provider_data as any;
-  const [phoneNumber, setPhoneNumber] = useState<string>('');
+  const [phoneNumber, setPhoneNumber] = useState<E164Number | ''>('');
   const createCallMutation = useCreateOutboundCall();
+
+  const isValid = phoneNumber ? isValidPhoneNumber(phoneNumber) : false;
 
   // Update phone number when project data loads
   useEffect(() => {
     if (project && providerData) {
       const insurancePhone = providerData?.insuranceAgencyContact?.phone || providerData?.phone || '';
-      setPhoneNumber(insurancePhone);
+      setPhoneNumber(insurancePhone as E164Number | '');
     }
   }, [project, providerData]);
 
@@ -65,7 +69,7 @@ function ProjectDetail() {
   }
 
   const handleStartCall = (): void => {
-    if (!phoneNumber.trim()) {
+    if (!phoneNumber || !isValid) {
       return;
     }
 
@@ -224,13 +228,19 @@ function ProjectDetail() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="phone-number">Phone Number</Label>
-                <Input
+                <PhoneInput
                   id="phone-number"
-                  type="tel"
+                  placeholder="Enter phone number"
                   value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  onChange={(value) => setPhoneNumber(value || '')}
+                  defaultCountry="US"
                   disabled={createCallMutation.isPending}
                 />
+                {phoneNumber && !isValid && (
+                  <p className="text-sm text-red-600">
+                    Please enter a valid phone number
+                  </p>
+                )}
               </div>
 
               {/* Success Message */}
@@ -270,7 +280,7 @@ function ProjectDetail() {
                 onClick={handleStartCall}
                 className="w-full"
                 size="lg"
-                disabled={createCallMutation.isPending || !phoneNumber.trim()}
+                disabled={createCallMutation.isPending || !phoneNumber || !isValid}
               >
                 {createCallMutation.isPending ? (
                   <>
