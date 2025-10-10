@@ -51,7 +51,7 @@ class Status(str, Enum):
 
     SCHEDULED = "Scheduled"
     DISPATCHED = "Dispatched"
-    IN_PROGRESS = "InProgress"
+    IN_PROGRESS = "In Progress"
     HOLD = "Hold"
     COMPLETED = "Completed"
     CANCELED = "Canceled"
@@ -158,4 +158,6 @@ class ServiceTitanEndpoints:
 
     # Form submissions endpoints
     FORM_SUBMISSIONS = "/forms/v2/tenant/{tenant_id}/submissions"
-    FORM_SUBMISSIONS_BY_FORM_ID = "/forms/v2/tenant/{tenant_id}/forms/{form_id}/submissions"
+    FORM_SUBMISSIONS_BY_FORM_ID = (
+        "/forms/v2/tenant/{tenant_id}/forms/{form_id}/submissions"
+    )
