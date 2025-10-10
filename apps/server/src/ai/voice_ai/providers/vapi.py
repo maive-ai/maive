@@ -4,10 +4,10 @@ Vapi provider implementation for Voice AI operations.
 This module implements the VoiceAIProvider interface for Vapi.
 """
 
+import asyncio
 import json
 from http import HTTPStatus
 from typing import Any, Optional
-import asyncio
 
 import httpx
 import phonenumbers
@@ -15,8 +15,15 @@ from pydantic import ValidationError
 
 from src.ai.voice_ai.base import VoiceAIError, VoiceAIProvider
 from src.ai.voice_ai.config import get_vapi_settings, get_voice_ai_settings
-from src.ai.voice_ai.constants import CallStatus, VoiceAIErrorCode, VoiceAIProvider as VoiceAIProviderEnum, WebhookEventType
-from src.ai.voice_ai.providers.vapi_schemas import VapiCallData, VapiClaimStatusData, VapiEndpoints, VapiMessage, VapiWebhookPayload
+from src.ai.voice_ai.constants import CallStatus, VoiceAIErrorCode, WebhookEventType
+from src.ai.voice_ai.constants import VoiceAIProvider as VoiceAIProviderEnum
+from src.ai.voice_ai.providers.vapi_schemas import (
+    VapiCallData,
+    VapiClaimStatusData,
+    VapiEndpoints,
+    VapiMessage,
+    VapiWebhookPayload,
+)
 from src.ai.voice_ai.schemas import (
     CallEndedData,
     CallRequest,
@@ -44,10 +51,12 @@ class VapiProvider(VoiceAIProvider):
 
         if not self._vapi_settings.api_key:
             raise ValueError("VAPI_API_KEY environment variable is required")
-        
+
         # Construct endpoint URLs once
         self._call_endpoint = f"{self._vapi_settings.base_url}{VapiEndpoints.CALL}"
-        self._call_by_id_endpoint = lambda call_id: f"{self._vapi_settings.base_url}{VapiEndpoints.CALL_BY_ID.format(call_id=call_id)}"
+        self._call_by_id_endpoint = (
+            lambda call_id: f"{self._vapi_settings.base_url}{VapiEndpoints.CALL_BY_ID.format(call_id=call_id)}"
+        )
 
     async def create_outbound_call(self, request: CallRequest) -> CallResponse:
         """
@@ -68,7 +77,9 @@ class VapiProvider(VoiceAIProvider):
         logger.info(f"[Vapi Provider] Creating outbound call to {request.phone_number}")
 
         try:
-            async with httpx.AsyncClient(timeout=self._voice_ai_settings.request_timeout) as client:
+            async with httpx.AsyncClient(
+                timeout=self._voice_ai_settings.request_timeout
+            ) as client:
                 response = await client.post(
                     self._call_endpoint,
                     headers=headers,
@@ -76,9 +87,13 @@ class VapiProvider(VoiceAIProvider):
                 )
 
                 if response.status_code != HTTPStatus.CREATED:
-                    error_msg = f"Vapi API error: {response.status_code} - {response.text}"
+                    error_msg = (
+                        f"Vapi API error: {response.status_code} - {response.text}"
+                    )
                     logger.error(f"[Vapi Provider] {error_msg}")
-                    raise VoiceAIError(error_msg, error_code=VoiceAIErrorCode.HTTP_ERROR)
+                    raise VoiceAIError(
+                        error_msg, error_code=VoiceAIErrorCode.HTTP_ERROR
+                    )
 
                 return self._parse_call_response(response.json())
         except httpx.HTTPError as e:
@@ -107,10 +122,10 @@ class VapiProvider(VoiceAIProvider):
 
         vapi_secret = headers.get("x-vapi-secret")
         is_valid = vapi_secret == self._vapi_settings.webhook_secret
-        
+
         if not is_valid:
             logger.warning("[Vapi Provider] Webhook verification failed")
-        
+
         return is_valid
 
     async def parse_webhook(self, headers: dict[str, str], body: str) -> WebhookEvent:
@@ -133,7 +148,7 @@ class VapiProvider(VoiceAIProvider):
             error_msg = f"Invalid JSON in webhook: {str(e)}"
             logger.error(f"[Vapi Provider] {error_msg}")
             raise VoiceAIError(error_msg, error_code=VoiceAIErrorCode.INVALID_JSON)
-        
+
         try:
             vapi_payload = VapiWebhookPayload(**raw_data)
         except ValidationError as e:
@@ -146,7 +161,9 @@ class VapiProvider(VoiceAIProvider):
         call_id = message.call.id if message.call else None
 
         if not call_id:
-            logger.warning(f"[Vapi Provider] No call_id found in webhook. Event type: {vapi_event_type}")
+            logger.warning(
+                f"[Vapi Provider] No call_id found in webhook. Event type: {vapi_event_type}"
+            )
 
         event_type = self._map_vapi_event_type(vapi_event_type)
         event_data = self._extract_event_data(event_type, message, vapi_payload)
@@ -174,19 +191,28 @@ class VapiProvider(VoiceAIProvider):
         headers = self._build_headers()
 
         try:
-            async with httpx.AsyncClient(timeout=self._voice_ai_settings.request_timeout) as client:
+            async with httpx.AsyncClient(
+                timeout=self._voice_ai_settings.request_timeout
+            ) as client:
                 response = await client.get(
                     self._call_by_id_endpoint(call_id),
                     headers=headers,
                 )
 
                 if response.status_code == HTTPStatus.NOT_FOUND:
-                    raise VoiceAIError(f"Call {call_id} not found", error_code=VoiceAIErrorCode.NOT_FOUND)
-                
+                    raise VoiceAIError(
+                        f"Call {call_id} not found",
+                        error_code=VoiceAIErrorCode.NOT_FOUND,
+                    )
+
                 if response.status_code != HTTPStatus.OK:
-                    error_msg = f"Vapi API error: {response.status_code} - {response.text}"
+                    error_msg = (
+                        f"Vapi API error: {response.status_code} - {response.text}"
+                    )
                     logger.error(f"[Vapi Provider] {error_msg}")
-                    raise VoiceAIError(error_msg, error_code=VoiceAIErrorCode.HTTP_ERROR)
+                    raise VoiceAIError(
+                        error_msg, error_code=VoiceAIErrorCode.HTTP_ERROR
+                    )
 
                 return self._parse_call_response(response.json())
         except httpx.HTTPError as e:
@@ -197,65 +223,78 @@ class VapiProvider(VoiceAIProvider):
     async def end_call(self, call_id: str) -> bool:
         """
         End an ongoing call programmatically.
-        
+
         First fetches call details to get the controlUrl, then sends end-call command.
-        
+
         Args:
             call_id: The unique identifier for the call
-            
+
         Returns:
             bool: True if call was successfully ended
-            
+
         Raises:
             VoiceAIError: If the call is not found or cannot be ended
         """
         # Step 1: Get call details to extract controlUrl
         call_response = await self.get_call_status(call_id)
-        
+
         if not call_response.provider_data:
-            raise VoiceAIError("No provider data available", error_code=VoiceAIErrorCode.NOT_FOUND)
-        
+            raise VoiceAIError(
+                "No provider data available", error_code=VoiceAIErrorCode.NOT_FOUND
+            )
+
         # Parse provider data with typed model
         vapi_data = VapiCallData(**call_response.provider_data)
-        
+
         if not vapi_data.monitor or not vapi_data.monitor.control_url:
-            raise VoiceAIError(f"No control URL found for call {call_id}", error_code=VoiceAIErrorCode.NOT_FOUND)
-        
+            raise VoiceAIError(
+                f"No control URL found for call {call_id}",
+                error_code=VoiceAIErrorCode.NOT_FOUND,
+            )
+
         control_url = vapi_data.monitor.control_url
-        
+
         # Step 2: Send end-call command
         headers = {"Content-Type": "application/json"}
         payload = {"type": "end-call"}
-        
+
         logger.info(f"[Vapi Provider] Ending call {call_id}")
-        
+
         try:
-            async with httpx.AsyncClient(timeout=self._voice_ai_settings.request_timeout) as client:
+            async with httpx.AsyncClient(
+                timeout=self._voice_ai_settings.request_timeout
+            ) as client:
                 response = await client.post(
                     control_url,
                     headers=headers,
                     json=payload,
                 )
-                
+
                 if response.status_code not in (HTTPStatus.OK, HTTPStatus.ACCEPTED):
-                    error_msg = f"Failed to end call: {response.status_code} - {response.text}"
+                    error_msg = (
+                        f"Failed to end call: {response.status_code} - {response.text}"
+                    )
                     logger.error(f"[Vapi Provider] {error_msg}")
-                    raise VoiceAIError(error_msg, error_code=VoiceAIErrorCode.HTTP_ERROR)
-                
+                    raise VoiceAIError(
+                        error_msg, error_code=VoiceAIErrorCode.HTTP_ERROR
+                    )
+
                 logger.info(f"[Vapi Provider] Successfully ended call {call_id}")
                 return True
-                
+
         except httpx.HTTPError as e:
             error_msg = f"HTTP error ending call: {str(e)}"
             logger.error(f"[Vapi Provider] {error_msg}")
             raise VoiceAIError(error_msg, error_code=VoiceAIErrorCode.HTTP_ERROR)
 
-    async def monitor_ongoing_call(self, call_id: str, call_request: CallRequest) -> None:
+    async def monitor_ongoing_call(
+        self, call_id: str, call_request: CallRequest
+    ) -> None:
         """
         Poll call status every 10s up to 24h; log structured data when call ends.
 
         Note: This method is deprecated and will be removed in a future version.
-        Use the CallMonitoringWorkflow instead for proper orchestration.
+        Use the CallAndWriteToCRMWorkflow instead for proper orchestration.
         """
         poll_interval_seconds = 10
         max_polling_duration = 60 * 60 * 24  # 24 hours
@@ -265,13 +304,17 @@ class VapiProvider(VoiceAIProvider):
             while True:
                 elapsed = asyncio.get_event_loop().time() - start_time
                 if elapsed > max_polling_duration:
-                    logger.warning(f"[Vapi Provider] Monitoring timed out for call {call_id}")
+                    logger.warning(
+                        f"[Vapi Provider] Monitoring timed out for call {call_id}"
+                    )
                     break
 
                 try:
                     status = await self.get_call_status(call_id)
                 except VoiceAIError as e:
-                    logger.error(f"[Vapi Provider] Error polling call {call_id}: {e.message}")
+                    logger.error(
+                        f"[Vapi Provider] Error polling call {call_id}: {e.message}"
+                    )
                     break
 
                 logger.info(f"[Vapi Provider] Call {call_id} status: {status.status}")
@@ -286,20 +329,28 @@ class VapiProvider(VoiceAIProvider):
         except asyncio.CancelledError:
             logger.info(f"[Vapi Provider] Monitoring task for call {call_id} canceled")
 
-    def _handle_call_ended(self, call_id: str, provider_data: dict[str, Any]) -> Optional[VapiClaimStatusData]:
+    def _handle_call_ended(
+        self, call_id: str, provider_data: dict[str, Any]
+    ) -> Optional[VapiClaimStatusData]:
         """Extract and log structured data from provider response (if present)."""
         try:
             analysis = provider_data.get("analysis") or {}
             structured = analysis.get("structuredData")
             if structured:
                 structured = VapiClaimStatusData(**structured)
-                logger.info(f"[Vapi Provider] Structured data for call {call_id}: {structured}")
+                logger.info(
+                    f"[Vapi Provider] Structured data for call {call_id}: {structured}"
+                )
                 return structured
             else:
-                logger.info(f"[Vapi Provider] No structured data found for call {call_id}")
+                logger.info(
+                    f"[Vapi Provider] No structured data found for call {call_id}"
+                )
                 return None
         except Exception as e:
-            logger.error(f"[Vapi Provider] Error logging structured data for call {call_id}: {e}")
+            logger.error(
+                f"[Vapi Provider] Error logging structured data for call {call_id}: {e}"
+            )
             return None
 
     def _build_headers(self) -> dict[str, str]:
@@ -353,7 +404,7 @@ class VapiProvider(VoiceAIProvider):
                 customer_number=message.customer.number if message.customer else None,
                 assistant_id=message.assistant.id if message.assistant else None,
             )
-        
+
         if event_type is WebhookEventType.CALL_ENDED:
             return CallEndedData(
                 duration=message.duration_seconds,
@@ -363,21 +414,25 @@ class VapiProvider(VoiceAIProvider):
                 analysis=message.analysis.structured_data if message.analysis else None,
                 vapi_payload=vapi_payload.model_dump(),
             )
-        
+
         if event_type is WebhookEventType.FUNCTION_CALL:
             # Function data is at root level of webhook
             return FunctionCallData(
-                function_name=vapi_payload.function.name if vapi_payload.function else None,
-                parameters=vapi_payload.function.parameters if vapi_payload.function else None,
+                function_name=vapi_payload.function.name
+                if vapi_payload.function
+                else None,
+                parameters=vapi_payload.function.parameters
+                if vapi_payload.function
+                else None,
             )
-        
+
         if event_type is WebhookEventType.TRANSCRIPT:
             # Transcript events have data at root level
             return TranscriptData(
                 transcript=vapi_payload.transcript,
                 is_partial=vapi_payload.is_partial,
             )
-        
+
         if event_type is WebhookEventType.SPEECH_UPDATE:
             # Speech update events have data at root level
             return SpeechUpdateData(
@@ -385,53 +440,61 @@ class VapiProvider(VoiceAIProvider):
                 role=vapi_payload.role,
                 turn=vapi_payload.turn,
             )
-        
+
         if event_type is WebhookEventType.CONVERSATION_UPDATE:
             # Conversation can be at root or in message
             return ConversationUpdateData(
                 conversation=vapi_payload.conversation,
                 messages=message.messages,
             )
-        
+
         if event_type is WebhookEventType.STATUS_UPDATE:
             # Status updates have data at root level
             return StatusUpdateData(
                 status=vapi_payload.status,
                 ended_reason=vapi_payload.ended_reason,
             )
-        
+
         # Fallback for unknown/unhandled event types
-        logger.warning(f"[Vapi Provider] Unhandled event type: {event_type}. Returning empty data.")
+        logger.warning(
+            f"[Vapi Provider] Unhandled event type: {event_type}. Returning empty data."
+        )
         return {}
 
     def _format_phone_number(self, phone_number: str) -> str:
         """
         Format phone number to E.164 format.
-        
+
         Defaults to US region if no country code is provided.
-        
+
         Args:
             phone_number: Phone number string in any format
-            
+
         Returns:
             str: E.164 formatted phone number (e.g., +15551234567)
         """
         try:
             # Try parsing with explicit region (US default)
             parsed = phonenumbers.parse(phone_number, "US")
-            
+
             # Validate the number
             if phonenumbers.is_valid_number(parsed):
-                return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
-            
+                return phonenumbers.format_number(
+                    parsed, phonenumbers.PhoneNumberFormat.E164
+                )
+
             # If invalid, try parsing without region (assumes international format)
             parsed = phonenumbers.parse(phone_number, None)
             if phonenumbers.is_valid_number(parsed):
-                return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
-                
+                return phonenumbers.format_number(
+                    parsed, phonenumbers.PhoneNumberFormat.E164
+                )
+
         except phonenumbers.NumberParseException:
-            logger.warning(f"[Vapi Provider] Could not parse phone number: {phone_number}")
-        
+            logger.warning(
+                f"[Vapi Provider] Could not parse phone number: {phone_number}"
+            )
+
         # Fallback: return as-is if parsing fails
         return phone_number
 
@@ -503,7 +566,7 @@ class VapiProvider(VoiceAIProvider):
     def _build_claim_status_structured_data(self) -> dict[str, Any]:
         """Build analysis plan for claim status structured data extraction."""
         structured_data_prompt = "Extract insurance claim status information from this call transcript. Focus on: claim status (approved/denied/pending), payment details (amount, date, check number), required documents, and next steps."
-        
+
         return {
             "structuredDataPrompt": structured_data_prompt,
             "structuredDataSchema": {
@@ -577,7 +640,7 @@ class VapiProvider(VoiceAIProvider):
         """Parse Vapi call response into standard format."""
         # Parse into typed model first
         call_data = VapiCallData(**vapi_data)
-        
+
         # Map Vapi status strings to standard CallStatus enum
         vapi_status = (call_data.status or "").lower()
         status_mapping = {
@@ -599,4 +662,3 @@ class VapiProvider(VoiceAIProvider):
             created_at=call_data.created_at,
             provider_data=vapi_data,
         )
-
