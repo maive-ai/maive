@@ -675,14 +675,14 @@
         }
       }
     },
-    "/api/workflows/monitored-call": {
+    "/api/workflows/call-and-write-results-to-crm": {
       "post": {
         "tags": [
           "Workflows"
         ],
-        "summary": "Create Monitored Call",
-        "description": "Create an outbound call with monitoring and CRM integration.\n\nThis workflow endpoint orchestrates:\n1. Creating the call via Voice AI provider\n2. Starting background call monitoring\n3. Updating CRM with call results when complete\n\nArgs:\n    request: The call request with phone number and context\n    current_user: The authenticated user\n    workflow: The call monitoring workflow from dependency injection\n\nReturns:\n    CallResponse: The call information\n\nRaises:\n    HTTPException: If call creation fails",
-        "operationId": "create_monitored_call_api_workflows_monitored_call_post",
+        "summary": "Call And Write Results To Crm",
+        "description": "Create an outbound call with monitoring and write results to CRM.\n\nThis workflow endpoint orchestrates:\n1. Creating the call via Voice AI provider\n2. Starting background call monitoring and writing results to CRM\n3. Updating CRM with call results when complete\n\nArgs:\n    request: The call request with phone number and context\n    current_user: The authenticated user\n    workflow: The call monitoring and CRM writing workflow from dependency injection\n\nReturns:\n    CallResponse: The call information\n\nRaises:\n    HTTPException: If call creation fails",
+        "operationId": "call_and_write_results_to_crm_api_workflows_call_and_write_results_to_crm_post",
         "requestBody": {
           "content": {
             "application/json": {
