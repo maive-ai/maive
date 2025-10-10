@@ -89,3 +89,33 @@ class VoiceAIService:
                 provider=getattr(self.voice_ai_provider, "provider_name", None),
             )
 
+    async def end_call(self, call_id: str) -> bool | VoiceAIErrorResponse:
+        """
+        End an ongoing call programmatically.
+        
+        Args:
+            call_id: The call identifier
+            
+        Returns:
+            bool (True if successful) or VoiceAIErrorResponse on error
+        """
+        try:
+            logger.info(f"Ending call: {call_id}")
+            result = await self.voice_ai_provider.end_call(call_id)
+            logger.info(f"Successfully ended call {call_id}")
+            return result
+        except VoiceAIError as e:
+            logger.error(f"Voice AI error ending call {call_id}: {e.message}")
+            return VoiceAIErrorResponse(
+                error=e.message,
+                error_code=e.error_code,
+                provider=getattr(self.voice_ai_provider, "provider_name", None),
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error ending call {call_id}: {e}")
+            return VoiceAIErrorResponse(
+                error=f"Unexpected error: {str(e)}",
+                error_code=VoiceAIErrorCode.UNKNOWN_ERROR,
+                provider=getattr(self.voice_ai_provider, "provider_name", None),
+            )
+

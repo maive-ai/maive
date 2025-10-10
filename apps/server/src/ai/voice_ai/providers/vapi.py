@@ -194,6 +194,62 @@ class VapiProvider(VoiceAIProvider):
             logger.error(f"[Vapi Provider] {error_msg}")
             raise VoiceAIError(error_msg, error_code=VoiceAIErrorCode.HTTP_ERROR)
 
+    async def end_call(self, call_id: str) -> bool:
+        """
+        End an ongoing call programmatically.
+        
+        First fetches call details to get the controlUrl, then sends end-call command.
+        
+        Args:
+            call_id: The unique identifier for the call
+            
+        Returns:
+            bool: True if call was successfully ended
+            
+        Raises:
+            VoiceAIError: If the call is not found or cannot be ended
+        """
+        # Step 1: Get call details to extract controlUrl
+        call_response = await self.get_call_status(call_id)
+        
+        if not call_response.provider_data:
+            raise VoiceAIError("No provider data available", error_code=VoiceAIErrorCode.NOT_FOUND)
+        
+        # Parse provider data with typed model
+        vapi_data = VapiCallData(**call_response.provider_data)
+        
+        if not vapi_data.monitor or not vapi_data.monitor.control_url:
+            raise VoiceAIError(f"No control URL found for call {call_id}", error_code=VoiceAIErrorCode.NOT_FOUND)
+        
+        control_url = vapi_data.monitor.control_url
+        
+        # Step 2: Send end-call command
+        headers = {"Content-Type": "application/json"}
+        payload = {"type": "end-call"}
+        
+        logger.info(f"[Vapi Provider] Ending call {call_id}")
+        
+        try:
+            async with httpx.AsyncClient(timeout=self._voice_ai_settings.request_timeout) as client:
+                response = await client.post(
+                    control_url,
+                    headers=headers,
+                    json=payload,
+                )
+                
+                if response.status_code not in (HTTPStatus.OK, HTTPStatus.ACCEPTED):
+                    error_msg = f"Failed to end call: {response.status_code} - {response.text}"
+                    logger.error(f"[Vapi Provider] {error_msg}")
+                    raise VoiceAIError(error_msg, error_code=VoiceAIErrorCode.HTTP_ERROR)
+                
+                logger.info(f"[Vapi Provider] Successfully ended call {call_id}")
+                return True
+                
+        except httpx.HTTPError as e:
+            error_msg = f"HTTP error ending call: {str(e)}"
+            logger.error(f"[Vapi Provider] {error_msg}")
+            raise VoiceAIError(error_msg, error_code=VoiceAIErrorCode.HTTP_ERROR)
+
     async def monitor_ongoing_call(self, call_id: str, call_request: CallRequest) -> None:
         """
         Poll call status every 10s up to 24h; log structured data when call ends.
