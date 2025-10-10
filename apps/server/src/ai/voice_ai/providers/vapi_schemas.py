@@ -31,6 +31,17 @@ class VapiCallMetadata(BaseModel):
         use_enum_values = True
 
 
+class VapiMonitor(BaseModel):
+    """Vapi monitor URLs for call control and listening."""
+    
+    listen_url: str | None = Field(None, alias="listenUrl", description="WebSocket URL for listening to call audio")
+    control_url: str | None = Field(None, alias="controlUrl", description="URL for controlling the call")
+    
+    class Config:
+        """Pydantic configuration."""
+        populate_by_name = True
+
+
 class VapiCallData(BaseModel):
     """Vapi call data structure."""
 
@@ -42,6 +53,7 @@ class VapiCallData(BaseModel):
     type: str | None = Field(None, description="Call type")
     status: str | None = Field(None, description="Call status")
     assistant_id: str | None = Field(None, alias="assistantId", description="Assistant ID")
+    monitor: VapiMonitor | None = Field(None, description="Monitor URLs for control and listening")
 
     class Config:
         """Pydantic configuration."""

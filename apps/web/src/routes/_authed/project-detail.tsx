@@ -1,15 +1,16 @@
-import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
-import { createFileRoute } from '@tanstack/react-router';
-import { AlertCircle, CheckCircle2, Loader2, MapPin, Phone, Mail, FileText, Building2, User } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import type { E164Number } from 'react-phone-number-input';
-import { isValidPhoneNumber } from 'react-phone-number-input';
+import { useEndCall } from '@/clients/ai/voice';
 import { useFetchProject } from '@/clients/crm';
-import { useCreateOutboundCall } from '@/clients/workflows';
+import { useCallAndWriteResultsToCrm } from '@/clients/workflows';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/ui/phone-input';
+import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
+import { createFileRoute } from '@tanstack/react-router';
+import { AlertCircle, Building2, CheckCircle2, FileText, Loader2, Mail, MapPin, Phone, User } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import type { Value as E164Number } from 'react-phone-number-input';
+import { isValidPhoneNumber } from 'react-phone-number-input';
 
 export const Route = createFileRoute('/_authed/project-detail')({
   component: ProjectDetail,
@@ -27,7 +28,9 @@ function ProjectDetail() {
   // Initialize hooks before any early returns
   const providerData = project?.provider_data as any;
   const [phoneNumber, setPhoneNumber] = useState<E164Number | ''>('');
-  const createCallMutation = useCreateOutboundCall();
+  const [activeCallId, setActiveCallId] = useState<string | null>(null);
+  const createCallMutation = useCallAndWriteResultsToCrm();
+  const endCallMutation = useEndCall();
 
   const isValid = phoneNumber ? isValidPhoneNumber(phoneNumber) : false;
 
@@ -38,6 +41,13 @@ function ProjectDetail() {
       setPhoneNumber(insurancePhone as E164Number | '');
     }
   }, [project, providerData]);
+
+  // Store call ID when call starts successfully
+  useEffect(() => {
+    if (createCallMutation.isSuccess && createCallMutation.data) {
+      setActiveCallId(createCallMutation.data.call_id);
+    }
+  }, [createCallMutation.isSuccess, createCallMutation.data]);
 
   // Loading state
   if (isLoading) {
@@ -85,6 +95,17 @@ function ProjectDetail() {
       adjuster_phone: providerData?.adjusterContact?.phone,
       tenant: providerData?.tenant,
       job_id: providerData?.job_id,
+    });
+  };
+
+  const handleEndCall = (): void => {
+    if (!activeCallId) return;
+    
+    endCallMutation.mutate(activeCallId, {
+      onSuccess: () => {
+        setActiveCallId(null);
+        createCallMutation.reset();
+      }
     });
   };
 
@@ -277,18 +298,34 @@ function ProjectDetail() {
               )}
 
               <Button
-                onClick={handleStartCall}
+                onClick={activeCallId ? handleEndCall : handleStartCall}
                 className="w-full"
                 size="lg"
-                disabled={createCallMutation.isPending || !phoneNumber || !isValid}
+                variant={activeCallId ? "destructive" : "default"}
+                disabled={
+                  activeCallId 
+                    ? endCallMutation.isPending 
+                    : (createCallMutation.isPending || !phoneNumber || !isValid)
+                }
               >
-                {createCallMutation.isPending ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin" />
-                    Creating Call...
-                  </>
+                {activeCallId ? (
+                  endCallMutation.isPending ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      Ending Call...
+                    </>
+                  ) : (
+                    'End Call'
+                  )
                 ) : (
-                  `Start Call with ${providerData?.insuranceAgencyContact?.name || 'Contact'}`
+                  createCallMutation.isPending ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      Creating Call...
+                    </>
+                  ) : (
+                    `Start Call with ${providerData?.insuranceAgencyContact?.name || 'Contact'}`
+                  )
                 )}
               </Button>
             </CardContent>
