@@ -6,6 +6,7 @@ import { isValidPhoneNumber } from 'react-phone-number-input';
 import type { Value as E164Number } from 'react-phone-number-input';
 import { useFetchProject } from '@/clients/crm';
 import { useCreateOutboundCall, useEndCall } from '@/clients/workflows';
+import { CallAudioVisualizer } from '@/components/call/CallAudioVisualizer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -28,6 +29,7 @@ function ProjectDetail() {
   const providerData = project?.provider_data as any;
   const [phoneNumber, setPhoneNumber] = useState<E164Number | ''>('');
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
+  const [listenUrl, setListenUrl] = useState<string | null>(null);
   const createCallMutation = useCreateOutboundCall();
   const endCallMutation = useEndCall();
 
@@ -45,6 +47,12 @@ function ProjectDetail() {
   useEffect(() => {
     if (createCallMutation.isSuccess && createCallMutation.data) {
       setActiveCallId(createCallMutation.data.call_id);
+      
+      // Extract listenUrl from provider_data
+      const providerData = createCallMutation.data.provider_data;
+      if (providerData?.monitor?.listenUrl) {
+        setListenUrl(providerData.monitor.listenUrl);
+      }
     }
   }, [createCallMutation.isSuccess, createCallMutation.data]);
 
@@ -103,6 +111,7 @@ function ProjectDetail() {
     endCallMutation.mutate(activeCallId, {
       onSuccess: () => {
         setActiveCallId(null);
+        setListenUrl(null);
         createCallMutation.reset();
       }
     });
@@ -327,6 +336,8 @@ function ProjectDetail() {
                   )
                 )}
               </Button>
+
+              <CallAudioVisualizer listenUrl={listenUrl} />
             </CardContent>
           </Card>
         </div>
