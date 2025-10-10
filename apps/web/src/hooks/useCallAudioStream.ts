@@ -93,8 +93,8 @@ export function useCallAudioStream(listenUrl: string | null) {
     setState(prev => ({ ...prev, isConnected: true, error: null }));
   };
   
-  const handleWebSocketError = (): void => {
-    console.error('[Audio Stream] WebSocket error');
+  const handleWebSocketError = (event: Event): void => {
+    console.error('[Audio Stream] WebSocket error:', event);
     isConnectingRef.current = false;
     setState(prev => ({ ...prev, error: 'Connection error' }));
   };
@@ -118,6 +118,7 @@ export function useCallAudioStream(listenUrl: string | null) {
   const connect = () => {
     if (!listenUrl || wsRef.current || isConnectingRef.current) return;
     
+    console.log('[Audio Stream] Attempting to connect to:', listenUrl);
     isConnectingRef.current = true;
     
     try {

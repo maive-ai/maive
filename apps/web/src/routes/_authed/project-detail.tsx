@@ -51,8 +51,12 @@ function ProjectDetail() {
       
       // Extract listenUrl from provider_data
       const providerData = callAndWritetoCrmMutation.data.provider_data;
+      console.log('[Project Detail] Provider data:', providerData);
       if (providerData?.monitor?.listenUrl) {
+        console.log('[Project Detail] Setting listenUrl:', providerData.monitor.listenUrl);
         setListenUrl(providerData.monitor.listenUrl);
+      } else {
+        console.log('[Project Detail] No listenUrl found in provider_data');
       }
     }
   }, [callAndWritetoCrmMutation.isSuccess, callAndWritetoCrmMutation.data]);
@@ -338,7 +342,10 @@ function ProjectDetail() {
                 )}
               </Button>
 
-              <CallAudioVisualizer listenUrl={listenUrl} />
+              <CallAudioVisualizer 
+                listenUrl={listenUrl} 
+                onDisconnect={() => setListenUrl(null)}
+              />
             </CardContent>
           </Card>
         </div>
