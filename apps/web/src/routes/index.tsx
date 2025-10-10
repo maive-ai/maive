@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button';
 import MaiveLogo from '@maive/brand/logos/Maive-Main-Logo.svg';
 import {
   createFileRoute,
@@ -6,7 +7,6 @@ import {
 } from '@tanstack/react-router';
 import { useAuth } from '../auth';
 import { env } from '../env';
-import { Button } from '@/components/ui/button';
 
 export const Route: AnyRoute = createFileRoute('/')({
   beforeLoad: ({ context }) => {
@@ -14,7 +14,7 @@ export const Route: AnyRoute = createFileRoute('/')({
       // Redirect to voice-ai if workflows are disabled, otherwise workflows
       const defaultRoute = env.PUBLIC_ENABLE_WORKFLOWS
         ? '/workflows'
-        : '/voice-ai';
+        : '/projects';
       throw redirect({
         to: defaultRoute,
         replace: true, // optional, avoids pushing the "/" into history

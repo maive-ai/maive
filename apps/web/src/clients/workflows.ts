@@ -33,12 +33,12 @@ const createWorkflowsApi = async (): Promise<WorkflowsApi> => {
 /**
  * Create an outbound voice AI call with monitoring and CRM integration
  */
-export async function createOutboundCall(
+export async function callAndWriteToCrm(
   request: CallRequest,
 ): Promise<CallResponse> {
   const api = await createWorkflowsApi();
 
-  const response = await api.createMonitoredCallApiWorkflowsMonitoredCallPost(request);
+  const response = await api.callAndWriteResultsToCrmApiWorkflowsCallAndWriteResultsToCrmPost(request);
   return response.data;
 }
 
@@ -46,9 +46,9 @@ export async function createOutboundCall(
 /**
  * React Query mutation hook for creating outbound calls
  */
-export function useCreateOutboundCall(): UseMutationResult<CallResponse, Error, CallRequest> {
+export function useCallAndWriteResultsToCrm(): UseMutationResult<CallResponse, Error, CallRequest> {
   return useMutation({
-    mutationFn: createOutboundCall,
+    mutationFn: callAndWriteToCrm,
     onSuccess: (callResponse) => {
       console.log(`Voice AI call created: ${callResponse.call_id}`);
     },

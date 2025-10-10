@@ -1,19 +1,19 @@
+import { useCallAndWriteResultsToCrm } from '@/clients/workflows';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { createFileRoute } from '@tanstack/react-router';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import type { E164Number } from 'react-phone-number-input';
 import { isValidPhoneNumber } from 'react-phone-number-input';
-import { useCreateOutboundCall } from '@/clients/workflows';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { PhoneInput } from '@/components/ui/phone-input';
 
 export const Route = createFileRoute('/_authed/simple-phone-input')({
   component: SimplePhoneInput,
@@ -21,7 +21,7 @@ export const Route = createFileRoute('/_authed/simple-phone-input')({
 
 function SimplePhoneInput() {
   const [phoneNumber, setPhoneNumber] = useState<E164Number | ''>('');
-  const createCallMutation = useCreateOutboundCall();
+  const createCallMutation = useCallAndWriteResultsToCrm();
 
   const isValid = phoneNumber ? isValidPhoneNumber(phoneNumber) : false;
 
