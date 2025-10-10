@@ -202,27 +202,6 @@ function ProjectDetail() {
                 </div>
               </div>
 
-              {/* Insurance Agency Contact */}
-              <div className="border-t pt-6">
-                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
-                  Insurance Agency Contact
-                </p>
-                <div className="space-y-3 pl-2">
-                  <div className="flex items-center gap-3">
-                    <User className="size-4 text-gray-400" />
-                    <p className="text-gray-700">{providerData?.insuranceAgencyContact?.name || 'Not available'}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Phone className="size-4 text-gray-400" />
-                    <p className="text-gray-600">{providerData?.insuranceAgencyContact?.phone || 'Not available'}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Mail className="size-4 text-gray-400" />
-                    <p className="text-gray-600 break-all">{providerData?.insuranceAgencyContact?.email || 'Not available'}</p>
-                  </div>
-                </div>
-              </div>
-
               {/* Adjuster Contact */}
               <div className="border-t pt-6">
                 <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
