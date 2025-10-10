@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Phone, PhoneOff } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { useCallAudioStream } from '@/hooks/useCallAudioStream';
@@ -14,6 +14,14 @@ export function CallAudioVisualizer({ listenUrl, onDisconnect }: CallAudioVisual
   const { volumeLevel, isConnected, error, connect, disconnect } = useCallAudioStream(listenUrl);
   const [bars, setBars] = useState(Array(50).fill(5));
   
+  const updateBars = useCallback((volume: number) => {
+    setBars(Array(50).fill(0).map(() => Math.random() * volume * 150));
+  }, []);
+  
+  const resetBars = useCallback(() => {
+    setBars(Array(50).fill(5));
+  }, []);
+  
   // Update bars based on volume level
   useEffect(() => {
     if (isConnected) {
@@ -21,7 +29,7 @@ export function CallAudioVisualizer({ listenUrl, onDisconnect }: CallAudioVisual
     } else {
       resetBars();
     }
-  }, [volumeLevel, isConnected]);
+  }, [volumeLevel, isConnected, updateBars, resetBars]);
   
   // Auto-disconnect when listenUrl is removed
   useEffect(() => {
@@ -29,14 +37,6 @@ export function CallAudioVisualizer({ listenUrl, onDisconnect }: CallAudioVisual
       disconnect();
     }
   }, [listenUrl, isConnected, disconnect]);
-  
-  const updateBars = (volume: number) => {
-    setBars(bars.map(() => Math.random() * volume * 150));
-  };
-  
-  const resetBars = () => {
-    setBars(Array(50).fill(5));
-  };
   
   const handleToggle = () => {
     if (isConnected) {
