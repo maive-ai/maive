@@ -1,6 +1,7 @@
 import { useEndCall } from '@/clients/ai/voice';
 import { useFetchProject } from '@/clients/crm';
-import { useCallAndWriteResultsToCrm } from '@/clients/workflows';
+import { useCallAndWriteToCrm } from '@/clients/workflows';
+import { CallAudioVisualizer } from '@/components/call/CallAudioVisualizer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -29,7 +30,8 @@ function ProjectDetail() {
   const providerData = project?.provider_data as any;
   const [phoneNumber, setPhoneNumber] = useState<E164Number | ''>('');
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
-  const createCallMutation = useCallAndWriteResultsToCrm();
+  const [listenUrl, setListenUrl] = useState<string | null>(null);
+  const callAndWritetoCrmMutation = useCallAndWriteToCrm();
   const endCallMutation = useEndCall();
 
   const isValid = phoneNumber ? isValidPhoneNumber(phoneNumber) : false;
@@ -44,10 +46,20 @@ function ProjectDetail() {
 
   // Store call ID when call starts successfully
   useEffect(() => {
-    if (createCallMutation.isSuccess && createCallMutation.data) {
-      setActiveCallId(createCallMutation.data.call_id);
+    if (callAndWritetoCrmMutation.isSuccess && callAndWritetoCrmMutation.data) {
+      setActiveCallId(callAndWritetoCrmMutation.data.call_id);
+      
+      // Extract listenUrl from provider_data
+      const providerData = callAndWritetoCrmMutation.data.provider_data;
+      console.log('[Project Detail] Provider data:', providerData);
+      if (providerData?.monitor?.listenUrl) {
+        console.log('[Project Detail] Setting listenUrl:', providerData.monitor.listenUrl);
+        setListenUrl(providerData.monitor.listenUrl);
+      } else {
+        console.log('[Project Detail] No listenUrl found in provider_data');
+      }
     }
-  }, [createCallMutation.isSuccess, createCallMutation.data]);
+  }, [callAndWritetoCrmMutation.isSuccess, callAndWritetoCrmMutation.data]);
 
   // Loading state
   if (isLoading) {
@@ -83,7 +95,7 @@ function ProjectDetail() {
       return;
     }
 
-    createCallMutation.mutate({
+    callAndWritetoCrmMutation.mutate({
       phone_number: phoneNumber,
       // Pass customer details from project data
       customer_id: project.project_id,
@@ -104,7 +116,8 @@ function ProjectDetail() {
     endCallMutation.mutate(activeCallId, {
       onSuccess: () => {
         setActiveCallId(null);
-        createCallMutation.reset();
+        setListenUrl(null);
+        callAndWritetoCrmMutation.reset();
       }
     });
   };
@@ -255,7 +268,7 @@ function ProjectDetail() {
                   value={phoneNumber}
                   onChange={(value) => setPhoneNumber(value || '')}
                   defaultCountry="US"
-                  disabled={createCallMutation.isPending}
+                  disabled={callAndWritetoCrmMutation.isPending}
                 />
                 {phoneNumber && !isValid && (
                   <p className="text-sm text-red-600">
@@ -265,7 +278,7 @@ function ProjectDetail() {
               </div>
 
               {/* Success Message */}
-              {createCallMutation.isSuccess && createCallMutation.data && (
+              {callAndWritetoCrmMutation.isSuccess && callAndWritetoCrmMutation.data && (
                 <div className="flex items-start gap-3 rounded-lg bg-green-50 border border-green-200 p-4">
                   <CheckCircle2 className="size-5 text-green-600 mt-0.5" />
                   <div className="flex-1 space-y-1">
@@ -273,17 +286,17 @@ function ProjectDetail() {
                       Call started!
                     </p>
                     <p className="text-sm text-green-700">
-                      Call ID: {createCallMutation.data.call_id}
+                      Call ID: {callAndWritetoCrmMutation.data.call_id}
                     </p>
                     <p className="text-xs text-green-600">
-                      Status: {createCallMutation.data.status}
+                      Status: {callAndWritetoCrmMutation.data.status}
                     </p>
                   </div>
                 </div>
               )}
 
               {/* Error Message */}
-              {createCallMutation.isError && (
+              {callAndWritetoCrmMutation.isError && (
                 <div className="flex items-start gap-3 rounded-lg bg-red-50 border border-red-200 p-4">
                   <AlertCircle className="size-5 text-red-600 mt-0.5" />
                   <div className="flex-1">
@@ -291,7 +304,7 @@ function ProjectDetail() {
                       Failed to create call
                     </p>
                     <p className="text-sm text-red-700">
-                      {createCallMutation.error?.message || 'An unexpected error occurred'}
+                      {callAndWritetoCrmMutation.error?.message || 'An unexpected error occurred'}
                     </p>
                   </div>
                 </div>
@@ -305,7 +318,7 @@ function ProjectDetail() {
                 disabled={
                   activeCallId 
                     ? endCallMutation.isPending 
-                    : (createCallMutation.isPending || !phoneNumber || !isValid)
+                    : (callAndWritetoCrmMutation.isPending || !phoneNumber || !isValid)
                 }
               >
                 {activeCallId ? (
@@ -318,7 +331,7 @@ function ProjectDetail() {
                     'End Call'
                   )
                 ) : (
-                  createCallMutation.isPending ? (
+                  callAndWritetoCrmMutation.isPending ? (
                     <>
                       <Loader2 className="size-4 animate-spin" />
                       Creating Call...
@@ -328,6 +341,11 @@ function ProjectDetail() {
                   )
                 )}
               </Button>
+
+              <CallAudioVisualizer 
+                listenUrl={listenUrl} 
+                onDisconnect={() => setListenUrl(null)}
+              />
             </CardContent>
           </Card>
         </div>
