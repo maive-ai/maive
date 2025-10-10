@@ -1140,7 +1140,7 @@ export interface SkuModel {
 export const Status = {
     Scheduled: 'Scheduled',
     Dispatched: 'Dispatched',
-    InProgress: 'InProgress',
+    InProgress: 'In Progress',
     Hold: 'Hold',
     Completed: 'Completed',
     Canceled: 'Canceled'

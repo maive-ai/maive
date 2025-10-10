@@ -1,10 +1,10 @@
+import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
+
 import { createFileRoute } from '@tanstack/react-router';
 import { AlertCircle, Building2, CheckCircle2, FileText, Loader2, Mail, MapPin, Phone, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import type { Value as E164Number } from 'react-phone-number-input';
-import { isValidPhoneNumber } from 'react-phone-number-input';
-
-import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
+import type { Country, Value as E164Number } from 'react-phone-number-input';
+import { isValidPhoneNumber, parsePhoneNumber } from 'react-phone-number-input';
 
 import { useEndCall } from '@/clients/ai/voice';
 import { useFetchProject } from '@/clients/crm';
@@ -32,6 +32,7 @@ function ProjectDetail() {
   // Initialize hooks before any early returns
   const providerData = project?.provider_data as any;
   const [phoneNumber, setPhoneNumber] = useState<E164Number | ''>('');
+  const [selectedCountry, setSelectedCountry] = useState<Country>('US');
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
   const [listenUrl, setListenUrl] = useState<string | null>(null);
   const callAndWritetoCrmMutation = useCallAndWriteToCrm();
@@ -43,7 +44,27 @@ function ProjectDetail() {
   useEffect(() => {
     if (project && providerData) {
       const insurancePhone = providerData?.insuranceAgencyContact?.phone || providerData?.phone || '';
-      setPhoneNumber(insurancePhone as E164Number | '');
+      
+      if (insurancePhone) {
+        try {
+          // Parse the phone number to get E.164 format
+          const parsedPhone = parsePhoneNumber(insurancePhone);
+          if (parsedPhone) {
+            // Set the full E.164 number - the component will auto-detect country and format
+            setPhoneNumber(parsedPhone.number as E164Number);
+            setSelectedCountry(parsedPhone.country || 'US');
+          } else {
+            // If parsing fails, just set the phone number as-is
+            setPhoneNumber(insurancePhone as E164Number);
+          }
+        } catch (error) {
+          // If parsing fails, just set the phone number as-is
+          console.warn('Failed to parse phone number:', insurancePhone, error);
+          setPhoneNumber(insurancePhone as E164Number);
+        }
+      } else {
+        setPhoneNumber('');
+      }
     }
   }, [project, providerData]);
 
@@ -252,7 +273,8 @@ function ProjectDetail() {
                   placeholder="Enter phone number"
                   value={phoneNumber}
                   onChange={(value) => setPhoneNumber(value || '')}
-                  defaultCountry="US"
+                  defaultCountry={selectedCountry}
+                  displayInitialValueAsLocalNumber
                   disabled={callAndWritetoCrmMutation.isPending}
                 />
                 {phoneNumber && !isValid && (
