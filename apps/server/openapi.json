@@ -634,6 +634,45 @@
             }
           }
         }
+      },
+      "delete": {
+        "tags": [
+          "Voice AI"
+        ],
+        "summary": "End Call",
+        "description": "End an ongoing call programmatically.\n\nArgs:\n    call_id: The unique identifier for the call to end\n    current_user: The authenticated user\n    voice_ai_service: The Voice AI service instance from dependency injection\n    \nRaises:\n    HTTPException: If the call is not found or cannot be ended",
+        "operationId": "end_call_api_voice_ai_calls__call_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "call_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Call Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/workflows/monitored-call": {
