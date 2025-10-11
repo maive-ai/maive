@@ -37,7 +37,7 @@ from src.ai.voice_ai.schemas import (
     WebhookEvent,
     WebhookEventData,
 )
-from src.workflows.constants import ClaimStatus
+from src.integrations.crm.constants import ClaimStatus
 from src.utils.logger import logger
 
 
@@ -581,7 +581,7 @@ class VapiProvider(VoiceAIProvider):
                     "claim_status": {
                         "type": "string",
                         "enum": [status.value for status in ClaimStatus],
-                        "description": "Current status of the insurance claim",
+                        "description": f"Current status of the insurance claim. Options: {', '.join([f'{s.value} ({s.description})' for s in ClaimStatus])}",
                     },
                     "payment_details": {
                         "type": "object",
