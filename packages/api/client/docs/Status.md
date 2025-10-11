@@ -8,7 +8,7 @@ Status values for Service Titan jobs and projects.
 
 * `Dispatched` (value: `'Dispatched'`)
 
-* `InProgress` (value: `'InProgress'`)
+* `InProgress` (value: `'In Progress'`)
 
 * `Hold` (value: `'Hold'`)
 

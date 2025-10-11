@@ -9,12 +9,11 @@ import random
 from datetime import UTC, datetime
 
 from src.integrations.crm.constants import Status
-from src.integrations.crm.schemas import ProjectData, ContactInfo, Project
-
+from src.integrations.crm.schemas import ContactInfo, Project, ProjectData
 
 # Default phone number for all mock data
 DEFAULT_PHONE_NUMBER = "+1-703-268-1917"
-    
+
 
 # Project statuses
 PROJECT_STATUSES = [status.value for status in Status]
@@ -27,7 +26,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="John Smith",
         address="123 Main St, Austin, TX 78701",
         phone=DEFAULT_PHONE_NUMBER,
-        email="john.smith@email.com",
+        email="john.smith@gmail.com",
         claimNumber="CLM-2024-001",
         dateOfLoss="2024-08-15",
         insuranceAgency="State Farm Insurance",
@@ -49,7 +48,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="Emily Davis",
         address="456 Oak Avenue, Dallas, TX 75201",
         phone=DEFAULT_PHONE_NUMBER,
-        email="emily.davis@email.com",
+        email="emily.davis@gmail.com",
         claimNumber="CLM-2024-002",
         dateOfLoss="2024-09-01",
         insuranceAgency="Allstate Insurance",
@@ -71,7 +70,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="Michael Thompson",
         address="789 Pine Street, Houston, TX 77001",
         phone=DEFAULT_PHONE_NUMBER,
-        email="michael.thompson@email.com",
+        email="michael.thompson@gmail.com",
         claimNumber="CLM-2024-003",
         dateOfLoss="2024-08-28",
         insuranceAgency="USAA Insurance",
@@ -93,7 +92,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="Sarah Wilson",
         address="321 Elm Drive, San Antonio, TX 78201",
         phone=DEFAULT_PHONE_NUMBER,
-        email="sarah.wilson@email.com",
+        email="sarah.wilson@gmail.com",
         claimNumber="CLM-2024-004",
         dateOfLoss="2024-09-10",
         insuranceAgency="Farmers Insurance",
@@ -115,7 +114,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="Robert Johnson",
         address="654 Cedar Lane, Fort Worth, TX 76101",
         phone=DEFAULT_PHONE_NUMBER,
-        email="robert.johnson@email.com",
+        email="robert.johnson@gmail.com",
         notes="Maintenance customer. No insurance claim.",
     ),
     ProjectData(
@@ -123,7 +122,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="Jennifer Martinez",
         address="987 Maple Avenue, Plano, TX 75023",
         phone=DEFAULT_PHONE_NUMBER,
-        email="jennifer.martinez@email.com",
+        email="jennifer.martinez@gmail.com",
         claimNumber="CLM-2024-005",
         dateOfLoss="2024-09-05",
         insuranceAgency="Liberty Mutual",
@@ -145,7 +144,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="David Chen",
         address="456 Willow Street, Richardson, TX 75080",
         phone=DEFAULT_PHONE_NUMBER,
-        email="david.chen@email.com",
+        email="david.chen@gmail.com",
         claimNumber="CLM-2024-006",
         dateOfLoss="2024-08-20",
         insuranceAgency="Progressive Insurance",
@@ -167,7 +166,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="Lisa Anderson",
         address="321 Sunset Drive, Garland, TX 75040",
         phone=DEFAULT_PHONE_NUMBER,
-        email="lisa.anderson@email.com",
+        email="lisa.anderson@gmail.com",
         claimNumber="CLM-2024-007",
         dateOfLoss="2024-09-12",
         insuranceAgency="Geico Insurance",
@@ -189,7 +188,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="Mark Wilson",
         address="789 Oak Hill Lane, Irving, TX 75061",
         phone=DEFAULT_PHONE_NUMBER,
-        email="mark.wilson@email.com",
+        email="mark.wilson@gmail.com",
         notes="Routine maintenance check. Long-term customer.",
     ),
     ProjectData(
@@ -197,7 +196,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="Amanda Foster",
         address="654 Pine Ridge Court, Mesquite, TX 75149",
         phone=DEFAULT_PHONE_NUMBER,
-        email="amanda.foster@email.com",
+        email="amanda.foster@gmail.com",
         claimNumber="CLM-2024-008",
         dateOfLoss="2024-08-30",
         insuranceAgency="Nationwide Insurance",
@@ -219,7 +218,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="Christopher Davis",
         address="123 Cedar Creek Drive, Grand Prairie, TX 75050",
         phone=DEFAULT_PHONE_NUMBER,
-        email="christopher.davis@email.com",
+        email="christopher.davis@gmail.com",
         claimNumber="CLM-2024-009",
         dateOfLoss="2024-09-08",
         insuranceAgency="Travelers Insurance",
@@ -241,7 +240,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="Rebecca Martinez",
         address="987 Elm Street, Carrollton, TX 75006",
         phone=DEFAULT_PHONE_NUMBER,
-        email="rebecca.martinez@email.com",
+        email="rebecca.martinez@gmail.com",
         notes="Preventive maintenance customer. Annual inspection due.",
     ),
     ProjectData(
@@ -249,7 +248,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="Daniel Rodriguez",
         address="456 Birch Lane, Lewisville, TX 75057",
         phone=DEFAULT_PHONE_NUMBER,
-        email="daniel.rodriguez@email.com",
+        email="daniel.rodriguez@gmail.com",
         claimNumber="CLM-2024-010",
         dateOfLoss="2024-09-15",
         insuranceAgency="Hartford Insurance",
@@ -271,7 +270,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="Stephanie White",
         address="321 Valley View Road, Flower Mound, TX 75022",
         phone=DEFAULT_PHONE_NUMBER,
-        email="stephanie.white@email.com",
+        email="stephanie.white@gmail.com",
         notes="New customer referral. Interested in full roof replacement.",
     ),
     ProjectData(
@@ -279,7 +278,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="Thomas Brown",
         address="789 Highland Park Drive, Arlington, TX 76010",
         phone=DEFAULT_PHONE_NUMBER,
-        email="thomas.brown@email.com",
+        email="thomas.brown@gmail.com",
         claimNumber="CLM-2024-011",
         dateOfLoss="2024-09-03",
         insuranceAgency="Amica Insurance",
@@ -301,7 +300,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="Patricia Garcia",
         address="654 Mountain View Circle, Euless, TX 76039",
         phone=DEFAULT_PHONE_NUMBER,
-        email="patricia.garcia@email.com",
+        email="patricia.garcia@gmail.com",
         notes="Maintenance customer. Gutter cleaning and inspection.",
     ),
     ProjectData(
@@ -309,7 +308,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="William Lee",
         address="123 Riverside Drive, Bedford, TX 76021",
         phone=DEFAULT_PHONE_NUMBER,
-        email="william.lee@email.com",
+        email="william.lee@gmail.com",
         claimNumber="CLM-2024-012",
         dateOfLoss="2024-08-25",
         insuranceAgency="MetLife Insurance",
@@ -331,7 +330,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="Michelle Taylor",
         address="987 Forest Glen Way, Hurst, TX 76053",
         phone=DEFAULT_PHONE_NUMBER,
-        email="michelle.taylor@email.com",
+        email="michelle.taylor@gmail.com",
         claimNumber="CLM-2024-013",
         dateOfLoss="2024-09-10",
         insuranceAgency="Chubb Insurance",
@@ -353,7 +352,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="Joseph Martinez",
         address="456 Creekside Lane, Colleyville, TX 76034",
         phone=DEFAULT_PHONE_NUMBER,
-        email="joseph.martinez@email.com",
+        email="joseph.martinez@gmail.com",
         notes="Regular maintenance customer. Quarterly inspections.",
     ),
     ProjectData(
@@ -361,7 +360,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="Karen Anderson",
         address="321 Oakwood Drive, Grapevine, TX 76051",
         phone=DEFAULT_PHONE_NUMBER,
-        email="karen.anderson@email.com",
+        email="karen.anderson@gmail.com",
         claimNumber="CLM-2024-014",
         dateOfLoss="2024-09-07",
         insuranceAgency="American Family Insurance",
@@ -383,7 +382,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="Steven Wilson",
         address="789 Meadowbrook Lane, Southlake, TX 76092",
         phone=DEFAULT_PHONE_NUMBER,
-        email="steven.wilson@email.com",
+        email="steven.wilson@gmail.com",
         notes="New construction inspection. High-end residential project.",
     ),
     ProjectData(
@@ -391,7 +390,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="Nancy Rodriguez",
         address="654 Sunset Boulevard, Mansfield, TX 76063",
         phone=DEFAULT_PHONE_NUMBER,
-        email="nancy.rodriguez@email.com",
+        email="nancy.rodriguez@gmail.com",
         claimNumber="CLM-2024-015",
         dateOfLoss="2024-09-02",
         insuranceAgency="Safeco Insurance",
@@ -413,7 +412,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="Richard Davis",
         address="123 Prairie View Drive, Cedar Hill, TX 75104",
         phone=DEFAULT_PHONE_NUMBER,
-        email="richard.davis@email.com",
+        email="richard.davis@gmail.com",
         notes="Routine maintenance customer. Annual roof cleaning.",
     ),
     ProjectData(
@@ -421,7 +420,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="Helen Garcia",
         address="987 Hillside Avenue, DeSoto, TX 75115",
         phone=DEFAULT_PHONE_NUMBER,
-        email="helen.garcia@email.com",
+        email="helen.garcia@gmail.com",
         claimNumber="CLM-2024-016",
         dateOfLoss="2024-08-28",
         insuranceAgency="Auto-Owners Insurance",
@@ -443,7 +442,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="Paul Thompson",
         address="456 Garden Valley Road, Lancaster, TX 75146",
         phone=DEFAULT_PHONE_NUMBER,
-        email="paul.thompson@email.com",
+        email="paul.thompson@gmail.com",
         claimNumber="CLM-2024-017",
         dateOfLoss="2024-09-11",
         insuranceAgency="Mutual of Omaha",
@@ -465,7 +464,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="Dorothy Lee",
         address="321 Brookside Drive, Duncanville, TX 75116",
         phone=DEFAULT_PHONE_NUMBER,
-        email="dorothy.lee@email.com",
+        email="dorothy.lee@gmail.com",
         notes="Senior citizen customer. Preventive maintenance and inspection.",
     ),
     ProjectData(
@@ -473,7 +472,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="Kenneth Martinez",
         address="789 Woodland Trail, Glenn Heights, TX 75154",
         phone=DEFAULT_PHONE_NUMBER,
-        email="kenneth.martinez@email.com",
+        email="kenneth.martinez@gmail.com",
         claimNumber="CLM-2024-018",
         dateOfLoss="2024-09-04",
         insuranceAgency="Cincinnati Insurance",
@@ -495,7 +494,7 @@ MOCK_PROJECTS_RAW: list[ProjectData] = [
         customerName="Betty Anderson",
         address="654 Maple Ridge Circle, Red Oak, TX 75154",
         phone=DEFAULT_PHONE_NUMBER,
-        email="betty.anderson@email.com",
+        email="betty.anderson@gmail.com",
         notes="Long-term customer. Quarterly gutter maintenance and roof inspection.",
     ),
 ]
@@ -526,7 +525,6 @@ def get_mock_projects() -> list[Project]:
 
     projects = []
     for project_data in MOCK_PROJECTS_RAW:
-
         # Add Service Titan-like metadata with numeric tenant and job_id
         project_data.tenant = 1
         project_data.job_id = _derive_numeric_job_id(project_data.id)
