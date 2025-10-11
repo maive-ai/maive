@@ -1,6 +1,3 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { AlertCircle, Building2, FileText, Loader2, User } from 'lucide-react';
-import { useState } from 'react';
 import { useCreateProject, type ProjectData } from '@/clients/crm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { env } from '@/env';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { AlertCircle, Building2, FileText, Loader2, User } from 'lucide-react';
+import { useState } from 'react';
 
 export const Route = createFileRoute('/_authed/create-project')({
   component: CreateProject,
@@ -175,7 +175,7 @@ function CreateProject() {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="customer@email.com"
+                      placeholder="customer@gmail.com"
                     />
                   </div>
                 </div>

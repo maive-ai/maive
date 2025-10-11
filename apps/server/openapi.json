@@ -2306,7 +2306,7 @@
         "enum": [
           "Scheduled",
           "Dispatched",
-          "InProgress",
+          "In Progress",
           "Hold",
           "Completed",
           "Canceled"
