@@ -197,6 +197,9 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+      pcm-player:
+        specifier: ^0.0.18
+        version: 0.0.18
       react:
         specifier: 'catalog:'
         version: 19.1.1
@@ -4403,6 +4406,9 @@ packages:
   path-type@4.0.0:
     resolution: {integrity: sha512-gDKb8aZMDeD/tZWs9P6+q0J9Mwkdl6xMV8TjnGP3qJVJ06bdMgkbBlLU8IdfOsIsFz2BW1rNVT3XuNEl8zPAvw==}
     engines: {node: '>=8'}
+
+  pcm-player@0.0.18:
+    resolution: {integrity: sha512-kRamagzBRlcLORBlLxb4UADPwqyGOiGgkzhZsIwtMGS7n6Hlp7h44PaEL8TIybzSkyMcIvvsQjUCuphW+aeDkg==}
 
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
@@ -10263,6 +10269,8 @@ snapshots:
   path-to-regexp@8.2.0: {}
 
   path-type@4.0.0: {}
+
+  pcm-player@0.0.18: {}
 
   picocolors@1.1.1: {}
 
