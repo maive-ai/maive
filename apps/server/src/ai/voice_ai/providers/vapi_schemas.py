@@ -9,6 +9,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from src.integrations.crm.constants import ClaimStatus
+
 
 class VapiEndpoints:
     """Vapi API endpoint paths."""

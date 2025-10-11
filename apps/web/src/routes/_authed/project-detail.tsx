@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/ui/phone-input';
+import { getClaimStatusColor } from '@/lib/utils';
+import { ClaimStatus } from '@maive/api/client';
 import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
 import { createFileRoute } from '@tanstack/react-router';
 import { AlertCircle, Building2, CheckCircle2, FileText, Loader2, Mail, MapPin, Phone, User } from 'lucide-react';
@@ -25,13 +27,13 @@ export const Route = createFileRoute('/_authed/project-detail')({
 function ProjectDetail() {
   const { projectId } = Route.useSearch();
   const { data: project, isLoading, isError } = useFetchProject(projectId);
-  
+
   // Initialize hooks before any early returns
   const providerData = project?.provider_data as any;
   const [phoneNumber, setPhoneNumber] = useState<E164Number | ''>('');
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
   const [listenUrl, setListenUrl] = useState<string | null>(null);
-  const callAndWritetoCrmMutation = useCallAndWriteToCrm();
+  const callAndWritetoCrmMutation = useCallAndWriteToCrm(projectId);
   const endCallMutation = useEndCall();
 
   const isValid = phoneNumber ? isValidPhoneNumber(phoneNumber) : false;
@@ -137,6 +139,11 @@ function ProjectDetail() {
                 <div>
                   <CardTitle className="text-2xl">{providerData?.customerName || 'Customer Name'}</CardTitle>
                 </div>
+                {project.claim_status && project.claim_status !== ClaimStatus.None && (
+                  <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getClaimStatusColor(project.claim_status)}`}>
+                    {project.claim_status}
+                  </div>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
