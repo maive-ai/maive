@@ -214,6 +214,25 @@ class CallAndWriteToCRMWorkflow:
                     f"[Call Monitoring Workflow] Successfully added CRM note for job {job_id}"
                 )
 
+            # Update claim status in CRM
+            if analysis.structured_data.claim_status:
+                logger.info(
+                    f"[Call Monitoring Workflow] Updating claim status for job {job_id} to {analysis.structured_data.claim_status}"
+                )
+                status_update_result = await self.crm_service.update_project_claim_status(
+                    job_id=job_id,
+                    claim_status=analysis.structured_data.claim_status,
+                )
+
+                if status_update_result:
+                    logger.error(
+                        f"[Call Monitoring Workflow] Failed to update claim status for job {job_id}: {status_update_result.error}"
+                    )
+                else:
+                    logger.info(
+                        f"[Call Monitoring Workflow] Successfully updated claim status for job {job_id}"
+                    )
+
         except Exception as e:
             logger.error(
                 f"[Call Monitoring Workflow] Error processing completed call {call_id}: {e}"

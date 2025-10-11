@@ -252,6 +252,24 @@ export type CallStatus = typeof CallStatus[keyof typeof CallStatus];
 
 
 /**
+ * Claim status values with descriptions for AI context.
+ * @export
+ * @enum {string}
+ */
+
+export const ClaimStatus = {
+    None: 'None',
+    PendingReview: 'Pending Review',
+    WorkNeeded: 'Work Needed',
+    PartiallyApproved: 'Partially Approved',
+    FullyApproved: 'Fully Approved',
+    Denied: 'Denied'
+} as const;
+
+export type ClaimStatus = typeof ClaimStatus[keyof typeof ClaimStatus];
+
+
+/**
  * Provider-agnostic structured data from insurance claim status calls.
  * @export
  * @interface ClaimStatusData
@@ -265,10 +283,10 @@ export interface ClaimStatusData {
     'call_outcome'?: string;
     /**
      * Claim status: approved, denied, pending_review, etc.
-     * @type {string}
+     * @type {ClaimStatus}
      * @memberof ClaimStatusData
      */
-    'claim_status'?: string;
+    'claim_status'?: ClaimStatus;
     /**
      * 
      * @type {PaymentDetails}
@@ -288,6 +306,8 @@ export interface ClaimStatusData {
      */
     'claim_update_summary'?: string | null;
 }
+
+
 /**
  * Contact information model.
  * @export
@@ -1015,6 +1035,12 @@ export interface ProjectStatusResponse {
      * @memberof ProjectStatusResponse
      */
     'status': Status;
+    /**
+     * Current claim status
+     * @type {ClaimStatus}
+     * @memberof ProjectStatusResponse
+     */
+    'claim_status'?: ClaimStatus;
     /**
      * CRM provider
      * @type {CRMProvider}

@@ -1093,6 +1093,19 @@
         "title": "CallStatus",
         "description": "Call status values across Voice AI systems."
       },
+      "ClaimStatus": {
+        "type": "string",
+        "enum": [
+          "None",
+          "Pending Review",
+          "Work Needed",
+          "Partially Approved",
+          "Fully Approved",
+          "Denied"
+        ],
+        "title": "ClaimStatus",
+        "description": "Claim status values with descriptions for AI context."
+      },
       "ClaimStatusData": {
         "properties": {
           "call_outcome": {
@@ -1102,10 +1115,9 @@
             "default": "unknown"
           },
           "claim_status": {
-            "type": "string",
-            "title": "Claim Status",
+            "$ref": "#/components/schemas/ClaimStatus",
             "description": "Claim status: approved, denied, pending_review, etc.",
-            "default": "unknown"
+            "default": "None"
           },
           "payment_details": {
             "anyOf": [
@@ -2136,6 +2148,11 @@
           "status": {
             "$ref": "#/components/schemas/Status",
             "description": "Current project status"
+          },
+          "claim_status": {
+            "$ref": "#/components/schemas/ClaimStatus",
+            "description": "Current claim status",
+            "default": "None"
           },
           "provider": {
             "$ref": "#/components/schemas/CRMProvider",

@@ -306,3 +306,38 @@ class CRMService:
                 error_code="UNKNOWN_ERROR",
                 provider=getattr(self.crm_provider, 'provider_name', None)
             )
+
+    async def update_project_claim_status(
+        self,
+        job_id: int,
+        claim_status: str,
+    ) -> CRMErrorResponse | None:
+        """
+        Update the claim status for a specific project/job.
+
+        Args:
+            job_id: The job identifier
+            claim_status: The new claim status value
+
+        Returns:
+            CRMErrorResponse if error occurs, None on success
+        """
+        try:
+            logger.info(f"Updating claim status for job {job_id} to {claim_status}")
+            await self.crm_provider.update_project_claim_status(job_id, claim_status)
+            logger.info(f"Successfully updated claim status for job {job_id}")
+            return None
+        except CRMError as e:
+            logger.error(f"CRM error updating claim status for job {job_id}: {e.message}")
+            return CRMErrorResponse(
+                error=e.message,
+                error_code=e.error_code,
+                provider=getattr(self.crm_provider, 'provider_name', None)
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error updating claim status for job {job_id}: {e}")
+            return CRMErrorResponse(
+                error=f"Unexpected error: {str(e)}",
+                error_code="UNKNOWN_ERROR",
+                provider=getattr(self.crm_provider, 'provider_name', None)
+            )
