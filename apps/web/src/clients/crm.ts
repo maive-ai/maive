@@ -38,6 +38,9 @@ export async function fetchAllProjects(): Promise<ProjectStatusListResponse> {
   const api = await createCRMApi();
 
   const response = await api.getAllProjectStatusesApiCrmProjectsStatusGet();
+  console.log(
+    `[CRM Client] Fetched ${response.data.total_count} projects with claim statuses`
+  );
   return response.data;
 }
 
@@ -47,6 +50,9 @@ export async function fetchAllProjects(): Promise<ProjectStatusListResponse> {
 export async function fetchProjectStatus(projectId: string): Promise<ProjectStatusResponse> {
   const api = await createCRMApi();
   const response = await api.getProjectStatusApiCrmProjectsProjectIdStatusGet(projectId);
+  console.log(
+    `[CRM Client] Fetched project ${projectId} - Status: ${response.data.status}, Claim Status: ${response.data.claim_status}`
+  );
   return response.data;
 }
 
@@ -91,7 +97,7 @@ export async function createProject(projectData: ProjectData): Promise<void> {
  * React Query mutation hook for creating a new project
  * Invalidates projects query on success to refresh the list
  */
-export function useCreateProject() {
+export function useCreateProject(): ReturnType<typeof useMutation<void, Error, ProjectData>> {
   const queryClient = useQueryClient();
 
   return useMutation({

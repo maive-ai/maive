@@ -6,7 +6,7 @@ import {
   type CallRequest,
   type CallResponse,
 } from '@maive/api/client';
-import { useMutation, type UseMutationResult } from '@tanstack/react-query';
+import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 
 import { getIdToken } from '@/auth';
 import { env } from '@/env';
@@ -45,15 +45,35 @@ export async function callAndWriteToCrm(
 
 /**
  * React Query mutation hook for creating outbound calls
+ * @param projectId - Optional project ID to invalidate queries after call completes
  */
-export function useCallAndWriteToCrm(): UseMutationResult<CallResponse, Error, CallRequest> {
+export function useCallAndWriteToCrm(projectId?: string): UseMutationResult<CallResponse, Error, CallRequest> {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: callAndWriteToCrm,
-    onSuccess: (callResponse) => {
-      console.log(`Voice AI call created: ${callResponse.call_id}`);
+    onSuccess: async (callResponse) => {
+      console.log(`[Workflows] Voice AI call created: ${callResponse.call_id}`);
+
+      // Invalidate project queries to refetch updated status
+      if (projectId) {
+        console.log(`[Workflows] Invalidating project query for: ${projectId}`);
+        await queryClient.invalidateQueries({ queryKey: ['project-status', projectId] });
+
+        // Log the refetched data
+        const projectData = queryClient.getQueryData(['project-status', projectId]) as any;
+        if (projectData) {
+          console.log(
+            `[Workflows] Refetched project ${projectId} after call - ` +
+            `Status: ${projectData.status}, Claim Status: ${projectData.claim_status}`
+          );
+        }
+      }
+      console.log('[Workflows] Invalidating all projects query');
+      await queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
     onError: (error) => {
-      console.error('Failed to create voice AI call:', error);
+      console.error('[Workflows] Failed to create voice AI call:', error);
     },
   });
 }

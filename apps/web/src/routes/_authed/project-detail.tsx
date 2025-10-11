@@ -1,20 +1,19 @@
-import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
-
-import { createFileRoute } from '@tanstack/react-router';
-import { AlertCircle, Building2, FileText, Loader2, Mail, MapPin, Phone, User } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import type { Value as E164Number } from 'react-phone-number-input';
-import { isValidPhoneNumber, parsePhoneNumber } from 'react-phone-number-input';
-
 import { useEndCall } from '@/clients/ai/voice';
 import { useFetchProject } from '@/clients/crm';
 import { useCallAndWriteToCrm } from '@/clients/workflows';
-import { E164PhoneInput } from '@/components/E164PhoneInput';
 import { CallAudioVisualizer } from '@/components/call/CallAudioVisualizer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { getStatusColor } from '@/lib/utils';
+import { PhoneInput } from '@/components/ui/phone-input';
+import { getClaimStatusColor } from '@/lib/utils';
+import { ClaimStatus } from '@maive/api/client';
+import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
+import { createFileRoute } from '@tanstack/react-router';
+import { AlertCircle, Building2, CheckCircle2, FileText, Loader2, Mail, MapPin, Phone, User } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import type { Value as E164Number } from 'react-phone-number-input';
+import { isValidPhoneNumber } from 'react-phone-number-input';
 
 export const Route = createFileRoute('/_authed/project-detail')({
   component: ProjectDetail,
@@ -28,14 +27,13 @@ export const Route = createFileRoute('/_authed/project-detail')({
 function ProjectDetail() {
   const { projectId } = Route.useSearch();
   const { data: project, isLoading, isError } = useFetchProject(projectId);
-  
+
   // Initialize hooks before any early returns
   const providerData = project?.provider_data as any;
   const [phoneNumber, setPhoneNumber] = useState<E164Number | ''>('');
-  // Country parsing handled by E164PhoneInput
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
   const [listenUrl, setListenUrl] = useState<string | null>(null);
-  const callAndWritetoCrmMutation = useCallAndWriteToCrm();
+  const callAndWritetoCrmMutation = useCallAndWriteToCrm(projectId);
   const endCallMutation = useEndCall();
 
   const isValid = phoneNumber ? isValidPhoneNumber(phoneNumber) : false;
@@ -44,27 +42,7 @@ function ProjectDetail() {
   useEffect(() => {
     if (project && providerData) {
       const insurancePhone = providerData?.insuranceAgencyContact?.phone || providerData?.phone || '';
-      
-      if (insurancePhone) {
-        try {
-          // Parse the phone number to get E.164 format
-          const parsedPhone = parsePhoneNumber(insurancePhone);
-          if (parsedPhone) {
-            // Set the full E.164 number - the component will auto-detect country and format
-            setPhoneNumber(parsedPhone.number as E164Number);
-            // Country handled by E164PhoneInput
-          } else {
-            // If parsing fails, just set the phone number as-is
-            setPhoneNumber(insurancePhone as E164Number);
-          }
-        } catch (error) {
-          // If parsing fails, just set the phone number as-is
-          console.warn('Failed to parse phone number:', insurancePhone, error);
-          setPhoneNumber(insurancePhone as E164Number);
-        }
-      } else {
-        setPhoneNumber('');
-      }
+      setPhoneNumber(insurancePhone as E164Number | '');
     }
   }, [project, providerData]);
 
@@ -158,12 +136,14 @@ function ProjectDetail() {
                 <div className="size-10 rounded-lg bg-gradient-to-br from-orange-400 to-pink-400 flex items-center justify-center">
                   <Building2 className="size-6 text-white" />
                 </div>
-                <div className="flex-1">
+                <div>
                   <CardTitle className="text-2xl">{providerData?.customerName || 'Customer Name'}</CardTitle>
                 </div>
-                <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
-                  {project.status}
-                </div>
+                {project.claim_status && project.claim_status !== ClaimStatus.None && (
+                  <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getClaimStatusColor(project.claim_status)}`}>
+                    {project.claim_status}
+                  </div>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -211,6 +191,37 @@ function ProjectDetail() {
                     </div>
                   </div>
                 </div>
+
+                {/* Notes */}
+                <div>
+                  <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
+                    Notes
+                  </p>
+                  <div className="space-y-3 pl-2">
+                    <p className="text-gray-600 whitespace-pre-wrap">{providerData?.notes || 'No notes'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Insurance Agency Contact */}
+              <div className="border-t pt-6">
+                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
+                  Insurance Agency Contact
+                </p>
+                <div className="space-y-3 pl-2">
+                  <div className="flex items-center gap-3">
+                    <User className="size-4 text-gray-400" />
+                    <p className="text-gray-700">{providerData?.insuranceAgencyContact?.name || 'Not available'}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Phone className="size-4 text-gray-400" />
+                    <p className="text-gray-600">{providerData?.insuranceAgencyContact?.phone || 'Not available'}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Mail className="size-4 text-gray-400" />
+                    <p className="text-gray-600 break-all">{providerData?.insuranceAgencyContact?.email || 'Not available'}</p>
+                  </div>
+                </div>
               </div>
 
               {/* Adjuster Contact */}
@@ -233,16 +244,6 @@ function ProjectDetail() {
                   </div>
                 </div>
               </div>
-
-              {/* Notes */}
-              <div className="border-t pt-6">
-                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
-                  Notes
-                </p>
-                <div className="space-y-3 pl-2">
-                  <p className="text-gray-600 whitespace-pre-wrap">{providerData?.notes || 'No notes'}</p>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </div>
@@ -261,18 +262,19 @@ function ProjectDetail() {
                 </div>
                 <div>
                   <CardTitle className="text-xl">Maive Assistant AI</CardTitle>
-                  <p className="text-sm text-gray-600">Initiate a call with your AI Assistant to check on a claim.</p>
+                  <p className="text-sm text-gray-600">Let your AI Assistant Riley check on a claim.</p>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="phone-number">Phone Number</Label>
-                <E164PhoneInput
+                <PhoneInput
                   id="phone-number"
                   placeholder="Enter phone number"
                   value={phoneNumber}
                   onChange={(value) => setPhoneNumber(value || '')}
+                  defaultCountry="US"
                   disabled={callAndWritetoCrmMutation.isPending}
                 />
                 {phoneNumber && !isValid && (
@@ -281,6 +283,24 @@ function ProjectDetail() {
                   </p>
                 )}
               </div>
+
+              {/* Success Message */}
+              {callAndWritetoCrmMutation.isSuccess && callAndWritetoCrmMutation.data && (
+                <div className="flex items-start gap-3 rounded-lg bg-green-50 border border-green-200 p-4">
+                  <CheckCircle2 className="size-5 text-green-600 mt-0.5" />
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-medium text-green-900">
+                      Call started!
+                    </p>
+                    <p className="text-sm text-green-700">
+                      Call ID: {callAndWritetoCrmMutation.data.call_id}
+                    </p>
+                    <p className="text-xs text-green-600">
+                      Status: {callAndWritetoCrmMutation.data.status}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Error Message */}
               {callAndWritetoCrmMutation.isError && (
@@ -324,7 +344,7 @@ function ProjectDetail() {
                       Creating Call...
                     </>
                   ) : (
-                    `Start Call with ${providerData?.adjusterContact?.name || 'Contact'}`
+                    `Start Call with ${providerData?.insuranceAgencyContact?.name || 'Contact'}`
                   )
                 )}
               </Button>

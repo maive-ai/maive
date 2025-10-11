@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 from src.ai.voice_ai.constants import CallStatus, VoiceAIErrorCode, WebhookEventType
 from src.ai.voice_ai.constants import VoiceAIProvider as VoiceAIProviderEnum
+from src.integrations.crm.constants import ClaimStatus
 
 
 class CallRequest(BaseModel):
@@ -243,8 +244,8 @@ class ClaimStatusData(BaseModel):
         default="unknown",
         description="Call outcome: success, voicemail, gatekeeper, failed",
     )
-    claim_status: str = Field(
-        default="unknown",
+    claim_status: ClaimStatus = Field(
+        default=ClaimStatus.NONE,
         description="Claim status: approved, denied, pending_review, etc.",
     )
     payment_details: PaymentDetails | None = Field(None, description="Payment details")
@@ -258,9 +259,21 @@ class ClaimStatusData(BaseModel):
     @classmethod
     def from_vapi(cls, vapi_data: dict[str, Any]) -> "ClaimStatusData":
         """Create from Vapi-specific structured data."""
+        # Handle claim_status - can be string or ClaimStatus enum
+        claim_status_value = vapi_data.get("claim_status", ClaimStatus.NONE)
+        if isinstance(claim_status_value, str):
+            # Try to convert string to enum
+            try:
+                claim_status = ClaimStatus(claim_status_value)
+            except ValueError:
+                # If conversion fails, use NONE as default
+                claim_status = ClaimStatus.NONE
+        else:
+            claim_status = claim_status_value or ClaimStatus.NONE
+
         return cls(
             call_outcome=vapi_data.get("call_outcome", "unknown"),
-            claim_status=vapi_data.get("claim_status"),
+            claim_status=claim_status,
             payment_details=(
                 PaymentDetails.from_vapi(vapi_data["payment_details"])
                 if vapi_data.get("payment_details")
