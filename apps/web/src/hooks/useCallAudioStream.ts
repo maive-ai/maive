@@ -1,91 +1,55 @@
+import PCMPlayer from 'pcm-player';
 import { useEffect, useRef, useState } from 'react';
 
-const SAMPLE_RATE = 48000;
 const FFT_SIZE = 256;
 const UINT8_MAX_VALUE = 255;
+
 interface AudioStreamState {
   isConnected: boolean;
-  isPlaying: boolean;
-  volumeLevel: number; // Add volume tracking (0-1)
+  volumeLevel: number;
   error: string | null;
 }
 
 export function useCallAudioStream(listenUrl: string | null) {
   const [state, setState] = useState<AudioStreamState>({
     isConnected: false,
-    isPlaying: false,
     volumeLevel: 0,
     error: null,
   });
   
   const wsRef = useRef<WebSocket | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
+  const playerRef = useRef<PCMPlayer | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const volumeIntervalRef = useRef<number | null>(null);
-  const nextPlayTimeRef = useRef(0);
   const isConnectingRef = useRef(false);
-  
-  const createAudioBuffer = (arrayBuffer: ArrayBuffer): AudioBuffer | null => {
-    const audioContext = audioContextRef.current;
-    if (!audioContext) return null;
+
+  const setupPlayer = (): void => {
+    // Initialize PCMPlayer with built-in analyser
+    const player = new PCMPlayer({
+      inputCodec: 'Int16',
+      channels: 2,
+      sampleRate: 24000,
+      flushTime: 50, // Low latency buffer (50ms)
+      fftSize: FFT_SIZE,
+    });
+    playerRef.current = player;
     
-    const pcmData = new Int16Array(arrayBuffer);
-    const audioBuffer = audioContext.createBuffer(1, pcmData.length, SAMPLE_RATE);
-    const channelData = audioBuffer.getChannelData(0);
-    
-    // Convert Int16 PCM to Float32
-    for (let i = 0; i < pcmData.length; i++) {
-      const sample = pcmData[i];
-      if (sample !== undefined) {
-        channelData[i] = sample / 32768.0;
-      }
-    }
-    
-    return audioBuffer;
-  };
-  
-  const playAudioChunk = (arrayBuffer: ArrayBuffer): void => {
-    const audioContext = audioContextRef.current;
-    const analyser = analyserRef.current;
-    
-    if (!audioContext || !analyser) return;
-    
-    try {
-      const audioBuffer = createAudioBuffer(arrayBuffer);
-      if (!audioBuffer) return;
-      
-      // Initialize play time on first chunk
-      if (nextPlayTimeRef.current < audioContext.currentTime) {
-        nextPlayTimeRef.current = audioContext.currentTime;
-      }
-      
-      const source = audioContext.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(analyser);
-      analyser.connect(audioContext.destination);
-      source.start(nextPlayTimeRef.current);
-      
-      nextPlayTimeRef.current += audioBuffer.duration;
-      setState(prev => ({ ...prev, isPlaying: true }));
-    } catch (error) {
-      console.error('[Audio Stream] Playback error:', error);
-    }
-  };
-  
-  const setupAudioContext = (): void => {
-    const audioContext = new AudioContext();
-    audioContextRef.current = audioContext;
-    
-    const analyser = audioContext.createAnalyser();
-    analyser.fftSize = FFT_SIZE;
-    analyserRef.current = analyser;
+    // Use PCMPlayer's built-in analyser
+    analyserRef.current = player.analyserNode;
     
     startVolumeMonitoring();
+    
+    // Try to resume if suspended (autoplay policy)
+    if (player.audioCtx.state === 'suspended') {
+      player.audioCtx.resume().catch((err: Error) => {
+        console.warn('[Audio Stream] AudioContext suspended (user interaction required):', err);
+      });
+    }
   };
   
   const handleWebSocketMessage = (event: MessageEvent): void => {
-    if (event.data instanceof Blob) {
-      event.data.arrayBuffer().then(playAudioChunk);
+    if (event.data instanceof ArrayBuffer) {
+      playerRef.current?.feed(event.data);
     }
   };
   
@@ -104,11 +68,12 @@ export function useCallAudioStream(listenUrl: string | null) {
   const handleWebSocketClose = (): void => {
     isConnectingRef.current = false;
     stopVolumeMonitoring();
-    setState(prev => ({ ...prev, isConnected: false, isPlaying: false, volumeLevel: 0 }));
+    setState(prev => ({ ...prev, isConnected: false, volumeLevel: 0 }));
   };
   
   const setupWebSocket = (url: string): void => {
     const ws = new WebSocket(url);
+    ws.binaryType = 'arraybuffer';
     wsRef.current = ws;
     
     ws.onopen = handleWebSocketOpen;
@@ -124,7 +89,7 @@ export function useCallAudioStream(listenUrl: string | null) {
     isConnectingRef.current = true;
     
     try {
-      setupAudioContext();
+      setupPlayer();
       setupWebSocket(listenUrl);
     } catch (err) {
       console.error('[Audio Stream] Failed to connect:', err);
@@ -174,24 +139,23 @@ export function useCallAudioStream(listenUrl: string | null) {
     wsRef.current = null;
   };
   
-  const cleanupAudioContext = (): void => {
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
+  const cleanupPlayer = (): void => {
+    if (playerRef.current) {
+      playerRef.current.destroy();
+      playerRef.current = null;
     }
     analyserRef.current = null;
   };
   
   const resetState = (): void => {
-    nextPlayTimeRef.current = 0;
     isConnectingRef.current = false;
-    setState({ isConnected: false, isPlaying: false, volumeLevel: 0, error: null });
+    setState({ isConnected: false, volumeLevel: 0, error: null });
   };
   
   const disconnect = () => {
     stopVolumeMonitoring();
     cleanupWebSocket();
-    cleanupAudioContext();
+    cleanupPlayer();
     resetState();
   };
   
