@@ -35,19 +35,6 @@ class VoiceAIProvider(str, Enum):
     VAPI = "vapi"
 
 
-class WebhookEventType(str, Enum):
-    """Standard webhook event types across providers."""
-
-    CALL_STARTED = "call_started"
-    CALL_ENDED = "call_ended"
-    FUNCTION_CALL = "function_call"
-    TRANSCRIPT = "transcript"
-    SPEECH_UPDATE = "speech_update"
-    CONVERSATION_UPDATE = "conversation_update"
-    STATUS_UPDATE = "status_update"
-    ERROR = "error"
-
-
 class VoiceAIErrorCode(str, Enum):
     """Standard error codes across Voice AI providers."""
 
