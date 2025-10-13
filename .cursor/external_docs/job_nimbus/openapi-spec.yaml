@@ -1,0 +1,1758 @@
+openapi: 3.0.0
+info:
+  title: JobNimbus Public API
+  description: >-
+    # Getting Started
+
+    This document describes how to construct API requests and handle responses
+    from the JobNimbus API.
+
+
+
+    # Building your API Request
+
+
+
+    When building your API Request, you will need to pass along a few values:
+    1.) the content-type, 2.) the authorization (API key), 3.) the base URL, 3.)
+    a set actor (optional), and 4.) your query (optional if performing a GET).
+
+
+
+
+    ## Supported HTTP  Methods
+
+    The JobNimbus API Supports the following HTTP Methods:
+
+
+    - GET
+
+    - PUT
+
+    - POST
+
+
+
+    ## JSON Support
+
+    The JobNimbus API is a REST-like API that allows exchanging data in JSON
+    format, only. JSON responses use the application/json content-type.
+
+        {
+        "count": 1,
+        "results": [
+            {
+                ...
+                "first_name": "David",
+                "display_name": "David JACKSON",
+                "last_name": "JACKSON",
+                "...
+            }
+        ]}
+    ## Base URL
+
+    The base URL for API endpoint requests:
+
+        https://app.jobnimbus.com/api1/
+
+    ## Requesting an API Key (Token)
+
+    In order to obtain an API key, customers of JobNimbus must log into their
+    account and go to settings ---> API ----> New API key --> Select Profile
+    ----> Set the integration name (if existing) or type in the name  in the
+    Description box --->save.
+
+
+    If you're a developer working on a new integration, you can create a free
+    trial account to develop with at https://www.jobnimbus.com/trial-signup.
+
+
+    ## Authentication
+
+    To authenticate requests, set an HTTP header named "Authorization" to
+    "Bearer <api token>"
+
+
+    The API token is a customer admin level token that grants permissions based
+    on the 'Access Profile' that is associated with the token.
+
+
+    *Sample Token*:
+
+        jilqy9efy8jk79v9
+
+    ## Setting an Actor
+
+
+    Optional: If the API token is associated with an 'Access Profile' that has
+    admin level permissions, you can optionally pass an 'actor' query string
+    parameter to cause the API request to inherit the permissions of a specific
+    JobNimbus user account. This will also affect the 'Created By' value of the
+    record in JobNimbus. For example, if you have a JobNimbus team member named
+    Samantha Rawlings and her email address is sam@company.com, then if you
+    passed her email address as the actor and created a contact in JobNimbus
+    through the API, that contact would show up as having been created by
+    Samantha. Additionally, if Samantha is a limited access user and you were to
+    make a call to 'GET /contacts', the results would only include contacts that
+    Samantha has access to.
+
+
+    *Example*:
+
+        "https://app.jobnimbus.com/api1/contacts?actor=sam%40company.com"
+
+    ## Common Query Parameters
+
+
+    Each endpoint utilizes common parameters to customize how a request may be
+    formatted, returns specific fields, or executes a requess. Below are the
+    parameters that are available for our most commonly used endpoints
+    (contacts, jobs, and notes):
+
+
+    * size - number of elements to return (default: 1000). Example: `?size=1000`
+
+    * from - zero based starting point to be used for pagination (default: 0)
+    Example: `?from=1`
+
+    * sort_field - which field to sort by (default: date_created). Example:
+    `?sort_field=date_created`
+
+    * sort_direction = which direction to sort the results (default: 'desc')
+    `?sort_direction=asc`
+
+    * fields - limit which fields to include in response (default: all fields
+    will be included)
+
+    * filter - URL encoded JSON filter object. Please see following section.
+
+    * bulk - This improves performance by optimistically saving the record. Note
+    that subsequent “search” type queries might not include this record for
+    several seconds. Example: `?bulk=true`
+
+    * skip (a comma separated list)- This causes JobNimbus to NOT perform
+    various automated actions. Example: `?skip=automation,notification`
+     * automation - This bypasses any automation triggers, ensuring your automation rules don’t get triggered.
+     * notification - This bypasses sending any type of notification (email, push notification, etc).
+
+    ## Queries via the API
+
+    Within a GET request via the JobNimbus API, you are able to pass a query
+    using ElasticSearch syntax (with JSON formatting). This query is passed at
+    the end of the base URL within your request following a question mark and
+    equal sign (?=).
+
+
+    *Examples*:
+
+
+    A GET request against the contacts API for a contact with the first name of
+    "John":
+
+        ?filter={"must":[{"term":{"first_name":"John"}}]}
+        
+    A GET request against the contacts API endpoint for all contacts with the
+    first name of "John" and last name of "Smith" would use a query  such as
+    this:
+
+        ?filter={"must":[{"term":{"first_name":"John"}},{"term":{"last_name":"Smith"}}]}
+    Return all of the contacts related to a specific JobNimbus contact's
+    JobNimbus id (id/jnid) and a specific workflow name:
+
+        ?filter={"must":[{"term":{"related.id":"abc12345"}},{"term":{"record_type_name":"Customer"}}]}
+        
+    ## Custom fields
+
+
+    If you have created custom fields for contacts or jobs, you may have the
+    need to access the information stored in these fields. Custom fields are
+    created via the Contact Fields or Job Fields section of your JobNimbus
+    Settings.
+
+
+    When viewing custom fields on a contact or job record from their respective
+    endpoints, the custom fields will typically be labeled with the name
+    assigned to them (i,e. “Date of Loss”) or a system-generated label for older
+    custom fields. These system-generated custom fields will be pre-labeled with
+    the prefix cf* annotating a custom field, an underscore, their field type,
+    another underscore, and number for that field (i,e. “cf_string_1”).
+
+
+    The following custom field types in JobNimbus will be passed in the
+    following data formats via the API:
+
+
+    * Text: String
+
+    * Date: Date
+
+    * Number: Long integer.
+
+    * Decimal: Double integer.
+
+    * Boolean: true/false
+
+    * Options list: string (separated by commas)
+
+
+    You can update a custom field via the <a
+    href="https://app.jobnimbus.com/customeradmin/Settings.aspx?autotab=Contact-Fields">Contact
+    Fields</a> and <a
+    href="https://app.jobnimbus.com/customeradmin/Settings.aspx?autotab=Job-Fields">Job
+    Fields</a> section of your JobNimbus Settings.
+
+
+    *Example*
+
+    ```
+
+    ...
+                "cf_string_1": "Two-leg. Requires sign-off by the spouse.",
+                "cf_date_1": 1550692800,
+                "Claim Number": "124523-f",
+                "Date of Loss": 1550692800
+                
+    ...
+
+    ```
+
+    ## Guidance on Escaping Special Characters in Json
+
+    In the payload of the request being sent to JobNimbus (the body of the
+    data), there are certain characters in the field values that must be
+    "escaped" (specially marked or notated with a backslash). Escaping these
+    characters prevents the request from returning errors such as (415:
+    Unsupport Media Type or 422: Unprocessable Entity).
+
+
+    Please ensure all JSON payloads escape the following characters:
+
+
+    - Backspace is replaced with `\b`
+
+    - Form feed is replaced with `\f`
+
+    - Newline is replaced with `\n`
+
+    - Carriage return is replaced with `\r`
+
+    - Tab is replaced with `\t`
+
+    - Double quote is replaced with `\"`
+
+    - Backslash is replaced with `\\`
+        
+    ## A Sample API Request
+
+        curl -X GET -H "Content-Type: application/json" -H "Authorization: Bearer <token>"  "https://app.jobnimbus.com/api1/contacts?actor=sam%40company.com?filter={"must":[{"term":{"first_name":"John"}},{"term":{"last_name":"Smith"}}}]}"
+
+    # Error Handling
+
+    It's important that you capture and relay API errors to either the end user
+    or to a log file to assist with troubleshooting. If an API request fails,
+    the HTTP response code will be something other than "200" and the response
+    body should contain a helpful error message. Discarding these error messages
+    without displaying them to either the end user or making them available to
+    your customer support team will make troubleshooting difficult. 
+
+
+    *JobNimbus will not be able to assist with troubleshooting if errors are not
+    properly captured.*
+
+
+    # Requesting Support
+
+    If an API request is failing, please contact support@jobnimbus.com with the
+    following information:
+
+
+    - The request URL, including the query string
+
+    - The request payload
+
+    - The HTTP response error code and text message
+  version: 1.0.0
+servers:
+  - url: https://app.jobnimbus.com
+components:
+  securitySchemes:
+    noauthAuth:
+      type: http
+      scheme: noauth
+tags:
+  - name: Contacts
+    description: >-
+      The Contact API endpoint allows you to create, view, and update an
+      individual or group of Contacts within JobNimbus.
+
+
+      #### Referenced Path:
+
+          /contacts
+
+      #### URL:
+
+          https://app.jobnimbus.com/api1/contacts
+
+      #### Field Properties:
+
+
+      <table>
+
+      <thead><tr><th>Field Name</th><th>Description</th><th>Required to
+      POST?</th><th>Format</th></tr></thead><tbody>
+       <tr><td>jnid</td><td>The primary key for the record.</td><td>No</td><td>text</td></tr>
+       <tr><td>customer</td><td>The id of the customer that this record is associated with.</td><td>No</td><td>text</td></tr>
+       <tr><td>type</td><td>The record type.</td><td>No</td><td>text</td></tr>
+       <tr><td>recid</td><td>An auto-incrementing number that is assigned to each new record of this type.  It is used when generating the number field.</td><td>No</td><td>long</td></tr>
+       <tr><td>external_id</td><td>3rd party data import id, we can use it to link other records from 3rd party</td><td>No</td><td>text</td></tr>
+       <tr><td>class_id</td><td>The id of the class that this record is associated with. (currently using for referencing qb class)</td><td>No</td><td>text</td></tr>
+       <tr><td>class_name</td><td>The name of the class that this record is associated with. (currently using for referencing qb class)</td><td>No</td><td>text</td></tr>
+       <tr><td>number</td><td>The customer defined template generated number assigned to this record, based off of the record id.</td><td>No</td><td>text</td></tr>
+       <tr><td>created_by</td><td>The contact id that created this record.</td><td>No</td><td>text</td></tr>
+       <tr><td>created_by_name</td><td>The denormalized name of the contact that created this record.</td><td>No</td><td>text</td></tr>
+       <tr><td>date_created</td><td>The unix timestamp reflecting when this record was created.</td><td>No</td><td>date</td></tr>
+       <tr><td>date_updated</td><td>The unix timestamp reflecting when this record was updated.</td><td>No</td><td>date</td></tr>
+       <tr><td>location</td><td>If multi-location is enabled, the location this record is associated with.</td><td>No</td><td>array</td></tr>
+       <tr><td>is_active</td><td>Whether this record is active(true) or deleted(false).</td><td>No</td><td>boolean</td></tr>
+       <tr><td>rules</td><td>A list of workflow rule ids that have been triggered for this record.  Used to prevent recursion.</td><td>No</td><td>text</td></tr>
+       <tr><td>is_archived</td><td>Whether this record has been archived (true) or not (false).</td><td>No</td><td>boolean</td></tr>
+       <tr><td>owners</td><td>The optional array list of owners for the record.</td><td>No</td><td>array</td></tr>
+       <tr><td>subcontractors</td><td>The optional list of subcontractors for the record.</td><td>No</td><td>array</td></tr>
+       <tr><td>color</td><td>color for subcontractor</td><td>No</td><td>text</td></tr>
+       <tr><td>date_start</td><td>The event start unix timestamp for this record.</td><td>No</td><td>date</td></tr>
+       <tr><td>date_end</td><td>The event end unix timestamp for this record.</td><td>No</td><td>date</td></tr>
+       <tr><td>tags</td><td>A comma separated list of string tags.</td><td>No</td><td>text</td></tr>
+       <tr><td>related</td><td>The optional list of related records for the record.</td><td>No</td><td>array</td></tr>
+       <tr><td>sales_rep</td><td>The denormalized sales_rep of the parent record.</td><td>No</td><td>text</td></tr>
+       <tr><td>sales_rep_name</td><td>The denormalized sales_rep_name of the parent record.</td><td>No</td><td>text</td></tr>
+       <tr><td>date_status_change</td><td>The unix timestamp reflecting when the status of this record was changed.</td><td>No</td><td>date</td></tr>
+       <tr><td>description</td><td>The description of this record.</td><td>No</td><td>text</td></tr>
+       <tr><td>address_line1</td><td>The line 1 portion of the physical address.</td><td>No</td><td>text</td></tr>
+       <tr><td>address_line2</td><td>The line 2 portion of the physical address.</td><td>No</td><td>text</td></tr>
+       <tr><td>city</td><td>The city portion of the physical address.</td><td>No</td><td>text</td></tr>
+       <tr><td>state_text</td><td>The state text portion of the physical address.</td><td>No</td><td>text</td></tr>
+       <tr><td>zip</td><td>The postal code portion of the physical address.</td><td>No</td><td>text</td></tr>
+       <tr><td>country_name</td><td>The country portion of the physical address.</td><td>No</td><td>text</td></tr>
+       <tr><td>record_type</td><td>The workflow type id for this record.</td><td>No</td><td>integer</td></tr>
+       <tr><td>record_type_name</td><td>The workflow type name for this record.</td><td>Yes</td><td>text</td></tr>
+       <tr><td>status</td><td>The workflow status id for this record.</td><td>No</td><td>integer</td></tr>
+       <tr><td>status_name</td><td>The workflow status name for this record.</td><td>Yes</td><td>text</td></tr>
+       <tr><td>source</td><td>The lead source id for this record.</td><td>No</td><td>integer</td></tr>
+       <tr><td>source_name</td><td>The lead source name for this record.</td><td>No</td><td>text</td></tr>
+       <tr><td>geo</td><td>The geo coordinates of the address associated with this record.</td><td>No</td><td>geo_point</td></tr>
+       <tr><td>image_id</td><td>The id of the image (avatar) associated with this record.</td><td>No</td><td>array</td></tr>
+       <tr><td>estimated_time</td><td>The number of minutes this record is estimated to take to complete.</td><td>No</td><td>long</td></tr>
+       <tr><td>actual_time</td><td>The number of minutes logged against this record toward completion.</td><td>No</td><td>long</td></tr>
+       <tr><td>task_count</td><td>The aggregated number of tasks associated with this record.</td><td>No</td><td>long</td></tr>
+       <tr><td>last_estimate</td><td>Most recent estimate value</td><td>No</td><td>double</td></tr>
+       <tr><td>last_invoice</td><td>Most recent invoice value</td><td>No</td><td>double</td></tr>
+       <tr><td>last_budget_gross_margin</td><td>Most recent budget gross margin</td><td>No</td><td>double</td></tr>
+       <tr><td>last_budget_gross_profit</td><td>Most recent budget gross profit</td><td>No</td><td>double</td></tr>
+       <tr><td>last_budget_revenue</td><td>Most recent budget revenue</td><td>No</td><td>double</td></tr>
+       <tr><td>is_lead</td><td>Whether this record is a lead or not.</td><td>No</td><td>boolean</td></tr>
+       <tr><td>is_closed</td><td>Whether this record is closed or not.</td><td>No</td><td>boolean</td></tr>
+       <tr><td>is_sub_contractor</td><td>Whether this contact is a subcontractor or not for User.</td><td>No</td><td>boolean</td></tr>
+       <tr><td>first_name</td><td>The first name of the person this contact record is associated with.</td><td>Yes*</td><td>text</td></tr>
+       <tr><td>last_name</td><td>The last name of the person this contact record is associated with.</td><td>Yes*</td><td>text</td></tr>
+       <tr><td>company</td><td>The company name that this contact record is associated with.</td><td>Yes*</td><td>text</td></tr>
+       <tr><td>display_name</td><td>Display name used mainly for QB syncing - unique field</td><td>Yes*</td><td>text</td></tr>
+       <tr><td>email</td><td>The email address associated with this contact.</td><td>No</td><td>text</td></tr>
+       <tr><td>home_phone</td><td>The home phone number associated with this contact.</td><td>No</td><td>text</td></tr>
+       <tr><td>mobile_phone</td><td>The mobile phone number associated with this contact.</td><td>No</td><td>text</td></tr>
+       <tr><td>work_phone</td><td>The work phone number associated with this contact.</td><td>No</td><td>text</td></tr>
+       <tr><td>fax_number</td><td>The fax number associated with this contact.</td><td>No</td><td>text</td></tr>
+       <tr><td>website</td><td>The web site associated with this contact.</td><td>No</td><td>text</td></tr>
+      </tbody></table>
+
+
+      _*See conditions for "POST Create a Contact", below_.
+  - name: Jobs
+    description: "The Jobs API endpoint allows you to create, view, and update an individual or group of Jobs within JobNimbus.\n\n#### Referenced Path:\n\n    /jobs\n\n#### URL:\n\n    https://app.jobnimbus.com/api1/jobs\n\n#### Field Properties:\n<style type=\"text/css\">\n\ttable.tableizer-table {\n\t\tfont-size: 12px;\n\t\tborder: 1px solid #CCC; \n\t\tfont-family: Arial, Helvetica, sans-serif;\n\t} \n\t.tableizer-table td {\n\t\tpadding: 4px;\n\t\tmargin: 3px;\n\t\tborder: 1px solid #CCC;\n\t}\n\t.tableizer-table th {\n\t\tbackground-color: #104E8B; \n\t\tcolor: #FFF;\n\t\tfont-weight: bold;\n\t}\n</style>\n<table class=\"tableizer-table\">\n<thead><tr class=\"tableizer-firstrow\"><th>Field Name:</th><th>Description:</th><th>Required to POST?</th><th>Format</th></tr></thead><tbody>\n <tr><td>jnid</td><td>The primary key for the record.</td><td>No</td><td>text</td></tr>\n <tr><td>customer</td><td>The id of the customer that this record is associated with.</td><td>No</td><td>text</td></tr>\n <tr><td>type</td><td>The record type.</td><td>No</td><td>text</td></tr>\n <tr><td>recid</td><td>An auto-incrementing number that is assigned to each new record of this type.  It is used when generating the number field.</td><td>No</td><td>long</td></tr>\n <tr><td>external_id</td><td>3rd party data import id, we can use it to link other records from 3rd party</td><td>No</td><td>text</td></tr>\n <tr><td>number</td><td>The customer defined template generated number assigned to this record, based off of the record id.</td><td>No</td><td>text</td></tr>\n <tr><td>created_by</td><td>The contact id that created this record.</td><td>No</td><td>text</td></tr>\n <tr><td>created_by_name</td><td>The denormalized name of the contact that created this record.</td><td>No</td><td>text</td></tr>\n <tr><td>rules</td><td>A list of workflow rule ids that have been triggered for this record.  Used to prevent recursion.</td><td>No</td><td>text</td></tr>\n <tr><td>date_created</td><td>The unix timestamp reflecting when this record was created.</td><td>No</td><td>date</td></tr>\n <tr><td>date_updated</td><td>The unix timestamp reflecting when this record was updated.</td><td>No</td><td>date</td></tr>\n <tr><td>location</td><td>If multi-location is enabled, the location this record is associated with.</td><td>No</td><td>array</td></tr>\n <tr><td>is_active</td><td>Whether this record is active(true) or deleted(false).</td><td>No</td><td>boolean</td></tr>\n <tr><td>is_archived</td><td>Whether this record has been archived (true) or not (false).</td><td>No</td><td>boolean</td></tr>\n <tr><td>owners</td><td>The optional array list of owners for the record.</td><td>No</td><td>array</td></tr>\n <tr><td>subcontractors</td><td>The optional list of subcontractors for the record.</td><td>No</td><td>array</td></tr>\n <tr><td>date_start</td><td>The event start unix timestamp for this record.</td><td>No</td><td>date</td></tr>\n <tr><td>date_end</td><td>The event end unix timestamp for this record.</td><td>No</td><td>date</td></tr>\n <tr><td>tags</td><td>A comma separated list of string tags.</td><td>No</td><td>text</td></tr>\n <tr><td>related</td><td>The optional list of related records for the record.</td><td>No</td><td>array</td></tr>\n <tr><td>sales_rep</td><td>The denormalized sales_rep of the parent record.</td><td>No</td><td>text</td></tr>\n <tr><td>sales_rep_name</td><td>The denormalized sales_rep_name of the parent record.</td><td>No</td><td>text</td></tr>\n <tr><td>date_status_change</td><td>The unix timestamp reflecting when the status of this record was changed.</td><td>No</td><td>date</td></tr>\n <tr><td>description</td><td>The description of this record.</td><td>No</td><td>text</td></tr>\n <tr><td>address_line1</td><td>The line 1 portion of the physical address.</td><td>No</td><td>text</td></tr>\n <tr><td>address_line2</td><td>The line 2 portion of the physical address.</td><td>No</td><td>text</td></tr>\n <tr><td>city</td><td>The city portion of the physical address.</td><td>No</td><td>text</td></tr>\n <tr><td>state_text</td><td>The state text portion of the physical address.</td><td>No</td><td>text</td></tr>\n <tr><td>zip</td><td>The postal code portion of the physical address.</td><td>No</td><td>text</td></tr>\n <tr><td>country_name</td><td>The country portion of the physical address.</td><td>No</td><td>text</td></tr>\n <tr><td>record_type</td><td>The workflow type id for this record.</td><td>No</td><td>integer</td></tr>\n <tr><td>record_type_name</td><td>The workflow type name for this record.</td><td>Yes</td><td>text</td></tr>\n <tr><td>status</td><td>The workflow status id for this record.</td><td>No</td><td>integer</td></tr>\n <tr><td>status_name</td><td>The workflow status name for this record.</td><td>Yes</td><td>text</td></tr>\n <tr><td>source</td><td>The lead source id for this record.</td><td>No</td><td>integer</td></tr>\n <tr><td>source_name</td><td>The lead source name for this record.</td><td>No</td><td>text</td></tr>\n <tr><td>geo</td><td>The geo coordinates of the address associated with this record.</td><td>No</td><td>geo_point</td></tr>\n <tr><td>image_id</td><td>The id of the image (avatar) associated with this record.</td><td>No</td><td>array</td></tr>\n <tr><td>estimated_time</td><td>The number of minutes this record is estimated to take to complete.</td><td>No</td><td>long</td></tr>\n <tr><td>actual_time</td><td>The number of minutes logged against this record toward completion.</td><td>No</td><td>long</td></tr>\n <tr><td>task_count</td><td>The aggregated number of tasks associated with this record.</td><td>No</td><td>long</td></tr>\n <tr><td>last_estimate</td><td>Most recent estimate value</td><td>No</td><td>double</td></tr>\n <tr><td>last_invoice</td><td>Most recent invoice value</td><td>No</td><td>double</td></tr>\n <tr><td>last_budget_gross_margin</td><td>Most recent budget gross margin</td><td>No</td><td>double</td></tr>\n <tr><td>last_budget_gross_profit</td><td>Most recent budget gross profit</td><td>No</td><td>double</td></tr>\n <tr><td>last_budget_revenue</td><td>Most recent budget revenue</td><td>No</td><td>double</td></tr>\n <tr><td>is_lead</td><td>Whether this record is a lead or not.</td><td>No</td><td>boolean</td></tr>\n <tr><td>is_closed</td><td>Whether this record is closed or not.</td><td>No</td><td>boolean</td></tr>\n <tr><td>primary</td><td>An object that stores the primary record that is related to this record.</td><td>No</td><td>array</td></tr>\n <tr><td>name</td><td>The name of the job.</td><td>Yes</td><td>text</td></tr>\n</tbody></table>"
+  - name: Tasks
+    description: "The Tasks API endpoint allows you to create, view, and update an individual or group of Tasks within JobNimbus.\n\n#### Referenced Path:\n\n    /tasks\n\n#### URL:\n\n    https://app.jobnimbus.com/api1/tasks\n\n#### Field Properties:\n<style type=\"text/css\">\n\ttable.tableizer-table {\n\t\tfont-size: 12px;\n\t\tborder: 1px solid #CCC; \n\t\tfont-family: Arial, Helvetica, sans-serif;\n\t} \n\t.tableizer-table td {\n\t\tpadding: 4px;\n\t\tmargin: 3px;\n\t\tborder: 1px solid #CCC;\n\t}\n\t.tableizer-table th {\n\t\tbackground-color: #104E8B; \n\t\tcolor: #FFF;\n\t\tfont-weight: bold;\n\t}\n</style>\n<table class=\"tableizer-table\">\n<thead><tr class=\"tableizer-firstrow\"><th>Field Name:</th><th>Description:</th><th>Required to Post?</th><th>Format:</th></tr></thead><tbody>\n <tr><td>jnid</td><td>The primary key for the record.</td><td>No</td><td>text</td></tr>\n <tr><td>customer</td><td>The id of the customer that this record is associated with.</td><td>No</td><td>text</td></tr>\n <tr><td>type</td><td>The record type.</td><td>No</td><td>text</td></tr>\n <tr><td>external_id</td><td>3rd party data import id, we can use it to link other records from 3rd party</td><td>No</td><td>text</td></tr>\n <tr><td>location</td><td>If multi-location is enabled, the location this record is associated with.</td><td>No</td><td>array</td></tr>\n <tr><td>created_by</td><td>The contact id that created this record.</td><td>No</td><td>text</td></tr>\n <tr><td>created_by_name</td><td>The denormalized name of the contact that created this record.</td><td>No</td><td>text</td></tr>\n <tr><td>date_created</td><td>The unix timestamp reflecting when this record was created.</td><td>No</td><td>date</td></tr>\n <tr><td>date_updated</td><td>The unix timestamp reflecting when this record was updated.</td><td>No</td><td>date</td></tr>\n <tr><td>is_active</td><td>Whether this record is active(true) or deleted(false).</td><td>No</td><td>boolean</td></tr>\n <tr><td>is_archived</td><td>Whether this record has been archived (true) or not (false).</td><td>No</td><td>boolean</td></tr>\n <tr><td>owners</td><td>The optional array list of owners for the record.</td><td>No</td><td>array</td></tr>\n <tr><td>subcontractors</td><td>The optional list of subcontractors for the record.</td><td>No</td><td>array</td></tr>\n <tr><td>date_start</td><td>The event start unix timestamp for this record.</td><td>Yes</td><td>date</td></tr>\n <tr><td>date_end</td><td>The event end unix timestamp for this record.</td><td>No</td><td>date</td></tr>\n <tr><td>tags</td><td>A comma separated list of string tags.</td><td>No</td><td>text</td></tr>\n <tr><td>recid</td><td>An auto-incrementing number that is assigned to each new record of this type.  It is used when generating the number field.</td><td>No</td><td>long</td></tr>\n <tr><td>number</td><td>The customer defined template generated number assigned to this record, based off of the record id.</td><td>No</td><td>text</td></tr>\n <tr><td>rules</td><td>A list of workflow rule ids that have been triggered for this record.  Used to prevent recursion.</td><td>No</td><td>text</td></tr>\n <tr><td>related</td><td>The optional list of related records for the record.</td><td>Yes</td><td>array</td></tr>\n <tr><td>description</td><td>The description of this record.</td><td>No</td><td>text</td></tr>\n <tr><td>estimated_time</td><td>The number of minutes this record is estimated to take to complete.</td><td>No</td><td>long</td></tr>\n <tr><td>actual_time</td><td>The number of minutes logged against this record toward completion.</td><td>No</td><td>long</td></tr>\n <tr><td>is_completed</td><td>Whether this task has been marked completed (true) or not (false).</td><td>No</td><td>boolean</td></tr>\n <tr><td>title</td><td>The title of the task</td><td>Yes</td><td>text</td></tr>\n <tr><td>primary</td><td>An object that stores the primary record that is related to this record.</td><td>No</td><td>array</td></tr>\n <tr><td>record_type</td><td>The id of the task type.</td><td>No</td><td>integer</td></tr>\n <tr><td>record_type_name</td><td>The denormalized name of the task type.</td><td>Yes</td><td>text</td></tr>\n <tr><td>priority</td><td>The numeric priority of the task.  0=none, 1=high, 2=medium, 3=low</td><td>No</td><td>integer</td></tr>\n</tbody></table>"
+  - name: Activities
+    description: "The Activities API endpoint allows you to create, view, and update an individual or group of activity within JobNimbus.\n\n#### Referenced Path:\n\n    /activities\n\n#### URL:\n\n    https://app.jobnimbus.com/api1/activities\n\n#### Field Properties:\n<style type=\"text/css\">\n\ttable.tableizer-table {\n\t\tfont-size: 12px;\n\t\tborder: 1px solid #CCC; \n\t\tfont-family: Arial, Helvetica, sans-serif;\n\t} \n\t.tableizer-table td {\n\t\tpadding: 4px;\n\t\tmargin: 3px;\n\t\tborder: 1px solid #CCC;\n\t}\n\t.tableizer-table th {\n\t\tbackground-color: #104E8B; \n\t\tcolor: #FFF;\n\t\tfont-weight: bold;\n\t}\n</style>\n<table class=\"tableizer-table\">\n<thead><tr class=\"tableizer-firstrow\"><th>Field Name:</th><th>Description:</th><th>Required to Post?</th><th>Format:</th></tr></thead><tbody>\n <tr><td>jnid</td><td>The primary key for the record.</td><td>No</td><td>text</td></tr>\n <tr><td>customer</td><td>The id of the customer that this record is associated with.</td><td>No</td><td>text</td></tr>\n <tr><td>type</td><td>The record type.</td><td>No</td><td>text</td></tr>\n <tr><td>external_id</td><td>3rd party data import id, we can use it to link other records from 3rd party</td><td>No</td><td>text</td></tr>\n <tr><td>created_by</td><td>The contact id that created this record.</td><td>No</td><td>text</td></tr>\n <tr><td>created_by_name</td><td>The denormalized name of the contact that created this record.</td><td>No</td><td>text</td></tr>\n <tr><td>date_created</td><td>The unix timestamp reflecting when this record was created.</td><td>No</td><td>date</td></tr>\n <tr><td>date_updated</td><td>The unix timestamp reflecting when this record was updated.</td><td>No</td><td>date</td></tr>\n <tr><td>is_active</td><td>Whether this record is active(true) or deleted(false).</td><td>No</td><td>boolean</td></tr>\n <tr><td>is_archived</td><td>Whether this record has been archived (true) or not (false).</td><td>No</td><td>boolean</td></tr>\n <tr><td>owners</td><td>The optional array list of owners for the record.</td><td>No</td><td>array</td></tr>\n <tr><td>sales_rep</td><td>The denormalized sales_rep of the parent record.</td><td>No</td><td>text</td></tr>\n <tr><td>sales_rep_name</td><td>The denormalized sales_rep_name of the parent record.</td><td>No</td><td>text</td></tr>\n <tr><td>related</td><td>The optional list of related records for the record.</td><td>No</td><td>array</td></tr>\n <tr><td>rules</td><td>A list of workflow rule ids that have been triggered for this record.  Used to prevent recursion.</td><td>No</td><td>text</td></tr>\n <tr><td>primary</td><td>The primary record that is related to this record (with status information).</td><td>Yes</td><td>array</td></tr>\n <tr><td>is_private</td><td>Whether this record is private or not.</td><td>No</td><td>boolean</td></tr>\n <tr><td>record_type</td><td>The activity type id for this record (null for system defined activity).</td><td>No</td><td>integer</td></tr>\n <tr><td>email_status</td><td>The email status for which activity is linked to email record</td><td>No</td><td>text</td></tr>\n <tr><td>Yes</td><td>The workflow type name for this record.</td><td>No</td><td>text</td></tr>\n <tr><td>source</td><td>source from where this record created.</td><td>No</td><td>text</td></tr>\n <tr><td>location</td><td>If multi-location is enabled, the location this record is associated with.</td><td>No</td><td>array</td></tr>\n <tr><td>stack</td><td>Stack Trace for delete</td><td>No</td><td>array</td></tr>\n <tr><td>note</td><td>The activity note text.</td><td>Yes</td><td>text</td></tr>\n <tr><td>is_status_change</td><td>Whether or not this activity item is the result of a primary record status change.</td><td>No</td><td>boolean</td></tr>\n <tr><td>is_editable</td><td>Whether or not this activity item is editable.</td><td>No</td><td>boolean</td></tr>\n</tbody></table>"
+  - name: Files
+    description: "The Files API endpoint allows you to create, view, and update an individual or group of files within JobNimbus.\n\n#### Referenced Path:\n\n    /files\n\n#### URL:\n\n    https://app.jobnimbus.com/api1/files\n\n#### Field Properties:\n<style type=\"text/css\">\n\ttable.tableizer-table {\n\t\tfont-size: 12px;\n\t\tborder: 1px solid #CCC; \n\t\tfont-family: Arial, Helvetica, sans-serif;\n\t} \n\t.tableizer-table td {\n\t\tpadding: 4px;\n\t\tmargin: 3px;\n\t\tborder: 1px solid #CCC;\n\t}\n\t.tableizer-table th {\n\t\tbackground-color: #104E8B; \n\t\tcolor: #FFF;\n\t\tfont-weight: bold;\n\t}\n</style>\n<table class=\"tableizer-table\">\n<thead><tr class=\"tableizer-firstrow\"><th>Field Name:</th><th>Description:</th><th>Required to POST?</th><th>Format:</th></tr></thead><tbody>\n <tr><td>id</td><td>The primary key for the record.</td><td>No</td><td>text</td></tr>\n <tr><td>type</td><td>The record type.</td><td>Yes</td><td>text</td></tr>\n <tr><td>customer</td><td>The id of the customer that this record is associated with.</td><td>No</td><td>text</td></tr>\n <tr><td>date_created</td><td>The unix timestamp reflecting when this record was created.</td><td>No</td><td>date</td></tr>\n <tr><td>date_updated</td><td>The unix timestamp reflecting when this record was updated.</td><td>No</td><td>date</td></tr>\n</tbody></table>"
+paths:
+  /api1/contacts:
+    post:
+      tags:
+        - Contacts
+      summary: Create a Contact
+      description: >-
+        This request allows you to create a new contact within JobNimbus.
+
+
+        **Notes**:
+
+
+        * First Name, Last Name, First & Last Name, Display_Name, or Company
+        Name are required
+
+        * record_type_name is required and should be a workflow name defined in
+        the customers JobNimbus contact workflow settings
+
+        * status_name is required and should be a status defined within the
+        record_type_name workflow
+
+        * source_name is optional but if provided should be set to one of the
+        lead source names defined in the customer's settings
+
+        * Also accepts most of the fields listed in the "GET /contacts" response
+
+
+        **Response Codes**:
+
+
+        * HTTP Status 200 = success
+
+        * Anything other status code = failure and will include an error message
+        in the response
+      requestBody:
+        content:
+          '*/*':
+            schema:
+              type: string
+              example: >-
+                "{\n  \"first_name\": \"Sammy G\",\n  \"last_name\":
+                \"Kent\",\n  \"record_type_name\": \"Customer\",\n 
+                \"status_name\": \"Lead\",\n  \"geo\": {\n      \"lon\":
+                -88.687277,\n      \"lat\": 37.149574\n  }\n}"
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Authorization
+          in: header
+          schema:
+            type: string
+          example: bearer <token>
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+    get:
+      tags:
+        - Contacts
+      summary: Retrieve ALL Contacts
+      description: >-
+        This request allows you to retrieve all of the contacts within a
+        JobNimbus account.
+
+
+        **Response Codes**:
+
+
+        * HTTP Status 200 = success
+
+        * Anything other status code = failure and will include an error message
+        in the response
+
+
+        <hr />
+
+
+        **Request Parameters**
+
+
+        Request parameters should be passed in the query string
+
+
+        size - number of elements to return (default: 1000)
+
+
+        from - zero based starting point to be used for pagination (default: 0)
+
+
+        sort_field - which field to sort by (default: date_created)
+
+
+        sort_direction = which direction to sort the results (default: 'desc')
+
+
+        fields - limit which fields to include in response (default: all fields
+        will be included)
+
+
+        filter - URL encoded JSON filter object i.e.:
+
+
+        ```
+
+
+        {
+            "must": [
+                {
+                    "range": {
+                        "date_created": {
+                            "gte": 1459749600,
+                            "lte": 1459835940
+                        }
+                    }
+                }
+            ]
+        }
+
+        ```
+
+
+        <hr />
+
+
+        **Response**:
+
+
+        Example of a partial response:
+
+        ```
+
+        {
+          "recid": 1003,
+          "customer": "29a",
+          "type": "contact",
+          "created_by": "29b",
+          "created_by_name": "Sam Burnet",
+          "date_created": 1459789425,
+          "date_updated": 1460051077,
+          "owners": [
+            {
+              "id": "29b"
+            }
+          ],
+          "location": {
+            "id": 1,
+            "parent_id": null,
+            "name": "Developer Account"
+          },
+          "first_name": "Bruce",
+          "last_name": "Wayne",
+          "company": "Wayne Enterprises",
+          "description": "Likes to wear costumes...",
+          "email": "bruce@batman.com",
+          "home_phone": "8882223333",
+          "mobile_phone": "",
+          "work_phone": "",
+          "fax_number": "",
+          "address_line1": "123 S. Bat Street",
+          "address_line2": null,
+          "city": "Heber City",
+          "state_text": "UT",
+          "country_name": "United States",
+          "zip": "84032",
+          "website": "www.batman.com",
+          "record_type": 1,
+          "record_type_name": "Customer",
+          "status": 2,
+          "status_name": "Inspection",
+          "source": 1,
+          "source_name": "Referral",
+          "sales_rep": "1m1",
+          "sales_rep_name": "Sam Burnet",
+          "jnid": "1l7",
+          "geo": {
+            "lat": 0,
+            "lon": 0
+          },
+          ...
+        }
+
+        ```
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Authorization
+          in: header
+          schema:
+            type: string
+          example: bearer <token>
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /api1/contacts/<jnid>:
+    put:
+      tags:
+        - Contacts
+      summary: Update a Contact
+      description: >-
+        This request allows you to update a contact within JobNimbus.
+
+
+        **Notes**:
+
+
+        Mandatory field(s): jnid
+
+
+        **Response Codes**:
+
+
+        * HTTP Status 200 = success
+
+        * Anything other status code = failure and will include an error message
+        in the response
+      requestBody:
+        content:
+          '*/*':
+            schema:
+              type: string
+              example: >-
+                "{\n  \"first_name\":\"Clark\",\n  \"last_name\":\"Kent\",\n 
+                \"address_line1\":\"123 Maple St\",\n  \"address_line2\":\"Apt
+                C\",\n  \"city\": \"Orlando\",\n  \"state_text\": \"FL\",\n 
+                \"zip\":\"32806\"\n}"
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Authorization
+          in: header
+          schema:
+            type: string
+          example: bearer <token>
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+    get:
+      tags:
+        - Contacts
+      summary: Retrieve a Contact
+      description: >-
+        This request allows you to retrieve the information of a specific
+        contact within JobNimbus.
+
+
+        **Notes**:
+
+
+        Mandatory field(s): jnid
+
+
+        **Response Codes**:
+
+
+        * HTTP Status 200 = success
+
+        * Anything other status code = failure and will include an error message
+        in the response
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Authorization
+          in: header
+          schema:
+            type: string
+          example: bearer <token>
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /api1/jobs:
+    post:
+      tags:
+        - Jobs
+      summary: Create a Job
+      description: >
+        This request allows you to create a new job within JobNimbus.
+
+
+        **Notes**:
+
+
+        * name is required
+
+        * record_type_name is required and should be a workflow name defined in
+        the customers JobNimbus job workflow settings
+
+        * status_name is required and should be a status defined within the
+        record_type_name workflow
+
+        * source_name is optional but if provided should be set to one of the
+        lead source names defined in the customer's settings
+
+        * Also accepts most of the fields listed in the "GET /Jobs" response
+
+
+        **Response Codes**:
+
+
+        * HTTP Status 200 = success
+
+        * Anything other status code = failure and will include an error message
+        in the response
+      requestBody:
+        content:
+          '*/*':
+            schema:
+              type: string
+              example: >-
+                "{\n  \"name\":\"Kenny G's Roof\",\n  \"record_type_name\":
+                \"Job\",\n  \"status_name\": \"Lead\",\n  \"geo\": {\n     
+                \"lon\": -88.687277,\n      \"lat\": 37.149574\n  },\n 
+                \"primary\":{\n  \t\"id\":\"he2d2\"\n  }\n}"
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Authorization
+          in: header
+          schema:
+            type: string
+          example: bearer <token>
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+    get:
+      tags:
+        - Jobs
+      summary: Retrieve ALL Jobs
+      description: >-
+        This request allows you to retrieve all of the jobs within a JobNimbus
+        account.
+
+
+        **Response Codes**:
+
+
+        * HTTP Status 200 = success
+
+        * Anything other status code = failure and will include an error message
+        in the response
+
+        * 
+
+
+        <hr />
+
+        **Request Parameters**
+
+
+        Request parameters should be passed in the query string
+
+
+        size - number of elements to return (default: 1000)
+
+
+        from - zero based starting point to be used for pagination (default: 0)
+
+
+        sort_field - which field to sort by (default: date_created)
+
+
+        sort_direction = which direction to sort the results (default: 'desc')
+
+
+        fields - limit which fields to include in response (default: all fields
+        will be included)
+
+
+        filter - URL encoded JSON filter object i.e.:
+
+
+        ```
+
+
+        {
+            "must": [
+                {
+                    "range": {
+                        "date_created": {
+                            "gte": 1459749600,
+                            "lte": 1459835940
+                        }
+                    }
+                }
+            ]
+        }
+
+        ```
+
+
+        **Response**:
+
+
+        Example of a partial response:
+
+        ```
+
+        {
+         "recid": 1001,
+         "customer": "3oz",
+         "type": "job",
+         "created_by": "3p0",
+         "created_by_name": "Bot Barton",
+         "date_created": 1472567571,
+         "date_updated": 1472567572,
+         "location": {
+          "id": 1,
+          "parent_id": null
+         },
+         "owners": [
+          {
+           "id": "3p0"
+          }
+         ],
+         "is_active": true,
+         "name": "Test job",
+         "number": "1001",
+         "record_type": 5,
+         "record_type_name": "Residential",
+         "status": 19,
+         "status_name": "Lead",
+         "description": null,
+         "sales_rep": "3p0",
+         "sales_rep_name": "Bob Barton",
+         "address_line1": "100 N 52 E",
+         "address_line2": "",
+         "city": "American Fork",
+         "state_text": "UT",
+         "country_name": "United States",
+         "zip": "84003",
+         "jnid": "3pg",
+         "geo": {
+          "lat": 40.387368,
+          "lon": -111.789513
+         }
+         ...
+        }
+
+        ```
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Authorization
+          in: header
+          schema:
+            type: string
+          example: bearer <token>
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /api1/jobs/<jnid>:
+    put:
+      tags:
+        - Jobs
+      summary: Update a Job
+      description: >-
+        This request allows you to update a job within JobNimbus.
+
+
+        **Notes**:
+
+
+        * Mandatory field(s): jnid
+
+        * Also see required fields in "POST Create a Job"
+
+
+        **Response Codes**:
+
+
+        * HTTP Status 200 = success
+
+        * Anything other status code = failure and will include an error message
+        in the response
+      requestBody:
+        content:
+          '*/*':
+            schema:
+              type: string
+              example: >-
+                "{\n  \"name\":\"Kenny G's Roof\",\n  \"record_type_name\":
+                \"Job\",\n  \"status_name\": \"Lead\",\n  \"geo\": {\n     
+                \"lon\": -88.687277,\n      \"lat\": 37.149574\n  },\n 
+                \"primary\":{\n  \t\"id\":\"he2d2\"\n  }\n}"
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Authorization
+          in: header
+          schema:
+            type: string
+          example: bearer <token>
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+    get:
+      tags:
+        - Jobs
+      summary: Retrieve a Job
+      description: >-
+        This request allows you to retrieve the information of a specific job
+        within JobNimbus.
+
+
+        **Notes**:
+
+
+        Mandatory field(s): jnid
+
+
+        **Response Codes**:
+
+
+        * HTTP Status 200 = success
+
+        * Anything other status code = failure and will include an error message
+        in the response
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Authorization
+          in: header
+          schema:
+            type: string
+          example: bearer <token>
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /api1/tasks:
+    post:
+      tags:
+        - Tasks
+      summary: Create a Task
+      description: >
+        This request allows you to create a new task within JobNimbus.
+
+
+        **Notes**:
+
+
+        * title and date_start are required
+
+        * record_type_name is required and should be a task type name defined in
+        the customer's settings.
+
+        * related.id should be set to the contact or job that this task is
+        related to.
+
+        * Also accepts most of the fields listed in the "GET /tasks" response
+
+
+        **Response Codes**:
+
+
+        * HTTP Status 200 = success
+
+        * Anything other status code = failure and will include an error message
+        in the response
+      requestBody:
+        content:
+          '*/*':
+            schema:
+              type: string
+              example: >-
+                "\n{\n  \"date_start\": 1460131200,\n  \"date_end\": 0,\n 
+                \"title\": \"Meet with Bob to discuss proposal\",\n 
+                \"related\": [\n    {\n      \"id\": \"imqpqhqpaz5l5l92\"\n   
+                }\n  ],\n  \"record_type\": 4,\n  \"record_type_name\":
+                \"Appointment\"\n}"
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Authorization
+          in: header
+          schema:
+            type: string
+          example: bearer <token>
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+    get:
+      tags:
+        - Tasks
+      summary: Retrieve ALL Tasks
+      description: >-
+        This request allows you to retrieve all of the tasks within a JobNimbus
+        account.
+
+
+        **Response Codes**:
+
+
+        * HTTP Status 200 = success
+
+        * Anything other status code = failure and will include an error message
+        in the response
+
+
+        **Response**:
+
+        Example of a partial response:
+
+        ```
+
+        {
+            "count": 117,
+            "results": [
+                {
+                    "external_id": null,
+                    "recid": 1145,
+                    "number": "1145",
+                    "customer": "jagpt",
+                    "type": "task",
+                    "created_by": "jagpu",
+                    "created_by_name": "Josh Demo",
+                    "date_created": 1547742470,
+                    "date_updated": 1547742470,
+                    "is_active": true,
+                    "is_archived": false,
+                    "primary": null,
+                    "actual_time": 0,
+                    "estimated_time": 0,
+                    "title": "Custom Task Type",
+                    "location": {
+                        "id": 1
+                    },
+                    "description": "New custom task type",
+                    "record_type": 6,
+                    "record_type_name": "Custom Task Type",
+                    "priority": 0,
+                    "date_start": 1547712000,
+                    "date_sort": null,
+                    "date_end": 0,
+                    "is_completed": false,
+                    "hide_from_calendarview": false,
+                    "hide_from_tasklist": false,
+                    "owners": [
+                        {
+                            "id": "jagpu"
+                        }
+                    ],
+                    "subcontractors": [],
+                    "related": [
+                        {
+                            "id": "ql1a9",
+                            "name": "Martin ROBERTS",
+                            "number": "1096",
+                            "type": "contact"
+                        }
+                    ],
+                    "jnid": "14yspl",
+                    "tags": [],
+                    "rules": []
+                },
+            ]
+        }
+
+        ```
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Authorization
+          in: header
+          schema:
+            type: string
+          example: bearer <token>
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /api1/tasks/<jnid>:
+    put:
+      tags:
+        - Tasks
+      summary: Update a Task
+      description: >-
+        This request allows you to update a job within JobNimbus.
+
+
+        **Notes**:
+
+
+        * Mandatory field(s): jnid
+
+        * Also see required fields in "POST Create a Task"
+
+
+        **Response Codes**:
+
+
+        * HTTP Status 200 = success
+
+        * Anything other status code = failure and will include an error message
+        in the response
+      requestBody:
+        content:
+          '*/*':
+            schema:
+              type: string
+              example: '"{\n  \"date_start\": 1460134800\n}"'
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Authorization
+          in: header
+          schema:
+            type: string
+          example: bearer <token>
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+    get:
+      tags:
+        - Tasks
+      summary: Retrieve a Tasks
+      description: >-
+        This request allows you to retrieve the information of a specific task
+        within JobNimbus.
+
+
+        **Notes**:
+
+
+        Mandatory field(s): jnid
+
+
+        **Response Codes**:
+
+
+        * HTTP Status 200 = success
+
+        * Anything other status code = failure and will include an error message
+        in the response
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Authorization
+          in: header
+          schema:
+            type: string
+          example: bearer <token>
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /api1/activities:
+    post:
+      tags:
+        - Activities
+      summary: Create an Activity
+      description: >
+        This request allows you to create a new Activity within JobNimbus.
+
+
+        **Notes**:
+
+
+        * note, record_type_name and primary.id should be included.
+
+        * Also accepts most of the fields listed in the "GET /activities"
+        response
+
+
+        **Response Codes**:
+
+
+        * HTTP Status 200 = success
+
+        * Anything other status code = failure and will include an error message
+        in the response
+      requestBody:
+        content:
+          '*/*':
+            schema:
+              type: string
+              example: >-
+                "{\n  \"note\": \"My new note\",\n  \"date_created\":
+                1513108061,\n  \"record_type_name\": \"Note\",\n   \"primary\":
+                {\n    \"id\": \"i97\"\n  },\n}"
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Authorization
+          in: header
+          schema:
+            type: string
+          example: bearer <token>
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+    get:
+      tags:
+        - Activities
+      summary: Retrieve ALL Activities
+      description: >-
+        This request allows you to retrieve all of the activities within a
+        JobNimbus account.
+
+
+        **Response Codes**:
+
+
+        * HTTP Status 200 = success
+
+        * Anything other status code = failure and will include an error message
+        in the response
+
+
+        **Request Parameters**
+
+
+        Request parameters should be passed in the query string
+
+
+        size - number of elements to return (default: 1000)
+
+
+        from - zero based starting point to be used for pagination (default: 0)
+
+
+        sort_field - which field to sort by (default: date_created)
+
+
+        sort_direction = which direction to sort the results (default: 'desc')
+
+
+        fields - limit which fields to include in response (default: all fields
+        will be included)
+
+
+        filter - URL encoded JSON filter object i.e.:
+
+
+        ```
+
+
+        {
+            "must": [
+                {
+                    "range": {
+                        "date_created": {
+                            "gte": 1459749600,
+                            "lte": 1459835940
+                        }
+                    }
+                }
+            ]
+        }
+
+        ```
+
+
+        <hr />
+
+
+        **Response**:
+
+
+        Example of a partial response:
+
+        ```
+
+        {
+          "count": 10,
+          "activity": [
+          {
+            "type": "activity",
+            "customer": "7z76o",
+            "location": {
+                "id": 1
+            },
+            "primary": {
+                "new_status": 13,
+                "id": "he2d2",
+                "name": "Clark Kent",
+                "type": "contact",
+                "number": "1017"
+            },
+            "is_active": true,
+            "note": "Contact Created",
+            "is_status_change": true,
+            "record_type_name": "Contact Created",
+            "owners": [],
+            "related": [
+                {
+                    "id": "he2d2",
+                    "type": "contact",
+                    "name": "Clark Kent",
+                    "number": "1017"
+                }
+            ],
+            "jnid": "he2d3",
+            "created_by": "neo",
+            "created_by_name": "Thomas Anderson",
+            "date_created": 1512763337,
+            "date_updated": 1512763337,
+            "is_archived": false,
+            "is_editable": false
+          },
+          ...
+        ]
+
+        ```
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Authorization
+          in: header
+          schema:
+            type: string
+          example: bearer <token>
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /api1/activities/<jnid>:
+    get:
+      tags:
+        - Activities
+      summary: Retrieve an Activity
+      description: >-
+        This request allows you to retrieve the information of a specific
+        activity within JobNimbus.
+
+
+        **Notes**:
+
+
+        Mandatory field(s): jnid
+
+
+        **Response Codes**:
+
+
+        * HTTP Status 200 = success
+
+        * Anything other status code = failure and will include an error message
+        in the response
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Authorization
+          in: header
+          schema:
+            type: string
+          example: bearer <token>
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /api1/files:
+    post:
+      tags:
+        - Files
+      summary: Create a File
+      description: >-
+        This request allows you to create a new File attachment within
+        JobNimbus.
+
+
+        **Notes**:
+
+
+        *Data attribute should be base64 encoded, ie. btoa('This is my document
+        text.')
+
+
+        Type: 
+
+        * 1=Document 
+
+        * 2=Photo
+
+        * 3=Email Attachment
+
+        * 4=naturalForms
+
+        * 5=Invoice
+
+        * 6=Eagleview
+
+        * 7=Accurence
+
+        * 8=Credit Memo
+
+
+        **Response Codes**:
+
+
+        * HTTP Status 200 = success
+
+        * Anything other status code = failure and will include an error message
+        in the response
+
+
+        **Response**:
+
+
+        ```
+
+        {
+            "count": 165,
+            "files": [
+                {
+                    "customer": "jagpt",
+                    "type": "attachment",
+                    "created_by": "jagpu",
+                    "created_by_name": "Josh Demo",
+                    "is_active": true,
+                    "filename": "Screen Shot 2018-06-26 at 8.39.48 PM.png",
+                    "content_type": "image/png",
+                    "size": 555204,
+                    "jnid": "jsy16hg9ztze7cxx",
+                    "date_created": 1551926855,
+                    "date_updated": 1551926859,
+                    "is_private": false,
+                    "related": [
+                        {
+                            "id": "scpci",
+                            "type": "contact",
+                            "name": "Jimmy Rivera III"
+                        }
+                    ],
+                    "primary": {
+                        "id": "scpci",
+                        "type": "contact",
+                        "number": "1164",
+                        "name": "Jimmy Rivera III"
+                    },
+                    "owners": [
+                        {
+                            "id": "jagpu"
+                        }
+                    ],
+                    "sales_rep": "jagpu",
+                    "is_archived": false,
+                    "record_type": 2,
+                    "record_type_name": "Photo"
+                }
+            ]
+        }
+
+        ```
+      requestBody:
+        content:
+          '*/*':
+            schema:
+              type: string
+              example: >-
+                "{\n  \"data\":
+                \"VGhpcyBpcyBteSBuZXcgdGV4dCBkb2N1bWVudC4=\",\n   
+                \"is_private\": false,\n    \"related\": [\n       
+                \"hpzui\"\n    ],\n    \"type\": 1,\n    \"subtype\":
+                \"contact\",\n    \"filename\": \"myfilename.txt\",\n   
+                \"description\": \"The description of my file.\",\n    \"date\":
+                1513367467,\n    \"persist\": true\n}"
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Authorization
+          in: header
+          schema:
+            type: string
+          example: bearer <token>
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+    get:
+      tags:
+        - Files
+      summary: Retrieve List of File Attachments
+      description: >-
+        This request allows you to retrieve the information of all of the file
+        attachments within a JobNimbus account.
+
+
+        **Response Codes**:
+
+
+        * HTTP Status 200 = success
+
+        * Anything other status code = failure and will include an error message
+        in the response
+
+
+        **Response**:
+
+
+        Example of a partial response:
+
+        ```
+
+        {
+            "count": 165,
+            "files": [
+                {
+                    "customer": "jagpt",
+                    "type": "attachment",
+                    "created_by": "jagpu",
+                    "created_by_name": "Josh Demo",
+                    "is_active": true,
+                    "filename": "Screen Shot 2018-06-26 at 8.39.48 PM.png",
+                    "content_type": "image/png",
+                    "size": 555204,
+                    "jnid": "jsy16hg9ztze7cxx",
+                    "date_created": 1551926855,
+                    "date_updated": 1551926859,
+                    "is_private": false,
+                    "related": [
+                        {
+                            "id": "scpci",
+                            "type": "contact",
+                            "name": "Jimmy Rivera III"
+                        }
+                    ],
+                    "primary": {
+                        "id": "scpci",
+                        "type": "contact",
+                        "number": "1164",
+                        "name": "Jimmy Rivera III"
+                    },
+                    "owners": [
+                        {
+                            "id": "jagpu"
+                        }
+                    ],
+                    "sales_rep": "jagpu",
+                    "is_archived": false,
+                    "record_type": 2,
+                    "record_type_name": "Photo"
+                }
+            ]
+        }
+
+        ```
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Authorization
+          in: header
+          schema:
+            type: string
+          example: bearer <token>
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /api1/files/fromUrl:
+    post:
+      tags:
+        - Files
+      summary: Create a File from URL
+      description: >-
+        This request allows you to create a new File attachment within
+        JobNimbus.
+
+
+        **Notes**:
+
+
+        * Data attribute should be base64 encoded, ie. btoa('This is my document
+        text.')
+
+
+        * Type: 
+         * 1=Document 
+         * 2=Photo
+         * 3=Email Attachment
+         * 4=naturalForms
+         * 5=Invoice
+         * 6=Eagleview
+         * 7=Accurence
+         * 8=Credit Memo
+
+        * related[] should be the jnid of the contact or job that this file
+        should be attached to
+
+        * type should be set to a valid file type as defined in the JobNimbus
+        customer settings. Usually this can be set to 'Photo'
+
+        * description should be set to a photo caption/description
+
+        * name should be set to the file name. If not supplied, the file name
+        will be extracted from the url
+
+        * url should be set to the publicly accessable url of the image
+
+
+        **Response Codes**:
+
+
+        * HTTP Status 200 = success
+
+        * Anything other status code = failure and will include an error message
+        in the response
+
+        * A json response body will include an 'id' field. This should probably
+        be associated with the file in the remote database in case we decide to
+        implement the ability to upload image revisions
+      requestBody:
+        content:
+          '*/*':
+            schema:
+              type: string
+              example: >-
+                "{\n\"related\": [\"3pd\"],\n\"type\":
+                \"Photo\",\n\"description\": \"This is the image description /
+                caption\",\n\"url\":
+                \"https://s3.amazonaws.com/pubfilerepo/Tasks%20List.png\"\n}"
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Authorization
+          in: header
+          schema:
+            type: string
+          example: bearer <token>
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /files/<jnid>:
+    get:
+      tags:
+        - Files
+      summary: Retrieve a File Attachment
+      description: >-
+        This request allows you to retrieve a file attachments within a
+        JobNimbus account.
+
+
+        **Notes**:
+
+
+        Mandatory field(s): jnid
+
+
+        **Response Codes**:
+
+
+        * HTTP Status 200 = success
+
+        * Anything other status code = failure and will include an error message
+        in the response
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Authorization
+          in: header
+          schema:
+            type: string
+          example: bearer <token>
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}

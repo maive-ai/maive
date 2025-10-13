@@ -18,3 +18,6 @@ packages/api/client/.openapi-generator/
 
 # Cursor external docs
 .cursor/external_docs/service_titan/_catalog/
+.cursor/external_docs/service_titan/_dereferenced/
+.cursor/external_docs/job_nimbus/_catalog/
+.cursor/external_docs/job_nimbus/_dereferenced/
