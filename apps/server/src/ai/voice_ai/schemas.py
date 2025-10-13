@@ -9,7 +9,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from src.ai.voice_ai.constants import CallStatus, VoiceAIErrorCode, WebhookEventType
+from src.ai.voice_ai.constants import CallStatus, VoiceAIErrorCode
 from src.ai.voice_ai.constants import VoiceAIProvider as VoiceAIProviderEnum
 from src.integrations.crm.constants import ClaimStatus
 
@@ -74,100 +74,6 @@ class CallListResponse(BaseModel):
     calls: list[CallResponse] = Field(..., description="List of calls")
     total_count: int = Field(..., description="Total number of calls")
     provider: VoiceAIProviderEnum = Field(..., description="Voice AI provider")
-
-
-class CallStartedData(BaseModel):
-    """Data for call started events."""
-
-    customer_number: str | None = Field(None, description="Customer phone number")
-    assistant_id: str | None = Field(None, description="Assistant ID used for the call")
-
-
-class CallEndedData(BaseModel):
-    """Data for call ended events."""
-
-    duration: float | None = Field(None, description="Call duration in seconds")
-    transcript: str = Field(default="", description="Full call transcript")
-    end_reason: str | None = Field(None, description="Reason the call ended")
-    artifact: dict[str, Any] = Field(default_factory=dict, description="Call artifacts")
-    analysis: dict[str, Any] = Field(
-        default_factory=dict, description="Call analysis data"
-    )
-    vapi_payload: dict[str, Any] = Field(
-        default_factory=dict, description="Full provider payload for processing"
-    )
-
-
-class FunctionCallData(BaseModel):
-    """Data for function call events."""
-
-    function_name: str | None = Field(
-        None, description="Name of the function being called"
-    )
-    parameters: dict[str, Any] = Field(
-        default_factory=dict, description="Function call parameters"
-    )
-
-
-class TranscriptData(BaseModel):
-    """Data for transcript events."""
-
-    transcript: str = Field(default="", description="Transcript text")
-    is_partial: bool = Field(
-        default=False, description="Whether this is a partial transcript"
-    )
-
-
-class SpeechUpdateData(BaseModel):
-    """Data for speech update events."""
-
-    status: str | None = Field(None, description="Speech status")
-    role: str | None = Field(None, description="Speaker role")
-    turn: int | None = Field(None, description="Turn number")
-
-
-class ConversationUpdateData(BaseModel):
-    """Data for conversation update events."""
-
-    conversation: list[dict[str, Any]] = Field(
-        default_factory=list, description="Conversation history"
-    )
-    messages: list[dict[str, Any]] = Field(
-        default_factory=list, description="Message list"
-    )
-
-
-class StatusUpdateData(BaseModel):
-    """Data for status update events."""
-
-    status: str | None = Field(None, description="Call status")
-    ended_reason: str | None = Field(None, description="Reason for status change")
-
-
-# Union type for all event data types
-WebhookEventData = (
-    CallStartedData
-    | CallEndedData
-    | FunctionCallData
-    | TranscriptData
-    | SpeechUpdateData
-    | ConversationUpdateData
-    | StatusUpdateData
-    | dict[str, Any]  # Fallback for unknown event types
-)
-
-
-class WebhookEvent(BaseModel):
-    """Standard webhook event model across all Voice AI providers."""
-
-    event_type: WebhookEventType = Field(..., description="Type of webhook event")
-    call_id: str | None = Field(
-        None, description="Unique call identifier (may be None for some event types)"
-    )
-    data: WebhookEventData = Field(..., description="Event-specific typed data")
-    provider_data: dict[str, Any] = Field(
-        default_factory=dict, description="Raw provider data"
-    )
 
 
 class VoiceAIErrorResponse(BaseModel):
