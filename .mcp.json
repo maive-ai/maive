@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "jobnimbus": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@reapi/mcp-openapi@latest",
+        "--dir",
+        "./.cursor/external_docs/job_nimbus"
+      ],
+      "env": {}
+    }
+  }
+}
