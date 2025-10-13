@@ -174,11 +174,11 @@ class CallAndWriteToCRMWorkflow:
         """
         try:
             # Extract typed analysis data from provider response
-            analysis = call_response.extract_analysis()
+            analysis = call_response.analysis
 
-            if not analysis or not analysis.structured_data:
+            if analysis is None or analysis.structured_data is None:
                 logger.info(
-                    f"[Call Monitoring Workflow] No structured data found for call {call_id}"
+                    f"[Call Monitoring Workflow] No analysis available for call {call_id} after polling"
                 )
                 return
 
@@ -241,7 +241,7 @@ class CallAndWriteToCRMWorkflow:
                 f"[Call Monitoring Workflow] Error processing completed call {call_id}: {e}"
             )
 
-    def _format_crm_note(self, structured_data: ClaimStatusData) -> str:
+    def _format_crm_note(self, structured_data: ClaimStatusData | None) -> str:
         """
         Format structured data into a CRM note.
 
@@ -252,6 +252,10 @@ class CallAndWriteToCRMWorkflow:
             Formatted note text
         """
         try:
+            if structured_data is None:
+                logger.info("[Call Monitoring Workflow] No structured data found for call")
+                return ""
+
             # Build formatted note
             note_lines = [
                 "🤖 Voice AI Call Summary",
