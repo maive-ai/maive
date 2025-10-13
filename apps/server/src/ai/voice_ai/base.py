@@ -7,7 +7,7 @@ must implement, ensuring consistent behavior across different voice AI systems.
 
 from abc import ABC, abstractmethod
 
-from src.ai.voice_ai.schemas import CallRequest, CallResponse, WebhookEvent
+from src.ai.voice_ai.schemas import CallRequest, CallResponse
 
 
 class VoiceAIProvider(ABC):
@@ -30,37 +30,6 @@ class VoiceAIProvider(ABC):
         pass
 
     @abstractmethod
-    async def verify_webhook(self, headers: dict[str, str], body: str) -> bool:
-        """
-        Verify webhook authenticity.
-
-        Args:
-            headers: HTTP headers from the webhook request
-            body: Raw body of the webhook request
-
-        Returns:
-            bool: True if webhook is authentic, False otherwise
-        """
-        pass
-
-    @abstractmethod
-    async def parse_webhook(self, headers: dict[str, str], body: str) -> WebhookEvent:
-        """
-        Parse webhook payload into standard format.
-
-        Args:
-            headers: HTTP headers from the webhook request
-            body: Raw body of the webhook request
-
-        Returns:
-            WebhookEvent: Parsed webhook event with standard structure
-
-        Raises:
-            VoiceAIError: If webhook parsing fails
-        """
-        pass
-
-    @abstractmethod
     async def get_call_status(self, call_id: str) -> CallResponse:
         """
         Get the status of a specific call by ID.
@@ -77,14 +46,18 @@ class VoiceAIProvider(ABC):
         pass
 
     @abstractmethod
-    async def monitor_ongoing_call(self, call_id: str, request: CallRequest) -> None:
+    async def end_call(self, call_id: str) -> bool:
         """
-        Monitor an ongoing call until it reaches a terminal state. Implementations
-        should poll provider status at a reasonable interval and exit when the call
-        has completed or a timeout elapses.
+        End an ongoing call programmatically.
 
         Args:
-            call_id: The call identifier to monitor
+            call_id: The unique identifier for the call
+
+        Returns:
+            bool: True if call was successfully ended
+
+        Raises:
+            VoiceAIError: If the call is not found or cannot be ended
         """
         pass
 

@@ -1,28 +1,32 @@
+import { useCallAndWriteToCrm } from '@/clients/workflows';
+import { E164PhoneInput } from '@/components/E164PhoneInput';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import { createFileRoute } from '@tanstack/react-router';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useState } from 'react';
-import { useCreateOutboundCall } from '@/clients/workflows';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import type { E164Number } from 'react-phone-number-input';
+import { isValidPhoneNumber } from 'react-phone-number-input';
 
-export const Route = createFileRoute('/_authed/phone-input')({
-  component: PhoneInput,
+export const Route = createFileRoute('/_authed/simple-phone-input')({
+  component: SimplePhoneInput,
 });
 
-function PhoneInput() {
-  const [phoneNumber, setPhoneNumber] = useState<string>('');
-  const createCallMutation = useCreateOutboundCall();
+function SimplePhoneInput() {
+  const [phoneNumber, setPhoneNumber] = useState<E164Number | ''>('');
+  const createCallMutation = useCallAndWriteToCrm();
+
+  const isValid = phoneNumber ? isValidPhoneNumber(phoneNumber) : false;
 
   const handleStartCall = (): void => {
-    if (!phoneNumber.trim()) {
+    if (!phoneNumber || !isValid) {
       return;
     }
 
@@ -32,7 +36,7 @@ function PhoneInput() {
   };
 
   return (
-    <div className="flex h-full justify-center bg-gradient-to-b from-amber-50 to-white p-6">
+    <div className="flex h-full justify-center bg-white p-6">
       <div className="w-full max-w-2xl space-y-6">
         {/* Page Header */}
         <div className="text-center">
@@ -53,14 +57,18 @@ function PhoneInput() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="phone-number">Phone Number</Label>
-              <Input
+              <E164PhoneInput
                 id="phone-number"
-                type="tel"
                 placeholder="Enter phone number"
                 value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
+                onChange={(value) => setPhoneNumber(value || '')}
                 disabled={createCallMutation.isPending}
               />
+              {phoneNumber && !isValid && (
+                <p className="text-sm text-red-600">
+                  Please enter a valid phone number
+                </p>
+              )}
             </div>
 
             {/* Success Message */}
@@ -100,7 +108,7 @@ function PhoneInput() {
               onClick={handleStartCall}
               className="w-full"
               size="lg"
-              disabled={createCallMutation.isPending || !phoneNumber.trim()}
+              disabled={createCallMutation.isPending || !phoneNumber || !isValid}
             >
               {createCallMutation.isPending ? (
                 <>

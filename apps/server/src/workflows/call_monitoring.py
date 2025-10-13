@@ -15,11 +15,12 @@ from src.ai.voice_ai.schemas import (
     VoiceAIErrorResponse,
 )
 from src.ai.voice_ai.service import VoiceAIService
+from src.integrations.crm.constants import ClaimStatus
 from src.integrations.crm.service import CRMService
 from src.utils.logger import logger
 
 
-class CallMonitoringWorkflow:
+class CallAndWriteToCRMWorkflow:
     """Orchestrates Voice AI call creation and CRM updates."""
 
     def __init__(
@@ -37,17 +38,17 @@ class CallMonitoringWorkflow:
         self.voice_ai_service = voice_ai_service
         self.crm_service = crm_service
 
-    async def create_and_monitor_call(
+    async def call_and_write_results_to_crm(
         self,
         request: CallRequest,
         user_id: str | None = None,
     ) -> CallResponse | VoiceAIErrorResponse:
         """
-        Create an outbound call and start monitoring it.
+        Create an outbound call and start monitoring it and writing results to CRM.
 
         This method orchestrates:
         1. Creating the call via Voice AI service
-        2. Starting background monitoring
+        2. Starting background monitoring and writing results to CRM
         3. Updating CRM when call completes
 
         Args:
@@ -173,11 +174,11 @@ class CallMonitoringWorkflow:
         """
         try:
             # Extract typed analysis data from provider response
-            analysis = call_response.extract_analysis()
+            analysis = call_response.analysis
 
-            if not analysis or not analysis.structured_data:
+            if analysis is None or analysis.structured_data is None:
                 logger.info(
-                    f"[Call Monitoring Workflow] No structured data found for call {call_id}"
+                    f"[Call Monitoring Workflow] No analysis available for call {call_id} after polling"
                 )
                 return
 
@@ -214,12 +215,33 @@ class CallMonitoringWorkflow:
                     f"[Call Monitoring Workflow] Successfully added CRM note for job {job_id}"
                 )
 
+            # Update claim status in CRM (skip if status is None)
+            if analysis.structured_data.claim_status != ClaimStatus.NONE:
+                logger.info(
+                    f"[Call Monitoring Workflow] Updating claim status for job {job_id} to {analysis.structured_data.claim_status.value}"
+                )
+                status_update_result = (
+                    await self.crm_service.update_project_claim_status(
+                        job_id=job_id,
+                        claim_status=analysis.structured_data.claim_status.value,
+                    )
+                )
+
+                if status_update_result:
+                    logger.error(
+                        f"[Call Monitoring Workflow] Failed to update claim status for job {job_id}: {status_update_result.error}"
+                    )
+                else:
+                    logger.info(
+                        f"[Call Monitoring Workflow] Successfully updated claim status for job {job_id}"
+                    )
+
         except Exception as e:
             logger.error(
                 f"[Call Monitoring Workflow] Error processing completed call {call_id}: {e}"
             )
 
-    def _format_crm_note(self, structured_data: ClaimStatusData) -> str:
+    def _format_crm_note(self, structured_data: ClaimStatusData | None) -> str:
         """
         Format structured data into a CRM note.
 
@@ -230,6 +252,10 @@ class CallMonitoringWorkflow:
             Formatted note text
         """
         try:
+            if structured_data is None:
+                logger.info("[Call Monitoring Workflow] No structured data found for call")
+                return ""
+
             # Build formatted note
             note_lines = [
                 "🤖 Voice AI Call Summary",

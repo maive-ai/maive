@@ -48,3 +48,31 @@ async def get_call_status(
 
     return result
 
+
+@router.delete("/calls/{call_id}", status_code=HTTPStatus.NO_CONTENT)
+async def end_call(
+    call_id: str,
+    current_user: User = Depends(get_current_user),
+    voice_ai_service: VoiceAIService = Depends(get_voice_ai_service),
+) -> None:
+    """
+    End an ongoing call programmatically.
+    
+    Args:
+        call_id: The unique identifier for the call to end
+        current_user: The authenticated user
+        voice_ai_service: The Voice AI service instance from dependency injection
+        
+    Raises:
+        HTTPException: If the call is not found or cannot be ended
+    """
+    result = await voice_ai_service.end_call(call_id)
+    
+    if isinstance(result, VoiceAIErrorResponse):
+        if result.error_code == VoiceAIErrorCode.NOT_FOUND:
+            raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=result.error)
+        raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail=result.error)
+    
+    # Success - 204 No Content response
+    return None
+

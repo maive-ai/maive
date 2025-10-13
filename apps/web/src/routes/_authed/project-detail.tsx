@@ -1,13 +1,19 @@
-import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
-import { createFileRoute } from '@tanstack/react-router';
-import { AlertCircle, CheckCircle2, Loader2, MapPin, Phone, Mail, FileText, Building2, User } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useEndCall } from '@/clients/ai/voice';
 import { useFetchProject } from '@/clients/crm';
-import { useCreateOutboundCall } from '@/clients/workflows';
+import { useCallAndWriteToCrm } from '@/clients/workflows';
+import { CallAudioVisualizer } from '@/components/call/CallAudioVisualizer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PhoneInput } from '@/components/ui/phone-input';
+import { getClaimStatusColor } from '@/lib/utils';
+import { ClaimStatus } from '@maive/api/client';
+import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
+import { createFileRoute } from '@tanstack/react-router';
+import { AlertCircle, Building2, CheckCircle2, FileText, Loader2, Mail, MapPin, Phone, User } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import type { Value as E164Number } from 'react-phone-number-input';
+import { isValidPhoneNumber } from 'react-phone-number-input';
 
 export const Route = createFileRoute('/_authed/project-detail')({
   component: ProjectDetail,
@@ -21,19 +27,41 @@ export const Route = createFileRoute('/_authed/project-detail')({
 function ProjectDetail() {
   const { projectId } = Route.useSearch();
   const { data: project, isLoading, isError } = useFetchProject(projectId);
-  
+
   // Initialize hooks before any early returns
   const providerData = project?.provider_data as any;
-  const [phoneNumber, setPhoneNumber] = useState<string>('');
-  const createCallMutation = useCreateOutboundCall();
+  const [phoneNumber, setPhoneNumber] = useState<E164Number | ''>('');
+  const [activeCallId, setActiveCallId] = useState<string | null>(null);
+  const [listenUrl, setListenUrl] = useState<string | null>(null);
+  const callAndWritetoCrmMutation = useCallAndWriteToCrm(projectId);
+  const endCallMutation = useEndCall();
+
+  const isValid = phoneNumber ? isValidPhoneNumber(phoneNumber) : false;
 
   // Update phone number when project data loads
   useEffect(() => {
     if (project && providerData) {
       const insurancePhone = providerData?.insuranceAgencyContact?.phone || providerData?.phone || '';
-      setPhoneNumber(insurancePhone);
+      setPhoneNumber(insurancePhone as E164Number | '');
     }
   }, [project, providerData]);
+
+  // Store call ID when call starts successfully
+  useEffect(() => {
+    if (callAndWritetoCrmMutation.isSuccess && callAndWritetoCrmMutation.data) {
+      setActiveCallId(callAndWritetoCrmMutation.data.call_id);
+      
+      // Extract listenUrl from provider_data
+      const providerData = callAndWritetoCrmMutation.data.provider_data;
+      console.log('[Project Detail] Provider data:', providerData);
+      if (providerData?.monitor?.listenUrl) {
+        console.log('[Project Detail] Setting listenUrl:', providerData.monitor.listenUrl);
+        setListenUrl(providerData.monitor.listenUrl);
+      } else {
+        console.log('[Project Detail] No listenUrl found in provider_data');
+      }
+    }
+  }, [callAndWritetoCrmMutation.isSuccess, callAndWritetoCrmMutation.data]);
 
   // Loading state
   if (isLoading) {
@@ -65,11 +93,11 @@ function ProjectDetail() {
   }
 
   const handleStartCall = (): void => {
-    if (!phoneNumber.trim()) {
+    if (!phoneNumber || !isValid) {
       return;
     }
 
-    createCallMutation.mutate({
+    callAndWritetoCrmMutation.mutate({
       phone_number: phoneNumber,
       // Pass customer details from project data
       customer_id: project.project_id,
@@ -81,6 +109,18 @@ function ProjectDetail() {
       adjuster_phone: providerData?.adjusterContact?.phone,
       tenant: providerData?.tenant,
       job_id: providerData?.job_id,
+    });
+  };
+
+  const handleEndCall = (): void => {
+    if (!activeCallId) return;
+    
+    endCallMutation.mutate(activeCallId, {
+      onSuccess: () => {
+        setActiveCallId(null);
+        setListenUrl(null);
+        callAndWritetoCrmMutation.reset();
+      }
     });
   };
 
@@ -99,6 +139,11 @@ function ProjectDetail() {
                 <div>
                   <CardTitle className="text-2xl">{providerData?.customerName || 'Customer Name'}</CardTitle>
                 </div>
+                {project.claim_status && project.claim_status !== ClaimStatus.None && (
+                  <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getClaimStatusColor(project.claim_status)}`}>
+                    {project.claim_status}
+                  </div>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -224,17 +269,23 @@ function ProjectDetail() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="phone-number">Phone Number</Label>
-                <Input
+                <PhoneInput
                   id="phone-number"
-                  type="tel"
+                  placeholder="Enter phone number"
                   value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  disabled={createCallMutation.isPending}
+                  onChange={(value) => setPhoneNumber(value || '')}
+                  defaultCountry="US"
+                  disabled={callAndWritetoCrmMutation.isPending}
                 />
+                {phoneNumber && !isValid && (
+                  <p className="text-sm text-red-600">
+                    Please enter a valid phone number
+                  </p>
+                )}
               </div>
 
               {/* Success Message */}
-              {createCallMutation.isSuccess && createCallMutation.data && (
+              {callAndWritetoCrmMutation.isSuccess && callAndWritetoCrmMutation.data && (
                 <div className="flex items-start gap-3 rounded-lg bg-green-50 border border-green-200 p-4">
                   <CheckCircle2 className="size-5 text-green-600 mt-0.5" />
                   <div className="flex-1 space-y-1">
@@ -242,17 +293,17 @@ function ProjectDetail() {
                       Call started!
                     </p>
                     <p className="text-sm text-green-700">
-                      Call ID: {createCallMutation.data.call_id}
+                      Call ID: {callAndWritetoCrmMutation.data.call_id}
                     </p>
                     <p className="text-xs text-green-600">
-                      Status: {createCallMutation.data.status}
+                      Status: {callAndWritetoCrmMutation.data.status}
                     </p>
                   </div>
                 </div>
               )}
 
               {/* Error Message */}
-              {createCallMutation.isError && (
+              {callAndWritetoCrmMutation.isError && (
                 <div className="flex items-start gap-3 rounded-lg bg-red-50 border border-red-200 p-4">
                   <AlertCircle className="size-5 text-red-600 mt-0.5" />
                   <div className="flex-1">
@@ -260,27 +311,48 @@ function ProjectDetail() {
                       Failed to create call
                     </p>
                     <p className="text-sm text-red-700">
-                      {createCallMutation.error?.message || 'An unexpected error occurred'}
+                      {callAndWritetoCrmMutation.error?.message || 'An unexpected error occurred'}
                     </p>
                   </div>
                 </div>
               )}
 
               <Button
-                onClick={handleStartCall}
+                onClick={activeCallId ? handleEndCall : handleStartCall}
                 className="w-full"
                 size="lg"
-                disabled={createCallMutation.isPending || !phoneNumber.trim()}
+                variant={activeCallId ? "destructive" : "default"}
+                disabled={
+                  activeCallId 
+                    ? endCallMutation.isPending 
+                    : (callAndWritetoCrmMutation.isPending || !phoneNumber || !isValid)
+                }
               >
-                {createCallMutation.isPending ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin" />
-                    Creating Call...
-                  </>
+                {activeCallId ? (
+                  endCallMutation.isPending ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      Ending Call...
+                    </>
+                  ) : (
+                    'End Call'
+                  )
                 ) : (
-                  `Start Call with ${providerData?.insuranceAgencyContact?.name || 'Contact'}`
+                  callAndWritetoCrmMutation.isPending ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      Creating Call...
+                    </>
+                  ) : (
+                    `Start Call with ${providerData?.insuranceAgencyContact?.name || 'Contact'}`
+                  )
                 )}
               </Button>
+
+              <CallAudioVisualizer 
+                listenUrl={listenUrl} 
+                onDisconnect={() => setListenUrl(null)}
+              />
             </CardContent>
           </Card>
         </div>
