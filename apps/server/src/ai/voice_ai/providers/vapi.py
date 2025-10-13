@@ -7,6 +7,7 @@ This module implements the VoiceAIProvider interface for Vapi.
 from http import HTTPStatus
 from typing import Any
 
+from vapi.types.analysis import Analysis
 import httpx
 import phonenumbers
 from vapi import AsyncVapi
@@ -23,7 +24,7 @@ from src.ai.voice_ai.base import VoiceAIError, VoiceAIProvider
 from src.ai.voice_ai.config import get_vapi_settings, get_voice_ai_settings
 from src.ai.voice_ai.constants import CallStatus, VoiceAIErrorCode
 from src.ai.voice_ai.constants import VoiceAIProvider as VoiceAIProviderEnum
-from src.ai.voice_ai.schemas import CallRequest, CallResponse
+from src.ai.voice_ai.schemas import AnalysisData, CallRequest, CallResponse, ClaimStatusData
 from src.integrations.crm.constants import ClaimStatus
 from src.utils.logger import logger
 
@@ -65,17 +66,11 @@ class VapiProvider(VoiceAIProvider):
         try:
             # Build typed objects for SDK
             formatted_phone = self._format_phone_number(request.phone_number)
-            customer = CreateCustomerDto(number=formatted_phone)
+            customer = CreateCustomerDto(
+                number=formatted_phone,
+                external_id=request.customer_id,  # Use external_id for customer_id tracking
+            )
             assistant_overrides = self._build_assistant_overrides(request)
-            
-            # Build metadata
-            metadata: dict[str, Any] | None = None
-            if request.customer_id or request.metadata:
-                metadata = {}
-                if request.customer_id:
-                    metadata["customer_id"] = request.customer_id
-                if request.metadata:
-                    metadata.update(request.metadata)
             
             # Create call using SDK with typed objects
             call: VapiCall = await self._client.calls.create(
@@ -83,7 +78,6 @@ class VapiProvider(VoiceAIProvider):
                 phone_number_id=self._vapi_settings.phone_number_id,
                 customer=customer,
                 assistant_overrides=assistant_overrides,
-                metadata=metadata,
             )
             
             # Return call response using SDK's Call object directly
@@ -250,8 +244,6 @@ class VapiProvider(VoiceAIProvider):
 
     def _build_claim_status_analysis_plan(self) -> AnalysisPlan:
         """Build analysis plan for claim status structured data extraction using SDK types."""
-        structured_data_prompt = "Extract insurance claim status information from this call transcript. Focus on: claim status (approved/denied/pending), payment details (amount, date, check number), required documents, and next steps."
-
         # Build typed JSON Schema for structured data extraction
         schema = JsonSchema(
             type="object",
@@ -315,13 +307,8 @@ class VapiProvider(VoiceAIProvider):
         # Build the structured data plan with typed JsonSchema
         structured_data_plan = StructuredDataPlan(
             enabled=True,
-            messages=[
-                {
-                    "role": "system",
-                    "content": structured_data_prompt,
-                }
-            ],
             schema_=schema,
+            timeout_seconds=30,
         )
         
         # Return typed AnalysisPlan object
@@ -346,10 +333,23 @@ class VapiProvider(VoiceAIProvider):
         # Convert to dict only for provider_data storage
         provider_data = call.dict() if hasattr(call, "dict") else call.model_dump()
 
+        # Get analysis data if available
+        analysis_data = None
+        analysis: Analysis = call.analysis
+
+        if analysis is not None:
+            _structured_data = ClaimStatusData.from_vapi(analysis.structured_data) if analysis.structured_data is not None else None
+            analysis_data = AnalysisData(
+                summary=analysis.summary,
+                structured_data=_structured_data,
+                success_evaluation=analysis.success_evaluation,
+            )
+            
         return CallResponse(
             call_id=call.id,
             status=status,
             provider=VoiceAIProviderEnum.VAPI,
             created_at=call.created_at,
             provider_data=provider_data,
+            analysis=analysis_data,
         )

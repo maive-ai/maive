@@ -5,6 +5,7 @@ This module contains all Pydantic models related to Voice AI operations,
 call management, and status tracking across different Voice AI providers.
 """
 
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -34,46 +35,6 @@ class CallRequest(BaseModel):
     )
     job_id: int | None = Field(None, description="Job ID")
     tenant: int | None = Field(None, description="Tenant ID")
-
-
-class CallResponse(BaseModel):
-    """Response model for call information."""
-
-    call_id: str = Field(..., description="Unique call identifier")
-    status: CallStatus = Field(..., description="Current call status")
-    provider: VoiceAIProviderEnum = Field(..., description="Voice AI provider")
-    created_at: str | None = Field(None, description="Call creation timestamp")
-    provider_data: dict[str, Any] | None = Field(
-        None, description="Provider-specific data"
-    )
-    analysis: "AnalysisData | None" = Field(
-        None, description="Typed analysis data (extracted from provider_data)"
-    )
-
-    def extract_analysis(self) -> "AnalysisData | None":
-        """
-        Extract typed analysis data from provider_data based on provider type.
-
-        Returns:
-            AnalysisData or None if not available
-        """
-        if not self.provider_data:
-            return None
-
-        # Route to appropriate provider transformer
-        if self.provider == VoiceAIProviderEnum.VAPI:
-            return AnalysisData.from_vapi(self.provider_data)
-
-        # Add other providers here as needed
-        return None
-
-
-class CallListResponse(BaseModel):
-    """Response model for multiple calls."""
-
-    calls: list[CallResponse] = Field(..., description="List of calls")
-    total_count: int = Field(..., description="Total number of calls")
-    provider: VoiceAIProviderEnum = Field(..., description="Voice AI provider")
 
 
 class VoiceAIErrorResponse(BaseModel):
@@ -203,37 +164,25 @@ class AnalysisData(BaseModel):
     )
     success_evaluation: str | None = Field(None, description="Success evaluation")
 
-    @classmethod
-    def from_vapi(cls, provider_data: dict[str, Any]) -> "AnalysisData | None":
-        """
-        Extract analysis data from Vapi provider response.
 
-        Args:
-            provider_data: Raw Vapi response data containing analysis
+class CallResponse(BaseModel):
+    """Response model for call information."""
 
-        Returns:
-            AnalysisData or None if not found
-        """
-        if not provider_data:
-            return None
+    call_id: str = Field(..., description="Unique call identifier")
+    status: CallStatus = Field(..., description="Current call status")
+    provider: VoiceAIProviderEnum = Field(..., description="Voice AI provider")
+    created_at: datetime | None = Field(None, description="Call creation timestamp")
+    provider_data: dict[str, Any] | None = Field(
+        None, description="Provider-specific data"
+    )
+    analysis: AnalysisData | None = Field(
+        None, description="Typed analysis data (extracted from provider_data)"
+    )
 
-        # Vapi format: analysis object at root level
-        analysis = provider_data.get("analysis")
-        if not analysis:
-            return None
 
-        structured_raw = analysis.get("structuredData")
-        structured_typed = None
-        if structured_raw:
-            try:
-                structured_typed = ClaimStatusData.from_vapi(structured_raw)
-            except Exception:
-                # If parsing fails, leave as None
-                pass
+class CallListResponse(BaseModel):
+    """Response model for multiple calls."""
 
-        return cls(
-            summary=analysis.get("summary"),
-            structured_data=structured_typed,
-            success_evaluation=analysis.get("successEvaluation")
-            or analysis.get("success_evaluation"),
-        )
+    calls: list[CallResponse] = Field(..., description="List of calls")
+    total_count: int = Field(..., description="Total number of calls")
+    provider: VoiceAIProviderEnum = Field(..., description="Voice AI provider")
