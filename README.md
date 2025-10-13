@@ -187,3 +187,11 @@ You can read more about this
 ### Running local dev with containers
 - Set the vars in `apps/server/.env` and `apps/web/.env`
 - From the root of the project, run: `set -a && source ./apps/web/.env && set +a && docker compose up --build`
+
+## Setting up MCP Servers for Claude Code
+- Vapi (be sure to pass in an API key)
+```
+claude mcp add vapi-mcp \ 
+    --scope local \
+    -- npx -y mcp-remote https://mcp.vapi.ai/mcp --header "Authorization:Bearer ${VAPI_API_KEY}"
+```

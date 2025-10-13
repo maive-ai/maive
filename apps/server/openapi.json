@@ -634,16 +634,55 @@
             }
           }
         }
+      },
+      "delete": {
+        "tags": [
+          "Voice AI"
+        ],
+        "summary": "End Call",
+        "description": "End an ongoing call programmatically.\n\nArgs:\n    call_id: The unique identifier for the call to end\n    current_user: The authenticated user\n    voice_ai_service: The Voice AI service instance from dependency injection\n    \nRaises:\n    HTTPException: If the call is not found or cannot be ended",
+        "operationId": "end_call_api_voice_ai_calls__call_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "call_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Call Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
-    "/api/workflows/monitored-call": {
+    "/api/workflows/call-and-write-results-to-crm": {
       "post": {
         "tags": [
           "Workflows"
         ],
-        "summary": "Create Monitored Call",
-        "description": "Create an outbound call with monitoring and CRM integration.\n\nThis workflow endpoint orchestrates:\n1. Creating the call via Voice AI provider\n2. Starting background call monitoring\n3. Updating CRM with call results when complete\n\nArgs:\n    request: The call request with phone number and context\n    current_user: The authenticated user\n    workflow: The call monitoring workflow from dependency injection\n\nReturns:\n    CallResponse: The call information\n\nRaises:\n    HTTPException: If call creation fails",
-        "operationId": "create_monitored_call_api_workflows_monitored_call_post",
+        "summary": "Call And Write Results To Crm",
+        "description": "Create an outbound call with monitoring and write results to CRM.\n\nThis workflow endpoint orchestrates:\n1. Creating the call via Voice AI provider\n2. Starting background call monitoring and writing results to CRM\n3. Updating CRM with call results when complete\n\nArgs:\n    request: The call request with phone number and context\n    current_user: The authenticated user\n    workflow: The call monitoring and CRM writing workflow from dependency injection\n\nReturns:\n    CallResponse: The call information\n\nRaises:\n    HTTPException: If call creation fails",
+        "operationId": "call_and_write_results_to_crm_api_workflows_call_and_write_results_to_crm_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -994,7 +1033,8 @@
           "created_at": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "format": "date-time"
               },
               {
                 "type": "null"
@@ -1054,6 +1094,19 @@
         "title": "CallStatus",
         "description": "Call status values across Voice AI systems."
       },
+      "ClaimStatus": {
+        "type": "string",
+        "enum": [
+          "None",
+          "Pending Review",
+          "Work Needed",
+          "Partially Approved",
+          "Fully Approved",
+          "Denied"
+        ],
+        "title": "ClaimStatus",
+        "description": "Claim status values with descriptions for AI context."
+      },
       "ClaimStatusData": {
         "properties": {
           "call_outcome": {
@@ -1063,10 +1116,9 @@
             "default": "unknown"
           },
           "claim_status": {
-            "type": "string",
-            "title": "Claim Status",
+            "$ref": "#/components/schemas/ClaimStatus",
             "description": "Claim status: approved, denied, pending_review, etc.",
-            "default": "unknown"
+            "default": "None"
           },
           "payment_details": {
             "anyOf": [
@@ -2098,6 +2150,11 @@
             "$ref": "#/components/schemas/Status",
             "description": "Current project status"
           },
+          "claim_status": {
+            "$ref": "#/components/schemas/ClaimStatus",
+            "description": "Current claim status",
+            "default": "None"
+          },
           "provider": {
             "$ref": "#/components/schemas/CRMProvider",
             "description": "CRM provider"
@@ -2250,7 +2307,7 @@
         "enum": [
           "Scheduled",
           "Dispatched",
-          "InProgress",
+          "In Progress",
           "Hold",
           "Completed",
           "Canceled"

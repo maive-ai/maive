@@ -13,9 +13,9 @@ import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthSignupSuccessRouteImport } from './routes/auth/signup-success'
 import { Route as AuthErrorRouteImport } from './routes/auth/error'
+import { Route as AuthedSimplePhoneInputRouteImport } from './routes/_authed/simple-phone-input'
 import { Route as AuthedProjectsRouteImport } from './routes/_authed/projects'
 import { Route as AuthedProjectDetailRouteImport } from './routes/_authed/project-detail'
-import { Route as AuthedPhoneInputRouteImport } from './routes/_authed/phone-input'
 import { Route as AuthedCreateProjectRouteImport } from './routes/_authed/create-project'
 import { Route as AuthedWorkflowsIndexRouteImport } from './routes/_authed/workflows/index'
 import { Route as AuthedVoiceAiIndexRouteImport } from './routes/_authed/voice-ai/index'
@@ -42,6 +42,11 @@ const AuthErrorRoute = AuthErrorRouteImport.update({
   path: '/auth/error',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedSimplePhoneInputRoute = AuthedSimplePhoneInputRouteImport.update({
+  id: '/simple-phone-input',
+  path: '/simple-phone-input',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedProjectsRoute = AuthedProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
@@ -50,11 +55,6 @@ const AuthedProjectsRoute = AuthedProjectsRouteImport.update({
 const AuthedProjectDetailRoute = AuthedProjectDetailRouteImport.update({
   id: '/project-detail',
   path: '/project-detail',
-  getParentRoute: () => AuthedRoute,
-} as any)
-const AuthedPhoneInputRoute = AuthedPhoneInputRouteImport.update({
-  id: '/phone-input',
-  path: '/phone-input',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedCreateProjectRoute = AuthedCreateProjectRouteImport.update({
@@ -93,9 +93,9 @@ const AuthedVoiceAiCustomerIdRoute = AuthedVoiceAiCustomerIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/create-project': typeof AuthedCreateProjectRoute
-  '/phone-input': typeof AuthedPhoneInputRoute
   '/project-detail': typeof AuthedProjectDetailRoute
   '/projects': typeof AuthedProjectsRoute
+  '/simple-phone-input': typeof AuthedSimplePhoneInputRoute
   '/auth/error': typeof AuthErrorRoute
   '/auth/signup-success': typeof AuthSignupSuccessRoute
   '/voice-ai/$customerId': typeof AuthedVoiceAiCustomerIdRoute
@@ -107,9 +107,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/create-project': typeof AuthedCreateProjectRoute
-  '/phone-input': typeof AuthedPhoneInputRoute
   '/project-detail': typeof AuthedProjectDetailRoute
   '/projects': typeof AuthedProjectsRoute
+  '/simple-phone-input': typeof AuthedSimplePhoneInputRoute
   '/auth/error': typeof AuthErrorRoute
   '/auth/signup-success': typeof AuthSignupSuccessRoute
   '/voice-ai/$customerId': typeof AuthedVoiceAiCustomerIdRoute
@@ -123,9 +123,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteWithChildren
   '/_authed/create-project': typeof AuthedCreateProjectRoute
-  '/_authed/phone-input': typeof AuthedPhoneInputRoute
   '/_authed/project-detail': typeof AuthedProjectDetailRoute
   '/_authed/projects': typeof AuthedProjectsRoute
+  '/_authed/simple-phone-input': typeof AuthedSimplePhoneInputRoute
   '/auth/error': typeof AuthErrorRoute
   '/auth/signup-success': typeof AuthSignupSuccessRoute
   '/_authed/voice-ai/$customerId': typeof AuthedVoiceAiCustomerIdRoute
@@ -139,9 +139,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/create-project'
-    | '/phone-input'
     | '/project-detail'
     | '/projects'
+    | '/simple-phone-input'
     | '/auth/error'
     | '/auth/signup-success'
     | '/voice-ai/$customerId'
@@ -153,9 +153,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/create-project'
-    | '/phone-input'
     | '/project-detail'
     | '/projects'
+    | '/simple-phone-input'
     | '/auth/error'
     | '/auth/signup-success'
     | '/voice-ai/$customerId'
@@ -168,9 +168,9 @@ export interface FileRouteTypes {
     | '/'
     | '/_authed'
     | '/_authed/create-project'
-    | '/_authed/phone-input'
     | '/_authed/project-detail'
     | '/_authed/projects'
+    | '/_authed/simple-phone-input'
     | '/auth/error'
     | '/auth/signup-success'
     | '/_authed/voice-ai/$customerId'
@@ -217,6 +217,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthErrorRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/simple-phone-input': {
+      id: '/_authed/simple-phone-input'
+      path: '/simple-phone-input'
+      fullPath: '/simple-phone-input'
+      preLoaderRoute: typeof AuthedSimplePhoneInputRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/projects': {
       id: '/_authed/projects'
       path: '/projects'
@@ -229,13 +236,6 @@ declare module '@tanstack/react-router' {
       path: '/project-detail'
       fullPath: '/project-detail'
       preLoaderRoute: typeof AuthedProjectDetailRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/phone-input': {
-      id: '/_authed/phone-input'
-      path: '/phone-input'
-      fullPath: '/phone-input'
-      preLoaderRoute: typeof AuthedPhoneInputRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/create-project': {
@@ -285,9 +285,9 @@ declare module '@tanstack/react-router' {
 
 interface AuthedRouteChildren {
   AuthedCreateProjectRoute: typeof AuthedCreateProjectRoute
-  AuthedPhoneInputRoute: typeof AuthedPhoneInputRoute
   AuthedProjectDetailRoute: typeof AuthedProjectDetailRoute
   AuthedProjectsRoute: typeof AuthedProjectsRoute
+  AuthedSimplePhoneInputRoute: typeof AuthedSimplePhoneInputRoute
   AuthedVoiceAiCustomerIdRoute: typeof AuthedVoiceAiCustomerIdRoute
   AuthedWorkflowsWorkflowIdRoute: typeof AuthedWorkflowsWorkflowIdRoute
   AuthedWorkflowsNew_workflowRoute: typeof AuthedWorkflowsNew_workflowRoute
@@ -297,9 +297,9 @@ interface AuthedRouteChildren {
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedCreateProjectRoute: AuthedCreateProjectRoute,
-  AuthedPhoneInputRoute: AuthedPhoneInputRoute,
   AuthedProjectDetailRoute: AuthedProjectDetailRoute,
   AuthedProjectsRoute: AuthedProjectsRoute,
+  AuthedSimplePhoneInputRoute: AuthedSimplePhoneInputRoute,
   AuthedVoiceAiCustomerIdRoute: AuthedVoiceAiCustomerIdRoute,
   AuthedWorkflowsWorkflowIdRoute: AuthedWorkflowsWorkflowIdRoute,
   AuthedWorkflowsNew_workflowRoute: AuthedWorkflowsNew_workflowRoute,

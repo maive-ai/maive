@@ -5,16 +5,14 @@ This file contains hardcoded project data that can be easily removed
 when switching to real CRM integrations.
 """
 
-import random
 from datetime import UTC, datetime
 
-from src.integrations.crm.constants import Status
-from src.integrations.crm.schemas import ProjectData, ContactInfo, Project
-
+from src.integrations.crm.constants import ClaimStatus, Status
+from src.integrations.crm.schemas import ContactInfo, Project, ProjectData
 
 # Default phone number for all mock data
 DEFAULT_PHONE_NUMBER = "+1-703-268-1917"
-    
+
 
 # Project statuses
 PROJECT_STATUSES = [status.value for status in Status]
@@ -524,16 +522,133 @@ def get_mock_projects() -> list[Project]:
     """
     now = datetime.now(UTC).isoformat()
 
-    projects = []
-    for project_data in MOCK_PROJECTS_RAW:
+    # Manually assigned claim and project statuses based on notes content
+    project_statuses_and_claims = [
+        (
+            Status.IN_PROGRESS.value,
+            ClaimStatus.WORK_NEEDED.value,
+        ),  # st_001 - Roof damage from hail storm
+        (
+            Status.IN_PROGRESS.value,
+            ClaimStatus.WORK_NEEDED.value,
+        ),  # jn_002 - Wind damage, emergency tarp installed
+        (
+            Status.DISPATCHED.value,
+            ClaimStatus.APPROVED.value,
+        ),  # al_003 - Multiple shingle damage, military discount
+        (
+            Status.SCHEDULED.value,
+            ClaimStatus.PENDING_REVIEW.value,
+        ),  # md_004 - Storm damage claim pending
+        (
+            Status.SCHEDULED.value,
+            ClaimStatus.NONE.value,
+        ),  # st_005 - Maintenance customer, no claim
+        (
+            Status.IN_PROGRESS.value,
+            ClaimStatus.WORK_NEEDED.value,
+        ),  # st_006 - Urgent repair needed
+        (
+            Status.DISPATCHED.value,
+            ClaimStatus.APPROVED.value,
+        ),  # st_007 - Wind damage, high deductible
+        (
+            Status.IN_PROGRESS.value,
+            ClaimStatus.WORK_NEEDED.value,
+        ),  # jn_008 - Multiple shingle replacement
+        (
+            Status.SCHEDULED.value,
+            ClaimStatus.NONE.value,
+        ),  # jn_009 - Routine maintenance
+        (
+            Status.IN_PROGRESS.value,
+            ClaimStatus.WORK_NEEDED.value,
+        ),  # jn_010 - Storm damage, quick resolution needed
+        (
+            Status.SCHEDULED.value,
+            ClaimStatus.PENDING_REVIEW.value,
+        ),  # jn_011 - Hail damage assessment needed
+        (
+            Status.SCHEDULED.value,
+            ClaimStatus.NONE.value,
+        ),  # jn_012 - Preventive maintenance
+        (
+            Status.IN_PROGRESS.value,
+            ClaimStatus.WORK_NEEDED.value,
+        ),  # jn_013 - Wind and hail damage, emergency tarp
+        (
+            Status.SCHEDULED.value,
+            ClaimStatus.NONE.value,
+        ),  # jn_014 - New customer referral
+        (
+            Status.HOLD.value,
+            ClaimStatus.PARTIALLY_APPROVED.value,
+        ),  # al_015 - Large commercial claim, multiple buildings
+        (
+            Status.SCHEDULED.value,
+            ClaimStatus.NONE.value,
+        ),  # al_016 - Maintenance customer
+        (
+            Status.DISPATCHED.value,
+            ClaimStatus.APPROVED.value,
+        ),  # al_017 - Storm damage, veteran discount
+        (
+            Status.DISPATCHED.value,
+            ClaimStatus.APPROVED.value,
+        ),  # al_018 - High-value home, premium materials
+        (
+            Status.SCHEDULED.value,
+            ClaimStatus.NONE.value,
+        ),  # al_019 - Regular maintenance
+        (
+            Status.IN_PROGRESS.value,
+            ClaimStatus.WORK_NEEDED.value,
+        ),  # al_020 - Wind damage, quick estimate needed
+        (
+            Status.SCHEDULED.value,
+            ClaimStatus.NONE.value,
+        ),  # al_021 - New construction inspection
+        (
+            Status.SCHEDULED.value,
+            ClaimStatus.PENDING_REVIEW.value,
+        ),  # md_022 - Hail damage assessment
+        (
+            Status.COMPLETED.value,
+            ClaimStatus.NONE.value,
+        ),  # md_023 - Routine maintenance
+        (
+            Status.HOLD.value,
+            ClaimStatus.PARTIALLY_APPROVED.value,
+        ),  # md_024 - Complex claim, detailed assessment
+        (
+            Status.IN_PROGRESS.value,
+            ClaimStatus.WORK_NEEDED.value,
+        ),  # md_025 - Wind and hail damage
+        (
+            Status.SCHEDULED.value,
+            ClaimStatus.NONE.value,
+        ),  # md_026 - Senior citizen preventive maintenance
+        (
+            Status.IN_PROGRESS.value,
+            ClaimStatus.PARTIALLY_APPROVED.value,
+        ),  # md_027 - Large property, multiple damage areas
+        (
+            Status.COMPLETED.value,
+            ClaimStatus.NONE.value,
+        ),  # md_028 - Long-term customer maintenance
+    ]
 
+    projects = []
+    for idx, project_data in enumerate(MOCK_PROJECTS_RAW):
         # Add Service Titan-like metadata with numeric tenant and job_id
         project_data.tenant = 1
         project_data.job_id = _derive_numeric_job_id(project_data.id)
 
+        project_status, claim_status = project_statuses_and_claims[idx]
         project = Project(
             project_data=project_data,
-            status=random.choice(PROJECT_STATUSES),
+            status=project_status,
+            claim_status=claim_status,
             updated_at=now,
         )
         projects.append(project)

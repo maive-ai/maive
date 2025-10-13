@@ -5,11 +5,14 @@ This module contains all Pydantic models related to Voice AI operations,
 call management, and status tracking across different Voice AI providers.
 """
 
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
 
-from src.ai.voice_ai.constants import CallStatus, VoiceAIErrorCode, VoiceAIProvider as VoiceAIProviderEnum, WebhookEventType
+from src.ai.voice_ai.constants import CallStatus, VoiceAIErrorCode
+from src.ai.voice_ai.constants import VoiceAIProvider as VoiceAIProviderEnum
+from src.integrations.crm.constants import ClaimStatus
 
 
 class CallRequest(BaseModel):
@@ -21,125 +24,17 @@ class CallRequest(BaseModel):
     company_name: str | None = Field(None, description="Company name")
     customer_address: str | None = Field(None, description="Customer address")
     claim_number: str | None = Field(None, description="Insurance claim number")
-    date_of_loss: str | None = Field(None, description="Date of loss for insurance claim")
+    date_of_loss: str | None = Field(
+        None, description="Date of loss for insurance claim"
+    )
     insurance_agency: str | None = Field(None, description="Insurance agency name")
     adjuster_name: str | None = Field(None, description="Insurance adjuster name")
     adjuster_phone: str | None = Field(None, description="Insurance adjuster phone")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata"
+    )
     job_id: int | None = Field(None, description="Job ID")
     tenant: int | None = Field(None, description="Tenant ID")
-    
-
-class CallResponse(BaseModel):
-    """Response model for call information."""
-
-    call_id: str = Field(..., description="Unique call identifier")
-    status: CallStatus = Field(..., description="Current call status")
-    provider: VoiceAIProviderEnum = Field(..., description="Voice AI provider")
-    created_at: str | None = Field(None, description="Call creation timestamp")
-    provider_data: dict[str, Any] | None = Field(None, description="Provider-specific data")
-    analysis: "AnalysisData | None" = Field(None, description="Typed analysis data (extracted from provider_data)")
-
-    def extract_analysis(self) -> "AnalysisData | None":
-        """
-        Extract typed analysis data from provider_data based on provider type.
-
-        Returns:
-            AnalysisData or None if not available
-        """
-        if not self.provider_data:
-            return None
-
-        # Route to appropriate provider transformer
-        if self.provider == VoiceAIProviderEnum.VAPI:
-            return AnalysisData.from_vapi(self.provider_data)
-
-        # Add other providers here as needed
-        return None
-
-
-class CallListResponse(BaseModel):
-    """Response model for multiple calls."""
-
-    calls: list[CallResponse] = Field(..., description="List of calls")
-    total_count: int = Field(..., description="Total number of calls")
-    provider: VoiceAIProviderEnum = Field(..., description="Voice AI provider")
-
-
-class CallStartedData(BaseModel):
-    """Data for call started events."""
-
-    customer_number: str | None = Field(None, description="Customer phone number")
-    assistant_id: str | None = Field(None, description="Assistant ID used for the call")
-
-
-class CallEndedData(BaseModel):
-    """Data for call ended events."""
-
-    duration: float | None = Field(None, description="Call duration in seconds")
-    transcript: str = Field(default="", description="Full call transcript")
-    end_reason: str | None = Field(None, description="Reason the call ended")
-    artifact: dict[str, Any] = Field(default_factory=dict, description="Call artifacts")
-    analysis: dict[str, Any] = Field(default_factory=dict, description="Call analysis data")
-    vapi_payload: dict[str, Any] = Field(default_factory=dict, description="Full provider payload for processing")
-
-
-class FunctionCallData(BaseModel):
-    """Data for function call events."""
-
-    function_name: str | None = Field(None, description="Name of the function being called")
-    parameters: dict[str, Any] = Field(default_factory=dict, description="Function call parameters")
-
-
-class TranscriptData(BaseModel):
-    """Data for transcript events."""
-
-    transcript: str = Field(default="", description="Transcript text")
-    is_partial: bool = Field(default=False, description="Whether this is a partial transcript")
-
-
-class SpeechUpdateData(BaseModel):
-    """Data for speech update events."""
-
-    status: str | None = Field(None, description="Speech status")
-    role: str | None = Field(None, description="Speaker role")
-    turn: int | None = Field(None, description="Turn number")
-
-
-class ConversationUpdateData(BaseModel):
-    """Data for conversation update events."""
-
-    conversation: list[dict[str, Any]] = Field(default_factory=list, description="Conversation history")
-    messages: list[dict[str, Any]] = Field(default_factory=list, description="Message list")
-
-
-class StatusUpdateData(BaseModel):
-    """Data for status update events."""
-
-    status: str | None = Field(None, description="Call status")
-    ended_reason: str | None = Field(None, description="Reason for status change")
-
-
-# Union type for all event data types
-WebhookEventData = (
-    CallStartedData
-    | CallEndedData
-    | FunctionCallData
-    | TranscriptData
-    | SpeechUpdateData
-    | ConversationUpdateData
-    | StatusUpdateData
-    | dict[str, Any]  # Fallback for unknown event types
-)
-
-
-class WebhookEvent(BaseModel):
-    """Standard webhook event model across all Voice AI providers."""
-
-    event_type: WebhookEventType = Field(..., description="Type of webhook event")
-    call_id: str | None = Field(None, description="Unique call identifier (may be None for some event types)")
-    data: WebhookEventData = Field(..., description="Event-specific typed data")
-    provider_data: dict[str, Any] = Field(default_factory=dict, description="Raw provider data")
 
 
 class VoiceAIErrorResponse(BaseModel):
@@ -154,10 +49,13 @@ class VoiceAIErrorResponse(BaseModel):
 # Provider-agnostic structured data models
 # These models provide a common interface across different voice AI providers
 
+
 class PaymentDetails(BaseModel):
     """Provider-agnostic payment information from claim status calls."""
 
-    status: str | None = Field(None, description="Payment status: issued, not_issued, pending")
+    status: str | None = Field(
+        None, description="Payment status: issued, not_issued, pending"
+    )
     amount: float | None = Field(None, description="Payment amount")
     issue_date: str | None = Field(None, description="Date payment was issued")
     check_number: str | None = Field(None, description="Check number")
@@ -182,8 +80,12 @@ class PaymentDetails(BaseModel):
 class RequiredActions(BaseModel):
     """Provider-agnostic required actions from claim status calls."""
 
-    documents_needed: list[str] = Field(default_factory=list, description="List of required documents")
-    submission_method: str | None = Field(None, description="Document submission method: email, portal, mail")
+    documents_needed: list[str] = Field(
+        default_factory=list, description="List of required documents"
+    )
+    submission_method: str | None = Field(
+        None, description="Document submission method: email, portal, mail"
+    )
     next_steps: str | None = Field(None, description="Summary of next actions")
 
     @classmethod
@@ -205,18 +107,40 @@ class RequiredActions(BaseModel):
 class ClaimStatusData(BaseModel):
     """Provider-agnostic structured data from insurance claim status calls."""
 
-    call_outcome: str = Field(default="unknown", description="Call outcome: success, voicemail, gatekeeper, failed")
-    claim_status: str = Field(default="unknown", description="Claim status: approved, denied, pending_review, etc.")
+    call_outcome: str = Field(
+        default="unknown",
+        description="Call outcome: success, voicemail, gatekeeper, failed",
+    )
+    claim_status: ClaimStatus = Field(
+        default=ClaimStatus.NONE,
+        description="Claim status: approved, denied, pending_review, etc.",
+    )
     payment_details: PaymentDetails | None = Field(None, description="Payment details")
-    required_actions: RequiredActions | None = Field(None, description="Required actions")
-    claim_update_summary: str | None = Field(None, description="Summary of the call for notes")
+    required_actions: RequiredActions | None = Field(
+        None, description="Required actions"
+    )
+    claim_update_summary: str | None = Field(
+        None, description="Summary of the call for notes"
+    )
 
     @classmethod
     def from_vapi(cls, vapi_data: dict[str, Any]) -> "ClaimStatusData":
         """Create from Vapi-specific structured data."""
+        # Handle claim_status - can be string or ClaimStatus enum
+        claim_status_value = vapi_data.get("claim_status", ClaimStatus.NONE)
+        if isinstance(claim_status_value, str):
+            # Try to convert string to enum
+            try:
+                claim_status = ClaimStatus(claim_status_value)
+            except ValueError:
+                # If conversion fails, use NONE as default
+                claim_status = ClaimStatus.NONE
+        else:
+            claim_status = claim_status_value or ClaimStatus.NONE
+
         return cls(
             call_outcome=vapi_data.get("call_outcome", "unknown"),
-            claim_status=vapi_data.get("claim_status", "unknown"),
+            claim_status=claim_status,
             payment_details=(
                 PaymentDetails.from_vapi(vapi_data["payment_details"])
                 if vapi_data.get("payment_details")
@@ -235,40 +159,30 @@ class AnalysisData(BaseModel):
     """Provider-agnostic analysis data from completed calls."""
 
     summary: str | None = Field(None, description="Call summary")
-    structured_data: ClaimStatusData | None = Field(None, description="Structured data extraction")
+    structured_data: ClaimStatusData | None = Field(
+        None, description="Structured data extraction"
+    )
     success_evaluation: str | None = Field(None, description="Success evaluation")
 
-    @classmethod
-    def from_vapi(cls, provider_data: dict[str, Any]) -> "AnalysisData | None":
-        """
-        Extract analysis data from Vapi provider response.
 
-        Args:
-            provider_data: Raw Vapi response data containing analysis
+class CallResponse(BaseModel):
+    """Response model for call information."""
 
-        Returns:
-            AnalysisData or None if not found
-        """
-        if not provider_data:
-            return None
+    call_id: str = Field(..., description="Unique call identifier")
+    status: CallStatus = Field(..., description="Current call status")
+    provider: VoiceAIProviderEnum = Field(..., description="Voice AI provider")
+    created_at: datetime | None = Field(None, description="Call creation timestamp")
+    provider_data: dict[str, Any] | None = Field(
+        None, description="Provider-specific data"
+    )
+    analysis: AnalysisData | None = Field(
+        None, description="Typed analysis data (extracted from provider_data)"
+    )
 
-        # Vapi format: analysis object at root level
-        analysis = provider_data.get("analysis")
-        if not analysis:
-            return None
 
-        structured_raw = analysis.get("structuredData")
-        structured_typed = None
-        if structured_raw:
-            try:
-                structured_typed = ClaimStatusData.from_vapi(structured_raw)
-            except Exception:
-                # If parsing fails, leave as None
-                pass
+class CallListResponse(BaseModel):
+    """Response model for multiple calls."""
 
-        return cls(
-            summary=analysis.get("summary"),
-            structured_data=structured_typed,
-            success_evaluation=analysis.get("successEvaluation") or analysis.get("success_evaluation"),
-        )
-
+    calls: list[CallResponse] = Field(..., description="List of calls")
+    total_count: int = Field(..., description="Total number of calls")
+    provider: VoiceAIProviderEnum = Field(..., description="Voice AI provider")

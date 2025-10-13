@@ -634,6 +634,26 @@ class ServiceTitanProvider(CRMProvider):
             logger.error(f"Unexpected error adding note to job {job_id}: {e}")
             raise CRMError(f"Failed to add note to job: {str(e)}", "UNKNOWN_ERROR")
 
+    async def update_project_claim_status(self, job_id: int, claim_status: str) -> None:
+        """
+        Update the claim status for a specific project/job.
+
+        Note: Service Titan doesn't have a native claim status field, so this is
+        currently a no-op. In a real implementation, you might store this in a
+        custom field or use project tags/categories.
+
+        Args:
+            job_id: The unique identifier for the job
+            claim_status: The new claim status value
+
+        Raises:
+            CRMError: If the job is not found or an error occurs
+        """
+        logger.info(
+            f"[ServiceTitanProvider] Claim status update not supported for job {job_id} "
+            f"(would set to {claim_status}). This would require custom field implementation."
+        )
+
     async def get_job_hold_reasons(self, active: str | None = None) -> JobHoldReasonsListResponse:
         """
         Get a list of job hold reasons from Service Titan.

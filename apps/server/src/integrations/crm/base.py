@@ -153,6 +153,20 @@ class CRMProvider(ABC):
         """
         pass
 
+    @abstractmethod
+    async def update_project_claim_status(self, job_id: int, claim_status: str) -> None:
+        """
+        Update the claim status for a specific project/job.
+
+        Args:
+            job_id: The unique identifier for the job
+            claim_status: The new claim status value
+
+        Raises:
+            CRMError: If the job is not found or an error occurs
+        """
+        pass
+
 
 class CRMError(Exception):
     """Base exception for CRM-related errors."""

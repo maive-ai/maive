@@ -10,6 +10,7 @@ import uuid
 from datetime import UTC, datetime
 
 from src.integrations.crm.base import CRMError, CRMProvider
+from src.integrations.crm.constants import ClaimStatus
 from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
 from src.integrations.crm.constants import Status
 from src.integrations.crm.provider_schemas import FormSubmissionListResponse
@@ -68,9 +69,15 @@ class MockCRMProvider(CRMProvider):
         # Convert to ProjectStatusResponse with providerData excluding 'id'
         provider_data = project.project_data.model_dump(exclude={"id"}, mode="json")
 
+        logger.info(
+            f"[MockCRM] Returning project {project_id} - "
+            f"Status: {project.status}, Claim Status: {project.claim_status}"
+        )
+
         return ProjectStatusResponse(
             project_id=project.project_data.id,
             status=Status(project.status),
+            claim_status=ClaimStatus(project.claim_status),
             provider=CRMProviderEnum.MOCK_CRM,
             updated_at=project.updated_at,
             provider_data=provider_data,
@@ -89,10 +96,15 @@ class MockCRMProvider(CRMProvider):
         project_responses = []
         for project in self._projects:
             provider_data = project.project_data.model_dump(exclude={"id"}, mode="json")
+            logger.debug(
+                f"[MockCRM] Project {project.project_data.id} - "
+                f"Status: {project.status}, Claim Status: {project.claim_status}"
+            )
             project_responses.append(
                 ProjectStatusResponse(
                     project_id=project.project_data.id,
                     status=Status(project.status),
+                    claim_status=ClaimStatus(project.claim_status),
                     provider=CRMProviderEnum.MOCK_CRM,
                     updated_at=project.updated_at,
                     provider_data=provider_data,
@@ -205,4 +217,34 @@ class MockCRMProvider(CRMProvider):
             created_on=now,
             modified_on=now,
         )
+
+    async def update_project_claim_status(self, job_id: int, claim_status: str) -> None:
+        """
+        Update the claim status for a specific project/job.
+
+        Args:
+            job_id: The unique identifier for the job
+            claim_status: The new claim status value
+
+        Raises:
+            CRMError: If the job is not found
+        """
+        logger.debug(f"[MockCRMProvider] Updating claim status for job {job_id} to {claim_status}")
+
+        # Find job by job_id
+        job: Project | None = next((j for j in self._projects if j.project_data.job_id == job_id), None)
+
+        if job:
+            old_status = job.claim_status
+            job.claim_status = claim_status
+            logger.info(
+                f"[MockCRMProvider] Updated claim status for job {job_id} from "
+                f"{old_status} to {claim_status}"
+            )
+        else:
+            logger.warning(f"[MockCRMProvider] Job not found: {job_id}")
+            raise CRMError(
+                error_code="NOT_FOUND",
+                message=f"Job with ID {job_id} not found",
+            )
 

@@ -10,7 +10,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.integrations.crm.constants import CRMProvider, EstimateReviewStatus, Status
+from src.integrations.crm.constants import ClaimStatus, CRMProvider, EstimateReviewStatus, Status
 
 
 class ProjectStatusResponse(BaseModel):
@@ -18,6 +18,9 @@ class ProjectStatusResponse(BaseModel):
 
     project_id: str = Field(..., description="Unique project identifier")
     status: Status = Field(..., description="Current project status")
+    claim_status: ClaimStatus = Field(
+        default=ClaimStatus.NONE, description="Current claim status"
+    )
     provider: CRMProvider = Field(..., description="CRM provider")
     updated_at: datetime | None = Field(None, description="Last status update timestamp")
     provider_data: dict[str, Any] | None = Field(None, description="Provider-specific data")
@@ -411,5 +414,6 @@ class Project(BaseModel):
 
     project_data: ProjectData
     status: str
+    claim_status: str = Field(default="None", description="Claim status")
     updated_at: str
     metadata: dict[str, Any] | None = Field(None, description="Project metadata")
