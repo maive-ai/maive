@@ -1,3 +1,7 @@
 .cursor/external_docs/**/*.json filter=lfs diff=lfs merge=lfs -text
 .cursor/external_docs/**/*.yaml filter=lfs diff=lfs merge=lfs -text
 *.mp3 filter=lfs diff=lfs merge=lfs -text
+
+# Exclude _catalog and _dereferenced from LFS
+**/_catalog/** !filter !diff !merge text
+**/_dereferenced/** !filter !diff !merge text
