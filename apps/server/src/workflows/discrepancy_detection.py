@@ -56,14 +56,16 @@ class DiscrepancyDetectionWorkflow:
     async def execute_for_job(
         self,
         job_id: int,
-        audio_path: str,
+        audio_path: str | None = None,
+        transcript_path: str | None = None,
         form_submission: dict | None = None,
     ) -> dict:
         """Execute the discrepancy detection workflow for a single job.
 
         Args:
             job_id: Job ID to analyze
-            audio_path: Path to the audio file of the sales call
+            audio_path: Path to the audio file of the sales call (optional if transcript provided)
+            transcript_path: Path to the transcript JSON file (optional, alternative to audio)
             form_submission: Optional form submission data (if already fetched)
 
         Returns:
@@ -100,6 +102,19 @@ class DiscrepancyDetectionWorkflow:
             items_result = await self._fetch_estimate_items(selected_estimate.id)
             logger.info(f"✅ Found {len(items_result.items)} items")
 
+            # Save raw estimate data to JSON file
+            estimate_data_output = {
+                "estimate": selected_estimate.model_dump() if hasattr(selected_estimate, "model_dump") else selected_estimate.__dict__,
+                "items": [
+                    item.model_dump() if hasattr(item, "model_dump") else item.__dict__
+                    for item in items_result.items
+                ]
+            }
+            output_filename = f"estimate_data_job_{job_id}_estimate_{selected_estimate.id}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.json"
+            with open(output_filename, "w") as f:
+                json.dump(estimate_data_output, f, indent=2, default=str)
+            logger.info(f"✅ Estimate data saved to: {output_filename}")
+
             # Step 4: Get form submission (Notes to Production)
             if form_submission:
                 logger.info(f"\nStep 4: Using provided form submission")
@@ -114,10 +129,11 @@ class DiscrepancyDetectionWorkflow:
                 logger.warning(f"⚠️ No Notes to Production found for job {job_id}")
                 notes_to_production = {"message": "No Notes to Production found"}
 
-            # Step 5: Analyze audio with AI
-            logger.info("\nStep 5: Analyzing audio for discrepancies")
+            # Step 5: Analyze audio/transcript with AI
+            logger.info("\nStep 5: Analyzing audio/transcript for discrepancies")
             review_result = await self._analyze_audio(
                 audio_path=audio_path,
+                transcript_path=transcript_path,
                 estimate=selected_estimate,
                 estimate_items=items_result.items,
                 notes_to_production=notes_to_production,
@@ -280,12 +296,22 @@ class DiscrepancyDetectionWorkflow:
 
     async def _analyze_audio(
         self,
-        audio_path: str,
+        audio_path: str | None,
+        transcript_path: str | None,
         estimate,
         estimate_items,
         notes_to_production,
     ) -> DiscrepancyReview:
-        """Analyze audio for discrepancies using AI."""
+        """Analyze audio/transcript for discrepancies using AI.
+
+        Can handle:
+        - Audio only
+        - Transcript only
+        - Both audio and transcript together
+        """
+        if not audio_path and not transcript_path:
+            raise ValueError("Either audio_path or transcript_path must be provided")
+
         # Format estimate data
         estimate_data = {
             "estimate_id": estimate.id,
@@ -304,12 +330,59 @@ class DiscrepancyDetectionWorkflow:
             ],
         }
 
-        prompt = f"""You are an expert sales admin for a roofing company. You are reviewing the audio from a conversation between one of our sales reps and a customer. Please listen to and understand the contents of the audio conversation, the contents of the estimate, and any notes to production that the sales rep submitted via form following the conversation.
+        # Load transcript if provided
+        transcript_text = ""
+        if transcript_path:
+            logger.info(f"   Loading transcript from: {transcript_path}")
+            with open(transcript_path, "r") as f:
+                transcript_data = json.load(f)
+
+            # Format transcript for readability
+            transcript_lines = []
+            for entry in transcript_data:
+                speaker = entry.get("speaker", "Unknown")
+                text = entry.get("transcript", "")
+                start_time = entry.get("start_time", 0)
+                # Convert seconds to MM:SS format
+                minutes = int(start_time // 60)
+                seconds = int(start_time % 60)
+                timestamp = f"{minutes:02d}:{seconds:02d}"
+                transcript_lines.append(f"[{timestamp}] {speaker}: {text}")
+
+            transcript_text = "\n".join(transcript_lines)
+            logger.info(f"   Loaded transcript with {len(transcript_data)} entries")
+
+        # Build prompt based on what's available
+        if audio_path and transcript_text:
+            # Both audio and transcript
+            logger.info("   Analyzing using both audio and transcript")
+            instruction = "You are reviewing both the audio and transcript of a conversation between one of our sales reps and a customer. Use the audio for tone and context, and the transcript for specific details and timestamps."
+            conversation_section = f"""
+**Conversation Transcript (with timestamps):**
+{transcript_text}
+"""
+        elif transcript_text:
+            # Transcript only
+            logger.info("   Analyzing using transcript only")
+            instruction = "You are reviewing the transcript of a conversation between one of our sales reps and a customer. Please carefully read and understand the contents of the conversation transcript."
+            conversation_section = f"""
+**Conversation Transcript (with timestamps):**
+{transcript_text}
+"""
+        else:
+            # Audio only
+            logger.info("   Analyzing using audio only")
+            instruction = "You are reviewing the audio from a conversation between one of our sales reps and a customer. Please listen to and understand the contents of the audio conversation."
+            conversation_section = ""
+
+        prompt = f"""You are an expert sales admin for a roofing company. {instruction}
+
+Review the contents of the estimate and any notes to production that the sales rep submitted via form following the conversation.
 
 Identify what, if anything, mentioned during the conversation that was not updated in the estimate or logged in the form. If there is any information that would affect the roofing service provided or how it is provided, then please flag the conversation for review.
 
-Simply and concisely log what was not included in the estimate or form but stated during the audio conversation. In this concise message of the discrepancy, please include a timestamp in the audio when the discrepancy occurred in format (MM:SS).
-
+Simply and concisely log what was not included in the estimate or form but stated during the conversation. In this concise message of the discrepancy, please include a timestamp when the discrepancy occurred in format (MM:SS).
+{conversation_section}
 **Estimate Contents:**
 {json.dumps(estimate_data, indent=2)}
 
@@ -317,14 +390,15 @@ Simply and concisely log what was not included in the estimate or form but state
 {json.dumps(notes_to_production, indent=2)}
 """
 
+        # Use AI provider to analyze with structured output
+        logger.info(f"   Using AI provider: {self.ai_provider.__class__.__name__}")
+
         request = AudioAnalysisRequest(
             audio_path=audio_path,
             prompt=prompt,
             temperature=0.7,
         )
 
-        # Use AI provider to analyze audio with structured output
-        logger.info(f"   Using AI provider: {self.ai_provider.__class__.__name__}")
         review_result = await self.ai_provider.analyze_audio_with_structured_output(
             request=request,
             response_model=DiscrepancyReview,
@@ -367,8 +441,17 @@ async def main():
         description="Analyze sales calls for discrepancies in form submissions within a time range"
     )
     parser.add_argument(
-        "audio_path",
-        help="Path to the audio file of the sales call",
+        "--audio-path",
+        help="Path to the audio file of the sales call (optional if transcript provided)",
+    )
+    parser.add_argument(
+        "--transcript-path",
+        help="Path to the transcript JSON file (optional if audio provided)",
+    )
+    parser.add_argument(
+        "--job-id",
+        type=int,
+        help="Specific job ID to analyze (skips time-based form submission search)",
     )
     parser.add_argument(
         "--start-time",
@@ -383,7 +466,44 @@ async def main():
 
     args = parser.parse_args()
 
-    # Parse timestamps (will include timezone if provided, otherwise assume UTC)
+    # Validate input
+    if not args.audio_path and not args.transcript_path:
+        parser.error("Either --audio-path or --transcript-path must be provided")
+
+    workflow = DiscrepancyDetectionWorkflow()
+
+    # Handle single job analysis if job-id is provided
+    if args.job_id:
+        logger.info("=" * 60)
+        logger.info("SINGLE JOB DISCREPANCY DETECTION WORKFLOW")
+        logger.info("=" * 60)
+        logger.info(f"Job ID: {args.job_id}")
+        if args.audio_path:
+            logger.info(f"Audio file: {args.audio_path}")
+        if args.transcript_path:
+            logger.info(f"Transcript file: {args.transcript_path}")
+        logger.info("")
+
+        try:
+            result = await workflow.execute_for_job(
+                job_id=args.job_id,
+                audio_path=args.audio_path,
+                transcript_path=args.transcript_path,
+            )
+
+            print("\n" + "=" * 60)
+            print("WORKFLOW RESULT")
+            print("=" * 60)
+            print(json.dumps(result, indent=2, default=str))
+            print("=" * 60)
+
+        except Exception as e:
+            logger.error(f"Failed to process job {args.job_id}: {e}")
+            raise
+
+        return
+
+    # Parse timestamps for batch processing
     start_time = datetime.fromisoformat(args.start_time)
     if start_time.tzinfo is None:
         start_time = start_time.replace(tzinfo=UTC)
@@ -395,10 +515,11 @@ async def main():
     logger.info("BATCH DISCREPANCY DETECTION WORKFLOW")
     logger.info("=" * 60)
     logger.info(f"Time range: {start_time} to {end_time}")
-    logger.info(f"Audio file: {args.audio_path}")
+    if args.audio_path:
+        logger.info(f"Audio file: {args.audio_path}")
+    if args.transcript_path:
+        logger.info(f"Transcript file: {args.transcript_path}")
     logger.info("")
-
-    workflow = DiscrepancyDetectionWorkflow()
 
     # Step 1: Fetch all form submissions in the time range
     logger.info("Fetching form submissions in time range...")
@@ -455,6 +576,7 @@ async def main():
             result = await workflow.execute_for_job(
                 job_id=job_id,
                 audio_path=args.audio_path,
+                transcript_path=args.transcript_path,
                 form_submission=submission_by_job.get(job_id),
             )
             results.append(result)
