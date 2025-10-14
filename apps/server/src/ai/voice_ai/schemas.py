@@ -165,6 +165,15 @@ class AnalysisData(BaseModel):
     success_evaluation: str | None = Field(None, description="Success evaluation")
 
 
+class TranscriptMessage(BaseModel):
+    """Provider-agnostic transcript message."""
+
+    role: str = Field(..., description="Speaker role: user, assistant, system")
+    content: str = Field(..., description="Message content")
+    timestamp_seconds: float = Field(..., description="Seconds from call start")
+    duration_seconds: float | None = Field(None, description="Message duration")
+
+
 class CallResponse(BaseModel):
     """Response model for call information."""
 
@@ -177,6 +186,10 @@ class CallResponse(BaseModel):
     )
     analysis: AnalysisData | None = Field(
         None, description="Typed analysis data (extracted from provider_data)"
+    )
+    messages: list[TranscriptMessage] = Field(
+        default_factory=list,
+        description="Transcript messages from the call"
     )
 
 
