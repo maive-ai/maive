@@ -1066,6 +1066,14 @@
               }
             ],
             "description": "Typed analysis data (extracted from provider_data)"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/TranscriptMessage"
+            },
+            "type": "array",
+            "title": "Messages",
+            "description": "Transcript messages from the call"
           }
         },
         "type": "object",
@@ -2314,6 +2322,45 @@
         ],
         "title": "Status",
         "description": "Status values for Service Titan jobs and projects."
+      },
+      "TranscriptMessage": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "description": "Speaker role: user, assistant, system"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Message content"
+          },
+          "timestamp_seconds": {
+            "type": "number",
+            "title": "Timestamp Seconds",
+            "description": "Seconds from call start"
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds",
+            "description": "Message duration"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role",
+          "content",
+          "timestamp_seconds"
+        ],
+        "title": "TranscriptMessage",
+        "description": "Provider-agnostic transcript message."
       },
       "User": {
         "properties": {
