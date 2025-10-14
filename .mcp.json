@@ -76,6 +76,17 @@
         "./.cursor/external_docs/service_titan/service-agreements"
       ],
       "env": {}
+    },
+    "service-titan-service-pricebook": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@reapi/mcp-openapi@latest",
+        "--dir",
+        "./.cursor/external_docs/service_titan/pricebook"
+      ],
+      "env": {}
     }
   }
 }

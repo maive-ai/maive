@@ -53,6 +53,11 @@
         "command": "npx",
         "args": ["-y", "@reapi/mcp-openapi@latest", "--dir", "./.cursor/external_docs/service_titan/service-agreements"],
         "env": {}
+      },
+      "servicetitan-service-pricebook": {
+        "command": "npx",
+        "args": ["-y", "@reapi/mcp-openapi@latest", "--dir", "./.cursor/external_docs/service_titan/service-pricebook"],
+        "env": {}
       }
     }
   }
