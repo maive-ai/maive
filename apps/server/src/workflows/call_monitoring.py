@@ -12,6 +12,7 @@ from src.ai.voice_ai.schemas import (
     CallRequest,
     CallResponse,
     ClaimStatusData,
+    TranscriptMessage,
     VoiceAIErrorResponse,
 )
 from src.ai.voice_ai.service import VoiceAIService
@@ -103,6 +104,7 @@ class CallAndWriteToCRMWorkflow:
         poll_interval_seconds = 10
         max_polling_duration = 60 * 60 * 24  # 24 hours
         start_time = asyncio.get_event_loop().time()
+        logged_message_count = 0  # Track message count
 
         try:
             while True:
@@ -121,6 +123,13 @@ class CallAndWriteToCRMWorkflow:
                         f"[Call Monitoring Workflow] Error polling call {call_id}: {status_result.error}"
                     )
                     break
+
+                # Log new transcript messages
+                logged_message_count = self._log_new_transcript_messages(
+                    call_id=call_id,
+                    messages=status_result.messages,
+                    logged_count=logged_message_count,
+                )
 
                 logger.info(
                     f"[Call Monitoring Workflow] Call {call_id} status: {status_result.status}"
@@ -155,6 +164,36 @@ class CallAndWriteToCRMWorkflow:
             logger.error(
                 f"[Call Monitoring Workflow] Unexpected error monitoring call {call_id}: {e}"
             )
+
+    def _log_new_transcript_messages(
+        self,
+        call_id: str,
+        messages: list[TranscriptMessage],
+        logged_count: int,
+    ) -> int:
+        """
+        Log new transcript messages from the call.
+        
+        Args:
+            call_id: The call identifier
+            messages: List of transcript messages
+            logged_count: Number of messages already logged
+            
+        Returns:
+            Updated count of logged messages
+        """
+        if not messages:
+            return logged_count
+        
+        # Log only new messages
+        new_messages = messages[logged_count:]
+        for msg in new_messages:
+            logger.info(
+                f"[Call {call_id}] [{msg.timestamp_seconds:.1f}s] "
+                f"{msg.role.upper()}: {msg.content}"
+            )
+        
+        return len(messages)
 
     async def _process_completed_call(
         self,
