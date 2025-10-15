@@ -17,7 +17,7 @@ from datetime import UTC, datetime
 from pydantic import BaseModel, Field
 from tqdm.asyncio import tqdm
 
-from src.ai.base import AudioAnalysisRequest
+from src.ai.base import ContentAnalysisRequest
 from src.ai.providers import get_ai_provider
 from src.integrations.crm.base import CRMError
 from src.integrations.crm.constants import SubStatus
@@ -41,7 +41,7 @@ class DiscrepancyReview(BaseModel):
         description="True if discrepancies were found and the job needs review, False otherwise"
     )
     hold_explanation: str = Field(
-        description="Concise explanation of discrepancies found with timestamps (MM:SS format)"
+        description="Concise explanation of discrepancies found with timestamps (HH:MM:SS format)"
     )
 
 
@@ -95,20 +95,39 @@ class DiscrepancyDetectionWorkflow:
 
             logger.info(f"✅ Selected estimate: {selected_estimate.id}")
             logger.info(f"   Name: {selected_estimate.name or '(no name)'}")
-            logger.info(f"   Total: ${selected_estimate.subtotal + selected_estimate.tax:,.2f}")
+            logger.info(
+                f"   Total: ${selected_estimate.subtotal + selected_estimate.tax:,.2f}"
+            )
 
             # Step 3: Get estimate items
-            logger.info(f"\nStep 3: Fetching estimate items for estimate {selected_estimate.id}")
+            logger.info(
+                f"\nStep 3: Fetching estimate items for estimate {selected_estimate.id}"
+            )
             items_result = await self._fetch_estimate_items(selected_estimate.id)
-            logger.info(f"✅ Found {len(items_result.items)} items")
+
+            # Filter to only include active, customer-facing items visible in GUI/PDF
+            # - Items with invoice_item_id are on invoices, not the estimate (not visible in GUI/PDF)
+            # - Items with chargeable=False are internal cost tracking (materials/labor included in service items)
+            # - Items with chargeable=null or True are customer-facing line items
+            active_items = [
+                item
+                for item in items_result.items
+                if item.invoice_item_id is None and item.chargeable is not False
+            ]
+            filtered_count = len(items_result.items) - len(active_items)
+            logger.info(
+                f"✅ Found {len(active_items)} active chargeable items (filtered out {filtered_count} invoiced/non-chargeable items)"
+            )
 
             # Save raw estimate data to JSON file
             estimate_data_output = {
-                "estimate": selected_estimate.model_dump() if hasattr(selected_estimate, "model_dump") else selected_estimate.__dict__,
+                "estimate": selected_estimate.model_dump()
+                if hasattr(selected_estimate, "model_dump")
+                else selected_estimate.__dict__,
                 "items": [
                     item.model_dump() if hasattr(item, "model_dump") else item.__dict__
-                    for item in items_result.items
-                ]
+                    for item in active_items
+                ],
             }
             output_filename = f"estimate_data_job_{job_id}_estimate_{selected_estimate.id}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.json"
             with open(output_filename, "w") as f:
@@ -117,8 +136,10 @@ class DiscrepancyDetectionWorkflow:
 
             # Step 4: Get form submission (Notes to Production)
             if form_submission:
-                logger.info(f"\nStep 4: Using provided form submission")
-                notes_to_production = self._extract_notes_from_submission(form_submission)
+                logger.info("\nStep 4: Using provided form submission")
+                notes_to_production = self._extract_notes_from_submission(
+                    form_submission
+                )
             else:
                 logger.info(f"\nStep 4: Fetching form submission for job {job_id}")
                 notes_to_production = await self._fetch_form_submission(job_id)
@@ -135,7 +156,7 @@ class DiscrepancyDetectionWorkflow:
                 audio_path=audio_path,
                 transcript_path=transcript_path,
                 estimate=selected_estimate,
-                estimate_items=items_result.items,
+                estimate_items=active_items,
                 notes_to_production=notes_to_production,
             )
 
@@ -146,7 +167,9 @@ class DiscrepancyDetectionWorkflow:
             # Step 6: Conditional project hold
             if review_result.needs_review:
                 logger.info("\nStep 6: Discrepancy found - Updating project to HOLD")
-                await self._put_project_on_hold(project_id, review_result.hold_explanation)
+                await self._put_project_on_hold(
+                    project_id, review_result.hold_explanation
+                )
                 logger.info("✅ Project updated and note added")
             else:
                 logger.info("\nStep 6: No discrepancies found - No action needed")
@@ -160,7 +183,9 @@ class DiscrepancyDetectionWorkflow:
                 "estimate_id": selected_estimate.id,
                 "needs_review": review_result.needs_review,
                 "explanation": review_result.hold_explanation,
-                "action_taken": "project_on_hold" if review_result.needs_review else "none",
+                "action_taken": "project_on_hold"
+                if review_result.needs_review
+                else "none",
             }
 
         except CRMError as e:
@@ -202,17 +227,27 @@ class DiscrepancyDetectionWorkflow:
             page=1,
             page_size=50,
         )
-        job_estimates_response = await self.crm_provider.get_estimates(job_estimates_request)
-        logger.info(f"   Found {len(job_estimates_response.estimates)} estimates for job {job_id}")
+        job_estimates_response = await self.crm_provider.get_estimates(
+            job_estimates_request
+        )
+        logger.info(
+            f"   Found {len(job_estimates_response.estimates)} estimates for job {job_id}"
+        )
 
         # Check for sold estimates on this job
-        job_sold_estimates = [e for e in job_estimates_response.estimates if e.sold_on is not None]
+        job_sold_estimates = [
+            e for e in job_estimates_response.estimates if e.sold_on is not None
+        ]
 
         if len(job_sold_estimates) > 0:
-            logger.info(f"   ✅ Found {len(job_sold_estimates)} sold estimate(s) on job {job_id}")
+            logger.info(
+                f"   ✅ Found {len(job_sold_estimates)} sold estimate(s) on job {job_id}"
+            )
             if len(job_sold_estimates) > 1:
                 estimate_list = ", ".join([str(e.id) for e in job_sold_estimates])
-                logger.warning(f"   Multiple sold estimates found: {estimate_list}. Using most recent.")
+                logger.warning(
+                    f"   Multiple sold estimates found: {estimate_list}. Using most recent."
+                )
                 job_sold_estimates.sort(key=lambda e: e.sold_on, reverse=True)
             return job_sold_estimates[0]
 
@@ -226,24 +261,34 @@ class DiscrepancyDetectionWorkflow:
             page=1,
             page_size=50,
         )
-        project_estimates_response = await self.crm_provider.get_estimates(project_estimates_request)
-        logger.info(f"   Found {len(project_estimates_response.estimates)} total estimates for project {project_id}")
+        project_estimates_response = await self.crm_provider.get_estimates(
+            project_estimates_request
+        )
+        logger.info(
+            f"   Found {len(project_estimates_response.estimates)} total estimates for project {project_id}"
+        )
 
         # Filter for sold estimates
-        project_sold_estimates = [e for e in project_estimates_response.estimates if e.sold_on is not None]
+        project_sold_estimates = [
+            e for e in project_estimates_response.estimates if e.sold_on is not None
+        ]
 
         if len(project_sold_estimates) == 0:
             raise CRMError(
                 f"No sold estimates found for job {job_id} or project {project_id}. "
                 f"Found {len(project_estimates_response.estimates)} total estimates at project level, but none are sold.",
-                "NO_SOLD_ESTIMATE"
+                "NO_SOLD_ESTIMATE",
             )
 
-        logger.info(f"   ✅ Found {len(project_sold_estimates)} sold estimate(s) at project level")
+        logger.info(
+            f"   ✅ Found {len(project_sold_estimates)} sold estimate(s) at project level"
+        )
 
         if len(project_sold_estimates) > 1:
             estimate_list = ", ".join([str(e.id) for e in project_sold_estimates])
-            logger.warning(f"   Multiple sold estimates found: {estimate_list}. Using most recent.")
+            logger.warning(
+                f"   Multiple sold estimates found: {estimate_list}. Using most recent."
+            )
             project_sold_estimates.sort(key=lambda e: e.sold_on, reverse=True)
 
         return project_sold_estimates[0]
@@ -277,7 +322,11 @@ class DiscrepancyDetectionWorkflow:
         if not submissions:
             return None
 
-        submission = submissions[0] if isinstance(submissions[0], dict) else submissions[0].__dict__
+        submission = (
+            submissions[0]
+            if isinstance(submissions[0], dict)
+            else submissions[0].__dict__
+        )
         return self._extract_notes_from_submission(submission)
 
     def _extract_notes_from_submission(self, submission):
@@ -288,7 +337,13 @@ class DiscrepancyDetectionWorkflow:
             units = submission.get("units", [])
 
         for unit in units:
-            unit_dict = unit if isinstance(unit, dict) else unit.__dict__ if hasattr(unit, "__dict__") else {}
+            unit_dict = (
+                unit
+                if isinstance(unit, dict)
+                else unit.__dict__
+                if hasattr(unit, "__dict__")
+                else {}
+            )
             if unit_dict.get("name") == "Notes to Production":
                 return unit_dict
 
@@ -331,7 +386,7 @@ class DiscrepancyDetectionWorkflow:
         }
 
         # Load transcript if provided
-        transcript_text = ""
+        transcript_text = None
         if transcript_path:
             logger.info(f"   Loading transcript from: {transcript_path}")
             with open(transcript_path, "r") as f:
@@ -343,46 +398,35 @@ class DiscrepancyDetectionWorkflow:
                 speaker = entry.get("speaker", "Unknown")
                 text = entry.get("transcript", "")
                 start_time = entry.get("start_time", 0)
-                # Convert seconds to MM:SS format
-                minutes = int(start_time // 60)
+                # Convert seconds to HH:MM:SS format
+                hours = int(start_time // 3600)
+                minutes = int((start_time % 3600) // 60)
                 seconds = int(start_time % 60)
-                timestamp = f"{minutes:02d}:{seconds:02d}"
+                timestamp = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
                 transcript_lines.append(f"[{timestamp}] {speaker}: {text}")
 
             transcript_text = "\n".join(transcript_lines)
             logger.info(f"   Loaded transcript with {len(transcript_data)} entries")
 
-        # Build prompt based on what's available
-        if audio_path and transcript_text:
-            # Both audio and transcript
-            logger.info("   Analyzing using both audio and transcript")
-            instruction = "You are reviewing both the audio and transcript of a conversation between one of our sales reps and a customer. Use the audio for tone and context, and the transcript for specific details and timestamps."
-            conversation_section = f"""
-**Conversation Transcript (with timestamps):**
-{transcript_text}
-"""
-        elif transcript_text:
-            # Transcript only
-            logger.info("   Analyzing using transcript only")
-            instruction = "You are reviewing the transcript of a conversation between one of our sales reps and a customer. Please carefully read and understand the contents of the conversation transcript."
-            conversation_section = f"""
-**Conversation Transcript (with timestamps):**
-{transcript_text}
-"""
-        else:
-            # Audio only
-            logger.info("   Analyzing using audio only")
-            instruction = "You are reviewing the audio from a conversation between one of our sales reps and a customer. Please listen to and understand the contents of the audio conversation."
-            conversation_section = ""
+        # Build the prompt
+        prompt = f"""You are an expert sales admin for a roofing company. You are reviewing a conversation between one of our sales reps and a customer. The conversation may be provided as audio, transcript, or both.
 
-        prompt = f"""You are an expert sales admin for a roofing company. {instruction}
-
-Review the contents of the estimate and any notes to production that the sales rep submitted via form following the conversation.
+Please review and understand the contents of the conversation, the estimate, and any notes to production that the sales rep submitted via form following the conversation.
 
 Identify what, if anything, mentioned during the conversation that was not updated in the estimate or logged in the form. If there is any information that would affect the roofing service provided or how it is provided, then please flag the conversation for review.
 
-Simply and concisely log what was not included in the estimate or form but stated during the conversation. In this concise message of the discrepancy, please include a timestamp when the discrepancy occurred in format (MM:SS).
-{conversation_section}
+Simply and concisely log what was not included in the estimate or form but stated during the conversation. In this concise message of the discrepancy, please include a timestamp when the discrepancy occurred in format (HH:MM:SS).
+
+There are several fields in the conversation, production, notes, and estimate that you should consider for this analysis.
+- Shingle type, color, brand
+- Replacing pipe boots with rubber synthetic with mesh
+
+There are several fields in the estimate that you should explicity NOT consider for this analysis. DO NOT mention them in your response.
+- Customer's name
+- Insulation, spray foam insulation
+- Roof decking material type
+- Plank decking
+
 **Estimate Contents:**
 {json.dumps(estimate_data, indent=2)}
 
@@ -391,15 +435,16 @@ Simply and concisely log what was not included in the estimate or form but state
 """
 
         # Use AI provider to analyze with structured output
-        logger.info(f"   Using AI provider: {self.ai_provider.__class__.__name__}")
+        logger.info("   Initiating AI analysis...")
 
-        request = AudioAnalysisRequest(
+        request = ContentAnalysisRequest(
             audio_path=audio_path,
+            transcript_text=transcript_text,
             prompt=prompt,
             temperature=0.7,
         )
 
-        review_result = await self.ai_provider.analyze_audio_with_structured_output(
+        review_result = await self.ai_provider.analyze_content_with_structured_output(
             request=request,
             response_model=DiscrepancyReview,
         )
@@ -540,7 +585,11 @@ async def main():
     # Filter submissions by time range
     submissions_in_range = []
     for submission in form_result.data:
-        submitted_on = submission.submitted_on if hasattr(submission, "submitted_on") else submission.get("submitted_on")
+        submitted_on = (
+            submission.submitted_on
+            if hasattr(submission, "submitted_on")
+            else submission.get("submitted_on")
+        )
         if submitted_on and start_time <= submitted_on <= end_time:
             submissions_in_range.append(submission)
 
@@ -555,9 +604,19 @@ async def main():
     submission_by_job = {}
 
     for submission in submissions_in_range:
-        owners = submission.owners if hasattr(submission, "owners") else submission.get("owners", [])
+        owners = (
+            submission.owners
+            if hasattr(submission, "owners")
+            else submission.get("owners", [])
+        )
         for owner in owners:
-            owner_dict = owner if isinstance(owner, dict) else owner.__dict__ if hasattr(owner, "__dict__") else {}
+            owner_dict = (
+                owner
+                if isinstance(owner, dict)
+                else owner.__dict__
+                if hasattr(owner, "__dict__")
+                else {}
+            )
             if owner_dict.get("type") == "Job":
                 job_id = owner_dict.get("id")
                 if job_id:
