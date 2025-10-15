@@ -43,6 +43,16 @@ class AudioAnalysisRequest(BaseModel):
     temperature: float | None = None
 
 
+class ContentAnalysisRequest(BaseModel):
+    """Generic request for content analysis (audio, transcript, or both)."""
+
+    audio_path: str | None = None
+    transcript_text: str | None = None
+    prompt: str
+    context_data: dict[str, Any] | None = None
+    temperature: float | None = None
+
+
 class AIProvider(ABC):
     """Abstract base class for AI providers.
 
@@ -158,6 +168,25 @@ class AIProvider(ABC):
 
         Args:
             request: Audio analysis request
+            response_model: Pydantic model for structured output
+
+        Returns:
+            Instance of response_model with analysis results
+        """
+        pass
+
+    @abstractmethod
+    async def analyze_content_with_structured_output(
+        self,
+        request: ContentAnalysisRequest,
+        response_model: type[T],
+    ) -> T:
+        """Analyze content (audio, transcript, or both) and return structured output.
+
+        More generic version that can handle audio files, transcripts, or both.
+
+        Args:
+            request: Content analysis request
             response_model: Pydantic model for structured output
 
         Returns:

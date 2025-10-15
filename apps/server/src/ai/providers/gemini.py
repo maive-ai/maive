@@ -1,7 +1,6 @@
 """Gemini provider implementation."""
 
 import json
-import logging
 from pathlib import Path
 from typing import TypeVar
 
@@ -10,6 +9,7 @@ from pydantic import BaseModel
 from src.ai.base import (
     AIProvider,
     AudioAnalysisRequest,
+    ContentAnalysisRequest,
     ContentGenerationResult,
     FileMetadata,
     TranscriptionResult,
@@ -20,8 +20,7 @@ from src.ai.gemini.schemas import (
     GenerateContentRequest,
     GenerateStructuredContentRequest,
 )
-
-logger = logging.getLogger(__name__)
+from src.utils.logger import logger
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -217,7 +216,9 @@ class GeminiProvider(AIProvider):
             # Build prompt with context
             full_prompt = request.prompt
             if request.context_data:
-                context_text = f"\n\nContext Data:\n{json.dumps(request.context_data, indent=2)}"
+                context_text = (
+                    f"\n\nContext Data:\n{json.dumps(request.context_data, indent=2)}"
+                )
                 full_prompt += context_text
 
             # Generate analysis
@@ -262,11 +263,14 @@ class GeminiProvider(AIProvider):
 
             # Upload audio file
             file_metadata = await self.upload_file(request.audio_path)
+            logger.info("Uploaded file to Files API!")
 
             # Build prompt with context
             full_prompt = request.prompt
             if request.context_data:
-                context_text = f"\n\nContext Data:\n{json.dumps(request.context_data, indent=2)}"
+                context_text = (
+                    f"\n\nContext Data:\n{json.dumps(request.context_data, indent=2)}"
+                )
                 full_prompt += context_text
 
             # Generate structured analysis
@@ -285,4 +289,59 @@ class GeminiProvider(AIProvider):
             return result
         except Exception as e:
             logger.error(f"Structured audio analysis failed: {e}")
+            raise
+
+    async def analyze_content_with_structured_output(
+        self,
+        request: ContentAnalysisRequest,
+        response_model: type[T],
+    ) -> T:
+        """Analyze content (audio, transcript, or both) and return structured output.
+
+        Args:
+            request: Content analysis request
+            response_model: Pydantic model for structured output
+
+        Returns:
+            Instance of response_model with analysis results
+        """
+        try:
+            logger.info("Analyzing content with structured output")
+
+            # Build prompt (includes transcript if provided)
+            full_prompt = request.prompt
+            if request.transcript_text:
+                full_prompt = f"{request.prompt}\n\n**Conversation Transcript:**\n{request.transcript_text}"
+
+            if request.context_data:
+                context_text = (
+                    f"\n\nContext Data:\n{json.dumps(request.context_data, indent=2)}"
+                )
+                full_prompt += context_text
+
+            # Handle audio file if provided
+            file_ids = []
+            file_metadata = None
+            if request.audio_path:
+                logger.info(f"Uploading audio file: {request.audio_path}")
+                file_metadata = await self.upload_file(request.audio_path)
+                file_ids = [file_metadata.id]
+
+            # Generate structured analysis
+            gen_request = GenerateStructuredContentRequest(
+                prompt=full_prompt,
+                response_model=response_model,
+                files=file_ids,
+                temperature=request.temperature,
+            )
+
+            result = await self.client.generate_structured_content(gen_request)
+
+            # Clean up uploaded file if any
+            if file_metadata:
+                await self.delete_file(file_metadata.id)
+
+            return result
+        except Exception as e:
+            logger.error(f"Structured content analysis failed: {e}")
             raise

@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from src.ai.base import (
     AIProvider,
     AudioAnalysisRequest,
+    ContentAnalysisRequest,
     ContentGenerationResult,
     FileMetadata,
     TranscriptionResult,
@@ -463,4 +464,108 @@ class OpenAIProvider(AIProvider):
             logger.error(f"Structured audio analysis failed: {e}")
             raise OpenAIContentGenerationError(
                 f"Failed to analyze audio with structured output: {e}", e
+            )
+
+    async def analyze_content_with_structured_output(
+        self,
+        request: ContentAnalysisRequest,
+        response_model: type[T],
+    ) -> T:
+        """Analyze content (audio, transcript, or both) and return structured output.
+
+        Args:
+            request: Content analysis request
+            response_model: Pydantic model for structured output
+
+        Returns:
+            Instance of response_model with analysis results
+        """
+        try:
+            client = self._get_client()
+
+            logger.info("Analyzing content with structured output (OpenAI)")
+
+            # Build the base message
+            content_parts = []
+
+            # If audio is provided, add it as input
+            if request.audio_path:
+                path = Path(request.audio_path)
+                if not path.exists():
+                    raise OpenAIError(f"Audio file not found: {request.audio_path}")
+
+                logger.info(f"Including audio file: {path}")
+
+                # Read and encode audio as base64
+                with open(path, "rb") as audio_file:
+                    audio_data = base64.b64encode(audio_file.read()).decode("utf-8")
+
+                audio_format = path.suffix.lstrip(".")
+
+                content_parts.append({
+                    "type": "input_audio",
+                    "input_audio": {
+                        "data": audio_data,
+                        "format": audio_format,
+                    },
+                })
+
+            # Build the prompt text
+            prompt_text = request.prompt
+
+            # Add transcript if provided
+            if request.transcript_text:
+                prompt_text = f"{request.prompt}\n\n**Conversation Transcript:**\n{request.transcript_text}"
+
+            # Add context data if provided
+            if request.context_data:
+                context_text = f"\n\nContext Data:\n{json.dumps(request.context_data, indent=2)}"
+                prompt_text += context_text
+
+            # Add text part
+            content_parts.append({"type": "text", "text": prompt_text})
+
+            messages = [{"role": "user", "content": content_parts}]
+
+            # Choose appropriate model
+            model = (
+                self.settings.audio_model_name
+                if request.audio_path
+                else self.settings.model_name
+            )
+            temperature = request.temperature or self.settings.temperature
+
+            # Convert Pydantic model to JSON schema
+            schema = response_model.model_json_schema()
+
+            logger.info(f"Using model with structured output: {model}")
+
+            completion = await client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=self.settings.max_tokens,
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": response_model.__name__,
+                        "schema": schema,
+                        "strict": True,
+                    },
+                },
+            )
+
+            message = completion.choices[0].message
+            content = message.content or "{}"
+
+            logger.debug(f"Structured content analysis response: {content[:500]}")
+
+            # Parse and validate
+            data = json.loads(content)
+            return response_model(**data)
+
+        except Exception as e:
+            logger.error(f"Structured content analysis failed: {e}")
+            raise OpenAIContentGenerationError(
+                f"Failed to analyze content with structured output: {e}", e
             )
