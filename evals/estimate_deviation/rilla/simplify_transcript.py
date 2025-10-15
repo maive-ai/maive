@@ -12,6 +12,22 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 
+def seconds_to_timestamp(seconds: float) -> str:
+    """
+    Convert seconds to HH:MM:SS timestamp format.
+
+    Args:
+        seconds: Time in seconds
+
+    Returns:
+        String in HH:MM:SS format
+    """
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
+
 def simplify_transcript(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     Simplify transcript data by consolidating word-level information into speaker segments.
@@ -38,12 +54,12 @@ def simplify_transcript(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         start_time = words[0]["start_time"]
         end_time = words[-1]["end_time"]
 
-        # Create simplified segment
+        # Create simplified segment with formatted timestamps
         segment = {
             "speaker": speaker,
             "transcript": transcript_text,
-            "start_time": start_time,
-            "end_time": end_time,
+            "start_time": seconds_to_timestamp(start_time),
+            "end_time": seconds_to_timestamp(end_time),
         }
 
         simplified_segments.append(segment)

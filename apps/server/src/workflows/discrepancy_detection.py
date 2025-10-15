@@ -397,12 +397,7 @@ class DiscrepancyDetectionWorkflow:
             for entry in transcript_data:
                 speaker = entry.get("speaker", "Unknown")
                 text = entry.get("transcript", "")
-                start_time = entry.get("start_time", 0)
-                # Convert seconds to HH:MM:SS format
-                hours = int(start_time // 3600)
-                minutes = int((start_time % 3600) // 60)
-                seconds = int(start_time % 60)
-                timestamp = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                timestamp = entry.get("start_time", "00:00:00")
                 transcript_lines.append(f"[{timestamp}] {speaker}: {text}")
 
             transcript_text = "\n".join(transcript_lines)
