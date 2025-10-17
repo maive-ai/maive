@@ -118,7 +118,9 @@ Examples:
     )
 
     parser.add_argument(
-        "input_path", type=Path, help="Path to the input JSON file or directory containing JSON files"
+        "input_path",
+        type=Path,
+        help="Path to the input JSON file or directory containing JSON files",
     )
 
     parser.add_argument(
@@ -160,7 +162,9 @@ Examples:
 
         print(f"\nProcessed {len(json_files)} files successfully")
     else:
-        print(f"Error: Input path '{args.input_path}' is neither a file nor a directory")
+        print(
+            f"Error: Input path '{args.input_path}' is neither a file nor a directory"
+        )
         return 1
 
     return 0

@@ -7,6 +7,7 @@ Creates organized folders and names files with UUIDs.
 import argparse
 import os
 import subprocess
+import sys
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -59,6 +60,7 @@ def download_row(row_data):
 
     # Download audio file
     if download_file(audio_url, str(audio_output_temp)):
+        print("")
         # If it's a WAV file, convert to MP3
         if audio_ext.lower() == ".wav":
             if convert_wav_to_mp3(str(audio_output_temp), str(audio_output_final)):
@@ -220,6 +222,11 @@ Examples:
     )
 
     args = parser.parse_args()
+
+    print(
+        "STOP RIGHT THERE -- this script caused errors with the downloaded audio files last time, resulting in huge MP3 files that weren't actually MP3 files. You must fix these errors, ensure proper file type management. The type of file (.wav, .mp3. .aa4) hosted by Rilla seems to vary. You should be downloading the original file type, converting to mp3 if necessary and downsampling to a 64 kbps bitrate (google gemini downsamples to 16 kbps bitrate anyway)"
+    )
+    sys.exit(0)
 
     base_output_dir = "/Users/willcray/maive/rilla_data"
 
