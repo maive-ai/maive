@@ -21,3 +21,5 @@ packages/api/client/.openapi-generator/
 **/_dereferenced/
 
 apps/server/scripts/output/**/*
+
+demo_data/
