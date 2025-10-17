@@ -412,15 +412,12 @@ Identify what, if anything, mentioned during the conversation that was not updat
 
 Simply and concisely log what was not included in the estimate or form but stated during the conversation. In this concise message of the discrepancy, please include a time range during which the discrepancy occurred. The format of the timestamp should be (HH:MM:SS) - (HH:MM:SS). Please ensure that any explanations are sorted in chronological order.
 
-There are several fields in the conversation, production, notes, and estimate that you should consider for this analysis.
-- Replacing pipe boots for the customer (this should be something that is included in the estimate if it is discussed in the conversation)
+There are several fields in the conversation, production, notes, and estimate that you should consider for this analysis. Examples:
+- Replacing pipe boots for the customer
 - Shingle type, color, brand
 
 There are several fields in the estimate that you should explicity NOT consider for this analysis. DO NOT mention them in your response.
 - Customer's name
-- Insulation, spray foam insulation
-- Roof decking material type
-- Plank decking
 
 **Estimate Contents:**
 {json.dumps(estimate_data, indent=2)}
