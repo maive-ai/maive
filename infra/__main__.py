@@ -404,7 +404,6 @@ if deploy_containers:
             ecr_repository.repository_url.apply(
                 lambda url: f"{url}:{server_image_tag}"
             ),
-            ecr_repository.repository_url.apply(lambda url: f"{url}:latest"),
         ],
         push=True,
         registries=[
@@ -810,7 +809,6 @@ if deploy_containers:
             web_ecr_repository.repository_url.apply(
                 lambda url: f"{url}:{web_image_tag}"
             ),
-            web_ecr_repository.repository_url.apply(lambda url: f"{url}:latest"),
         ],
         push=True,
         registries=[
@@ -820,10 +818,6 @@ if deploy_containers:
                 password=pulumi.Output.secret(auth_token.password),
             )
         ],
-    )
-
-    web_image_ref = web_ecr_repository.repository_url.apply(
-        lambda url: f"{url}:{web_image_tag}"
     )
 
 # ECS Task Definition (conditional)
@@ -842,7 +836,7 @@ if deploy_containers:
             [
                 {
                     "name": f"{server_app_name}-container",
-                    "image": server_image_ref,  # Use the immutable tag
+                    "image": server_image.ref,  # Use the built image
                     "portMappings": [{"containerPort": 8080, "protocol": "tcp"}],
                     "environment": [
                         {"name": "ENVIRONMENT", "value": environment},
@@ -941,7 +935,7 @@ if deploy_containers:
             [
                 {
                     "name": "nginx",
-                    "image": web_image_ref,  # Use the immutable tag
+                    "image": web_image.ref,  # Use the built image
                     "portMappings": [
                         {
                             "containerPort": 80,
