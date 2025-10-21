@@ -19,3 +19,7 @@ packages/api/client/.openapi-generator/
 # Cursor external docs - ignore all _catalog and _dereferenced directories
 **/_catalog/
 **/_dereferenced/
+
+apps/server/scripts/output/**/*
+
+demo_data/

@@ -417,3 +417,118 @@ class Project(BaseModel):
     claim_status: str = Field(default="None", description="Claim status")
     updated_at: str
     metadata: dict[str, Any] | None = Field(None, description="Project metadata")
+
+
+# Pricebook models
+
+
+class MaterialResponse(BaseModel):
+    """Response model for a single material from the pricebook."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: int = Field(..., description="Material ID")
+    code: str = Field(..., description="Material code/SKU")
+    display_name: str = Field(..., description="Display name", alias="displayName")
+    description: str | None = Field(None, description="Material description")
+    cost: float | None = Field(None, description="Material cost")
+    price: float | None = Field(None, description="Material price")
+    member_price: float | None = Field(None, description="Member price", alias="memberPrice")
+    add_on_price: float | None = Field(None, description="Add-on price", alias="addOnPrice")
+    add_on_member_price: float | None = Field(None, description="Add-on member price", alias="addOnMemberPrice")
+    active: bool = Field(..., description="Whether the material is active")
+    primary_vendor: dict[str, Any] | None = Field(None, description="Primary vendor info", alias="primaryVendor")
+    other_vendors: list[dict[str, Any]] | None = Field(None, description="Other vendors", alias="otherVendors")
+    manufacturer: str | None = Field(None, description="Manufacturer name")
+    manufacturer_number: str | None = Field(None, description="Manufacturer part number", alias="manufacturerNumber")
+    cost_type: str | None = Field(None, description="Cost type", alias="costType")
+    item_url: str | None = Field(None, description="Item URL", alias="itemUrl")
+
+
+class ServiceResponse(BaseModel):
+    """Response model for a single service from the pricebook."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: int = Field(..., description="Service ID")
+    code: str = Field(..., description="Service code/SKU")
+    display_name: str = Field(..., description="Display name", alias="displayName")
+    description: str | None = Field(None, description="Service description")
+    price: float | None = Field(None, description="Service price")
+    member_price: float | None = Field(None, description="Member price", alias="memberPrice")
+    add_on_price: float | None = Field(None, description="Add-on price", alias="addOnPrice")
+    add_on_member_price: float | None = Field(None, description="Add-on member price", alias="addOnMemberPrice")
+    active: bool = Field(..., description="Whether the service is active")
+    warranty_id: int | None = Field(None, description="Warranty ID", alias="warrantyId")
+    account: str | None = Field(None, description="Account name/code")
+    categories: list[dict[str, Any]] | None = Field(None, description="Service categories")
+    taxable: bool | None = Field(None, description="Whether the service is taxable")
+    hours: float | None = Field(None, description="Service hours")
+
+
+class EquipmentResponse(BaseModel):
+    """Response model for a single equipment from the pricebook."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: int = Field(..., description="Equipment ID")
+    code: str = Field(..., description="Equipment code/SKU")
+    display_name: str = Field(..., description="Display name", alias="displayName")
+    description: str | None = Field(None, description="Equipment description")
+    price: float | None = Field(None, description="Equipment price")
+    member_price: float | None = Field(None, description="Member price", alias="memberPrice")
+    add_on_price: float | None = Field(None, description="Add-on price", alias="addOnPrice")
+    add_on_member_price: float | None = Field(None, description="Add-on member price", alias="addOnMemberPrice")
+    active: bool = Field(..., description="Whether the equipment is active")
+    cost: float | None = Field(None, description="Equipment cost")
+    manufacturer: str | None = Field(None, description="Manufacturer name")
+    model_number: str | None = Field(None, description="Model number", alias="modelNumber")
+    primary_vendor: dict[str, Any] | None = Field(None, description="Primary vendor info", alias="primaryVendor")
+    other_vendors: list[dict[str, Any]] | None = Field(None, description="Other vendors", alias="otherVendors")
+
+
+class PricebookItemsRequest(BaseModel):
+    """Request model for fetching pricebook items."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    tenant: int = Field(..., description="Tenant ID")
+    page: int = Field(default=1, description="Page number for pagination")
+    page_size: int = Field(default=50, le=50, description="Page size for pagination (max 50)", alias="pageSize")
+    active: str = Field(default="True", description="Filter by active status (True, False, Any)")
+
+
+class MaterialsListResponse(BaseModel):
+    """Response model for paginated list of materials."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    data: list[MaterialResponse] = Field(..., description="List of materials")
+    page: int = Field(..., description="Current page number")
+    page_size: int = Field(..., description="Page size", alias="pageSize")
+    total_count: int | None = Field(None, description="Total count of materials", alias="totalCount")
+    has_more: bool = Field(..., description="Whether there are more pages", alias="hasMore")
+
+
+class ServicesListResponse(BaseModel):
+    """Response model for paginated list of services."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    data: list[ServiceResponse] = Field(..., description="List of services")
+    page: int = Field(..., description="Current page number")
+    page_size: int = Field(..., description="Page size", alias="pageSize")
+    total_count: int | None = Field(None, description="Total count of services", alias="totalCount")
+    has_more: bool = Field(..., description="Whether there are more pages", alias="hasMore")
+
+
+class EquipmentListResponse(BaseModel):
+    """Response model for paginated list of equipment."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    data: list[EquipmentResponse] = Field(..., description="List of equipment")
+    page: int = Field(..., description="Current page number")
+    page_size: int = Field(..., description="Page size", alias="pageSize")
+    total_count: int | None = Field(None, description="Total count of equipment", alias="totalCount")
+    has_more: bool = Field(..., description="Whether there are more pages", alias="hasMore")

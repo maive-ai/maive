@@ -9,11 +9,15 @@ from abc import ABC, abstractmethod
 
 from src.integrations.crm.provider_schemas import FormSubmissionListResponse
 from src.integrations.crm.schemas import (
+    EquipmentListResponse,
     EstimateResponse,
     JobNoteResponse,
     JobResponse,
+    MaterialsListResponse,
+    PricebookItemsRequest,
     ProjectStatusListResponse,
     ProjectStatusResponse,
+    ServicesListResponse,
 )
 
 
@@ -164,6 +168,54 @@ class CRMProvider(ABC):
 
         Raises:
             CRMError: If the job is not found or an error occurs
+        """
+        pass
+
+    @abstractmethod
+    async def get_pricebook_materials(self, request: PricebookItemsRequest) -> MaterialsListResponse:
+        """
+        Get materials from the pricebook.
+
+        Args:
+            request: Request parameters including pagination and filters
+
+        Returns:
+            MaterialsListResponse: Paginated list of materials
+
+        Raises:
+            CRMError: If an error occurs while fetching materials
+        """
+        pass
+
+    @abstractmethod
+    async def get_pricebook_services(self, request: PricebookItemsRequest) -> ServicesListResponse:
+        """
+        Get services from the pricebook.
+
+        Args:
+            request: Request parameters including pagination and filters
+
+        Returns:
+            ServicesListResponse: Paginated list of services
+
+        Raises:
+            CRMError: If an error occurs while fetching services
+        """
+        pass
+
+    @abstractmethod
+    async def get_pricebook_equipment(self, request: PricebookItemsRequest) -> EquipmentListResponse:
+        """
+        Get equipment from the pricebook.
+
+        Args:
+            request: Request parameters including pagination and filters
+
+        Returns:
+            EquipmentListResponse: Paginated list of equipment
+
+        Raises:
+            CRMError: If an error occurs while fetching equipment
         """
         pass
 

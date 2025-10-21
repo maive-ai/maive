@@ -19,6 +19,7 @@ from src.integrations.crm.provider_schemas import (
     FormSubmissionListResponse,
 )
 from src.integrations.crm.schemas import (
+    EquipmentListResponse,
     EstimateItemResponse,
     EstimateItemsRequest,
     EstimateItemsResponse,
@@ -29,6 +30,8 @@ from src.integrations.crm.schemas import (
     JobHoldReasonsListResponse,
     JobNoteResponse,
     JobResponse,
+    MaterialsListResponse,
+    PricebookItemsRequest,
     ProjectByIdRequest,
     ProjectNoteResponse,
     ProjectResponse,
@@ -36,6 +39,7 @@ from src.integrations.crm.schemas import (
     ProjectStatusResponse,
     ProjectSubStatusesRequest,
     ProjectSubStatusListResponse,
+    ServicesListResponse,
     UpdateProjectRequest,
 )
 from src.utils.logger import logger
@@ -1000,6 +1004,126 @@ class ServiceTitanProvider(CRMProvider):
         except Exception as e:
             logger.error(f"Unexpected error fetching form submissions: {e}")
             raise CRMError(f"Failed to fetch form submissions: {str(e)}", "UNKNOWN_ERROR")
+
+    async def get_pricebook_materials(self, request: PricebookItemsRequest) -> MaterialsListResponse:
+        """
+        Get materials from the Service Titan pricebook.
+
+        Args:
+            request: Request parameters including pagination and filters
+
+        Returns:
+            MaterialsListResponse: Paginated list of materials
+
+        Raises:
+            CRMError: If an error occurs while fetching materials
+        """
+        try:
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.PRICEBOOK_MATERIALS.format(tenant_id=self.tenant_id)}"
+
+            params = {
+                "page": request.page,
+                "pageSize": request.page_size,
+                "active": request.active,
+            }
+
+            logger.debug(f"Fetching pricebook materials with params: {params}")
+
+            response = await self._make_authenticated_request("GET", url, params=params)
+            response.raise_for_status()
+
+            data = response.json()
+            logger.info(f"Found {len(data.get('data', []))} materials")
+
+            return MaterialsListResponse(**data)
+
+        except httpx.HTTPStatusError as e:
+            error_body = e.response.text
+            logger.error(f"HTTP error fetching pricebook materials: {error_body}")
+            raise CRMError(f"Failed to fetch pricebook materials: {error_body}", "HTTP_ERROR")
+        except Exception as e:
+            logger.error(f"Unexpected error fetching pricebook materials: {e}")
+            raise CRMError(f"Failed to fetch pricebook materials: {str(e)}", "UNKNOWN_ERROR")
+
+    async def get_pricebook_services(self, request: PricebookItemsRequest) -> ServicesListResponse:
+        """
+        Get services from the Service Titan pricebook.
+
+        Args:
+            request: Request parameters including pagination and filters
+
+        Returns:
+            ServicesListResponse: Paginated list of services
+
+        Raises:
+            CRMError: If an error occurs while fetching services
+        """
+        try:
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.PRICEBOOK_SERVICES.format(tenant_id=self.tenant_id)}"
+
+            params = {
+                "page": request.page,
+                "pageSize": request.page_size,
+                "active": request.active,
+            }
+
+            logger.debug(f"Fetching pricebook services with params: {params}")
+
+            response = await self._make_authenticated_request("GET", url, params=params)
+            response.raise_for_status()
+
+            data = response.json()
+            logger.info(f"Found {len(data.get('data', []))} services")
+
+            return ServicesListResponse(**data)
+
+        except httpx.HTTPStatusError as e:
+            error_body = e.response.text
+            logger.error(f"HTTP error fetching pricebook services: {error_body}")
+            raise CRMError(f"Failed to fetch pricebook services: {error_body}", "HTTP_ERROR")
+        except Exception as e:
+            logger.error(f"Unexpected error fetching pricebook services: {e}")
+            raise CRMError(f"Failed to fetch pricebook services: {str(e)}", "UNKNOWN_ERROR")
+
+    async def get_pricebook_equipment(self, request: PricebookItemsRequest) -> EquipmentListResponse:
+        """
+        Get equipment from the Service Titan pricebook.
+
+        Args:
+            request: Request parameters including pagination and filters
+
+        Returns:
+            EquipmentListResponse: Paginated list of equipment
+
+        Raises:
+            CRMError: If an error occurs while fetching equipment
+        """
+        try:
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.PRICEBOOK_EQUIPMENT.format(tenant_id=self.tenant_id)}"
+
+            params = {
+                "page": request.page,
+                "pageSize": request.page_size,
+                "active": request.active,
+            }
+
+            logger.debug(f"Fetching pricebook equipment with params: {params}")
+
+            response = await self._make_authenticated_request("GET", url, params=params)
+            response.raise_for_status()
+
+            data = response.json()
+            logger.info(f"Found {len(data.get('data', []))} equipment items")
+
+            return EquipmentListResponse(**data)
+
+        except httpx.HTTPStatusError as e:
+            error_body = e.response.text
+            logger.error(f"HTTP error fetching pricebook equipment: {error_body}")
+            raise CRMError(f"Failed to fetch pricebook equipment: {error_body}", "HTTP_ERROR")
+        except Exception as e:
+            logger.error(f"Unexpected error fetching pricebook equipment: {e}")
+            raise CRMError(f"Failed to fetch pricebook equipment: {str(e)}", "UNKNOWN_ERROR")
 
     async def close(self):
         """Close the HTTP client."""
