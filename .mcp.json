@@ -1,0 +1,92 @@
+{
+  "mcpServers": {
+    "jobnimbus": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@reapi/mcp-openapi@latest",
+        "--dir",
+        "./.cursor/external_docs/job_nimbus"
+      ],
+      "env": {}
+    },
+    "service-titan-crm": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@reapi/mcp-openapi@latest",
+        "--dir",
+        "./.cursor/external_docs/service_titan/crm/tenant-crm-v2.json"
+      ],
+      "env": {}
+    },
+    "service-titan-forms": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@reapi/mcp-openapi@latest",
+        "--dir",
+        "./.cursor/external_docs/service_titan/forms/tenant-forms-v2.json"
+      ],
+      "env": {}
+    },
+    "service-titan-jpm": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@reapi/mcp-openapi@latest",
+        "--dir",
+        "./.cursor/external_docs/service_titan/jpm/tenant-jpm-v2.json"
+      ],
+      "env": {}
+    },
+    "service-titan-payroll": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@reapi/mcp-openapi@latest",
+        "--dir",
+        "./.cursor/external_docs/service_titan/payroll/tenant-payroll-v2.json"
+      ],
+      "env": {}
+    },
+    "service-titan-salestech": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@reapi/mcp-openapi@latest",
+        "--dir",
+        "./.cursor/external_docs/service_titan/salestech/tenant-salestech-v2.json"
+      ],
+      "env": {}
+    },
+    "service-titan-service-agreements": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@reapi/mcp-openapi@latest",
+        "--dir",
+        "./.cursor/external_docs/service_titan/service-agreements"
+      ],
+      "env": {}
+    },
+    "service-titan-service-pricebook": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@reapi/mcp-openapi@latest",
+        "--dir",
+        "./.cursor/external_docs/service_titan/pricebook"
+      ],
+      "env": {}
+    }
+  }
+}
