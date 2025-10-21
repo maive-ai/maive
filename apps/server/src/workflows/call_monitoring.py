@@ -11,6 +11,7 @@ from src.ai.voice_ai.constants import CallStatus
 from src.ai.voice_ai.schemas import (
     CallRequest,
     CallResponse,
+    AnalysisData,
     ClaimStatusData,
     TranscriptMessage,
     VoiceAIErrorResponse,
@@ -236,7 +237,7 @@ class CallAndWriteToCRMWorkflow:
                 return
 
             # Format note text from structured data
-            note_text = self._format_crm_note(analysis.structured_data)
+            note_text = self._format_crm_note(analysis)
 
             # Add note to CRM job via service (no HTTP!)
             crm_result = await self.crm_service.add_job_note(
@@ -280,16 +281,19 @@ class CallAndWriteToCRMWorkflow:
                 f"[Call Monitoring Workflow] Error processing completed call {call_id}: {e}"
             )
 
-    def _format_crm_note(self, structured_data: ClaimStatusData | None) -> str:
+    def _format_crm_note(self, analysis: AnalysisData | None) -> str:
         """
         Format structured data into a CRM note.
 
         Args:
-            structured_data: The extracted typed structured data
+            analysis: The extracted typed analysis data
 
         Returns:
             Formatted note text
         """
+        structured_data: ClaimStatusData | None = analysis.structured_data
+        summary: str | None = analysis.summary
+
         try:
             if structured_data is None:
                 logger.info("[Call Monitoring Workflow] No structured data found for call")
@@ -301,6 +305,7 @@ class CallAndWriteToCRMWorkflow:
                 "",
                 f"Call Outcome: {structured_data.call_outcome.capitalize()}",
                 f"Claim Status: {structured_data.claim_status.value.capitalize()}",
+                f"Summary: {summary}",
             ]
 
             # Add next steps if available
