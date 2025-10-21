@@ -253,8 +253,14 @@ class VapiProvider(VoiceAIProvider):
             properties={
                 "call_outcome": {
                     "type": "string",
-                    "enum": ["success", "voicemail", "gatekeeper", "failed"],
-                    "description": "How the call ended",
+                    "enum": [
+                        "completed",      # Successfully determined claim status
+                        "voicemail",      # Reached voicemail
+                        "gatekeeper",     # Blocked by gatekeeper  
+                        "inconclusive",   # Call happened but couldn't determine status
+                        "no_answer"       # No connection established
+                    ],
+                    "description": "Result of the claim status inquiry call",
                 },
                 "claim_status": {
                     "type": "string",
@@ -334,7 +340,7 @@ class VapiProvider(VoiceAIProvider):
         status = status_mapping.get(vapi_status, CallStatus.QUEUED)
 
         # Store VapiCall object directly - provides strong typing
-        provider_data = call
+        provider_data: VapiCall = call
 
         # Parse messages from Vapi format to provider-agnostic format
         messages = self._parse_messages(call.messages) if call.messages else []
