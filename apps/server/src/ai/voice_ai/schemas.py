@@ -176,13 +176,15 @@ class TranscriptMessage(BaseModel):
 
 class CallResponse(BaseModel):
     """Response model for call information."""
+    
+    model_config = {"arbitrary_types_allowed": True}
 
     call_id: str = Field(..., description="Unique call identifier")
     status: CallStatus = Field(..., description="Current call status")
     provider: VoiceAIProviderEnum = Field(..., description="Voice AI provider")
     created_at: datetime | None = Field(None, description="Call creation timestamp")
-    provider_data: dict[str, Any] | None = Field(
-        None, description="Provider-specific data"
+    provider_data: Any = Field(
+        None, description="Provider-specific data (VapiCall for Vapi, dict for others)"
     )
     analysis: AnalysisData | None = Field(
         None, description="Typed analysis data (extracted from provider_data)"
