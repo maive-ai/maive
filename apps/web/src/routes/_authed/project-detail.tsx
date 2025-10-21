@@ -1,3 +1,11 @@
+import { ClaimStatus } from '@maive/api/client';
+import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
+import { createFileRoute } from '@tanstack/react-router';
+import { AlertCircle, Building2, CheckCircle2, FileText, Loader2, Mail, MapPin, Phone, User } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { isValidPhoneNumber } from 'react-phone-number-input';
+import type { Value as E164Number } from 'react-phone-number-input';
+
 import { useEndCall } from '@/clients/ai/voice';
 import { useFetchProject } from '@/clients/crm';
 import { useCallAndWriteToCrm } from '@/clients/workflows';
@@ -7,13 +15,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { getClaimStatusColor } from '@/lib/utils';
-import { ClaimStatus } from '@maive/api/client';
-import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
-import { createFileRoute } from '@tanstack/react-router';
-import { AlertCircle, Building2, CheckCircle2, FileText, Loader2, Mail, MapPin, Phone, User } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import type { Value as E164Number } from 'react-phone-number-input';
-import { isValidPhoneNumber } from 'react-phone-number-input';
 
 export const Route = createFileRoute('/_authed/project-detail')({
   component: ProjectDetail,
@@ -54,9 +55,9 @@ function ProjectDetail() {
       // Extract listenUrl from provider_data
       const providerData = callAndWritetoCrmMutation.data.provider_data;
       console.log('[Project Detail] Provider data:', providerData);
-      if (providerData?.monitor?.listenUrl) {
-        console.log('[Project Detail] Setting listenUrl:', providerData.monitor.listenUrl);
-        setListenUrl(providerData.monitor.listenUrl);
+      if (providerData?.monitor?.listen_url) {
+        console.log('[Project Detail] Setting listenUrl:', providerData.monitor.listen_url);
+        setListenUrl(providerData.monitor.listen_url);
       } else {
         console.log('[Project Detail] No listenUrl found in provider_data');
       }
