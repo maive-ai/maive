@@ -203,7 +203,7 @@ class MockCRMProvider(CRMProvider):
         
         if job:
             # Add note to job
-            enhanced_text = f"{now.strftime('%Y-%m-%d %H:%M')}: {text}"
+            enhanced_text = f"{now.strftime('%Y-%m-%d %I:%M %p')}: {text}"
             job.project_data.notes = enhanced_text + "\n\n" + job.project_data.notes
             logger.debug(f"[MockCRMProvider] Added note to job: {text}")
         else:

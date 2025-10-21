@@ -299,8 +299,8 @@ class CallAndWriteToCRMWorkflow:
             note_lines = [
                 "🤖 Voice AI Call Summary",
                 "",
-                f"Call Outcome: {structured_data.call_outcome}",
-                f"Claim Status: {structured_data.claim_status}",
+                f"Call Outcome: {structured_data.call_outcome.capitalize()}",
+                f"Claim Status: {structured_data.claim_status.value.capitalize()}",
             ]
 
             # Add next steps if available
