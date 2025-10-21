@@ -1044,17 +1044,8 @@
             "description": "Call creation timestamp"
           },
           "provider_data": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Provider Data",
-            "description": "Provider-specific data"
+            "description": "Provider-specific data (VapiCall for Vapi, dict for others)"
           },
           "analysis": {
             "anyOf": [
