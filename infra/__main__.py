@@ -1,5 +1,7 @@
 """AWS Infrastructure for Maive application using Pulumi"""
 
+import time
+
 import pulumi
 import pulumi_docker_build as docker_build
 from pulumi_aws import (
@@ -32,6 +34,11 @@ force_destroy_buckets = s3_cfg.get_bool("force_destroy") or False
 app_name = pulumi.get_project()
 server_app_name = f"{app_name}-server"
 web_app_name = f"{app_name}-web"
+
+# Generate timestamp-based tags for immutable deployments
+timestamp = int(time.time())
+server_image_tag = f"{server_app_name}-{timestamp}"
+web_image_tag = f"{web_app_name}-{timestamp}"
 
 app_domain_url = pulumi.Output.format(
     "{}://{}",
@@ -303,6 +310,7 @@ if deploy_containers:
     ecr_repository = ecr.Repository(
         f"{server_app_name}-repo-{stack_name}",
         name=f"{server_app_name}-{stack_name}",
+        image_tag_mutability="IMMUTABLE",
         image_scanning_configuration=ecr.RepositoryImageScanningConfigurationArgs(
             scan_on_push=True,
         ),
@@ -319,6 +327,7 @@ if deploy_containers:
     web_ecr_repository = ecr.Repository(
         f"{web_app_name}-repo-{stack_name}",
         name=f"{web_app_name}-{stack_name}",
+        image_tag_mutability="IMMUTABLE",
         image_scanning_configuration=ecr.RepositoryImageScanningConfigurationArgs(
             scan_on_push=True,
         ),
@@ -327,6 +336,50 @@ if deploy_containers:
             "Environment": environment,
             "Stack": stack_name,
         },
+    )
+
+    # ECR Lifecycle policies (expire untagged images after 14 days)
+    ecr.LifecyclePolicy(
+        f"{server_app_name}-repo-lifecycle-{stack_name}",
+        repository=ecr_repository.name,
+        policy=pulumi.Output.json_dumps(
+            {
+                "rules": [
+                    {
+                        "rulePriority": 1,
+                        "description": "Expire untagged after 14 days",
+                        "selection": {
+                            "tagStatus": "untagged",
+                            "countType": "sinceImagePushed",
+                            "countUnit": "days",
+                            "countNumber": 14,
+                        },
+                        "action": {"type": "expire"},
+                    }
+                ]
+            }
+        ),
+    )
+    ecr.LifecyclePolicy(
+        f"{web_app_name}-repo-lifecycle-{stack_name}",
+        repository=web_ecr_repository.name,
+        policy=pulumi.Output.json_dumps(
+            {
+                "rules": [
+                    {
+                        "rulePriority": 1,
+                        "description": "Expire untagged after 14 days",
+                        "selection": {
+                            "tagStatus": "untagged",
+                            "countType": "sinceImagePushed",
+                            "countUnit": "days",
+                            "countNumber": 14,
+                        },
+                        "action": {"type": "expire"},
+                    }
+                ]
+            }
+        ),
     )
 
 # Get ECR authorization token for pushing images (conditional)
@@ -347,7 +400,11 @@ if deploy_containers:
             location="../apps/server/Dockerfile",
         ),
         platforms=["linux/amd64"],  # Ensure compatibility with AWS Fargate
-        tags=[ecr_repository.repository_url.apply(lambda url: f"{url}:latest")],
+        tags=[
+            ecr_repository.repository_url.apply(
+                lambda url: f"{url}:{server_image_tag}"
+            ),
+        ],
         push=True,
         registries=[
             docker_build.RegistryArgs(
@@ -356,6 +413,11 @@ if deploy_containers:
                 password=pulumi.Output.secret(auth_token.password),
             )
         ],
+    )
+
+    # Explicit image reference for task definition
+    server_image_ref = ecr_repository.repository_url.apply(
+        lambda url: f"{url}:{server_image_tag}"
     )
 
 
@@ -743,7 +805,11 @@ if deploy_containers:
             "PUBLIC_COGNITO_SCOPES": config.require("public_cognito_scopes"),
             "PUBLIC_OAUTH_REDIRECT_ROUTE": config.require("oauth_redirect_route"),
         },
-        tags=[web_ecr_repository.repository_url.apply(lambda url: f"{url}:latest")],
+        tags=[
+            web_ecr_repository.repository_url.apply(
+                lambda url: f"{url}:{web_image_tag}"
+            ),
+        ],
         push=True,
         registries=[
             docker_build.RegistryArgs(
@@ -905,6 +971,12 @@ if deploy_containers:
         cluster=cluster.arn,
         task_definition=task_definition.arn,
         desired_count=1,
+        deployment_circuit_breaker={
+            "enable": True,
+            "rollback": True,
+        },
+        deployment_maximum_percent=200,
+        deployment_minimum_healthy_percent=100,
         launch_type="FARGATE",
         network_configuration=ecs.ServiceNetworkConfigurationArgs(
             assign_public_ip=True,
@@ -936,7 +1008,13 @@ if deploy_containers:
         name=f"{web_app_name}-{stack_name}",
         cluster=cluster.arn,
         task_definition=web_task_definition.arn,
-        desired_count=1,
+        desired_count=2,
+        deployment_circuit_breaker={
+            "enable": True,
+            "rollback": True,
+        },
+        deployment_maximum_percent=200,
+        deployment_minimum_healthy_percent=100,
         launch_type="FARGATE",
         network_configuration=ecs.ServiceNetworkConfigurationArgs(
             assign_public_ip=True,
