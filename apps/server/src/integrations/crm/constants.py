@@ -190,3 +190,8 @@ class ServiceTitanEndpoints:
     FORM_SUBMISSIONS_BY_FORM_ID = (
         "/forms/v2/tenant/{tenant_id}/forms/{form_id}/submissions"
     )
+
+    # Pricebook endpoints
+    PRICEBOOK_MATERIALS = "/pricebook/v2/tenant/{tenant_id}/materials"
+    PRICEBOOK_SERVICES = "/pricebook/v2/tenant/{tenant_id}/services"
+    PRICEBOOK_EQUIPMENT = "/pricebook/v2/tenant/{tenant_id}/equipment"

@@ -4,14 +4,15 @@ Script to download audio and transcript files from URLs in Excel/CSV files.
 Creates organized folders and names files with UUIDs.
 """
 
-import os
-import sys
-import subprocess
-import uuid
 import argparse
-import pandas as pd
-from pathlib import Path
+import os
+import subprocess
+import sys
+import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+
+import pandas as pd
 from tqdm import tqdm
 
 
@@ -19,9 +20,7 @@ def download_file(url, output_path):
     """Download a file using wget."""
     try:
         subprocess.run(
-            ['wget', '-O', output_path, url],
-            check=True,
-            capture_output=True
+            ["wget", "-O", output_path, url], check=True, capture_output=True
         )
         return True
     except subprocess.CalledProcessError as e:
@@ -29,13 +28,13 @@ def download_file(url, output_path):
         return False
 
 
-def convert_wav_to_mp3(wav_path, mp3_path, bitrate='256k'):
+def convert_wav_to_mp3(wav_path, mp3_path, bitrate="64k"):
     """Convert WAV file to MP3 using ffmpeg."""
     try:
         subprocess.run(
-            ['ffmpeg', '-i', wav_path, '-b:a', bitrate, '-y', mp3_path],
+            ["ffmpeg", "-i", wav_path, "-b:a", bitrate, "-y", mp3_path],
             check=True,
-            capture_output=True
+            capture_output=True,
         )
         return True
     except subprocess.CalledProcessError as e:
@@ -48,8 +47,8 @@ def download_row(row_data):
     idx, audio_url, transcript_url, file_uuid, output_dir = row_data
 
     # Determine audio file extension from URL (strip query parameters)
-    audio_url_path = str(audio_url).split('?')[0]
-    audio_ext = Path(audio_url_path).suffix or '.mp3'
+    audio_url_path = str(audio_url).split("?")[0]
+    audio_ext = Path(audio_url_path).suffix or ".mp3"
     audio_output_temp = output_dir / f"{file_uuid}{audio_ext}"
     audio_output_final = output_dir / f"{file_uuid}.mp3"
     transcript_output = output_dir / f"{file_uuid}.txt"
@@ -61,8 +60,9 @@ def download_row(row_data):
 
     # Download audio file
     if download_file(audio_url, str(audio_output_temp)):
+        print("")
         # If it's a WAV file, convert to MP3
-        if audio_ext.lower() == '.wav':
+        if audio_ext.lower() == ".wav":
             if convert_wav_to_mp3(str(audio_output_temp), str(audio_output_final)):
                 # Delete the WAV file after successful conversion
                 audio_output_temp.unlink()
@@ -89,9 +89,9 @@ def process_file(input_file, base_output_dir, include_open=False):
     # Determine file type and read accordingly
     file_path = Path(input_file)
 
-    if file_path.suffix.lower() in ['.xlsx', '.xls']:
+    if file_path.suffix.lower() in [".xlsx", ".xls"]:
         df = pd.read_excel(input_file)
-    elif file_path.suffix.lower() == '.csv':
+    elif file_path.suffix.lower() == ".csv":
         df = pd.read_csv(input_file)
     else:
         print(f"Unsupported file type: {file_path.suffix}")
@@ -112,11 +112,11 @@ def process_file(input_file, base_output_dir, include_open=False):
 
     for col in df.columns:
         col_lower = str(col).lower()
-        if 'audio' in col_lower and 'url' in col_lower:
+        if "audio" in col_lower and "url" in col_lower:
             audio_col = col
-        elif 'transcript' in col_lower and 'url' in col_lower:
+        elif "transcript" in col_lower and "url" in col_lower:
             transcript_col = col
-        elif col_lower == 'outcome':
+        elif col_lower == "outcome":
             outcome_col = col
 
     if audio_col is None or transcript_col is None:
@@ -132,19 +132,21 @@ def process_file(input_file, base_output_dir, include_open=False):
 
         # Filter for "Sold" and optionally "Open" outcomes
         if include_open:
-            df = df[df[outcome_col].str.lower().isin(['sold', 'open'])]
+            df = df[df[outcome_col].str.lower().isin(["sold", "open"])]
             filtered_rows = len(df)
-            print(f"Found {filtered_rows} 'Sold' or 'Open' rows out of {total_rows} total rows")
+            print(
+                f"Found {filtered_rows} 'Sold' or 'Open' rows out of {total_rows} total rows"
+            )
         else:
-            df = df[df[outcome_col].str.lower() == 'sold']
+            df = df[df[outcome_col].str.lower() == "sold"]
             filtered_rows = len(df)
             print(f"Found {filtered_rows} 'Sold' rows out of {total_rows} total rows")
     else:
         print("Warning: No 'Outcome' column found, processing all rows")
 
     # Prepare download tasks and add new columns to dataframe
-    df['downloaded_audio_file'] = None
-    df['downloaded_transcript_file'] = None
+    df["downloaded_audio_file"] = None
+    df["downloaded_transcript_file"] = None
 
     download_tasks = []
     for idx, row in df.iterrows():
@@ -170,16 +172,24 @@ def process_file(input_file, base_output_dir, include_open=False):
         with tqdm(total=len(download_tasks), desc="Downloading", unit="row") as pbar:
             for future in as_completed(futures):
                 try:
-                    idx, audio_success, transcript_success, audio_filename, transcript_filename = future.result()
+                    (
+                        idx,
+                        audio_success,
+                        transcript_success,
+                        audio_filename,
+                        transcript_filename,
+                    ) = future.result()
 
                     # Update dataframe with filenames
                     if audio_filename:
-                        df.at[idx, 'downloaded_audio_file'] = audio_filename
+                        df.at[idx, "downloaded_audio_file"] = audio_filename
                     if transcript_filename:
-                        df.at[idx, 'downloaded_transcript_file'] = transcript_filename
+                        df.at[idx, "downloaded_transcript_file"] = transcript_filename
 
                     if not audio_success or not transcript_success:
-                        tqdm.write(f"Row {idx + 1}: Partial failure (audio: {audio_success}, transcript: {transcript_success})")
+                        tqdm.write(
+                            f"Row {idx + 1}: Partial failure (audio: {audio_success}, transcript: {transcript_success})"
+                        )
                 except Exception as e:
                     tqdm.write(f"Error processing row: {e}")
                 finally:
@@ -195,22 +205,30 @@ def process_file(input_file, base_output_dir, include_open=False):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Download audio and transcript files from URLs in Excel/CSV files.',
+        description="Download audio and transcript files from URLs in Excel/CSV files.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   python download_audio_transcripts.py data.xlsx
   python download_audio_transcripts.py file1.csv file2.xlsx
   python download_audio_transcripts.py --include-open data.xlsx
-        """
+        """,
     )
-    parser.add_argument('files', nargs='+', help='Excel or CSV files to process')
-    parser.add_argument('--include-open', action='store_true',
-                        help='Also download rows with "Open" outcome (default: only "Sold")')
+    parser.add_argument("files", nargs="+", help="Excel or CSV files to process")
+    parser.add_argument(
+        "--include-open",
+        action="store_true",
+        help='Also download rows with "Open" outcome (default: only "Sold")',
+    )
 
     args = parser.parse_args()
 
-    base_output_dir = '/Users/willcray/maive/rilla_data'
+    print(
+        "STOP RIGHT THERE -- this script caused errors with the downloaded audio files last time, resulting in huge MP3 files that weren't actually MP3 files. You must fix these errors, ensure proper file type management. The type of file (.wav, .mp3. .aa4) hosted by Rilla seems to vary. You should be downloading the original file type, converting to mp3 if necessary and downsampling to a 64 kbps bitrate (google gemini downsamples to 16 kbps bitrate anyway)"
+    )
+    sys.exit(0)
+
+    base_output_dir = "/Users/willcray/maive/rilla_data"
 
     # Process each input file
     for input_file in args.files:
@@ -219,8 +237,8 @@ Examples:
             continue
 
         process_file(input_file, base_output_dir, include_open=args.include_open)
-        print("\n" + "="*80 + "\n")
+        print("\n" + "=" * 80 + "\n")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

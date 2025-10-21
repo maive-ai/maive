@@ -17,7 +17,7 @@ from datetime import UTC, datetime
 from pydantic import BaseModel, Field
 from tqdm.asyncio import tqdm
 
-from src.ai.base import AudioAnalysisRequest
+from src.ai.base import ContentAnalysisRequest
 from src.ai.providers import get_ai_provider
 from src.integrations.crm.base import CRMError
 from src.integrations.crm.constants import SubStatus
@@ -41,7 +41,7 @@ class DiscrepancyReview(BaseModel):
         description="True if discrepancies were found and the job needs review, False otherwise"
     )
     hold_explanation: str = Field(
-        description="Concise explanation of discrepancies found with timestamps (MM:SS format)"
+        description="Concise explanation of discrepancies found with timestamps (HH:MM:SS format)"
     )
 
 
@@ -56,14 +56,16 @@ class DiscrepancyDetectionWorkflow:
     async def execute_for_job(
         self,
         job_id: int,
-        audio_path: str,
+        audio_path: str | None = None,
+        transcript_path: str | None = None,
         form_submission: dict | None = None,
     ) -> dict:
         """Execute the discrepancy detection workflow for a single job.
 
         Args:
             job_id: Job ID to analyze
-            audio_path: Path to the audio file of the sales call
+            audio_path: Path to the audio file of the sales call (optional if transcript provided)
+            transcript_path: Path to the transcript JSON file (optional, alternative to audio)
             form_submission: Optional form submission data (if already fetched)
 
         Returns:
@@ -93,17 +95,51 @@ class DiscrepancyDetectionWorkflow:
 
             logger.info(f"✅ Selected estimate: {selected_estimate.id}")
             logger.info(f"   Name: {selected_estimate.name or '(no name)'}")
-            logger.info(f"   Total: ${selected_estimate.subtotal + selected_estimate.tax:,.2f}")
+            logger.info(
+                f"   Total: ${selected_estimate.subtotal + selected_estimate.tax:,.2f}"
+            )
 
             # Step 3: Get estimate items
-            logger.info(f"\nStep 3: Fetching estimate items for estimate {selected_estimate.id}")
+            logger.info(
+                f"\nStep 3: Fetching estimate items for estimate {selected_estimate.id}"
+            )
             items_result = await self._fetch_estimate_items(selected_estimate.id)
-            logger.info(f"✅ Found {len(items_result.items)} items")
+
+            # Filter to only include active, customer-facing items visible in GUI/PDF
+            # - Items with invoice_item_id are on invoices, not the estimate (not visible in GUI/PDF)
+            # - Items with chargeable=False are internal cost tracking (materials/labor included in service items)
+            # - Items with chargeable=null or True are customer-facing line items
+            active_items = [
+                item
+                for item in items_result.items
+                if item.invoice_item_id is None and item.chargeable is not False
+            ]
+            filtered_count = len(items_result.items) - len(active_items)
+            logger.info(
+                f"✅ Found {len(active_items)} active chargeable items (filtered out {filtered_count} invoiced/non-chargeable items)"
+            )
+
+            # Save raw estimate data to JSON file
+            estimate_data_output = {
+                "estimate": selected_estimate.model_dump()
+                if hasattr(selected_estimate, "model_dump")
+                else selected_estimate.__dict__,
+                "items": [
+                    item.model_dump() if hasattr(item, "model_dump") else item.__dict__
+                    for item in active_items
+                ],
+            }
+            output_filename = f"estimate_data_job_{job_id}_estimate_{selected_estimate.id}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.json"
+            with open(output_filename, "w") as f:
+                json.dump(estimate_data_output, f, indent=2, default=str)
+            logger.info(f"✅ Estimate data saved to: {output_filename}")
 
             # Step 4: Get form submission (Notes to Production)
             if form_submission:
-                logger.info(f"\nStep 4: Using provided form submission")
-                notes_to_production = self._extract_notes_from_submission(form_submission)
+                logger.info("\nStep 4: Using provided form submission")
+                notes_to_production = self._extract_notes_from_submission(
+                    form_submission
+                )
             else:
                 logger.info(f"\nStep 4: Fetching form submission for job {job_id}")
                 notes_to_production = await self._fetch_form_submission(job_id)
@@ -114,12 +150,13 @@ class DiscrepancyDetectionWorkflow:
                 logger.warning(f"⚠️ No Notes to Production found for job {job_id}")
                 notes_to_production = {"message": "No Notes to Production found"}
 
-            # Step 5: Analyze audio with AI
-            logger.info("\nStep 5: Analyzing audio for discrepancies")
+            # Step 5: Analyze audio/transcript with AI
+            logger.info("\nStep 5: Analyzing audio/transcript for discrepancies")
             review_result = await self._analyze_audio(
                 audio_path=audio_path,
+                transcript_path=transcript_path,
                 estimate=selected_estimate,
-                estimate_items=items_result.items,
+                estimate_items=active_items,
                 notes_to_production=notes_to_production,
             )
 
@@ -130,7 +167,9 @@ class DiscrepancyDetectionWorkflow:
             # Step 6: Conditional project hold
             if review_result.needs_review:
                 logger.info("\nStep 6: Discrepancy found - Updating project to HOLD")
-                await self._put_project_on_hold(project_id, review_result.hold_explanation)
+                await self._put_project_on_hold(
+                    project_id, review_result.hold_explanation
+                )
                 logger.info("✅ Project updated and note added")
             else:
                 logger.info("\nStep 6: No discrepancies found - No action needed")
@@ -144,7 +183,9 @@ class DiscrepancyDetectionWorkflow:
                 "estimate_id": selected_estimate.id,
                 "needs_review": review_result.needs_review,
                 "explanation": review_result.hold_explanation,
-                "action_taken": "project_on_hold" if review_result.needs_review else "none",
+                "action_taken": "project_on_hold"
+                if review_result.needs_review
+                else "none",
             }
 
         except CRMError as e:
@@ -186,17 +227,27 @@ class DiscrepancyDetectionWorkflow:
             page=1,
             page_size=50,
         )
-        job_estimates_response = await self.crm_provider.get_estimates(job_estimates_request)
-        logger.info(f"   Found {len(job_estimates_response.estimates)} estimates for job {job_id}")
+        job_estimates_response = await self.crm_provider.get_estimates(
+            job_estimates_request
+        )
+        logger.info(
+            f"   Found {len(job_estimates_response.estimates)} estimates for job {job_id}"
+        )
 
         # Check for sold estimates on this job
-        job_sold_estimates = [e for e in job_estimates_response.estimates if e.sold_on is not None]
+        job_sold_estimates = [
+            e for e in job_estimates_response.estimates if e.sold_on is not None
+        ]
 
         if len(job_sold_estimates) > 0:
-            logger.info(f"   ✅ Found {len(job_sold_estimates)} sold estimate(s) on job {job_id}")
+            logger.info(
+                f"   ✅ Found {len(job_sold_estimates)} sold estimate(s) on job {job_id}"
+            )
             if len(job_sold_estimates) > 1:
                 estimate_list = ", ".join([str(e.id) for e in job_sold_estimates])
-                logger.warning(f"   Multiple sold estimates found: {estimate_list}. Using most recent.")
+                logger.warning(
+                    f"   Multiple sold estimates found: {estimate_list}. Using most recent."
+                )
                 job_sold_estimates.sort(key=lambda e: e.sold_on, reverse=True)
             return job_sold_estimates[0]
 
@@ -210,24 +261,34 @@ class DiscrepancyDetectionWorkflow:
             page=1,
             page_size=50,
         )
-        project_estimates_response = await self.crm_provider.get_estimates(project_estimates_request)
-        logger.info(f"   Found {len(project_estimates_response.estimates)} total estimates for project {project_id}")
+        project_estimates_response = await self.crm_provider.get_estimates(
+            project_estimates_request
+        )
+        logger.info(
+            f"   Found {len(project_estimates_response.estimates)} total estimates for project {project_id}"
+        )
 
         # Filter for sold estimates
-        project_sold_estimates = [e for e in project_estimates_response.estimates if e.sold_on is not None]
+        project_sold_estimates = [
+            e for e in project_estimates_response.estimates if e.sold_on is not None
+        ]
 
         if len(project_sold_estimates) == 0:
             raise CRMError(
                 f"No sold estimates found for job {job_id} or project {project_id}. "
                 f"Found {len(project_estimates_response.estimates)} total estimates at project level, but none are sold.",
-                "NO_SOLD_ESTIMATE"
+                "NO_SOLD_ESTIMATE",
             )
 
-        logger.info(f"   ✅ Found {len(project_sold_estimates)} sold estimate(s) at project level")
+        logger.info(
+            f"   ✅ Found {len(project_sold_estimates)} sold estimate(s) at project level"
+        )
 
         if len(project_sold_estimates) > 1:
             estimate_list = ", ".join([str(e.id) for e in project_sold_estimates])
-            logger.warning(f"   Multiple sold estimates found: {estimate_list}. Using most recent.")
+            logger.warning(
+                f"   Multiple sold estimates found: {estimate_list}. Using most recent."
+            )
             project_sold_estimates.sort(key=lambda e: e.sold_on, reverse=True)
 
         return project_sold_estimates[0]
@@ -261,7 +322,11 @@ class DiscrepancyDetectionWorkflow:
         if not submissions:
             return None
 
-        submission = submissions[0] if isinstance(submissions[0], dict) else submissions[0].__dict__
+        submission = (
+            submissions[0]
+            if isinstance(submissions[0], dict)
+            else submissions[0].__dict__
+        )
         return self._extract_notes_from_submission(submission)
 
     def _extract_notes_from_submission(self, submission):
@@ -272,7 +337,13 @@ class DiscrepancyDetectionWorkflow:
             units = submission.get("units", [])
 
         for unit in units:
-            unit_dict = unit if isinstance(unit, dict) else unit.__dict__ if hasattr(unit, "__dict__") else {}
+            unit_dict = (
+                unit
+                if isinstance(unit, dict)
+                else unit.__dict__
+                if hasattr(unit, "__dict__")
+                else {}
+            )
             if unit_dict.get("name") == "Notes to Production":
                 return unit_dict
 
@@ -280,12 +351,22 @@ class DiscrepancyDetectionWorkflow:
 
     async def _analyze_audio(
         self,
-        audio_path: str,
+        audio_path: str | None,
+        transcript_path: str | None,
         estimate,
         estimate_items,
         notes_to_production,
     ) -> DiscrepancyReview:
-        """Analyze audio for discrepancies using AI."""
+        """Analyze audio/transcript for discrepancies using AI.
+
+        Can handle:
+        - Audio only
+        - Transcript only
+        - Both audio and transcript together
+        """
+        if not audio_path and not transcript_path:
+            raise ValueError("Either audio_path or transcript_path must be provided")
+
         # Format estimate data
         estimate_data = {
             "estimate_id": estimate.id,
@@ -304,11 +385,39 @@ class DiscrepancyDetectionWorkflow:
             ],
         }
 
-        prompt = f"""You are an expert sales admin for a roofing company. You are reviewing the audio from a conversation between one of our sales reps and a customer. Please listen to and understand the contents of the audio conversation, the contents of the estimate, and any notes to production that the sales rep submitted via form following the conversation.
+        # Load transcript if provided
+        transcript_text = None
+        if transcript_path:
+            logger.info(f"   Loading transcript from: {transcript_path}")
+            with open(transcript_path, "r") as f:
+                transcript_data = json.load(f)
+
+            # Format transcript for readability
+            transcript_lines = []
+            for entry in transcript_data:
+                speaker = entry.get("speaker", "Unknown")
+                text = entry.get("transcript", "")
+                timestamp = entry.get("start_time", "00:00:00")
+                transcript_lines.append(f"[{timestamp}] {speaker}: {text}")
+
+            transcript_text = "\n".join(transcript_lines)
+            logger.info(f"   Loaded transcript with {len(transcript_data)} entries")
+
+        # Build the prompt
+        prompt = f"""You are an expert sales admin for a roofing company. You are reviewing a conversation between one of our sales reps and a customer. The conversation may be provided as audio, transcript, or both.
+
+Please review and understand the contents of the conversation, the estimate, and any notes to production that the sales rep submitted via form following the conversation.
 
 Identify what, if anything, mentioned during the conversation that was not updated in the estimate or logged in the form. If there is any information that would affect the roofing service provided or how it is provided, then please flag the conversation for review.
 
-Simply and concisely log what was not included in the estimate or form but stated during the audio conversation. In this concise message of the discrepancy, please include a timestamp in the audio when the discrepancy occurred in format (MM:SS).
+Simply and concisely log what was not included in the estimate or form but stated during the conversation. In this concise message of the discrepancy, please include a time range during which the discrepancy occurred. The format of the timestamp should be (HH:MM:SS) - (HH:MM:SS). Please ensure that any explanations are sorted in chronological order.
+
+There are several fields in the conversation, production, notes, and estimate that you should consider for this analysis. Examples:
+- Replacing pipe boots for the customer
+- Shingle type, color, brand
+
+There are several fields in the estimate that you should explicity NOT consider for this analysis. DO NOT mention them in your response.
+- Customer's name
 
 **Estimate Contents:**
 {json.dumps(estimate_data, indent=2)}
@@ -317,15 +426,17 @@ Simply and concisely log what was not included in the estimate or form but state
 {json.dumps(notes_to_production, indent=2)}
 """
 
-        request = AudioAnalysisRequest(
+        # Use AI provider to analyze with structured output
+        logger.info("   Initiating AI analysis...")
+
+        request = ContentAnalysisRequest(
             audio_path=audio_path,
+            transcript_text=transcript_text,
             prompt=prompt,
             temperature=0.7,
         )
 
-        # Use AI provider to analyze audio with structured output
-        logger.info(f"   Using AI provider: {self.ai_provider.__class__.__name__}")
-        review_result = await self.ai_provider.analyze_audio_with_structured_output(
+        review_result = await self.ai_provider.analyze_content_with_structured_output(
             request=request,
             response_model=DiscrepancyReview,
         )
@@ -367,8 +478,17 @@ async def main():
         description="Analyze sales calls for discrepancies in form submissions within a time range"
     )
     parser.add_argument(
-        "audio_path",
-        help="Path to the audio file of the sales call",
+        "--audio-path",
+        help="Path to the audio file of the sales call (optional if transcript provided)",
+    )
+    parser.add_argument(
+        "--transcript-path",
+        help="Path to the transcript JSON file (optional if audio provided)",
+    )
+    parser.add_argument(
+        "--job-id",
+        type=int,
+        help="Specific job ID to analyze (skips time-based form submission search)",
     )
     parser.add_argument(
         "--start-time",
@@ -383,7 +503,44 @@ async def main():
 
     args = parser.parse_args()
 
-    # Parse timestamps (will include timezone if provided, otherwise assume UTC)
+    # Validate input
+    if not args.audio_path and not args.transcript_path:
+        parser.error("Either --audio-path or --transcript-path must be provided")
+
+    workflow = DiscrepancyDetectionWorkflow()
+
+    # Handle single job analysis if job-id is provided
+    if args.job_id:
+        logger.info("=" * 60)
+        logger.info("SINGLE JOB DISCREPANCY DETECTION WORKFLOW")
+        logger.info("=" * 60)
+        logger.info(f"Job ID: {args.job_id}")
+        if args.audio_path:
+            logger.info(f"Audio file: {args.audio_path}")
+        if args.transcript_path:
+            logger.info(f"Transcript file: {args.transcript_path}")
+        logger.info("")
+
+        try:
+            result = await workflow.execute_for_job(
+                job_id=args.job_id,
+                audio_path=args.audio_path,
+                transcript_path=args.transcript_path,
+            )
+
+            print("\n" + "=" * 60)
+            print("WORKFLOW RESULT")
+            print("=" * 60)
+            print(json.dumps(result, indent=2, default=str))
+            print("=" * 60)
+
+        except Exception as e:
+            logger.error(f"Failed to process job {args.job_id}: {e}")
+            raise
+
+        return
+
+    # Parse timestamps for batch processing
     start_time = datetime.fromisoformat(args.start_time)
     if start_time.tzinfo is None:
         start_time = start_time.replace(tzinfo=UTC)
@@ -395,10 +552,11 @@ async def main():
     logger.info("BATCH DISCREPANCY DETECTION WORKFLOW")
     logger.info("=" * 60)
     logger.info(f"Time range: {start_time} to {end_time}")
-    logger.info(f"Audio file: {args.audio_path}")
+    if args.audio_path:
+        logger.info(f"Audio file: {args.audio_path}")
+    if args.transcript_path:
+        logger.info(f"Transcript file: {args.transcript_path}")
     logger.info("")
-
-    workflow = DiscrepancyDetectionWorkflow()
 
     # Step 1: Fetch all form submissions in the time range
     logger.info("Fetching form submissions in time range...")
@@ -419,7 +577,11 @@ async def main():
     # Filter submissions by time range
     submissions_in_range = []
     for submission in form_result.data:
-        submitted_on = submission.submitted_on if hasattr(submission, "submitted_on") else submission.get("submitted_on")
+        submitted_on = (
+            submission.submitted_on
+            if hasattr(submission, "submitted_on")
+            else submission.get("submitted_on")
+        )
         if submitted_on and start_time <= submitted_on <= end_time:
             submissions_in_range.append(submission)
 
@@ -434,9 +596,19 @@ async def main():
     submission_by_job = {}
 
     for submission in submissions_in_range:
-        owners = submission.owners if hasattr(submission, "owners") else submission.get("owners", [])
+        owners = (
+            submission.owners
+            if hasattr(submission, "owners")
+            else submission.get("owners", [])
+        )
         for owner in owners:
-            owner_dict = owner if isinstance(owner, dict) else owner.__dict__ if hasattr(owner, "__dict__") else {}
+            owner_dict = (
+                owner
+                if isinstance(owner, dict)
+                else owner.__dict__
+                if hasattr(owner, "__dict__")
+                else {}
+            )
             if owner_dict.get("type") == "Job":
                 job_id = owner_dict.get("id")
                 if job_id:
@@ -455,6 +627,7 @@ async def main():
             result = await workflow.execute_for_job(
                 job_id=job_id,
                 audio_path=args.audio_path,
+                transcript_path=args.transcript_path,
                 form_submission=submission_by_job.get(job_id),
             )
             results.append(result)
