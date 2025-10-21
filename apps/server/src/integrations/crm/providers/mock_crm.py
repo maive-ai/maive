@@ -20,11 +20,15 @@ from src.integrations.crm.providers.mock_data import (
     get_mock_projects,
 )
 from src.integrations.crm.schemas import (
+    EquipmentListResponse,
     EstimateResponse,
     JobNoteResponse,
     JobResponse,
+    MaterialsListResponse,
+    PricebookItemsRequest,
     ProjectStatusListResponse,
     ProjectStatusResponse,
+    ServicesListResponse,
 )
 from src.utils.logger import logger
 
@@ -247,4 +251,25 @@ class MockCRMProvider(CRMProvider):
                 error_code="NOT_FOUND",
                 message=f"Job with ID {job_id} not found",
             )
+
+    async def get_pricebook_materials(self, request: PricebookItemsRequest) -> MaterialsListResponse:
+        """Mock CRM does not support pricebook materials."""
+        raise CRMError(
+            error_code="NOT_SUPPORTED",
+            message="Mock CRM does not support pricebook materials operations",
+        )
+
+    async def get_pricebook_services(self, request: PricebookItemsRequest) -> ServicesListResponse:
+        """Mock CRM does not support pricebook services."""
+        raise CRMError(
+            error_code="NOT_SUPPORTED",
+            message="Mock CRM does not support pricebook services operations",
+        )
+
+    async def get_pricebook_equipment(self, request: PricebookItemsRequest) -> EquipmentListResponse:
+        """Mock CRM does not support pricebook equipment."""
+        raise CRMError(
+            error_code="NOT_SUPPORTED",
+            message="Mock CRM does not support pricebook equipment operations",
+        )
 
