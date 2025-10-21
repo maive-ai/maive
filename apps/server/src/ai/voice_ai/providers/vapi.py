@@ -139,8 +139,8 @@ class VapiProvider(VoiceAIProvider):
                 "No provider data available", error_code=VoiceAIErrorCode.NOT_FOUND
             )
 
-        # Parse provider data with typed model
-        vapi_data = VapiCall(**call_response.provider_data)
+        # Use VapiCall object directly (strongly typed)
+        vapi_data: VapiCall = call_response.provider_data
 
         if not vapi_data.monitor or not vapi_data.monitor.control_url:
             raise VoiceAIError(
@@ -333,8 +333,8 @@ class VapiProvider(VoiceAIProvider):
         }
         status = status_mapping.get(vapi_status, CallStatus.QUEUED)
 
-        # Convert to dict only for provider_data storage
-        provider_data = call.dict() if hasattr(call, "dict") else call.model_dump()
+        # Store VapiCall object directly - provides strong typing
+        provider_data = call
 
         # Parse messages from Vapi format to provider-agnostic format
         messages = self._parse_messages(call.messages) if call.messages else []
