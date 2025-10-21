@@ -216,10 +216,10 @@ export interface CallResponse {
     'created_at'?: string | null;
     /**
      * 
-     * @type {{ [key: string]: any; }}
+     * @type {any}
      * @memberof CallResponse
      */
-    'provider_data'?: { [key: string]: any; } | null;
+    'provider_data'?: any;
     /**
      * 
      * @type {AnalysisData}
