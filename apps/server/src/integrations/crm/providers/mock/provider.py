@@ -10,33 +10,36 @@ import uuid
 from datetime import UTC, datetime
 
 from src.integrations.crm.base import CRMError, CRMProvider
-from src.integrations.crm.constants import ClaimStatus
+from src.integrations.crm.constants import ClaimStatus, Status
 from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
-from src.integrations.crm.constants import Status
 from src.integrations.crm.provider_schemas import FormSubmissionListResponse
-from src.integrations.crm.providers.mock_data import (
+from src.integrations.crm.providers.mock.mock_data import (
     Project,
     ProjectData,
     get_mock_projects,
 )
 from src.integrations.crm.schemas import (
+    EquipmentListResponse,
     EstimateResponse,
     JobNoteResponse,
     JobResponse,
+    MaterialsListResponse,
+    PricebookItemsRequest,
     ProjectStatusListResponse,
     ProjectStatusResponse,
+    ServicesListResponse,
 )
 from src.utils.logger import logger
 
 
-class MockCRMProvider(CRMProvider):
+class MockProvider(CRMProvider):
     """Mock CRM implementation using in-memory data."""
 
     def __init__(self):
         """Initialize the Mock CRM provider with in-memory data."""
         self._projects: list[Project] = get_mock_projects()
         logger.info(
-            f"MockCRMProvider initialized with {len(self._projects)} mock projects"
+            f"MockProvider initialized with {len(self._projects)} mock projects"
         )
 
     async def get_project_status(self, project_id: str) -> ProjectStatusResponse:
@@ -70,7 +73,7 @@ class MockCRMProvider(CRMProvider):
         provider_data = project.project_data.model_dump(exclude={"id"}, mode="json")
 
         logger.info(
-            f"[MockCRM] Returning project {project_id} - "
+            f"[Mock] Returning project {project_id} - "
             f"Status: {project.status}, Claim Status: {project.claim_status}"
         )
 
@@ -78,7 +81,7 @@ class MockCRMProvider(CRMProvider):
             project_id=project.project_data.id,
             status=Status(project.status),
             claim_status=ClaimStatus(project.claim_status),
-            provider=CRMProviderEnum.MOCK_CRM,
+            provider=CRMProviderEnum.MOCK,
             updated_at=project.updated_at,
             provider_data=provider_data,
         )
@@ -97,7 +100,7 @@ class MockCRMProvider(CRMProvider):
         for project in self._projects:
             provider_data = project.project_data.model_dump(exclude={"id"}, mode="json")
             logger.debug(
-                f"[MockCRM] Project {project.project_data.id} - "
+                f"[Mock] Project {project.project_data.id} - "
                 f"Status: {project.status}, Claim Status: {project.claim_status}"
             )
             project_responses.append(
@@ -105,7 +108,7 @@ class MockCRMProvider(CRMProvider):
                     project_id=project.project_data.id,
                     status=Status(project.status),
                     claim_status=ClaimStatus(project.claim_status),
-                    provider=CRMProviderEnum.MOCK_CRM,
+                    provider=CRMProviderEnum.MOCK,
                     updated_at=project.updated_at,
                     provider_data=provider_data,
                 )
@@ -114,7 +117,7 @@ class MockCRMProvider(CRMProvider):
         return ProjectStatusListResponse(
             projects=project_responses,
             total_count=len(project_responses),
-            provider=CRMProviderEnum.MOCK_CRM,
+            provider=CRMProviderEnum.MOCK,
         )
 
     async def create_project(self, project_data: ProjectData) -> None:
@@ -193,21 +196,23 @@ class MockCRMProvider(CRMProvider):
         self, job_id: int, text: str, pin_to_top: bool | None = None
     ) -> JobNoteResponse:
         """Add a note to a job."""
-        logger.debug(f"[MockCRMProvider] Adding note to job {job_id}")
-        
+        logger.debug(f"[MockProvider] Adding note to job {job_id}")
+
         now = datetime.now()
-        text = text.strip('\"')
+        text = text.strip('"')
 
         # Find job by job_id (already set in mock data)
-        job: Project | None = next((j for j in self._projects if j.project_data.job_id == job_id), None)
-        
+        job: Project | None = next(
+            (j for j in self._projects if j.project_data.job_id == job_id), None
+        )
+
         if job:
             # Add note to job
             enhanced_text = f"{now.strftime('%Y-%m-%d %H:%M')}: {text}"
             job.project_data.notes = enhanced_text + "\n\n" + job.project_data.notes
-            logger.debug(f"[MockCRMProvider] Added note to job: {text}")
+            logger.debug(f"[MockProvider] Added note to job: {text}")
         else:
-            logger.debug(f"[MockCRMProvider] Job not found: {job_id}")
+            logger.debug(f"[MockProvider] Job not found: {job_id}")
 
         # Return properly formatted response with all required fields
         return JobNoteResponse(
@@ -229,22 +234,52 @@ class MockCRMProvider(CRMProvider):
         Raises:
             CRMError: If the job is not found
         """
-        logger.debug(f"[MockCRMProvider] Updating claim status for job {job_id} to {claim_status}")
+        logger.debug(
+            f"[MockProvider] Updating claim status for job {job_id} to {claim_status}"
+        )
 
         # Find job by job_id
-        job: Project | None = next((j for j in self._projects if j.project_data.job_id == job_id), None)
+        job: Project | None = next(
+            (j for j in self._projects if j.project_data.job_id == job_id), None
+        )
 
         if job:
             old_status = job.claim_status
             job.claim_status = claim_status
             logger.info(
-                f"[MockCRMProvider] Updated claim status for job {job_id} from "
+                f"[MockProvider] Updated claim status for job {job_id} from "
                 f"{old_status} to {claim_status}"
             )
         else:
-            logger.warning(f"[MockCRMProvider] Job not found: {job_id}")
+            logger.warning(f"[MockProvider] Job not found: {job_id}")
             raise CRMError(
                 error_code="NOT_FOUND",
                 message=f"Job with ID {job_id} not found",
             )
 
+    async def get_pricebook_materials(
+        self, request: PricebookItemsRequest
+    ) -> MaterialsListResponse:
+        """Mock CRM does not support pricebook materials."""
+        raise CRMError(
+            error_code="NOT_SUPPORTED",
+            message="Mock CRM does not support pricebook operations",
+        )
+
+    async def get_pricebook_services(
+        self, request: PricebookItemsRequest
+    ) -> ServicesListResponse:
+        """Mock CRM does not support pricebook services."""
+        raise CRMError(
+            error_code="NOT_SUPPORTED",
+            message="Mock CRM does not support pricebook operations",
+        )
+
+    async def get_pricebook_equipment(
+        self, request: PricebookItemsRequest
+    ) -> EquipmentListResponse:
+        """Mock CRM does not support pricebook equipment."""
+        raise CRMError(
+            error_code="NOT_SUPPORTED",
+            message="Mock CRM does not support pricebook operations",
+        )

@@ -8,9 +8,9 @@ based on configuration, following the same pattern as the auth module.
 from src.integrations.crm.base import CRMProvider
 from src.integrations.crm.config import get_crm_settings
 from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
-from src.integrations.crm.providers.job_nimbus import JobNimbusProvider
-from src.integrations.crm.providers.mock_crm import MockCRMProvider
-from src.integrations.crm.providers.service_titan import ServiceTitanProvider
+from src.integrations.crm.providers.job_nimbus.provider import JobNimbusProvider
+from src.integrations.crm.providers.mock.provider import MockProvider
+from src.integrations.crm.providers.service_titan.provider import ServiceTitanProvider
 from src.utils.logger import logger
 
 
@@ -32,9 +32,9 @@ def create_crm_provider() -> CRMProvider:
     elif settings.provider == CRMProviderEnum.JOB_NIMBUS:
         logger.info("Creating JobNimbus CRM provider")
         return JobNimbusProvider()
-    elif settings.provider == CRMProviderEnum.MOCK_CRM:
+    elif settings.provider == CRMProviderEnum.MOCK:
         logger.info("Creating Mock CRM provider")
-        return MockCRMProvider()
+        return MockProvider()
     else:
         raise ValueError(f"Unsupported CRM provider: {settings.provider}")
 

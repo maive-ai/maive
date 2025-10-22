@@ -858,7 +858,7 @@
         "enum": [
           "service_titan",
           "job_nimbus",
-          "mock_crm"
+          "mock"
         ],
         "title": "CRMProvider",
         "description": "Available CRM providers."
