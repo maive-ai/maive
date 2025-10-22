@@ -8,6 +8,6 @@ Available CRM providers.
 
 * `JobNimbus` (value: `'job_nimbus'`)
 
-* `MockCrm` (value: `'mock'`)
+* `Mock` (value: `'mock'`)
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
