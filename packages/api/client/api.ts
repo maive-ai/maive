@@ -93,6 +93,7 @@ export interface AuthResponse {
 
 export const CRMProvider = {
     ServiceTitan: 'service_titan',
+    JobNimbus: 'job_nimbus',
     MockCrm: 'mock_crm'
 } as const;
 
