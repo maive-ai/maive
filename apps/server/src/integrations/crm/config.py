@@ -33,6 +33,20 @@ class ServiceTitanConfig(BaseSettings):
     )
 
 
+class JobNimbusConfig(BaseSettings):
+    """JobNimbus-specific configuration."""
+
+    model_config = SettingsConfigDict(
+        case_sensitive=False, extra="ignore", env_prefix="CRM_"
+    )
+
+    api_key: str = Field(description="JobNimbus API key")
+    base_api_url: str = Field(
+        default="https://app.jobnimbus.com/api1",
+        description="API base URL for requests",
+    )
+
+
 class CRMSettings(BaseSettings):
     """Configuration for CRM integrations using Pydantic settings."""
 
@@ -54,7 +68,7 @@ class CRMSettings(BaseSettings):
     )
 
     # Provider-specific configurations (populated on demand)
-    _provider_config: ServiceTitanConfig | None = None
+    _provider_config: ServiceTitanConfig | JobNimbusConfig | None = None
 
     @model_validator(mode="after")
     def validate_provider_config(self) -> "CRMSettings":
@@ -69,16 +83,26 @@ class CRMSettings(BaseSettings):
                     f"Service Titan configuration required when CRM_PROVIDER=service_titan. "
                     f"Missing environment variables: {e}"
                 )
+        elif self.provider == CRMProvider.JOB_NIMBUS:
+            # Load JobNimbus config only if using that provider
+            try:
+                self._provider_config = JobNimbusConfig()
+                logger.info("JobNimbus configuration loaded")
+            except Exception as e:
+                raise ValueError(
+                    f"JobNimbus configuration required when CRM_PROVIDER=job_nimbus. "
+                    f"Missing environment variables: {e}"
+                )
         return self
 
     @property
-    def provider_config(self) -> ServiceTitanConfig:
+    def provider_config(self) -> ServiceTitanConfig | JobNimbusConfig:
         """
         Get provider-specific configuration.
-        
+
         Returns:
-            ServiceTitanConfig: Provider configuration instance
-            
+            ServiceTitanConfig | JobNimbusConfig: Provider configuration instance
+
         Raises:
             ValueError: If provider config is not loaded
         """
@@ -109,14 +133,19 @@ def get_crm_settings() -> CRMSettings:
         # Log provider-specific config if available
         if _crm_settings.provider == CRMProvider.SERVICE_TITAN:
             config = _crm_settings.provider_config
-            logger.info(f"Service Titan Tenant ID: {config.tenant_id}")
-            logger.info(f"Service Titan Client ID: {config.client_id}")
-            logger.info(
-                f"Service Titan Client Secret (first 5 chars): {config.client_secret[:5]}..."
-            )
-            logger.info(
-                f"Service Titan App Key (first 5 chars): {config.app_key[:5]}..."
-            )
+            if isinstance(config, ServiceTitanConfig):
+                logger.info(f"Service Titan Tenant ID: {config.tenant_id}")
+                logger.info(f"Service Titan Client ID: {config.client_id}")
+                logger.info(
+                    f"Service Titan Client Secret (first 5 chars): {config.client_secret[:5]}..."
+                )
+                logger.info(
+                    f"Service Titan App Key (first 5 chars): {config.app_key[:5]}..."
+                )
+        elif _crm_settings.provider == CRMProvider.JOB_NIMBUS:
+            config = _crm_settings.provider_config
+            if isinstance(config, JobNimbusConfig):
+                logger.info(f"JobNimbus API Key (first 5 chars): {config.api_key[:5]}...")
     return _crm_settings
 
 
