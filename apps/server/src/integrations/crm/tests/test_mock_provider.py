@@ -1,20 +1,20 @@
-"""Tests for MockCRM provider."""
+"""Tests for Mock provider."""
 
 import pytest
 
-from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
 from src.integrations.crm.constants import ClaimStatus, Status
-from src.integrations.crm.providers.mock_crm.provider import MockCRMProvider
+from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
+from src.integrations.crm.providers.mock.provider import MockProvider
 
 
 @pytest.fixture
 def mock_provider():
-    """Create a MockCRM provider instance."""
-    return MockCRMProvider()
+    """Create a Mock provider instance."""
+    return MockProvider()
 
 
-class TestMockCRMProvider:
-    """Test suite for MockCRM provider."""
+class TestMockProvider:
+    """Test suite for Mock provider."""
 
     @pytest.mark.asyncio
     async def test_get_all_project_statuses(self, mock_provider):
@@ -23,7 +23,7 @@ class TestMockCRMProvider:
 
         # Check response structure
         assert result.total_count > 0
-        assert result.provider == CRMProviderEnum.MOCK_CRM
+        assert result.provider == CRMProviderEnum.MOCK
         assert len(result.projects) == result.total_count
         assert len(result.projects) > 0
 
@@ -69,7 +69,7 @@ class TestMockCRMProvider:
         # Check response structure
         assert result.project_id == project_id
         assert result.status in [s.value for s in Status]
-        assert result.provider == CRMProviderEnum.MOCK_CRM
+        assert result.provider == CRMProviderEnum.MOCK
         assert result.provider_data is not None
 
         # Check provider_data has customer information
@@ -102,12 +102,14 @@ class TestMockCRMProvider:
                 projects_without_customer_name.append(project.project_id)
 
         # All projects should have provider_data
-        assert len(projects_without_data) == 0, \
+        assert len(projects_without_data) == 0, (
             f"Projects without provider_data: {projects_without_data}"
+        )
 
         # All projects should have customerName in provider_data
-        assert len(projects_without_customer_name) == 0, \
+        assert len(projects_without_customer_name) == 0, (
             f"Projects without customerName: {projects_without_customer_name}"
+        )
 
         print(f"\n✓ All {len(result.projects)} projects have complete provider_data")
 
@@ -123,7 +125,9 @@ class TestMockCRMProvider:
                 project_with_claim = project
                 break
 
-        assert project_with_claim is not None, "Should have at least one project with a claim"
+        assert project_with_claim is not None, (
+            "Should have at least one project with a claim"
+        )
 
         provider_data = project_with_claim.provider_data
 
@@ -137,7 +141,9 @@ class TestMockCRMProvider:
             assert "phone" in contact
             assert "email" in contact
 
-            print(f"\n✓ Project {project_with_claim.project_id} has complete contact info")
+            print(
+                f"\n✓ Project {project_with_claim.project_id} has complete contact info"
+            )
             print(f"✓ Insurance Agency: {provider_data['insuranceAgency']}")
             print(f"✓ Contact: {contact['name']}")
 
@@ -158,7 +164,7 @@ class TestMockCRMProvider:
             parsed = json.loads(json_str)
             assert parsed["customerName"] == first_project.provider_data["customerName"]
 
-            print(f"\n✓ provider_data is JSON serializable")
+            print("\n✓ provider_data is JSON serializable")
             print(f"✓ JSON length: {len(json_str)} bytes")
         except (TypeError, ValueError) as e:
             pytest.fail(f"provider_data is not JSON serializable: {e}")
