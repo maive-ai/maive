@@ -857,6 +857,7 @@
         "type": "string",
         "enum": [
           "service_titan",
+          "job_nimbus",
           "mock_crm"
         ],
         "title": "CRMProvider",

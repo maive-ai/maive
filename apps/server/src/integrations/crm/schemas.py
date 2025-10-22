@@ -13,6 +13,135 @@ from pydantic import BaseModel, ConfigDict, Field
 from src.integrations.crm.constants import ClaimStatus, CRMProvider, EstimateReviewStatus, Status
 
 
+# ============================================================================
+# UNIVERSAL SCHEMAS - Work across all CRM providers
+# ============================================================================
+
+
+class Job(BaseModel):
+    """Universal job model that works across all CRM providers."""
+
+    id: str = Field(..., description="Unique job identifier (provider-specific format)")
+    name: str | None = Field(None, description="Job name/title")
+    number: str | None = Field(None, description="Job number")
+    status: str = Field(..., description="Current job status (provider-specific)")
+    status_id: int | str | None = Field(None, description="Status identifier")
+    workflow_type: str | None = Field(None, description="Workflow/record type name")
+    description: str | None = Field(None, description="Job description")
+
+    # Customer/contact information
+    customer_id: str | None = Field(None, description="Associated customer/contact ID")
+    customer_name: str | None = Field(None, description="Customer name")
+
+    # Address
+    address_line1: str | None = Field(None, description="Address line 1")
+    address_line2: str | None = Field(None, description="Address line 2")
+    city: str | None = Field(None, description="City")
+    state: str | None = Field(None, description="State/province")
+    postal_code: str | None = Field(None, description="ZIP/postal code")
+    country: str | None = Field(None, description="Country")
+
+    # Dates (ISO format strings for universality)
+    created_at: str | None = Field(None, description="Creation timestamp (ISO format)")
+    updated_at: str | None = Field(None, description="Last update timestamp (ISO format)")
+    completed_at: str | None = Field(None, description="Completion timestamp (ISO format)")
+
+    # Sales/team
+    sales_rep_id: str | None = Field(None, description="Sales representative ID")
+    sales_rep_name: str | None = Field(None, description="Sales representative name")
+
+    # Provider-specific data
+    provider: CRMProvider = Field(..., description="CRM provider name")
+    provider_data: dict[str, Any] = Field(
+        default_factory=dict, description="Provider-specific data"
+    )
+
+
+class JobList(BaseModel):
+    """Universal job list response with pagination."""
+
+    jobs: list[Job] = Field(..., description="List of jobs")
+    total_count: int = Field(..., description="Total number of jobs")
+    provider: CRMProvider = Field(..., description="CRM provider name")
+    page: int | None = Field(None, description="Current page number (if paginated)")
+    page_size: int | None = Field(None, description="Page size (if paginated)")
+    has_more: bool | None = Field(None, description="Whether more results exist")
+
+
+class Contact(BaseModel):
+    """Universal contact/customer model that works across all CRM providers."""
+
+    id: str = Field(..., description="Unique contact identifier (provider-specific format)")
+    first_name: str | None = Field(None, description="First name")
+    last_name: str | None = Field(None, description="Last name")
+    company: str | None = Field(None, description="Company name")
+    display_name: str | None = Field(None, description="Display name")
+
+    # Contact information
+    email: str | None = Field(None, description="Email address")
+    phone: str | None = Field(None, description="Primary phone number")
+    mobile_phone: str | None = Field(None, description="Mobile phone")
+    work_phone: str | None = Field(None, description="Work phone")
+
+    # Address
+    address_line1: str | None = Field(None, description="Address line 1")
+    address_line2: str | None = Field(None, description="Address line 2")
+    city: str | None = Field(None, description="City")
+    state: str | None = Field(None, description="State/province")
+    postal_code: str | None = Field(None, description="ZIP/postal code")
+    country: str | None = Field(None, description="Country")
+
+    # Classification
+    status: str | None = Field(None, description="Contact status")
+    workflow_type: str | None = Field(None, description="Workflow/record type name")
+
+    # Dates
+    created_at: str | None = Field(None, description="Creation timestamp (ISO format)")
+    updated_at: str | None = Field(None, description="Last update timestamp (ISO format)")
+
+    # Provider-specific data
+    provider: CRMProvider = Field(..., description="CRM provider name")
+    provider_data: dict[str, Any] = Field(
+        default_factory=dict, description="Provider-specific data"
+    )
+
+
+class ContactList(BaseModel):
+    """Universal contact list response with pagination."""
+
+    contacts: list[Contact] = Field(..., description="List of contacts")
+    total_count: int = Field(..., description="Total number of contacts")
+    provider: CRMProvider = Field(..., description="CRM provider name")
+    page: int | None = Field(None, description="Current page number (if paginated)")
+    page_size: int | None = Field(None, description="Page size (if paginated)")
+    has_more: bool | None = Field(None, description="Whether more results exist")
+
+
+class Note(BaseModel):
+    """Universal note/activity model that works across all CRM providers."""
+
+    id: str | None = Field(None, description="Note identifier")
+    text: str = Field(..., description="Note text content")
+    entity_id: str = Field(..., description="ID of the entity this note belongs to")
+    entity_type: str = Field(..., description="Type of entity (job, contact, project, etc.)")
+    created_by_id: str | None = Field(None, description="Creator identifier")
+    created_by_name: str | None = Field(None, description="Creator name")
+    created_at: str = Field(..., description="Creation timestamp (ISO format)")
+    updated_at: str | None = Field(None, description="Last update timestamp (ISO format)")
+    is_pinned: bool = Field(default=False, description="Whether the note is pinned")
+
+    # Provider-specific data
+    provider: CRMProvider = Field(..., description="CRM provider name")
+    provider_data: dict[str, Any] = Field(
+        default_factory=dict, description="Provider-specific data"
+    )
+
+
+# ============================================================================
+# LEGACY/PROVIDER-SPECIFIC SCHEMAS - To be deprecated/moved
+# ============================================================================
+
+
 class ProjectStatusResponse(BaseModel):
     """Response model for project status information."""
 
