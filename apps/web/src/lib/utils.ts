@@ -99,3 +99,29 @@ export function getStatusColor(status: string): string {
   }
 }
 
+/**
+ * Format a phone number for display
+ * Supports US phone numbers in various formats
+ *
+ * Examples:
+ * - "8881234568" -> "(888) 123-4568"
+ * - "+18881234568" -> "(888) 123-4568"
+ * - "888-123-4568" -> "(888) 123-4568"
+ */
+export function formatPhoneNumber(phone: string | null | undefined): string {
+  if (!phone) return 'Not available';
+
+  // Remove all non-digit characters
+  const digits = phone.replace(/\D/g, '');
+
+  // Handle US phone numbers (10 or 11 digits)
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  } else if (digits.length === 11 && digits[0] === '1') {
+    return `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+  }
+
+  // If not a standard format, return as-is
+  return phone;
+}
+

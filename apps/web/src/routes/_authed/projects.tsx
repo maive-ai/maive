@@ -29,16 +29,18 @@ function Projects() {
 
     return data.projects.filter((project) => {
       const providerData = project.provider_data as any;
-      
-      // Search across multiple fields (camelCase from mock CRM)
+
+      // Search across multiple fields
       const searchableFields = [
         project.id,
         project.status,
+        project.customer_name,
+        project.claim_number,
+        project.number,
         providerData?.customerName,
         providerData?.address,
         providerData?.phone,
         providerData?.email,
-        providerData?.claimNumber,
         providerData?.insuranceAgency,
         providerData?.insuranceAgencyContact?.name,
         providerData?.adjusterName,

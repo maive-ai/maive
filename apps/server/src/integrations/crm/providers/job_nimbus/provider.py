@@ -5,6 +5,7 @@ This module implements the CRMProvider interface for JobNimbus,
 handling API communication and data transformation.
 """
 
+import asyncio
 import json
 from datetime import UTC, datetime
 from typing import Any
@@ -203,7 +204,7 @@ class JobNimbusProvider(CRMProvider):
             data = response.json()
             jn_job = JobNimbusJobResponse(**data)
 
-            return self._transform_jn_job_to_universal_project(jn_job)
+            return await self._transform_jn_job_to_universal_project_async(jn_job)
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
@@ -241,11 +242,11 @@ class JobNimbusProvider(CRMProvider):
             data = response.json()
             jn_jobs_list = JobNimbusJobsListResponse(**data)
 
-            # Transform to universal Project schemas
-            projects = [
-                self._transform_jn_job_to_universal_project(jn_job)
+            # Transform to universal Project schemas (using async to fetch contact details)
+            projects = await asyncio.gather(*[
+                self._transform_jn_job_to_universal_project_async(jn_job)
                 for jn_job in jn_jobs_list.results
-            ]
+            ])
 
             # Apply pagination
             start_idx = (page - 1) * page_size
@@ -522,8 +523,68 @@ class JobNimbusProvider(CRMProvider):
             },
         )
 
-    def _transform_jn_job_to_universal_project(self, jn_job: JobNimbusJobResponse) -> Project:
-        """Transform JobNimbus job to universal Project schema."""
+    def _extract_custom_field(
+        self, all_data: dict[str, Any], possible_names: list[str]
+    ) -> Any:
+        """Extract a custom field value by checking multiple possible field names.
+
+        Args:
+            all_data: All fields from JobNimbus job
+            possible_names: List of possible normalized field names to check
+
+        Returns:
+            The field value if found, None otherwise
+        """
+        for key, value in all_data.items():
+            # Normalize the key by removing spaces, underscores, and special chars
+            normalized_key = key.lower().replace(" ", "").replace("_", "").replace("#", "")
+            if normalized_key in possible_names and value:
+                return value
+        return None
+
+    async def _transform_jn_job_to_universal_project_async(self, jn_job: JobNimbusJobResponse) -> Project:
+        """Async version that fetches primary contact details for email."""
+        # Get all fields from the JobNimbus job, including custom fields
+        all_data = jn_job.model_dump(mode="json")
+
+        # Extract claim number from various possible custom field names
+        claim_number = self._extract_custom_field(
+            all_data, ["claimnumber", "claim", "claimno"]
+        )
+
+        # Extract and convert date of loss
+        date_of_loss_raw = self._extract_custom_field(
+            all_data, ["dateofloss", "losdate", "lossdate", "dol"]
+        )
+        date_of_loss = None
+        if date_of_loss_raw:
+            if isinstance(date_of_loss_raw, (int, float)):
+                date_of_loss = self._unix_timestamp_to_datetime(
+                    int(date_of_loss_raw)
+                ).isoformat()
+            elif isinstance(date_of_loss_raw, str):
+                date_of_loss = date_of_loss_raw
+
+        # Extract primary contact info
+        customer_name = jn_job.primary.name if jn_job.primary else None
+        customer_phone = None
+        customer_email = None
+
+        # Fetch primary contact details to get email and phone
+        if jn_job.primary and jn_job.primary.id:
+            try:
+                contact = await self.get_contact(jn_job.primary.id)
+                customer_email = contact.email
+                # Use the primary phone field (already has fallback logic in transformation)
+                customer_phone = contact.phone or contact.mobile_phone or contact.work_phone
+                logger.info(f"[JobNimbus] Fetched contact {jn_job.primary.id} - phone: {customer_phone}, email: {customer_email}")
+            except Exception as e:
+                logger.warning(f"[JobNimbus] Failed to fetch contact {jn_job.primary.id}: {e}")
+
+        # Store contact info in provider_data for frontend access
+        all_data["customer_phone"] = customer_phone
+        all_data["customer_email"] = customer_email
+
         return Project(
             id=jn_job.jnid,
             name=jn_job.name,
@@ -535,7 +596,7 @@ class JobNimbusProvider(CRMProvider):
             workflow_type=jn_job.record_type_name,
             description=jn_job.description,
             customer_id=jn_job.primary.id if jn_job.primary else None,
-            customer_name=jn_job.primary.name if jn_job.primary else None,
+            customer_name=customer_name,
             location_id=str(jn_job.location.id) if jn_job.location else None,
             address_line1=jn_job.address_line1,
             address_line2=jn_job.address_line2,
@@ -548,18 +609,12 @@ class JobNimbusProvider(CRMProvider):
             start_date=None,  # Not tracked in JobNimbus
             target_completion_date=None,
             actual_completion_date=None,
+            claim_number=claim_number,
+            date_of_loss=date_of_loss,
             sales_rep_id=jn_job.sales_rep,
             sales_rep_name=jn_job.sales_rep_name,
             provider=CRMProviderEnum.JOB_NIMBUS,
-            provider_data={
-                "recid": jn_job.recid,
-                "jnid": jn_job.jnid,
-                "record_type": jn_job.record_type,
-                "source": jn_job.source,
-                "source_name": jn_job.source_name,
-                "owners": [owner.model_dump() for owner in jn_job.owners],
-                "related": [r.model_dump() for r in jn_job.related] if jn_job.related else None,
-            },
+            provider_data=all_data,  # Includes all fields including custom fields
         )
 
     def _transform_jn_contact_to_universal(self, jn_contact: JobNimbusContactResponse) -> Contact:

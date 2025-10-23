@@ -29,6 +29,8 @@ Name | Type | Description | Notes
 **start_date** | **string** |  | [optional] [default to undefined]
 **target_completion_date** | **string** |  | [optional] [default to undefined]
 **actual_completion_date** | **string** |  | [optional] [default to undefined]
+**claim_number** | **string** |  | [optional] [default to undefined]
+**date_of_loss** | **string** |  | [optional] [default to undefined]
 **sales_rep_id** | **string** |  | [optional] [default to undefined]
 **sales_rep_name** | **string** |  | [optional] [default to undefined]
 **provider** | [**CRMProvider**](CRMProvider.md) | CRM provider name | [default to undefined]
@@ -63,6 +65,8 @@ const instance: Project = {
     start_date,
     target_completion_date,
     actual_completion_date,
+    claim_number,
+    date_of_loss,
     sales_rep_id,
     sales_rep_name,
     provider,

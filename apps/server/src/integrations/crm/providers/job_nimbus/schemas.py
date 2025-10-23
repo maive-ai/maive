@@ -48,7 +48,7 @@ class RelatedEntity(BaseModel):
 class JobNimbusJobResponse(BaseModel):
     """Response model for a JobNimbus job."""
 
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
 
     recid: int | None = Field(None, description="Record ID")
     jnid: str = Field(..., description="JobNimbus unique ID")
@@ -91,8 +91,8 @@ class JobNimbusJobResponse(BaseModel):
     related: list[RelatedEntity] | None = Field(None, description="Related entities")
     primary: RelatedEntity | None = Field(None, description="Primary related entity")
 
-    # Custom fields (catch-all for customer-defined fields)
-    # Note: These will be captured as extra fields
+    # Custom fields (captured via extra="allow")
+    # Examples: "Claim Number", "Date of Loss", "cf_string_1", "cf_date_1", etc.
 
 
 class JobNimbusJobsListResponse(BaseModel):
@@ -163,6 +163,7 @@ class JobNimbusContactResponse(BaseModel):
     owners: list[OwnerInfo] = Field(default_factory=list, description="List of owners")
     is_active: bool | None = Field(None, description="Whether the contact is active", alias="isActive")
     is_archived: bool | None = Field(None, description="Whether the contact is archived", alias="isArchived")
+    is_sub: bool | None = Field(None, description="Whether the contact is a subcontractor", alias="isSub")
 
     # Contact-specific fields
     first_name: str | None = Field(None, description="First name", alias="firstName")

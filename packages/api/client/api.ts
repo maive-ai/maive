@@ -987,6 +987,18 @@ export interface Project {
      * @type {string}
      * @memberof Project
      */
+    'claim_number'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Project
+     */
+    'date_of_loss'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Project
+     */
     'sales_rep_id'?: string | null;
     /**
      * 

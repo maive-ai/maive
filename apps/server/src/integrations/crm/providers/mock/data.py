@@ -25,7 +25,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "John Smith",
         "address": "123 Main St, Austin, TX 78701",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "john.smith@email.com",
+        "email": "john.smith@gmail.com",
         "claimNumber": "CLM-2024-001",
         "dateOfLoss": "2024-08-15",
         "insuranceAgency": "State Farm Insurance",
@@ -47,7 +47,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "Emily Davis",
         "address": "456 Oak Avenue, Dallas, TX 75201",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "emily.davis@email.com",
+        "email": "emily.davis@gmail.com",
         "claimNumber": "CLM-2024-002",
         "dateOfLoss": "2024-09-01",
         "insuranceAgency": "Allstate Insurance",
@@ -69,7 +69,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "Michael Thompson",
         "address": "789 Pine Street, Houston, TX 77001",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "michael.thompson@email.com",
+        "email": "michael.thompson@gmail.com",
         "claimNumber": "CLM-2024-003",
         "dateOfLoss": "2024-08-28",
         "insuranceAgency": "USAA Insurance",
@@ -91,7 +91,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "Sarah Wilson",
         "address": "321 Elm Drive, San Antonio, TX 78201",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "sarah.wilson@email.com",
+        "email": "sarah.wilson@gmail.com",
         "claimNumber": "CLM-2024-004",
         "dateOfLoss": "2024-09-10",
         "insuranceAgency": "Farmers Insurance",
@@ -113,7 +113,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "Robert Johnson",
         "address": "654 Cedar Lane, Fort Worth, TX 76101",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "robert.johnson@email.com",
+        "email": "robert.johnson@gmail.com",
         "notes": "Maintenance customer. No insurance claim.",
     },
     {
@@ -121,7 +121,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "Jennifer Martinez",
         "address": "987 Maple Avenue, Plano, TX 75023",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "jennifer.martinez@email.com",
+        "email": "jennifer.martinez@gmail.com",
         "claimNumber": "CLM-2024-005",
         "dateOfLoss": "2024-09-05",
         "insuranceAgency": "Liberty Mutual",
@@ -143,7 +143,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "David Chen",
         "address": "456 Willow Street, Richardson, TX 75080",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "david.chen@email.com",
+        "email": "david.chen@gmail.com",
         "claimNumber": "CLM-2024-006",
         "dateOfLoss": "2024-08-20",
         "insuranceAgency": "Progressive Insurance",
@@ -165,7 +165,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "Lisa Anderson",
         "address": "321 Sunset Drive, Garland, TX 75040",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "lisa.anderson@email.com",
+        "email": "lisa.anderson@gmail.com",
         "claimNumber": "CLM-2024-007",
         "dateOfLoss": "2024-09-12",
         "insuranceAgency": "Geico Insurance",
@@ -187,7 +187,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "Mark Wilson",
         "address": "789 Oak Hill Lane, Irving, TX 75061",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "mark.wilson@email.com",
+        "email": "mark.wilson@gmail.com",
         "notes": "Routine maintenance check. Long-term customer.",
     },
     {
@@ -195,7 +195,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "Amanda Foster",
         "address": "654 Pine Ridge Court, Mesquite, TX 75149",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "amanda.foster@email.com",
+        "email": "amanda.foster@gmail.com",
         "claimNumber": "CLM-2024-008",
         "dateOfLoss": "2024-08-30",
         "insuranceAgency": "Nationwide Insurance",
@@ -217,7 +217,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "Christopher Davis",
         "address": "123 Cedar Creek Drive, Grand Prairie, TX 75050",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "christopher.davis@email.com",
+        "email": "christopher.davis@gmail.com",
         "claimNumber": "CLM-2024-009",
         "dateOfLoss": "2024-09-08",
         "insuranceAgency": "Travelers Insurance",
@@ -239,7 +239,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "Rebecca Martinez",
         "address": "987 Elm Street, Carrollton, TX 75006",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "rebecca.martinez@email.com",
+        "email": "rebecca.martinez@gmail.com",
         "notes": "Preventive maintenance customer. Annual inspection due.",
     },
     {
@@ -247,7 +247,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "Daniel Rodriguez",
         "address": "456 Birch Lane, Lewisville, TX 75057",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "daniel.rodriguez@email.com",
+        "email": "daniel.rodriguez@gmail.com",
         "claimNumber": "CLM-2024-010",
         "dateOfLoss": "2024-09-15",
         "insuranceAgency": "Hartford Insurance",
@@ -269,7 +269,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "Stephanie White",
         "address": "321 Valley View Road, Flower Mound, TX 75022",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "stephanie.white@email.com",
+        "email": "stephanie.white@gmail.com",
         "notes": "New customer referral. Interested in full roof replacement.",
     },
     {
@@ -277,7 +277,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "Thomas Brown",
         "address": "789 Highland Park Drive, Arlington, TX 76010",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "thomas.brown@email.com",
+        "email": "thomas.brown@gmail.com",
         "claimNumber": "CLM-2024-011",
         "dateOfLoss": "2024-09-03",
         "insuranceAgency": "Amica Insurance",
@@ -299,7 +299,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "Patricia Garcia",
         "address": "654 Mountain View Circle, Euless, TX 76039",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "patricia.garcia@email.com",
+        "email": "patricia.garcia@gmail.com",
         "notes": "Maintenance customer. Gutter cleaning and inspection.",
     },
     {
@@ -307,7 +307,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "William Lee",
         "address": "123 Riverside Drive, Bedford, TX 76021",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "william.lee@email.com",
+        "email": "william.lee@gmail.com",
         "claimNumber": "CLM-2024-012",
         "dateOfLoss": "2024-08-25",
         "insuranceAgency": "MetLife Insurance",
@@ -329,7 +329,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "Michelle Taylor",
         "address": "987 Forest Glen Way, Hurst, TX 76053",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "michelle.taylor@email.com",
+        "email": "michelle.taylor@gmail.com",
         "claimNumber": "CLM-2024-013",
         "dateOfLoss": "2024-09-10",
         "insuranceAgency": "Chubb Insurance",
@@ -351,7 +351,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "Joseph Martinez",
         "address": "456 Creekside Lane, Colleyville, TX 76034",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "joseph.martinez@email.com",
+        "email": "joseph.martinez@gmail.com",
         "notes": "Regular maintenance customer. Quarterly inspections.",
     },
     {
@@ -359,7 +359,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "Karen Anderson",
         "address": "321 Oakwood Drive, Grapevine, TX 76051",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "karen.anderson@email.com",
+        "email": "karen.anderson@gmail.com",
         "claimNumber": "CLM-2024-014",
         "dateOfLoss": "2024-09-07",
         "insuranceAgency": "American Family Insurance",
@@ -381,7 +381,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "Steven Wilson",
         "address": "789 Meadowbrook Lane, Southlake, TX 76092",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "steven.wilson@email.com",
+        "email": "steven.wilson@gmail.com",
         "notes": "New construction inspection. High-end residential project.",
     },
     {
@@ -389,7 +389,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "Nancy Rodriguez",
         "address": "654 Sunset Boulevard, Mansfield, TX 76063",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "nancy.rodriguez@email.com",
+        "email": "nancy.rodriguez@gmail.com",
         "claimNumber": "CLM-2024-015",
         "dateOfLoss": "2024-09-02",
         "insuranceAgency": "Safeco Insurance",
@@ -411,7 +411,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "Richard Davis",
         "address": "123 Prairie View Drive, Cedar Hill, TX 75104",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "richard.davis@email.com",
+        "email": "richard.davis@gmail.com",
         "notes": "Routine maintenance customer. Annual roof cleaning.",
     },
     {
@@ -419,7 +419,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "Helen Garcia",
         "address": "987 Hillside Avenue, DeSoto, TX 75115",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "helen.garcia@email.com",
+        "email": "helen.garcia@gmail.com",
         "claimNumber": "CLM-2024-016",
         "dateOfLoss": "2024-08-28",
         "insuranceAgency": "Auto-Owners Insurance",
@@ -441,7 +441,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "Paul Thompson",
         "address": "456 Garden Valley Road, Lancaster, TX 75146",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "paul.thompson@email.com",
+        "email": "paul.thompson@gmail.com",
         "claimNumber": "CLM-2024-017",
         "dateOfLoss": "2024-09-11",
         "insuranceAgency": "Mutual of Omaha",
@@ -463,7 +463,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "Dorothy Lee",
         "address": "321 Brookside Drive, Duncanville, TX 75116",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "dorothy.lee@email.com",
+        "email": "dorothy.lee@gmail.com",
         "notes": "Senior citizen customer. Preventive maintenance and inspection.",
     },
     {
@@ -471,7 +471,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "Kenneth Martinez",
         "address": "789 Woodland Trail, Glenn Heights, TX 75154",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "kenneth.martinez@email.com",
+        "email": "kenneth.martinez@gmail.com",
         "claimNumber": "CLM-2024-018",
         "dateOfLoss": "2024-09-04",
         "insuranceAgency": "Cincinnati Insurance",
@@ -493,7 +493,7 @@ MOCK_PROJECTS_RAW = [
         "customerName": "Betty Anderson",
         "address": "654 Maple Ridge Circle, Red Oak, TX 75154",
         "phone": DEFAULT_PHONE_NUMBER,
-        "email": "betty.anderson@email.com",
+        "email": "betty.anderson@gmail.com",
         "notes": "Long-term customer. Quarterly gutter maintenance and roof inspection.",
     },
 ]
@@ -526,32 +526,32 @@ def get_mock_projects() -> list[Project]:
     project_statuses = [
         Status.IN_PROGRESS.value,  # st_001 - Roof damage from hail storm
         Status.IN_PROGRESS.value,  # jn_002 - Wind damage, emergency tarp installed
-        Status.DISPATCHED.value,   # al_003 - Multiple shingle damage, military discount
-        Status.SCHEDULED.value,    # md_004 - Storm damage claim pending
-        Status.SCHEDULED.value,    # st_005 - Maintenance customer, no claim
+        Status.DISPATCHED.value,  # al_003 - Multiple shingle damage, military discount
+        Status.SCHEDULED.value,  # md_004 - Storm damage claim pending
+        Status.SCHEDULED.value,  # st_005 - Maintenance customer, no claim
         Status.IN_PROGRESS.value,  # st_006 - Urgent repair needed
-        Status.DISPATCHED.value,   # st_007 - Wind damage, high deductible
+        Status.DISPATCHED.value,  # st_007 - Wind damage, high deductible
         Status.IN_PROGRESS.value,  # jn_008 - Multiple shingle replacement
-        Status.SCHEDULED.value,    # jn_009 - Routine maintenance
+        Status.SCHEDULED.value,  # jn_009 - Routine maintenance
         Status.IN_PROGRESS.value,  # jn_010 - Storm damage, quick resolution needed
-        Status.SCHEDULED.value,    # jn_011 - Hail damage assessment needed
-        Status.SCHEDULED.value,    # jn_012 - Preventive maintenance
+        Status.SCHEDULED.value,  # jn_011 - Hail damage assessment needed
+        Status.SCHEDULED.value,  # jn_012 - Preventive maintenance
         Status.IN_PROGRESS.value,  # jn_013 - Wind and hail damage, emergency tarp
-        Status.SCHEDULED.value,    # jn_014 - New customer referral
-        Status.HOLD.value,         # al_015 - Large commercial claim, multiple buildings
-        Status.SCHEDULED.value,    # al_016 - Maintenance customer
-        Status.DISPATCHED.value,   # al_017 - Storm damage, veteran discount
-        Status.DISPATCHED.value,   # al_018 - High-value home, premium materials
-        Status.SCHEDULED.value,    # al_019 - Regular maintenance
+        Status.SCHEDULED.value,  # jn_014 - New customer referral
+        Status.HOLD.value,  # al_015 - Large commercial claim, multiple buildings
+        Status.SCHEDULED.value,  # al_016 - Maintenance customer
+        Status.DISPATCHED.value,  # al_017 - Storm damage, veteran discount
+        Status.DISPATCHED.value,  # al_018 - High-value home, premium materials
+        Status.SCHEDULED.value,  # al_019 - Regular maintenance
         Status.IN_PROGRESS.value,  # al_020 - Wind damage, quick estimate needed
-        Status.SCHEDULED.value,    # al_021 - New construction inspection
-        Status.SCHEDULED.value,    # md_022 - Hail damage assessment
-        Status.COMPLETED.value,    # md_023 - Routine maintenance
-        Status.HOLD.value,         # md_024 - Complex claim, detailed assessment
+        Status.SCHEDULED.value,  # al_021 - New construction inspection
+        Status.SCHEDULED.value,  # md_022 - Hail damage assessment
+        Status.COMPLETED.value,  # md_023 - Routine maintenance
+        Status.HOLD.value,  # md_024 - Complex claim, detailed assessment
         Status.IN_PROGRESS.value,  # md_025 - Wind and hail damage
-        Status.SCHEDULED.value,    # md_026 - Senior citizen preventive maintenance
+        Status.SCHEDULED.value,  # md_026 - Senior citizen preventive maintenance
         Status.IN_PROGRESS.value,  # md_027 - Large property, multiple damage areas
-        Status.COMPLETED.value,    # md_028 - Long-term customer maintenance
+        Status.COMPLETED.value,  # md_028 - Long-term customer maintenance
     ]
 
     projects = []
@@ -599,6 +599,8 @@ def get_mock_projects() -> list[Project]:
             start_date=None,
             target_completion_date=None,
             actual_completion_date=None,
+            claim_number=data.get("claimNumber"),
+            date_of_loss=data.get("dateOfLoss"),
             sales_rep_id=None,
             sales_rep_name=None,
             provider=CRMProvider.MOCK,
