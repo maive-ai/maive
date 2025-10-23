@@ -3,120 +3,37 @@ Abstract base classes for CRM providers.
 
 This module defines the abstract interface that all CRM providers
 must implement, ensuring consistent behavior across different CRM systems.
+
+The interface is designed around universal CRM primitives (jobs, contacts, notes)
+that work across all providers, with provider-specific data stored in the
+provider_data field of each universal schema.
 """
 
 from abc import ABC, abstractmethod
+from typing import Any
 
-from src.integrations.crm.provider_schemas import FormSubmissionListResponse
-from src.integrations.crm.schemas import (
-    EquipmentListResponse,
-    EstimateResponse,
-    JobNoteResponse,
-    JobResponse,
-    MaterialsListResponse,
-    PricebookItemsRequest,
-    ProjectStatusListResponse,
-    ProjectStatusResponse,
-    ServicesListResponse,
-)
+from src.integrations.crm.schemas import Contact, ContactList, Job, JobList, Note
 
 
 class CRMProvider(ABC):
-    """Abstract interface for CRM providers."""
+    """
+    Universal abstract interface for CRM providers.
+
+    All CRM providers must implement these 6 core methods that work with
+    universal schemas. Providers can add additional provider-specific methods
+    as regular (non-abstract) instance methods.
+    """
 
     @abstractmethod
-    async def get_project_status(self, project_id: str) -> ProjectStatusResponse:
-        """
-        Get the status of a specific project by ID.
-
-        Args:
-            project_id: The unique identifier for the project
-
-        Returns:
-            ProjectStatusResponse: The project status information
-
-        Raises:
-            CRMError: If the project is not found or an error occurs
-        """
-        pass
-
-    @abstractmethod
-    async def get_all_project_statuses(self) -> ProjectStatusListResponse:
-        """
-        Get the status of all projects.
-
-        Returns:
-            ProjectStatusListResponse: List of all project statuses
-
-        Raises:
-            CRMError: If an error occurs while fetching project statuses
-        """
-        pass
-
-    @abstractmethod
-    async def get_appointment_status(
-        self, appointment_id: str
-    ) -> ProjectStatusResponse:
-        """
-        Get the status of a specific appointment by ID.
-
-        Args:
-            appointment_id: The unique identifier for the appointment
-
-        Returns:
-            ProjectStatusResponse: The appointment status information
-
-        Raises:
-            CRMError: If the appointment is not found or an error occurs
-        """
-        pass
-
-    @abstractmethod
-    async def get_all_appointment_statuses(self) -> ProjectStatusListResponse:
-        """
-        Get the status of all appointments.
-
-        Returns:
-            ProjectStatusListResponse: List of all appointment statuses
-
-        Raises:
-            CRMError: If an error occurs while fetching appointment statuses
-        """
-        pass
-
-    @abstractmethod
-    async def get_all_form_submissions(
-        self,
-        form_ids: list[int],
-        status: str | None = None,
-        owners: list[dict] | None = None,
-    ) -> FormSubmissionListResponse:
-        """
-        Get all form submissions for a specific form.
-
-        Args:
-            form_ids: List of form IDs to get submissions for
-            status: Optional form status to filter by (Started, Completed, Any)
-            owners: Optional list of owner objects with type and id
-
-        Returns:
-            FormSubmissionListResponse: List of all form submissions
-
-        Raises:
-            CRMError: If an error occurs while fetching form submissions
-        """
-        pass
-
-    @abstractmethod
-    async def get_job(self, job_id: int) -> JobResponse:
+    async def get_job(self, job_id: str) -> Job:
         """
         Get a specific job by ID.
 
         Args:
-            job_id: The unique identifier for the job
+            job_id: The unique identifier for the job (provider-specific format)
 
         Returns:
-            JobResponse: The job information
+            Job: Universal job schema with provider-specific data in provider_data
 
         Raises:
             CRMError: If the job is not found or an error occurs
@@ -124,98 +41,111 @@ class CRMProvider(ABC):
         pass
 
     @abstractmethod
-    async def get_estimate(self, estimate_id: int) -> EstimateResponse:
+    async def get_all_jobs(
+        self,
+        filters: dict[str, Any] | None = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> JobList:
         """
-        Get a specific estimate by ID.
+        Get all jobs with optional filtering and pagination.
 
         Args:
-            estimate_id: The unique identifier for the estimate
+            filters: Optional dictionary of provider-specific filters
+            page: Page number (1-indexed)
+            page_size: Number of items per page
 
         Returns:
-            EstimateResponse: The estimate information
+            JobList: Paginated list of jobs in universal schema
 
         Raises:
-            CRMError: If the estimate is not found or an error occurs
+            CRMError: If an error occurs while fetching jobs
         """
         pass
 
     @abstractmethod
-    async def add_job_note(self, job_id: int, text: str, pin_to_top: bool | None = None) -> JobNoteResponse:
+    async def get_contact(self, contact_id: str) -> Contact:
         """
-        Add a note to a specific job.
+        Get a specific contact/customer by ID.
 
         Args:
-            job_id: The unique identifier for the job
+            contact_id: The unique identifier for the contact (provider-specific format)
+
+        Returns:
+            Contact: Universal contact schema with provider-specific data
+
+        Raises:
+            CRMError: If the contact is not found or an error occurs
+            CRMError: If the provider doesn't support contacts as separate entities
+        """
+        pass
+
+    @abstractmethod
+    async def get_all_contacts(
+        self,
+        filters: dict[str, Any] | None = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> ContactList:
+        """
+        Get all contacts with optional filtering and pagination.
+
+        Args:
+            filters: Optional dictionary of provider-specific filters
+            page: Page number (1-indexed)
+            page_size: Number of items per page
+
+        Returns:
+            ContactList: Paginated list of contacts in universal schema
+
+        Raises:
+            CRMError: If an error occurs while fetching contacts
+            CRMError: If the provider doesn't support contacts as separate entities
+        """
+        pass
+
+    @abstractmethod
+    async def add_note(
+        self,
+        entity_id: str,
+        entity_type: str,
+        text: str,
+        **kwargs: Any,
+    ) -> Note:
+        """
+        Add a note/activity to an entity (job, contact, project, etc.).
+
+        Args:
+            entity_id: The ID of the entity to add the note to
+            entity_type: The type of entity (e.g., "job", "contact", "project")
             text: The text content of the note
-            pin_to_top: Whether to pin the note to the top (optional)
+            **kwargs: Provider-specific optional parameters (e.g., pin_to_top, private, etc.)
 
         Returns:
-            JobNoteResponse: The created note information
+            Note: Universal note schema with provider-specific metadata
 
         Raises:
-            CRMError: If the job is not found or an error occurs
+            CRMError: If the entity is not found or an error occurs
         """
         pass
 
     @abstractmethod
-    async def update_project_claim_status(self, job_id: int, claim_status: str) -> None:
+    async def update_job_status(
+        self,
+        job_id: str,
+        status: str,
+        **kwargs: Any,
+    ) -> None:
         """
-        Update the claim status for a specific project/job.
+        Update the status of a job.
 
         Args:
             job_id: The unique identifier for the job
-            claim_status: The new claim status value
+            status: The new status value (provider-specific format)
+            **kwargs: Provider-specific optional parameters (e.g., sub_status, reason, etc.)
 
         Raises:
             CRMError: If the job is not found or an error occurs
-        """
-        pass
-
-    @abstractmethod
-    async def get_pricebook_materials(self, request: PricebookItemsRequest) -> MaterialsListResponse:
-        """
-        Get materials from the pricebook.
-
-        Args:
-            request: Request parameters including pagination and filters
-
-        Returns:
-            MaterialsListResponse: Paginated list of materials
-
-        Raises:
-            CRMError: If an error occurs while fetching materials
-        """
-        pass
-
-    @abstractmethod
-    async def get_pricebook_services(self, request: PricebookItemsRequest) -> ServicesListResponse:
-        """
-        Get services from the pricebook.
-
-        Args:
-            request: Request parameters including pagination and filters
-
-        Returns:
-            ServicesListResponse: Paginated list of services
-
-        Raises:
-            CRMError: If an error occurs while fetching services
-        """
-        pass
-
-    @abstractmethod
-    async def get_pricebook_equipment(self, request: PricebookItemsRequest) -> EquipmentListResponse:
-        """
-        Get equipment from the pricebook.
-
-        Args:
-            request: Request parameters including pagination and filters
-
-        Returns:
-            EquipmentListResponse: Paginated list of equipment
-
-        Raises:
-            CRMError: If an error occurs while fetching equipment
         """
         pass
 
@@ -229,7 +159,7 @@ class CRMError(Exception):
 
         Args:
             message: Error message
-            error_code: Optional provider-specific error code
+            error_code: Optional provider-specific error code (e.g., "NOT_FOUND", "NOT_SUPPORTED", "UNAUTHORIZED")
         """
         super().__init__(message)
         self.message = message

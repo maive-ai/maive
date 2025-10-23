@@ -19,7 +19,7 @@ providers/
 │   ├── provider.py (copied, needs import updates)
 │   ├── schemas.py (moved from schemas_jobnimbus.py)
 │   └── constants.py (extracted JN-specific constants)
-└── mock_crm/
+└── mock/
     ├── __init__.py
     └── provider.py (copied, needs import updates)
 ```
@@ -280,9 +280,9 @@ def _transform_jn_job_to_universal(self, jn_job: JobNimbusJob) -> Job:
     )
 ```
 
-### Phase 7: Update MockCRMProvider
+### Phase 7: Update MockProvider
 
-**File:** `src/integrations/crm/providers/mock_crm/provider.py`
+**File:** `src/integrations/crm/providers/mock/provider.py`
 
 **Changes:**
 - Update imports to use new universal schemas
@@ -300,7 +300,7 @@ from src.integrations.crm.config import get_crm_settings
 from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
 from src.integrations.crm.providers.service_titan import ServiceTitanProvider
 from src.integrations.crm.providers.job_nimbus import JobNimbusProvider
-from src.integrations.crm.providers.mock_crm import MockCRMProvider
+from src.integrations.crm.providers.mock import MockProvider
 from src.utils.logger import logger
 
 # Rest stays the same
@@ -480,7 +480,7 @@ from src.integrations.crm.providers.factory import (
 )
 from src.integrations.crm.providers.service_titan import ServiceTitanProvider
 from src.integrations.crm.providers.job_nimbus import JobNimbusProvider
-from src.integrations.crm.providers.mock_crm import MockCRMProvider
+from src.integrations.crm.providers.mock import MockProvider
 
 __all__ = [
     "create_crm_provider",
@@ -488,7 +488,7 @@ __all__ = [
     "set_crm_provider",
     "ServiceTitanProvider",
     "JobNimbusProvider",
-    "MockCRMProvider",
+    "MockProvider",
 ]
 ```
 
@@ -497,7 +497,7 @@ __all__ = [
 **Files to Delete:**
 - `src/integrations/crm/providers/service_titan.py` (old location)
 - `src/integrations/crm/providers/job_nimbus.py` (old location)
-- `src/integrations/crm/providers/mock_crm.py` (old location)
+- `src/integrations/crm/providers/mock.py` (old location)
 - `src/integrations/crm/schemas_jobnimbus.py` (moved to providers/job_nimbus/schemas.py)
 
 **Update top-level constants.py:**
