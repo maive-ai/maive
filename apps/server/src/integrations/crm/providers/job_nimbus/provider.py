@@ -14,7 +14,7 @@ import httpx
 from src.integrations.crm.base import CRMError, CRMProvider
 from src.integrations.crm.config import JobNimbusConfig, get_crm_settings
 from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
-from src.integrations.crm.provider_schemas import FormSubmissionListResponse
+from src.integrations.crm.schemas import FormSubmissionListResponse
 from src.integrations.crm.providers.job_nimbus.constants import JobNimbusEndpoints
 from src.integrations.crm.providers.job_nimbus.schemas import (
     JobNimbusActivityResponse,

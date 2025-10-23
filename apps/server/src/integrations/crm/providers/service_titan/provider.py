@@ -14,15 +14,12 @@ from src.integrations.crm.base import CRMError, CRMProvider
 from src.integrations.crm.config import get_crm_settings
 from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
 from src.integrations.crm.constants import Status
-from src.integrations.crm.provider_schemas import (
-    CRMProviderDataFactory,
-    FormSubmissionListResponse,
-)
 from src.integrations.crm.providers.service_titan.constants import ServiceTitanEndpoints
 from src.integrations.crm.providers.service_titan.schemas import ServiceTitanJob
 from src.integrations.crm.schemas import (
     Contact,
     ContactList,
+    CRMProviderDataFactory,
     EquipmentListResponse,
     EstimateItemResponse,
     EstimateItemsRequest,
@@ -30,6 +27,7 @@ from src.integrations.crm.schemas import (
     EstimateResponse,
     EstimatesListResponse,
     EstimatesRequest,
+    FormSubmissionListResponse,
     FormSubmissionsRequest,
     Job,
     JobHoldReasonsListResponse,

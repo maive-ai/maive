@@ -1,22 +1,18 @@
-# EstimateStatus
+# StatusId
 
-Estimate status model with value and name.
+Status identifier
 
 ## Properties
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**value** | **number** | Status value | [default to undefined]
-**name** | **string** | Status name | [default to undefined]
 
 ## Example
 
 ```typescript
-import { EstimateStatus } from './api';
+import { StatusId } from './api';
 
-const instance: EstimateStatus = {
-    value,
-    name,
+const instance: StatusId = {
 };
 ```
 
