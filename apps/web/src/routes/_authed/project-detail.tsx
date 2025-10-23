@@ -39,11 +39,17 @@ function ProjectDetail() {
 
   // Update phone number when project data loads
   useEffect(() => {
-    if (project && providerData) {
-      const insurancePhone = providerData?.insuranceAgencyContact?.phone || providerData?.customer_phone || providerData?.phone || '';
-      setPhoneNumber(insurancePhone as E164Number | '');
+    if (project) {
+      let adjusterPhone = project.adjuster_phone || '';
+
+      // If phone number doesn't start with +, prepend +1 (US country code)
+      if (adjusterPhone && !adjusterPhone.startsWith('+')) {
+        adjusterPhone = '+1' + adjusterPhone.replace(/\D/g, ''); // Remove non-digits and add +1
+      }
+
+      setPhoneNumber(adjusterPhone as E164Number | '');
     }
-  }, [project, providerData]);
+  }, [project]);
 
   // Store call ID when call starts successfully
   useEffect(() => {
@@ -220,27 +226,6 @@ function ProjectDetail() {
                   </div>
                 </div>
               )}
-
-              {/* Insurance Agency Contact */}
-              <div className="border-t pt-6">
-                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
-                  Insurance Agency Contact
-                </p>
-                <div className="space-y-3 pl-2">
-                  <div className="flex items-center gap-3">
-                    <User className="size-4 text-gray-400" />
-                    <p className="text-gray-700">{providerData?.insuranceAgencyContact?.name || 'Not available'}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Phone className="size-4 text-gray-400" />
-                    <p className="text-gray-600">{formatPhoneNumber(providerData?.insuranceAgencyContact?.phone)}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Mail className="size-4 text-gray-400" />
-                    <p className="text-gray-600 break-all">{providerData?.insuranceAgencyContact?.email || 'Not available'}</p>
-                  </div>
-                </div>
-              </div>
 
               {/* Adjuster Contact */}
               {(project.adjuster_name || project.adjuster_phone || project.adjuster_email) && (
