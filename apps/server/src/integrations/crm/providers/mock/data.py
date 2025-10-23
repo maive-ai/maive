@@ -11,7 +11,7 @@ from src.integrations.crm.constants import ClaimStatus, Status
 from src.integrations.crm.schemas import ContactInfo, Project, ProjectData
 
 # Default phone number for all mock data
-DEFAULT_PHONE_NUMBER = "+1-703-268-1917"
+DEFAULT_PHONE_NUMBER = "703-268-1917"
 
 
 # Project statuses

@@ -79,7 +79,7 @@ class TestMockProvider:
         assert "phone" in provider_data
         assert "email" in provider_data
 
-        # Verify this is John Smith's project (from mock_data.py)
+        # Verify this is John Smith's project (from data.py)
         assert provider_data["customerName"] == "John Smith"
         assert "123 Main St" in provider_data["address"]
 

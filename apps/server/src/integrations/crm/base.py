@@ -12,7 +12,7 @@ provider_data field of each universal schema.
 from abc import ABC, abstractmethod
 from typing import Any
 
-from src.integrations.crm.schemas import Contact, ContactList, Job, JobList, Note
+from src.integrations.crm.schemas import Contact, ContactList, Job, JobList, Note, Project, ProjectList
 
 
 class CRMProvider(ABC):
@@ -146,6 +146,73 @@ class CRMProvider(ABC):
 
         Raises:
             CRMError: If the job is not found or an error occurs
+        """
+        pass
+
+    @abstractmethod
+    async def get_project(self, project_id: str) -> Project:
+        """
+        Get a specific project by ID.
+
+        In hierarchical CRMs (Service Titan), projects are top-level containers
+        that may contain multiple jobs. In flat CRMs (JobNimbus), this returns
+        the same entity as get_job().
+
+        Args:
+            project_id: The unique identifier for the project (provider-specific format)
+
+        Returns:
+            Project: Universal project schema with provider-specific data in provider_data
+
+        Raises:
+            CRMError: If the project is not found or an error occurs
+        """
+        pass
+
+    @abstractmethod
+    async def get_all_projects(
+        self,
+        filters: dict[str, Any] | None = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> ProjectList:
+        """
+        Get all projects with optional filtering and pagination.
+
+        In flat CRMs (JobNimbus), this returns the same data as get_all_jobs().
+
+        Args:
+            filters: Optional dictionary of provider-specific filters
+            page: Page number (1-indexed)
+            page_size: Number of items per page
+
+        Returns:
+            ProjectList: Paginated list of projects in universal schema
+
+        Raises:
+            CRMError: If an error occurs while fetching projects
+        """
+        pass
+
+    @abstractmethod
+    async def update_project_status(
+        self,
+        project_id: str,
+        status: str,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Update the status of a project.
+
+        In flat CRMs (JobNimbus), this has the same effect as update_job_status().
+
+        Args:
+            project_id: The unique identifier for the project
+            status: The new status value (provider-specific format)
+            **kwargs: Provider-specific optional parameters (e.g., sub_status, reason, etc.)
+
+        Raises:
+            CRMError: If the project is not found or an error occurs
         """
         pass
 
