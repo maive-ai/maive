@@ -397,7 +397,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/src__integrations__crm__schemas__Project__1"
+                  "$ref": "#/components/schemas/Project"
                 }
               }
             }
@@ -1574,30 +1574,6 @@
         "title": "Contact",
         "description": "Universal contact/customer model that works across all CRM providers."
       },
-      "ContactInfo": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "phone": {
-            "type": "string",
-            "title": "Phone"
-          },
-          "email": {
-            "type": "string",
-            "title": "Email"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name",
-          "phone",
-          "email"
-        ],
-        "title": "ContactInfo",
-        "description": "Contact information model."
-      },
       "ContactList": {
         "properties": {
           "contacts": {
@@ -2145,463 +2121,7 @@
         "title": "PaymentDetails",
         "description": "Provider-agnostic payment information from claim status calls."
       },
-      "ProjectData": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id",
-            "description": "Project ID"
-          },
-          "customerName": {
-            "type": "string",
-            "title": "Customername",
-            "description": "Customer/homeowner name"
-          },
-          "address": {
-            "type": "string",
-            "title": "Address",
-            "description": "Property address"
-          },
-          "phone": {
-            "type": "string",
-            "title": "Phone",
-            "description": "Customer phone number"
-          },
-          "email": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Email",
-            "description": "Customer email"
-          },
-          "claimNumber": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Claimnumber",
-            "description": "Insurance claim number"
-          },
-          "dateOfLoss": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Dateofloss",
-            "description": "Date of loss (ISO format)"
-          },
-          "insuranceAgency": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Insuranceagency",
-            "description": "Insurance company name"
-          },
-          "insuranceAgencyContact": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ContactInfo"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Insurance agency contact"
-          },
-          "adjusterName": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Adjustername",
-            "description": "Insurance adjuster name"
-          },
-          "adjusterContact": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ContactInfo"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Insurance adjuster contact"
-          },
-          "notes": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Notes",
-            "description": "Project notes"
-          },
-          "tenant": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tenant",
-            "description": "Tenant ID"
-          },
-          "job_id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Job Id",
-            "description": "Job ID"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "customerName",
-          "address",
-          "phone"
-        ],
-        "title": "ProjectData",
-        "description": "Mock project data model with all customer and claim information."
-      },
-      "ProjectList": {
-        "properties": {
-          "projects": {
-            "items": {
-              "$ref": "#/components/schemas/src__integrations__crm__schemas__Project__2"
-            },
-            "type": "array",
-            "title": "Projects",
-            "description": "List of projects"
-          },
-          "total_count": {
-            "type": "integer",
-            "title": "Total Count",
-            "description": "Total number of projects"
-          },
-          "provider": {
-            "$ref": "#/components/schemas/CRMProvider",
-            "description": "CRM provider name"
-          },
-          "page": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Page",
-            "description": "Current page number (if paginated)"
-          },
-          "page_size": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Page Size",
-            "description": "Page size (if paginated)"
-          },
-          "has_more": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Has More",
-            "description": "Whether more results exist"
-          }
-        },
-        "type": "object",
-        "required": [
-          "projects",
-          "total_count",
-          "provider"
-        ],
-        "title": "ProjectList",
-        "description": "Universal project list response with pagination."
-      },
-      "RequiredActions": {
-        "properties": {
-          "documents_needed": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Documents Needed",
-            "description": "List of required documents"
-          },
-          "submission_method": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Submission Method",
-            "description": "Document submission method: email, portal, mail"
-          },
-          "next_steps": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Next Steps",
-            "description": "Summary of next actions"
-          }
-        },
-        "type": "object",
-        "title": "RequiredActions",
-        "description": "Provider-agnostic required actions from claim status calls."
-      },
-      "Role": {
-        "type": "string",
-        "enum": [
-          "admin",
-          "manager",
-          "user"
-        ],
-        "title": "Role",
-        "description": "User roles in the system."
-      },
-      "User": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id",
-            "description": "User's unique identifier"
-          },
-          "email": {
-            "type": "string",
-            "title": "Email",
-            "description": "User's email address"
-          },
-          "name": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 128,
-                "minLength": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name",
-            "description": "User's full name"
-          },
-          "role": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Role"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "User's role"
-          },
-          "organization_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Organization Id",
-            "description": "User's organization ID"
-          },
-          "profile_picture": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Profile Picture",
-            "description": "User's profile picture URL"
-          },
-          "email_verified": {
-            "type": "boolean",
-            "title": "Email Verified",
-            "description": "Whether user's email is verified",
-            "default": false
-          },
-          "mfa_enabled": {
-            "type": "boolean",
-            "title": "Mfa Enabled",
-            "description": "Whether MFA is enabled for the user",
-            "default": false
-          },
-          "created_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Created At",
-            "description": "User creation timestamp"
-          },
-          "updated_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Updated At",
-            "description": "User last update timestamp"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "email"
-        ],
-        "title": "User",
-        "description": "User information."
-      },
-      "ValidationError": {
-        "properties": {
-          "loc": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
-            },
-            "type": "array",
-            "title": "Location"
-          },
-          "msg": {
-            "type": "string",
-            "title": "Message"
-          },
-          "type": {
-            "type": "string",
-            "title": "Error Type"
-          }
-        },
-        "type": "object",
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
-        "title": "ValidationError"
-      },
-      "VoiceAIProvider": {
-        "type": "string",
-        "enum": [
-          "vapi"
-        ],
-        "title": "VoiceAIProvider",
-        "description": "Available Voice AI providers."
-      },
-      "src__integrations__crm__schemas__Project__1": {
-        "properties": {
-          "project_data": {
-            "$ref": "#/components/schemas/ProjectData"
-          },
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "claim_status": {
-            "type": "string",
-            "title": "Claim Status",
-            "description": "Claim status",
-            "default": "None"
-          },
-          "updated_at": {
-            "type": "string",
-            "title": "Updated At"
-          },
-          "metadata": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Metadata",
-            "description": "Project metadata"
-          }
-        },
-        "type": "object",
-        "required": [
-          "project_data",
-          "status",
-          "updated_at"
-        ],
-        "title": "Project",
-        "description": "Mock project with status and metadata."
-      },
-      "src__integrations__crm__schemas__Project__2": {
+      "Project": {
         "properties": {
           "id": {
             "type": "string",
@@ -2871,6 +2391,30 @@
             "title": "Actual Completion Date",
             "description": "Actual completion date (ISO format)"
           },
+          "claim_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claim Number",
+            "description": "Insurance claim number"
+          },
+          "date_of_loss": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Of Loss",
+            "description": "Date of loss (ISO format)"
+          },
           "sales_rep_id": {
             "anyOf": [
               {
@@ -2914,6 +2458,269 @@
         ],
         "title": "Project",
         "description": "Universal project model that works across all CRM providers.\n\nIn hierarchical CRMs (Service Titan), projects are top-level containers that\nmay contain multiple jobs. In flat CRMs (JobNimbus), projects and jobs are\nthe same entity."
+      },
+      "ProjectList": {
+        "properties": {
+          "projects": {
+            "items": {
+              "$ref": "#/components/schemas/Project"
+            },
+            "type": "array",
+            "title": "Projects",
+            "description": "List of projects"
+          },
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count",
+            "description": "Total number of projects"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/CRMProvider",
+            "description": "CRM provider name"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page",
+            "description": "Current page number (if paginated)"
+          },
+          "page_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Size",
+            "description": "Page size (if paginated)"
+          },
+          "has_more": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Has More",
+            "description": "Whether more results exist"
+          }
+        },
+        "type": "object",
+        "required": [
+          "projects",
+          "total_count",
+          "provider"
+        ],
+        "title": "ProjectList",
+        "description": "Universal project list response with pagination."
+      },
+      "RequiredActions": {
+        "properties": {
+          "documents_needed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Documents Needed",
+            "description": "List of required documents"
+          },
+          "submission_method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submission Method",
+            "description": "Document submission method: email, portal, mail"
+          },
+          "next_steps": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Steps",
+            "description": "Summary of next actions"
+          }
+        },
+        "type": "object",
+        "title": "RequiredActions",
+        "description": "Provider-agnostic required actions from claim status calls."
+      },
+      "Role": {
+        "type": "string",
+        "enum": [
+          "admin",
+          "manager",
+          "user"
+        ],
+        "title": "Role",
+        "description": "User roles in the system."
+      },
+      "User": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "User's unique identifier"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email",
+            "description": "User's email address"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "User's full name"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Role"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "User's role"
+          },
+          "organization_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organization Id",
+            "description": "User's organization ID"
+          },
+          "profile_picture": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Picture",
+            "description": "User's profile picture URL"
+          },
+          "email_verified": {
+            "type": "boolean",
+            "title": "Email Verified",
+            "description": "Whether user's email is verified",
+            "default": false
+          },
+          "mfa_enabled": {
+            "type": "boolean",
+            "title": "Mfa Enabled",
+            "description": "Whether MFA is enabled for the user",
+            "default": false
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At",
+            "description": "User creation timestamp"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At",
+            "description": "User last update timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email"
+        ],
+        "title": "User",
+        "description": "User information."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VoiceAIProvider": {
+        "type": "string",
+        "enum": [
+          "vapi"
+        ],
+        "title": "VoiceAIProvider",
+        "description": "Available Voice AI providers."
       }
     },
     "securitySchemes": {

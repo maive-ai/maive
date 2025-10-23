@@ -159,6 +159,10 @@ class Project(BaseModel):
         None, description="Actual completion date (ISO format)"
     )
 
+    # Insurance/claim information
+    claim_number: str | None = Field(None, description="Insurance claim number")
+    date_of_loss: str | None = Field(None, description="Date of loss (ISO format)")
+
     # Sales/team
     sales_rep_id: str | None = Field(None, description="Sales representative ID")
     sales_rep_name: str | None = Field(None, description="Sales representative name")

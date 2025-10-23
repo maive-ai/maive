@@ -2,7 +2,7 @@ import { Building2, Mail, MapPin, Phone } from 'lucide-react';
 
 import type { Project } from '@/clients/crm';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { getStatusColor } from '@/lib/utils';
+import { formatPhoneNumber, getStatusColor } from '@/lib/utils';
 
 interface ProjectCardProps {
   project: Project;
@@ -10,13 +10,13 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({ project, onClick }: ProjectCardProps) {
-  // Extract data from provider_data (camelCase format from mock CRM)
+  // Extract data from provider_data
   const providerData = project.provider_data as any;
 
   const customerName = project.customer_name || providerData?.customerName || 'Customer Name';
   const address = project.address_line1 || providerData?.address || '123 Main St, City, State 12345';
-  const phone = providerData?.phone || '+1-555-0000';
-  const email = providerData?.email || 'customer@example.com';
+  const phone = formatPhoneNumber(providerData?.customer_phone || providerData?.phone);
+  const email = providerData?.customer_email || providerData?.email || 'Not available';
 
   const handleClick = (): void => {
     if (onClick) {
