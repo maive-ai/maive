@@ -162,6 +162,10 @@ class Project(BaseModel):
     # Insurance/claim information
     claim_number: str | None = Field(None, description="Insurance claim number")
     date_of_loss: str | None = Field(None, description="Date of loss (ISO format)")
+    insurance_company: str | None = Field(None, description="Insurance company/carrier name")
+    adjuster_name: str | None = Field(None, description="Insurance adjuster name")
+    adjuster_phone: str | None = Field(None, description="Insurance adjuster phone number")
+    adjuster_email: str | None = Field(None, description="Insurance adjuster email address")
 
     # Sales/team
     sales_rep_id: str | None = Field(None, description="Sales representative ID")
