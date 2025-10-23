@@ -457,15 +457,6 @@ async def add_contact_note(...) -> Note:
     # ...
 ```
 
-**Legacy Endpoints (Backward Compatible):**
-```python
-# Keep these temporarily, just delegate to new methods
-@router.get("/projects/{project_id}/status", response_model=Job)
-async def get_project_status_legacy(project_id: str, ...):
-    """Legacy endpoint - use /jobs/{job_id} instead."""
-    return await get_job(project_id, ...)
-```
-
 ### Phase 11: Update Provider __init__.py
 
 **File:** `src/integrations/crm/providers/__init__.py`
