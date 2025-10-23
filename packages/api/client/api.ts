@@ -999,6 +999,30 @@ export interface Project {
      * @type {string}
      * @memberof Project
      */
+    'insurance_company'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Project
+     */
+    'adjuster_name'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Project
+     */
+    'adjuster_phone'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Project
+     */
+    'adjuster_email'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Project
+     */
     'sales_rep_id'?: string | null;
     /**
      * 

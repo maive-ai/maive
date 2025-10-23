@@ -175,7 +175,7 @@ function ProjectDetail() {
               </div>
 
               {/* Claim Information */}
-              {(project.claim_number || project.date_of_loss || providerData?.insuranceAgency) && (
+              {(project.claim_number || project.date_of_loss || project.insurance_company) && (
                 <div className="border-t pt-6 space-y-4">
                   <div className="flex items-start gap-3">
                     <FileText className="size-5 text-gray-400 mt-0.5 shrink-0" />
@@ -198,10 +198,10 @@ function ProjectDetail() {
                           </p>
                         </div>
                       )}
-                      {providerData?.insuranceAgency && (
+                      {project.insurance_company && (
                         <div>
-                          <p className="font-medium text-gray-700">Insurance Agency</p>
-                          <p className="text-gray-600">{providerData.insuranceAgency}</p>
+                          <p className="font-medium text-gray-700">Insurance Company</p>
+                          <p className="text-gray-600">{project.insurance_company}</p>
                         </div>
                       )}
                     </div>
@@ -243,25 +243,33 @@ function ProjectDetail() {
               </div>
 
               {/* Adjuster Contact */}
-              <div className="border-t pt-6">
-                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
-                  Adjuster Contact
-                </p>
-                <div className="space-y-3 pl-2">
-                  <div className="flex items-center gap-3">
-                    <User className="size-4 text-gray-400" />
-                    <p className="text-gray-700">{providerData?.adjusterContact?.name || 'Not available'}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Phone className="size-4 text-gray-400" />
-                    <p className="text-gray-600">{formatPhoneNumber(providerData?.adjusterContact?.phone)}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Mail className="size-4 text-gray-400" />
-                    <p className="text-gray-600 break-all">{providerData?.adjusterContact?.email || 'Not available'}</p>
+              {(project.adjuster_name || project.adjuster_phone || project.adjuster_email) && (
+                <div className="border-t pt-6">
+                  <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
+                    Adjuster Contact
+                  </p>
+                  <div className="space-y-3 pl-2">
+                    {project.adjuster_name && (
+                      <div className="flex items-center gap-3">
+                        <User className="size-4 text-gray-400" />
+                        <p className="text-gray-700">{project.adjuster_name}</p>
+                      </div>
+                    )}
+                    {project.adjuster_phone && (
+                      <div className="flex items-center gap-3">
+                        <Phone className="size-4 text-gray-400" />
+                        <p className="text-gray-600">{formatPhoneNumber(project.adjuster_phone)}</p>
+                      </div>
+                    )}
+                    {project.adjuster_email && (
+                      <div className="flex items-center gap-3">
+                        <Mail className="size-4 text-gray-400" />
+                        <p className="text-gray-600 break-all">{project.adjuster_email}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>

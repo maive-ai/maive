@@ -31,6 +31,10 @@ Name | Type | Description | Notes
 **actual_completion_date** | **string** |  | [optional] [default to undefined]
 **claim_number** | **string** |  | [optional] [default to undefined]
 **date_of_loss** | **string** |  | [optional] [default to undefined]
+**insurance_company** | **string** |  | [optional] [default to undefined]
+**adjuster_name** | **string** |  | [optional] [default to undefined]
+**adjuster_phone** | **string** |  | [optional] [default to undefined]
+**adjuster_email** | **string** |  | [optional] [default to undefined]
 **sales_rep_id** | **string** |  | [optional] [default to undefined]
 **sales_rep_name** | **string** |  | [optional] [default to undefined]
 **provider** | [**CRMProvider**](CRMProvider.md) | CRM provider name | [default to undefined]
@@ -67,6 +71,10 @@ const instance: Project = {
     actual_completion_date,
     claim_number,
     date_of_loss,
+    insurance_company,
+    adjuster_name,
+    adjuster_phone,
+    adjuster_email,
     sales_rep_id,
     sales_rep_name,
     provider,

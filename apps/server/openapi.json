@@ -2415,6 +2415,54 @@
             "title": "Date Of Loss",
             "description": "Date of loss (ISO format)"
           },
+          "insurance_company": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Insurance Company",
+            "description": "Insurance company/carrier name"
+          },
+          "adjuster_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjuster Name",
+            "description": "Insurance adjuster name"
+          },
+          "adjuster_phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjuster Phone",
+            "description": "Insurance adjuster phone number"
+          },
+          "adjuster_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjuster Email",
+            "description": "Insurance adjuster email address"
+          },
           "sales_rep_id": {
             "anyOf": [
               {

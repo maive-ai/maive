@@ -581,9 +581,29 @@ class JobNimbusProvider(CRMProvider):
             except Exception as e:
                 logger.warning(f"[JobNimbus] Failed to fetch contact {jn_job.primary.id}: {e}")
 
+        # Extract insurance and adjuster information
+        insurance_company = self._extract_custom_field(
+            all_data, ["insurancecompany", "insurance", "carrier", "insurancecarrier"]
+        )
+        adjuster_name = self._extract_custom_field(
+            all_data, ["adjustername", "adjuster"]
+        )
+        adjuster_phone = self._extract_custom_field(
+            all_data, ["adjusterphone", "adjusterphoneno", "adjustercontact"]
+        )
+        adjuster_email = self._extract_custom_field(
+            all_data, ["adjusteremail", "adjusteremailaddress"]
+        )
+
         # Store contact info in provider_data for frontend access
         all_data["customer_phone"] = customer_phone
         all_data["customer_email"] = customer_email
+        all_data["insuranceAgency"] = insurance_company
+        all_data["adjusterContact"] = {
+            "name": adjuster_name,
+            "phone": adjuster_phone,
+            "email": adjuster_email,
+        }
 
         return Project(
             id=jn_job.jnid,
@@ -611,6 +631,10 @@ class JobNimbusProvider(CRMProvider):
             actual_completion_date=None,
             claim_number=claim_number,
             date_of_loss=date_of_loss,
+            insurance_company=insurance_company,
+            adjuster_name=adjuster_name,
+            adjuster_phone=adjuster_phone,
+            adjuster_email=adjuster_email,
             sales_rep_id=jn_job.sales_rep,
             sales_rep_name=jn_job.sales_rep_name,
             provider=CRMProviderEnum.JOB_NIMBUS,
