@@ -86,6 +86,70 @@ export interface AuthResponse {
     'mfa_setup_required'?: boolean;
 }
 /**
+ * 
+ * @export
+ * @interface BodyAddContactNoteApiCrmContactsContactIdNotesPost
+ */
+export interface BodyAddContactNoteApiCrmContactsContactIdNotesPost {
+    /**
+     * The note text content
+     * @type {string}
+     * @memberof BodyAddContactNoteApiCrmContactsContactIdNotesPost
+     */
+    'text': string;
+    /**
+     * Whether to pin the note to the top
+     * @type {boolean}
+     * @memberof BodyAddContactNoteApiCrmContactsContactIdNotesPost
+     */
+    'pin_to_top'?: boolean;
+}
+/**
+ * 
+ * @export
+ * @interface BodyAddJobNoteApiCrmJobsJobIdNotesPost
+ */
+export interface BodyAddJobNoteApiCrmJobsJobIdNotesPost {
+    /**
+     * The note text content
+     * @type {string}
+     * @memberof BodyAddJobNoteApiCrmJobsJobIdNotesPost
+     */
+    'text': string;
+    /**
+     * Whether to pin the note to the top
+     * @type {boolean}
+     * @memberof BodyAddJobNoteApiCrmJobsJobIdNotesPost
+     */
+    'pin_to_top'?: boolean;
+}
+/**
+ * 
+ * @export
+ * @interface BodyUpdateJobStatusApiCrmJobsJobIdStatusPatch
+ */
+export interface BodyUpdateJobStatusApiCrmJobsJobIdStatusPatch {
+    /**
+     * The new status value
+     * @type {string}
+     * @memberof BodyUpdateJobStatusApiCrmJobsJobIdStatusPatch
+     */
+    'status_value': string;
+}
+/**
+ * 
+ * @export
+ * @interface BodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch
+ */
+export interface BodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch {
+    /**
+     * The new status value
+     * @type {string}
+     * @memberof BodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch
+     */
+    'status_value': string;
+}
+/**
  * Available CRM providers.
  * @export
  * @enum {string}
@@ -310,6 +374,141 @@ export interface ClaimStatusData {
 
 
 /**
+ * Universal contact/customer model that works across all CRM providers.
+ * @export
+ * @interface Contact
+ */
+export interface Contact {
+    /**
+     * Unique contact identifier (provider-specific format)
+     * @type {string}
+     * @memberof Contact
+     */
+    'id': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof Contact
+     */
+    'first_name'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Contact
+     */
+    'last_name'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Contact
+     */
+    'company'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Contact
+     */
+    'display_name'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Contact
+     */
+    'email'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Contact
+     */
+    'phone'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Contact
+     */
+    'mobile_phone'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Contact
+     */
+    'work_phone'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Contact
+     */
+    'address_line1'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Contact
+     */
+    'address_line2'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Contact
+     */
+    'city'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Contact
+     */
+    'state'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Contact
+     */
+    'postal_code'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Contact
+     */
+    'country'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Contact
+     */
+    'status'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Contact
+     */
+    'workflow_type'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Contact
+     */
+    'created_at'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Contact
+     */
+    'updated_at'?: string | null;
+    /**
+     * CRM provider name
+     * @type {CRMProvider}
+     * @memberof Contact
+     */
+    'provider': CRMProvider;
+    /**
+     * Provider-specific data
+     * @type {{ [key: string]: any; }}
+     * @memberof Contact
+     */
+    'provider_data'?: { [key: string]: any; };
+}
+
+
+/**
  * Contact information model.
  * @export
  * @interface ContactInfo
@@ -335,327 +534,50 @@ export interface ContactInfo {
     'email': string;
 }
 /**
- * Response model for estimate item information.
+ * Universal contact list response with pagination.
  * @export
- * @interface EstimateItemResponse
+ * @interface ContactList
  */
-export interface EstimateItemResponse {
+export interface ContactList {
     /**
-     * ID of the estimate item
+     * List of contacts
+     * @type {Array<Contact>}
+     * @memberof ContactList
+     */
+    'contacts': Array<Contact>;
+    /**
+     * Total number of contacts
      * @type {number}
-     * @memberof EstimateItemResponse
+     * @memberof ContactList
      */
-    'id': number;
+    'total_count': number;
     /**
-     * SKU details
-     * @type {SkuModel}
-     * @memberof EstimateItemResponse
+     * CRM provider name
+     * @type {CRMProvider}
+     * @memberof ContactList
      */
-    'sku': SkuModel;
-    /**
-     * SKU account
-     * @type {string}
-     * @memberof EstimateItemResponse
-     */
-    'skuAccount': string;
-    /**
-     * Item description
-     * @type {string}
-     * @memberof EstimateItemResponse
-     */
-    'description': string;
+    'provider': CRMProvider;
     /**
      * 
      * @type {number}
-     * @memberof EstimateItemResponse
+     * @memberof ContactList
      */
-    'membershipTypeId'?: number | null;
-    /**
-     * Quantity
-     * @type {number}
-     * @memberof EstimateItemResponse
-     */
-    'qty': number;
-    /**
-     * Unit rate
-     * @type {number}
-     * @memberof EstimateItemResponse
-     */
-    'unitRate': number;
-    /**
-     * Total amount
-     * @type {number}
-     * @memberof EstimateItemResponse
-     */
-    'total': number;
-    /**
-     * Unit cost
-     * @type {number}
-     * @memberof EstimateItemResponse
-     */
-    'unitCost': number;
-    /**
-     * Total cost
-     * @type {number}
-     * @memberof EstimateItemResponse
-     */
-    'totalCost': number;
-    /**
-     * 
-     * @type {string}
-     * @memberof EstimateItemResponse
-     */
-    'itemGroupName'?: string | null;
+    'page'?: number | null;
     /**
      * 
      * @type {number}
-     * @memberof EstimateItemResponse
+     * @memberof ContactList
      */
-    'itemGroupRootId'?: number | null;
-    /**
-     * Date/time (in UTC) when the item was created
-     * @type {string}
-     * @memberof EstimateItemResponse
-     */
-    'createdOn': string;
-    /**
-     * Date/time (in UTC) when the item was last modified
-     * @type {string}
-     * @memberof EstimateItemResponse
-     */
-    'modifiedOn': string;
+    'page_size'?: number | null;
     /**
      * 
      * @type {boolean}
-     * @memberof EstimateItemResponse
+     * @memberof ContactList
      */
-    'chargeable'?: boolean | null;
-    /**
-     * 
-     * @type {number}
-     * @memberof EstimateItemResponse
-     */
-    'invoiceItemId'?: number | null;
-    /**
-     * 
-     * @type {number}
-     * @memberof EstimateItemResponse
-     */
-    'budgetCodeId'?: number | null;
-}
-/**
- * Response model for estimate items list.
- * @export
- * @interface EstimateItemsResponse
- */
-export interface EstimateItemsResponse {
-    /**
-     * List of estimate items
-     * @type {Array<EstimateItemResponse>}
-     * @memberof EstimateItemsResponse
-     */
-    'items': Array<EstimateItemResponse>;
-    /**
-     * 
-     * @type {number}
-     * @memberof EstimateItemsResponse
-     */
-    'total_count'?: number | null;
-    /**
-     * Current page number
-     * @type {number}
-     * @memberof EstimateItemsResponse
-     */
-    'page': number;
-    /**
-     * Page size
-     * @type {number}
-     * @memberof EstimateItemsResponse
-     */
-    'page_size': number;
-    /**
-     * Whether there are more items
-     * @type {boolean}
-     * @memberof EstimateItemsResponse
-     */
-    'has_more': boolean;
-}
-/**
- * Response model for Service Titan estimate information.
- * @export
- * @interface EstimateResponse
- */
-export interface EstimateResponse {
-    /**
-     * ID of the estimate
-     * @type {number}
-     * @memberof EstimateResponse
-     */
-    'id': number;
-    /**
-     * 
-     * @type {number}
-     * @memberof EstimateResponse
-     */
-    'jobId'?: number | null;
-    /**
-     * 
-     * @type {number}
-     * @memberof EstimateResponse
-     */
-    'projectId'?: number | null;
-    /**
-     * 
-     * @type {number}
-     * @memberof EstimateResponse
-     */
-    'locationId'?: number | null;
-    /**
-     * 
-     * @type {number}
-     * @memberof EstimateResponse
-     */
-    'customerId'?: number | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof EstimateResponse
-     */
-    'name'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof EstimateResponse
-     */
-    'jobNumber'?: string | null;
-    /**
-     * 
-     * @type {EstimateStatus}
-     * @memberof EstimateResponse
-     */
-    'status'?: EstimateStatus | null;
-    /**
-     * Review status of the estimate
-     * @type {EstimateReviewStatus}
-     * @memberof EstimateResponse
-     */
-    'reviewStatus': EstimateReviewStatus;
-    /**
-     * 
-     * @type {string}
-     * @memberof EstimateResponse
-     */
-    'summary'?: string | null;
-    /**
-     * Date/time (in UTC) when the estimate was created
-     * @type {string}
-     * @memberof EstimateResponse
-     */
-    'createdOn': string;
-    /**
-     * Date/time (in UTC) when estimate was last modified
-     * @type {string}
-     * @memberof EstimateResponse
-     */
-    'modifiedOn': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof EstimateResponse
-     */
-    'soldOn'?: string | null;
-    /**
-     * 
-     * @type {number}
-     * @memberof EstimateResponse
-     */
-    'soldBy'?: number | null;
-    /**
-     * Whether the estimate is active
-     * @type {boolean}
-     * @memberof EstimateResponse
-     */
-    'active': boolean;
-    /**
-     * Subtotal amount
-     * @type {number}
-     * @memberof EstimateResponse
-     */
-    'subtotal': number;
-    /**
-     * Tax amount
-     * @type {number}
-     * @memberof EstimateResponse
-     */
-    'tax': number;
-    /**
-     * 
-     * @type {number}
-     * @memberof EstimateResponse
-     */
-    'businessUnitId'?: number | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof EstimateResponse
-     */
-    'businessUnitName'?: string | null;
-    /**
-     * Whether this estimate is recommended
-     * @type {boolean}
-     * @memberof EstimateResponse
-     */
-    'isRecommended': boolean;
-    /**
-     * 
-     * @type {number}
-     * @memberof EstimateResponse
-     */
-    'budgetCodeId'?: number | null;
-    /**
-     * Whether this estimate is a change order
-     * @type {boolean}
-     * @memberof EstimateResponse
-     */
-    'isChangeOrder': boolean;
+    'has_more'?: boolean | null;
 }
 
 
-/**
- * Estimate review status values.
- * @export
- * @enum {string}
- */
-
-export const EstimateReviewStatus = {
-    None: 'None',
-    NeedsApproval: 'NeedsApproval',
-    Approved: 'Approved',
-    NotApproved: 'NotApproved'
-} as const;
-
-export type EstimateReviewStatus = typeof EstimateReviewStatus[keyof typeof EstimateReviewStatus];
-
-
-/**
- * Estimate status model with value and name.
- * @export
- * @interface EstimateStatus
- */
-export interface EstimateStatus {
-    /**
-     * Status value
-     * @type {number}
-     * @memberof EstimateStatus
-     */
-    'value': number;
-    /**
-     * Status name
-     * @type {string}
-     * @memberof EstimateStatus
-     */
-    'name': string;
-}
 /**
  * 
  * @export
@@ -670,205 +592,266 @@ export interface HTTPValidationError {
     'detail'?: Array<ValidationError>;
 }
 /**
- * Response model for job note.
+ * Universal job model that works across all CRM providers.
  * @export
- * @interface JobNoteResponse
+ * @interface Job
  */
-export interface JobNoteResponse {
+export interface Job {
     /**
-     * Text content of the note
+     * Unique job identifier (provider-specific format)
      * @type {string}
-     * @memberof JobNoteResponse
+     * @memberof Job
+     */
+    'id': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof Job
+     */
+    'name'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Job
+     */
+    'number'?: string | null;
+    /**
+     * Current job status (provider-specific)
+     * @type {string}
+     * @memberof Job
+     */
+    'status': string;
+    /**
+     * 
+     * @type {StatusId}
+     * @memberof Job
+     */
+    'status_id'?: StatusId | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Job
+     */
+    'workflow_type'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Job
+     */
+    'description'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Job
+     */
+    'customer_id'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Job
+     */
+    'customer_name'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Job
+     */
+    'address_line1'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Job
+     */
+    'address_line2'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Job
+     */
+    'city'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Job
+     */
+    'state'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Job
+     */
+    'postal_code'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Job
+     */
+    'country'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Job
+     */
+    'created_at'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Job
+     */
+    'updated_at'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Job
+     */
+    'completed_at'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Job
+     */
+    'sales_rep_id'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Job
+     */
+    'sales_rep_name'?: string | null;
+    /**
+     * CRM provider name
+     * @type {CRMProvider}
+     * @memberof Job
+     */
+    'provider': CRMProvider;
+    /**
+     * Provider-specific data
+     * @type {{ [key: string]: any; }}
+     * @memberof Job
+     */
+    'provider_data'?: { [key: string]: any; };
+}
+
+
+/**
+ * Universal job list response with pagination.
+ * @export
+ * @interface JobList
+ */
+export interface JobList {
+    /**
+     * List of jobs
+     * @type {Array<Job>}
+     * @memberof JobList
+     */
+    'jobs': Array<Job>;
+    /**
+     * Total number of jobs
+     * @type {number}
+     * @memberof JobList
+     */
+    'total_count': number;
+    /**
+     * CRM provider name
+     * @type {CRMProvider}
+     * @memberof JobList
+     */
+    'provider': CRMProvider;
+    /**
+     * 
+     * @type {number}
+     * @memberof JobList
+     */
+    'page'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof JobList
+     */
+    'page_size'?: number | null;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof JobList
+     */
+    'has_more'?: boolean | null;
+}
+
+
+/**
+ * Universal note/activity model that works across all CRM providers.
+ * @export
+ * @interface Note
+ */
+export interface Note {
+    /**
+     * 
+     * @type {string}
+     * @memberof Note
+     */
+    'id'?: string | null;
+    /**
+     * Note text content
+     * @type {string}
+     * @memberof Note
      */
     'text': string;
     /**
-     * Whether the note is pinned to the top
+     * ID of the entity this note belongs to
+     * @type {string}
+     * @memberof Note
+     */
+    'entity_id': string;
+    /**
+     * Type of entity (job, contact, project, etc.)
+     * @type {string}
+     * @memberof Note
+     */
+    'entity_type': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof Note
+     */
+    'created_by_id'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Note
+     */
+    'created_by_name'?: string | null;
+    /**
+     * Creation timestamp (ISO format)
+     * @type {string}
+     * @memberof Note
+     */
+    'created_at': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof Note
+     */
+    'updated_at'?: string | null;
+    /**
+     * Whether the note is pinned
      * @type {boolean}
-     * @memberof JobNoteResponse
+     * @memberof Note
      */
-    'isPinned': boolean;
+    'is_pinned'?: boolean;
     /**
-     * ID of user who created this note
-     * @type {number}
-     * @memberof JobNoteResponse
+     * CRM provider name
+     * @type {CRMProvider}
+     * @memberof Note
      */
-    'createdById': number;
+    'provider': CRMProvider;
     /**
-     * Date/time (in UTC) the note was created
-     * @type {string}
-     * @memberof JobNoteResponse
+     * Provider-specific data
+     * @type {{ [key: string]: any; }}
+     * @memberof Note
      */
-    'createdOn': string;
-    /**
-     * Date/time (in UTC) the note was modified
-     * @type {string}
-     * @memberof JobNoteResponse
-     */
-    'modifiedOn': string;
+    'provider_data'?: { [key: string]: any; };
 }
-/**
- * Response model for Service Titan job information.
- * @export
- * @interface JobResponse
- */
-export interface JobResponse {
-    /**
-     * ID of the job
-     * @type {number}
-     * @memberof JobResponse
-     */
-    'id': number;
-    /**
-     * Job number
-     * @type {string}
-     * @memberof JobResponse
-     */
-    'jobNumber': string;
-    /**
-     * 
-     * @type {number}
-     * @memberof JobResponse
-     */
-    'projectId'?: number | null;
-    /**
-     * ID of the job\'s customer
-     * @type {number}
-     * @memberof JobResponse
-     */
-    'customerId': number;
-    /**
-     * ID of the job\'s location
-     * @type {number}
-     * @memberof JobResponse
-     */
-    'locationId': number;
-    /**
-     * Status of the job
-     * @type {string}
-     * @memberof JobResponse
-     */
-    'jobStatus': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof JobResponse
-     */
-    'completedOn'?: string | null;
-    /**
-     * ID of the job\'s business unit
-     * @type {number}
-     * @memberof JobResponse
-     */
-    'businessUnitId': number;
-    /**
-     * ID of job type
-     * @type {number}
-     * @memberof JobResponse
-     */
-    'jobTypeId': number;
-    /**
-     * Priority of the job
-     * @type {string}
-     * @memberof JobResponse
-     */
-    'priority': string;
-    /**
-     * ID of the job\'s campaign
-     * @type {number}
-     * @memberof JobResponse
-     */
-    'campaignId': number;
-    /**
-     * Number of appointments on the job
-     * @type {number}
-     * @memberof JobResponse
-     */
-    'appointmentCount': number;
-    /**
-     * ID of the first appointment on the job
-     * @type {number}
-     * @memberof JobResponse
-     */
-    'firstAppointmentId': number;
-    /**
-     * ID of the last appointment on the job
-     * @type {number}
-     * @memberof JobResponse
-     */
-    'lastAppointmentId': number;
-    /**
-     * 
-     * @type {number}
-     * @memberof JobResponse
-     */
-    'recallForId'?: number | null;
-    /**
-     * 
-     * @type {number}
-     * @memberof JobResponse
-     */
-    'warrantyId'?: number | null;
-    /**
-     * Whether the job is a no-charge job
-     * @type {boolean}
-     * @memberof JobResponse
-     */
-    'noCharge': boolean;
-    /**
-     * Whether notifications will be sent to customers
-     * @type {boolean}
-     * @memberof JobResponse
-     */
-    'notificationsEnabled': boolean;
-    /**
-     * Date/time (in UTC) when the job was created
-     * @type {string}
-     * @memberof JobResponse
-     */
-    'createdOn': string;
-    /**
-     * ID of the user who created the job
-     * @type {number}
-     * @memberof JobResponse
-     */
-    'createdById': number;
-    /**
-     * Date/time (in UTC) when job was last modified
-     * @type {string}
-     * @memberof JobResponse
-     */
-    'modifiedOn': string;
-    /**
-     * Tags on the job
-     * @type {Array<number>}
-     * @memberof JobResponse
-     */
-    'tagTypeIds': Array<number>;
-    /**
-     * 
-     * @type {string}
-     * @memberof JobResponse
-     */
-    'customerPo'?: string | null;
-    /**
-     * 
-     * @type {number}
-     * @memberof JobResponse
-     */
-    'invoiceId'?: number | null;
-    /**
-     * 
-     * @type {number}
-     * @memberof JobResponse
-     */
-    'total'?: number | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof JobResponse
-     */
-    'summary'?: string | null;
-}
+
+
 /**
  * Provider-agnostic payment information from claim status calls.
  * @export
@@ -992,74 +975,47 @@ export interface ProjectData {
     'job_id'?: number | null;
 }
 /**
- * Response model for multiple project statuses.
+ * Universal project list response with pagination.
  * @export
- * @interface ProjectStatusListResponse
+ * @interface ProjectList
  */
-export interface ProjectStatusListResponse {
+export interface ProjectList {
     /**
-     * List of project statuses
-     * @type {Array<ProjectStatusResponse>}
-     * @memberof ProjectStatusListResponse
+     * List of projects
+     * @type {Array<SrcIntegrationsCrmSchemasProject2>}
+     * @memberof ProjectList
      */
-    'projects': Array<ProjectStatusResponse>;
+    'projects': Array<SrcIntegrationsCrmSchemasProject2>;
     /**
      * Total number of projects
      * @type {number}
-     * @memberof ProjectStatusListResponse
+     * @memberof ProjectList
      */
     'total_count': number;
     /**
-     * CRM provider
+     * CRM provider name
      * @type {CRMProvider}
-     * @memberof ProjectStatusListResponse
-     */
-    'provider': CRMProvider;
-}
-
-
-/**
- * Response model for project status information.
- * @export
- * @interface ProjectStatusResponse
- */
-export interface ProjectStatusResponse {
-    /**
-     * Unique project identifier
-     * @type {string}
-     * @memberof ProjectStatusResponse
-     */
-    'project_id': string;
-    /**
-     * Current project status
-     * @type {Status}
-     * @memberof ProjectStatusResponse
-     */
-    'status': Status;
-    /**
-     * Current claim status
-     * @type {ClaimStatus}
-     * @memberof ProjectStatusResponse
-     */
-    'claim_status'?: ClaimStatus;
-    /**
-     * CRM provider
-     * @type {CRMProvider}
-     * @memberof ProjectStatusResponse
+     * @memberof ProjectList
      */
     'provider': CRMProvider;
     /**
      * 
-     * @type {string}
-     * @memberof ProjectStatusResponse
+     * @type {number}
+     * @memberof ProjectList
      */
-    'updated_at'?: string | null;
+    'page'?: number | null;
     /**
      * 
-     * @type {{ [key: string]: any; }}
-     * @memberof ProjectStatusResponse
+     * @type {number}
+     * @memberof ProjectList
      */
-    'provider_data'?: { [key: string]: any; } | null;
+    'page_size'?: number | null;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof ProjectList
+     */
+    'has_more'?: boolean | null;
 }
 
 
@@ -1104,78 +1060,227 @@ export type Role = typeof Role[keyof typeof Role];
 
 
 /**
- * SKU model for estimate items.
+ * Mock project with status and metadata.
  * @export
- * @interface SkuModel
+ * @interface SrcIntegrationsCrmSchemasProject1
  */
-export interface SkuModel {
+export interface SrcIntegrationsCrmSchemasProject1 {
     /**
-     * SKU ID
-     * @type {number}
-     * @memberof SkuModel
+     * 
+     * @type {ProjectData}
+     * @memberof SrcIntegrationsCrmSchemasProject1
      */
-    'id': number;
+    'project_data': ProjectData;
     /**
-     * SKU name
+     * 
      * @type {string}
-     * @memberof SkuModel
+     * @memberof SrcIntegrationsCrmSchemasProject1
      */
-    'name': string;
+    'status': string;
     /**
-     * Display name
+     * Claim status
      * @type {string}
-     * @memberof SkuModel
+     * @memberof SrcIntegrationsCrmSchemasProject1
      */
-    'displayName': string;
+    'claim_status'?: string;
     /**
-     * SKU type
+     * 
      * @type {string}
-     * @memberof SkuModel
+     * @memberof SrcIntegrationsCrmSchemasProject1
      */
-    'type': string;
+    'updated_at': string;
     /**
-     * Sold hours
-     * @type {number}
-     * @memberof SkuModel
+     * 
+     * @type {{ [key: string]: any; }}
+     * @memberof SrcIntegrationsCrmSchemasProject1
      */
-    'soldHours': number;
-    /**
-     * General ledger account ID
-     * @type {number}
-     * @memberof SkuModel
-     */
-    'generalLedgerAccountId': number;
-    /**
-     * General ledger account name
-     * @type {string}
-     * @memberof SkuModel
-     */
-    'generalLedgerAccountName': string;
-    /**
-     * Date/time (in UTC) when SKU was last modified
-     * @type {string}
-     * @memberof SkuModel
-     */
-    'modifiedOn': string;
+    'metadata'?: { [key: string]: any; } | null;
 }
 /**
- * Status values for Service Titan jobs and projects.
+ * Universal project model that works across all CRM providers.  In hierarchical CRMs (Service Titan), projects are top-level containers that may contain multiple jobs. In flat CRMs (JobNimbus), projects and jobs are the same entity.
  * @export
- * @enum {string}
+ * @interface SrcIntegrationsCrmSchemasProject2
  */
+export interface SrcIntegrationsCrmSchemasProject2 {
+    /**
+     * Unique project identifier (provider-specific format)
+     * @type {string}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'id': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'name'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'number'?: string | null;
+    /**
+     * Current project status (provider-specific)
+     * @type {string}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'status': string;
+    /**
+     * 
+     * @type {StatusId}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'status_id'?: StatusId | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'sub_status'?: string | null;
+    /**
+     * 
+     * @type {SubStatusId}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'sub_status_id'?: SubStatusId | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'workflow_type'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'description'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'customer_id'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'customer_name'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'location_id'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'address_line1'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'address_line2'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'city'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'state'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'postal_code'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'country'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'created_at'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'updated_at'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'start_date'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'target_completion_date'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'actual_completion_date'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'sales_rep_id'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'sales_rep_name'?: string | null;
+    /**
+     * CRM provider name
+     * @type {CRMProvider}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'provider': CRMProvider;
+    /**
+     * Provider-specific data
+     * @type {{ [key: string]: any; }}
+     * @memberof SrcIntegrationsCrmSchemasProject2
+     */
+    'provider_data'?: { [key: string]: any; };
+}
 
-export const Status = {
-    Scheduled: 'Scheduled',
-    Dispatched: 'Dispatched',
-    InProgress: 'In Progress',
-    Hold: 'Hold',
-    Completed: 'Completed',
-    Canceled: 'Canceled'
-} as const;
 
-export type Status = typeof Status[keyof typeof Status];
-
-
+/**
+ * Status identifier
+ * @export
+ * @interface StatusId
+ */
+export interface StatusId {
+}
+/**
+ * Sub-status identifier
+ * @export
+ * @interface SubStatusId
+ */
+export interface SubStatusId {
+}
 /**
  * User information.
  * @export
@@ -1609,70 +1714,20 @@ export class AuthenticationApi extends BaseAPI {
 export const CRMApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
         /**
-         * Add a note to a specific job.  Args:     tenant: The tenant ID     job_id: The unique identifier for the job     text: The text content of the note     pin_to_top: Whether to pin the note to the top (optional)     crm_service: The CRM service instance from dependency injection  Returns:     JobNoteResponse: The created note information  Raises:     HTTPException: If the job is not found or an error occurs
-         * @summary Add Job Note
-         * @param {number} tenant 
-         * @param {number} jobId 
-         * @param {string} text 
-         * @param {boolean | null} [pinToTop] 
+         * Add a note to a contact.  This endpoint works across all CRM providers and returns a standardized Note schema.  Args:     contact_id: The unique identifier for the contact     text: The text content of the note     pin_to_top: Whether to pin the note to the top (provider-specific, may not be supported)     crm_service: The CRM service instance from dependency injection  Returns:     Note: The created note in universal format  Raises:     HTTPException: If the contact is not found or an error occurs
+         * @summary Add Contact Note
+         * @param {string} contactId 
+         * @param {BodyAddContactNoteApiCrmContactsContactIdNotesPost} bodyAddContactNoteApiCrmContactsContactIdNotesPost 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        addJobNoteApiCrmTenantJobsJobIdNotesPost: async (tenant: number, jobId: number, text: string, pinToTop?: boolean | null, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'tenant' is not null or undefined
-            assertParamExists('addJobNoteApiCrmTenantJobsJobIdNotesPost', 'tenant', tenant)
-            // verify required parameter 'jobId' is not null or undefined
-            assertParamExists('addJobNoteApiCrmTenantJobsJobIdNotesPost', 'jobId', jobId)
-            // verify required parameter 'text' is not null or undefined
-            assertParamExists('addJobNoteApiCrmTenantJobsJobIdNotesPost', 'text', text)
-            const localVarPath = `/api/crm/{tenant}/jobs/{job_id}/notes`
-                .replace(`{${"tenant"}}`, encodeURIComponent(String(tenant)))
-                .replace(`{${"job_id"}}`, encodeURIComponent(String(jobId)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-            // authentication HTTPBearer required
-            // http bearer authentication required
-            await setBearerAuthToObject(localVarHeaderParameter, configuration)
-
-            if (text !== undefined) {
-                localVarQueryParameter['text'] = text;
-            }
-
-            if (pinToTop !== undefined) {
-                localVarQueryParameter['pin_to_top'] = pinToTop;
-            }
-
-
-    
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * Create a new project in the CRM provider.  Note: The `id`, `tenant`, and `job_id` fields in the request will be auto-generated and any provided values will be ignored.  Args:     project_data: The project data (ProjectData model)     crm_service: The CRM service instance from dependency injection  Raises:     HTTPException: If the provider doesn\'t support project creation or an error occurs
-         * @summary Create Project
-         * @param {ProjectData} projectData 
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        createProjectApiCrmProjectsPost: async (projectData: ProjectData, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectData' is not null or undefined
-            assertParamExists('createProjectApiCrmProjectsPost', 'projectData', projectData)
-            const localVarPath = `/api/crm/projects`;
+        addContactNoteApiCrmContactsContactIdNotesPost: async (contactId: string, bodyAddContactNoteApiCrmContactsContactIdNotesPost: BodyAddContactNoteApiCrmContactsContactIdNotesPost, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'contactId' is not null or undefined
+            assertParamExists('addContactNoteApiCrmContactsContactIdNotesPost', 'contactId', contactId)
+            // verify required parameter 'bodyAddContactNoteApiCrmContactsContactIdNotesPost' is not null or undefined
+            assertParamExists('addContactNoteApiCrmContactsContactIdNotesPost', 'bodyAddContactNoteApiCrmContactsContactIdNotesPost', bodyAddContactNoteApiCrmContactsContactIdNotesPost)
+            const localVarPath = `/api/crm/contacts/{contact_id}/notes`
+                .replace(`{${"contact_id"}}`, encodeURIComponent(String(contactId)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
             let baseOptions;
@@ -1695,7 +1750,7 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
             setSearchParams(localVarUrlObj, localVarQueryParameter);
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
             localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            localVarRequestOptions.data = serializeDataIfNeeded(projectData, localVarRequestOptions, configuration)
+            localVarRequestOptions.data = serializeDataIfNeeded(bodyAddContactNoteApiCrmContactsContactIdNotesPost, localVarRequestOptions, configuration)
 
             return {
                 url: toPathString(localVarUrlObj),
@@ -1703,13 +1758,20 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
             };
         },
         /**
-         * Get the status of all projects.  Args:     crm_service: The CRM service instance from dependency injection  Returns:     ProjectStatusListResponse: List of all project statuses  Raises:     HTTPException: If an error occurs while fetching project statuses
-         * @summary Get All Project Statuses
+         * Add a note to a job.  This endpoint works across all CRM providers and returns a standardized Note schema.  Args:     job_id: The unique identifier for the job     text: The text content of the note     pin_to_top: Whether to pin the note to the top (provider-specific, may not be supported)     crm_service: The CRM service instance from dependency injection  Returns:     Note: The created note in universal format  Raises:     HTTPException: If the job is not found or an error occurs
+         * @summary Add Job Note
+         * @param {string} jobId 
+         * @param {BodyAddJobNoteApiCrmJobsJobIdNotesPost} bodyAddJobNoteApiCrmJobsJobIdNotesPost 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getAllProjectStatusesApiCrmProjectsStatusGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            const localVarPath = `/api/crm/projects/status`;
+        addJobNoteApiCrmJobsJobIdNotesPost: async (jobId: string, bodyAddJobNoteApiCrmJobsJobIdNotesPost: BodyAddJobNoteApiCrmJobsJobIdNotesPost, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'jobId' is not null or undefined
+            assertParamExists('addJobNoteApiCrmJobsJobIdNotesPost', 'jobId', jobId)
+            // verify required parameter 'bodyAddJobNoteApiCrmJobsJobIdNotesPost' is not null or undefined
+            assertParamExists('addJobNoteApiCrmJobsJobIdNotesPost', 'bodyAddJobNoteApiCrmJobsJobIdNotesPost', bodyAddJobNoteApiCrmJobsJobIdNotesPost)
+            const localVarPath = `/api/crm/jobs/{job_id}/notes`
+                .replace(`{${"job_id"}}`, encodeURIComponent(String(jobId)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
             let baseOptions;
@@ -1717,7 +1779,7 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
                 baseOptions = configuration.baseOptions;
             }
 
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
 
@@ -1727,9 +1789,12 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
 
 
     
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
             setSearchParams(localVarUrlObj, localVarQueryParameter);
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
             localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(bodyAddJobNoteApiCrmJobsJobIdNotesPost, localVarRequestOptions, configuration)
 
             return {
                 url: toPathString(localVarUrlObj),
@@ -1737,21 +1802,15 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
             };
         },
         /**
-         * Get a specific estimate by ID.  Args:     tenant: The tenant ID     estimate_id: The unique identifier for the estimate     crm_service: The CRM service instance from dependency injection  Returns:     EstimateResponse: The estimate information  Raises:     HTTPException: If the estimate is not found or an error occurs
-         * @summary Get Estimate
-         * @param {number} tenant 
-         * @param {number} estimateId 
+         * Get all contacts with pagination.  This endpoint works across all CRM providers and returns a standardized ContactList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     ContactList: Paginated list of contacts in universal format  Raises:     HTTPException: If an error occurs while fetching contacts
+         * @summary Get All Contacts
+         * @param {number} [page] Page number (1-indexed)
+         * @param {number} [pageSize] Number of items per page
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getEstimateApiCrmTenantEstimatesEstimateIdGet: async (tenant: number, estimateId: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'tenant' is not null or undefined
-            assertParamExists('getEstimateApiCrmTenantEstimatesEstimateIdGet', 'tenant', tenant)
-            // verify required parameter 'estimateId' is not null or undefined
-            assertParamExists('getEstimateApiCrmTenantEstimatesEstimateIdGet', 'estimateId', estimateId)
-            const localVarPath = `/api/crm/{tenant}/estimates/{estimate_id}`
-                .replace(`{${"tenant"}}`, encodeURIComponent(String(tenant)))
-                .replace(`{${"estimate_id"}}`, encodeURIComponent(String(estimateId)));
+        getAllContactsApiCrmContactsGet: async (page?: number, pageSize?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/crm/contacts`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
             let baseOptions;
@@ -1766,61 +1825,6 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
             // authentication HTTPBearer required
             // http bearer authentication required
             await setBearerAuthToObject(localVarHeaderParameter, configuration)
-
-
-    
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * Get estimate items with optional filters.  Args:     tenant: The tenant ID     estimate_id: Optional estimate ID to filter items     ids: Optional comma-separated string of item IDs (max 50)     active: Optional active status filter (True, False, Any)     page: Optional page number for pagination     page_size: Optional page size for pagination (max 50)     crm_service: The CRM service instance from dependency injection  Returns:     EstimateItemsResponse: The paginated list of estimate items  Raises:     HTTPException: If an error occurs
-         * @summary Get Estimate Items
-         * @param {number} tenant 
-         * @param {number | null} [estimateId] 
-         * @param {string | null} [ids] 
-         * @param {string | null} [active] 
-         * @param {number | null} [page] 
-         * @param {number | null} [pageSize] 
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        getEstimateItemsApiCrmTenantEstimatesItemsGet: async (tenant: number, estimateId?: number | null, ids?: string | null, active?: string | null, page?: number | null, pageSize?: number | null, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'tenant' is not null or undefined
-            assertParamExists('getEstimateItemsApiCrmTenantEstimatesItemsGet', 'tenant', tenant)
-            const localVarPath = `/api/crm/{tenant}/estimates/items`
-                .replace(`{${"tenant"}}`, encodeURIComponent(String(tenant)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-            // authentication HTTPBearer required
-            // http bearer authentication required
-            await setBearerAuthToObject(localVarHeaderParameter, configuration)
-
-            if (estimateId !== undefined) {
-                localVarQueryParameter['estimate_id'] = estimateId;
-            }
-
-            if (ids !== undefined) {
-                localVarQueryParameter['ids'] = ids;
-            }
-
-            if (active !== undefined) {
-                localVarQueryParameter['active'] = active;
-            }
 
             if (page !== undefined) {
                 localVarQueryParameter['page'] = page;
@@ -1842,20 +1846,142 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
             };
         },
         /**
-         * Get a specific job by ID.  Args:     tenant: The tenant ID     job_id: The unique identifier for the job     crm_service: The CRM service instance from dependency injection  Returns:     JobResponse: The job information  Raises:     HTTPException: If the job is not found or an error occurs
-         * @summary Get Job
-         * @param {number} tenant 
-         * @param {number} jobId 
+         * Get all jobs with pagination.  This endpoint works across all CRM providers and returns a standardized JobList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     JobList: Paginated list of jobs in universal format  Raises:     HTTPException: If an error occurs while fetching jobs
+         * @summary Get All Jobs
+         * @param {number} [page] Page number (1-indexed)
+         * @param {number} [pageSize] Number of items per page
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getJobApiCrmTenantJobsJobIdGet: async (tenant: number, jobId: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'tenant' is not null or undefined
-            assertParamExists('getJobApiCrmTenantJobsJobIdGet', 'tenant', tenant)
+        getAllJobsApiCrmJobsGet: async (page?: number, pageSize?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/crm/jobs`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            if (page !== undefined) {
+                localVarQueryParameter['page'] = page;
+            }
+
+            if (pageSize !== undefined) {
+                localVarQueryParameter['page_size'] = pageSize;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Get all projects with pagination.  This endpoint works across all CRM providers and returns a standardized ProjectList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     ProjectList: Paginated list of projects in universal format  Raises:     HTTPException: If an error occurs while fetching projects
+         * @summary Get All Projects
+         * @param {number} [page] Page number (1-indexed)
+         * @param {number} [pageSize] Number of items per page
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getAllProjectsApiCrmProjectsGet: async (page?: number, pageSize?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/crm/projects`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            if (page !== undefined) {
+                localVarQueryParameter['page'] = page;
+            }
+
+            if (pageSize !== undefined) {
+                localVarQueryParameter['page_size'] = pageSize;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Get a specific contact by ID.  This endpoint works across all CRM providers and returns a standardized Contact schema.  Args:     contact_id: The unique identifier for the contact (provider-specific format)     crm_service: The CRM service instance from dependency injection  Returns:     Contact: The contact information in universal format  Raises:     HTTPException: If the contact is not found or an error occurs
+         * @summary Get Contact
+         * @param {string} contactId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getContactApiCrmContactsContactIdGet: async (contactId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'contactId' is not null or undefined
+            assertParamExists('getContactApiCrmContactsContactIdGet', 'contactId', contactId)
+            const localVarPath = `/api/crm/contacts/{contact_id}`
+                .replace(`{${"contact_id"}}`, encodeURIComponent(String(contactId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Get a specific job by ID.  This endpoint works across all CRM providers and returns a standardized Job schema.  Args:     job_id: The unique identifier for the job (provider-specific format)     crm_service: The CRM service instance from dependency injection  Returns:     Job: The job information in universal format  Raises:     HTTPException: If the job is not found or an error occurs
+         * @summary Get Job
+         * @param {string} jobId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getJobApiCrmJobsJobIdGet: async (jobId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'jobId' is not null or undefined
-            assertParamExists('getJobApiCrmTenantJobsJobIdGet', 'jobId', jobId)
-            const localVarPath = `/api/crm/{tenant}/jobs/{job_id}`
-                .replace(`{${"tenant"}}`, encodeURIComponent(String(tenant)))
+            assertParamExists('getJobApiCrmJobsJobIdGet', 'jobId', jobId)
+            const localVarPath = `/api/crm/jobs/{job_id}`
                 .replace(`{${"job_id"}}`, encodeURIComponent(String(jobId)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -1884,16 +2010,16 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
             };
         },
         /**
-         * Get the status of a specific project by ID.  Args:     project_id: The unique identifier for the project     crm_service: The CRM service instance from dependency injection  Returns:     ProjectStatusResponse: The project status information  Raises:     HTTPException: If the project is not found or an error occurs
-         * @summary Get Project Status
+         * Get a specific project by ID.  This endpoint works across all CRM providers and returns a standardized Project schema.  Note: In flat CRMs like JobNimbus, projects and jobs are the same entity.  Args:     project_id: The unique identifier for the project (provider-specific format)     crm_service: The CRM service instance from dependency injection  Returns:     Project: The project information in universal format  Raises:     HTTPException: If the project is not found or an error occurs
+         * @summary Get Project
          * @param {string} projectId 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getProjectStatusApiCrmProjectsProjectIdStatusGet: async (projectId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        getProjectApiCrmProjectsProjectIdGet: async (projectId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'projectId' is not null or undefined
-            assertParamExists('getProjectStatusApiCrmProjectsProjectIdStatusGet', 'projectId', projectId)
-            const localVarPath = `/api/crm/projects/{project_id}/status`
+            assertParamExists('getProjectApiCrmProjectsProjectIdGet', 'projectId', projectId)
+            const localVarPath = `/api/crm/projects/{project_id}`
                 .replace(`{${"project_id"}}`, encodeURIComponent(String(projectId)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -1921,6 +2047,94 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
                 options: localVarRequestOptions,
             };
         },
+        /**
+         * Update the status of a job.  This endpoint works across all CRM providers.  Args:     job_id: The unique identifier for the job     status_value: The new status value (provider-specific format)     crm_service: The CRM service instance from dependency injection  Raises:     HTTPException: If the job is not found or an error occurs
+         * @summary Update Job Status
+         * @param {string} jobId 
+         * @param {BodyUpdateJobStatusApiCrmJobsJobIdStatusPatch} bodyUpdateJobStatusApiCrmJobsJobIdStatusPatch 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateJobStatusApiCrmJobsJobIdStatusPatch: async (jobId: string, bodyUpdateJobStatusApiCrmJobsJobIdStatusPatch: BodyUpdateJobStatusApiCrmJobsJobIdStatusPatch, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'jobId' is not null or undefined
+            assertParamExists('updateJobStatusApiCrmJobsJobIdStatusPatch', 'jobId', jobId)
+            // verify required parameter 'bodyUpdateJobStatusApiCrmJobsJobIdStatusPatch' is not null or undefined
+            assertParamExists('updateJobStatusApiCrmJobsJobIdStatusPatch', 'bodyUpdateJobStatusApiCrmJobsJobIdStatusPatch', bodyUpdateJobStatusApiCrmJobsJobIdStatusPatch)
+            const localVarPath = `/api/crm/jobs/{job_id}/status`
+                .replace(`{${"job_id"}}`, encodeURIComponent(String(jobId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'PATCH', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(bodyUpdateJobStatusApiCrmJobsJobIdStatusPatch, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Update the status of a project.  This endpoint works across all CRM providers.  Args:     project_id: The unique identifier for the project     status_value: The new status value (provider-specific format)     crm_service: The CRM service instance from dependency injection  Raises:     HTTPException: If the project is not found or an error occurs
+         * @summary Update Project Status
+         * @param {string} projectId 
+         * @param {BodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch} bodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateProjectStatusApiCrmProjectsProjectIdStatusPatch: async (projectId: string, bodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch: BodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'projectId' is not null or undefined
+            assertParamExists('updateProjectStatusApiCrmProjectsProjectIdStatusPatch', 'projectId', projectId)
+            // verify required parameter 'bodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch' is not null or undefined
+            assertParamExists('updateProjectStatusApiCrmProjectsProjectIdStatusPatch', 'bodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch', bodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch)
+            const localVarPath = `/api/crm/projects/{project_id}/status`
+                .replace(`{${"project_id"}}`, encodeURIComponent(String(projectId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'PATCH', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(bodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
     }
 };
 
@@ -1932,103 +2146,140 @@ export const CRMApiFp = function(configuration?: Configuration) {
     const localVarAxiosParamCreator = CRMApiAxiosParamCreator(configuration)
     return {
         /**
-         * Add a note to a specific job.  Args:     tenant: The tenant ID     job_id: The unique identifier for the job     text: The text content of the note     pin_to_top: Whether to pin the note to the top (optional)     crm_service: The CRM service instance from dependency injection  Returns:     JobNoteResponse: The created note information  Raises:     HTTPException: If the job is not found or an error occurs
+         * Add a note to a contact.  This endpoint works across all CRM providers and returns a standardized Note schema.  Args:     contact_id: The unique identifier for the contact     text: The text content of the note     pin_to_top: Whether to pin the note to the top (provider-specific, may not be supported)     crm_service: The CRM service instance from dependency injection  Returns:     Note: The created note in universal format  Raises:     HTTPException: If the contact is not found or an error occurs
+         * @summary Add Contact Note
+         * @param {string} contactId 
+         * @param {BodyAddContactNoteApiCrmContactsContactIdNotesPost} bodyAddContactNoteApiCrmContactsContactIdNotesPost 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async addContactNoteApiCrmContactsContactIdNotesPost(contactId: string, bodyAddContactNoteApiCrmContactsContactIdNotesPost: BodyAddContactNoteApiCrmContactsContactIdNotesPost, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Note>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.addContactNoteApiCrmContactsContactIdNotesPost(contactId, bodyAddContactNoteApiCrmContactsContactIdNotesPost, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.addContactNoteApiCrmContactsContactIdNotesPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Add a note to a job.  This endpoint works across all CRM providers and returns a standardized Note schema.  Args:     job_id: The unique identifier for the job     text: The text content of the note     pin_to_top: Whether to pin the note to the top (provider-specific, may not be supported)     crm_service: The CRM service instance from dependency injection  Returns:     Note: The created note in universal format  Raises:     HTTPException: If the job is not found or an error occurs
          * @summary Add Job Note
-         * @param {number} tenant 
-         * @param {number} jobId 
-         * @param {string} text 
-         * @param {boolean | null} [pinToTop] 
+         * @param {string} jobId 
+         * @param {BodyAddJobNoteApiCrmJobsJobIdNotesPost} bodyAddJobNoteApiCrmJobsJobIdNotesPost 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async addJobNoteApiCrmTenantJobsJobIdNotesPost(tenant: number, jobId: number, text: string, pinToTop?: boolean | null, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<JobNoteResponse>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.addJobNoteApiCrmTenantJobsJobIdNotesPost(tenant, jobId, text, pinToTop, options);
+        async addJobNoteApiCrmJobsJobIdNotesPost(jobId: string, bodyAddJobNoteApiCrmJobsJobIdNotesPost: BodyAddJobNoteApiCrmJobsJobIdNotesPost, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Note>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.addJobNoteApiCrmJobsJobIdNotesPost(jobId, bodyAddJobNoteApiCrmJobsJobIdNotesPost, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['CRMApi.addJobNoteApiCrmTenantJobsJobIdNotesPost']?.[localVarOperationServerIndex]?.url;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.addJobNoteApiCrmJobsJobIdNotesPost']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * Create a new project in the CRM provider.  Note: The `id`, `tenant`, and `job_id` fields in the request will be auto-generated and any provided values will be ignored.  Args:     project_data: The project data (ProjectData model)     crm_service: The CRM service instance from dependency injection  Raises:     HTTPException: If the provider doesn\'t support project creation or an error occurs
-         * @summary Create Project
-         * @param {ProjectData} projectData 
+         * Get all contacts with pagination.  This endpoint works across all CRM providers and returns a standardized ContactList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     ContactList: Paginated list of contacts in universal format  Raises:     HTTPException: If an error occurs while fetching contacts
+         * @summary Get All Contacts
+         * @param {number} [page] Page number (1-indexed)
+         * @param {number} [pageSize] Number of items per page
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async createProjectApiCrmProjectsPost(projectData: ProjectData, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<any>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.createProjectApiCrmProjectsPost(projectData, options);
+        async getAllContactsApiCrmContactsGet(page?: number, pageSize?: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ContactList>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getAllContactsApiCrmContactsGet(page, pageSize, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['CRMApi.createProjectApiCrmProjectsPost']?.[localVarOperationServerIndex]?.url;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.getAllContactsApiCrmContactsGet']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * Get the status of all projects.  Args:     crm_service: The CRM service instance from dependency injection  Returns:     ProjectStatusListResponse: List of all project statuses  Raises:     HTTPException: If an error occurs while fetching project statuses
-         * @summary Get All Project Statuses
+         * Get all jobs with pagination.  This endpoint works across all CRM providers and returns a standardized JobList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     JobList: Paginated list of jobs in universal format  Raises:     HTTPException: If an error occurs while fetching jobs
+         * @summary Get All Jobs
+         * @param {number} [page] Page number (1-indexed)
+         * @param {number} [pageSize] Number of items per page
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getAllProjectStatusesApiCrmProjectsStatusGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ProjectStatusListResponse>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getAllProjectStatusesApiCrmProjectsStatusGet(options);
+        async getAllJobsApiCrmJobsGet(page?: number, pageSize?: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<JobList>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getAllJobsApiCrmJobsGet(page, pageSize, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['CRMApi.getAllProjectStatusesApiCrmProjectsStatusGet']?.[localVarOperationServerIndex]?.url;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.getAllJobsApiCrmJobsGet']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * Get a specific estimate by ID.  Args:     tenant: The tenant ID     estimate_id: The unique identifier for the estimate     crm_service: The CRM service instance from dependency injection  Returns:     EstimateResponse: The estimate information  Raises:     HTTPException: If the estimate is not found or an error occurs
-         * @summary Get Estimate
-         * @param {number} tenant 
-         * @param {number} estimateId 
+         * Get all projects with pagination.  This endpoint works across all CRM providers and returns a standardized ProjectList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     ProjectList: Paginated list of projects in universal format  Raises:     HTTPException: If an error occurs while fetching projects
+         * @summary Get All Projects
+         * @param {number} [page] Page number (1-indexed)
+         * @param {number} [pageSize] Number of items per page
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getEstimateApiCrmTenantEstimatesEstimateIdGet(tenant: number, estimateId: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<EstimateResponse>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getEstimateApiCrmTenantEstimatesEstimateIdGet(tenant, estimateId, options);
+        async getAllProjectsApiCrmProjectsGet(page?: number, pageSize?: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ProjectList>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getAllProjectsApiCrmProjectsGet(page, pageSize, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['CRMApi.getEstimateApiCrmTenantEstimatesEstimateIdGet']?.[localVarOperationServerIndex]?.url;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.getAllProjectsApiCrmProjectsGet']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * Get estimate items with optional filters.  Args:     tenant: The tenant ID     estimate_id: Optional estimate ID to filter items     ids: Optional comma-separated string of item IDs (max 50)     active: Optional active status filter (True, False, Any)     page: Optional page number for pagination     page_size: Optional page size for pagination (max 50)     crm_service: The CRM service instance from dependency injection  Returns:     EstimateItemsResponse: The paginated list of estimate items  Raises:     HTTPException: If an error occurs
-         * @summary Get Estimate Items
-         * @param {number} tenant 
-         * @param {number | null} [estimateId] 
-         * @param {string | null} [ids] 
-         * @param {string | null} [active] 
-         * @param {number | null} [page] 
-         * @param {number | null} [pageSize] 
+         * Get a specific contact by ID.  This endpoint works across all CRM providers and returns a standardized Contact schema.  Args:     contact_id: The unique identifier for the contact (provider-specific format)     crm_service: The CRM service instance from dependency injection  Returns:     Contact: The contact information in universal format  Raises:     HTTPException: If the contact is not found or an error occurs
+         * @summary Get Contact
+         * @param {string} contactId 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getEstimateItemsApiCrmTenantEstimatesItemsGet(tenant: number, estimateId?: number | null, ids?: string | null, active?: string | null, page?: number | null, pageSize?: number | null, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<EstimateItemsResponse>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getEstimateItemsApiCrmTenantEstimatesItemsGet(tenant, estimateId, ids, active, page, pageSize, options);
+        async getContactApiCrmContactsContactIdGet(contactId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Contact>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getContactApiCrmContactsContactIdGet(contactId, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['CRMApi.getEstimateItemsApiCrmTenantEstimatesItemsGet']?.[localVarOperationServerIndex]?.url;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.getContactApiCrmContactsContactIdGet']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * Get a specific job by ID.  Args:     tenant: The tenant ID     job_id: The unique identifier for the job     crm_service: The CRM service instance from dependency injection  Returns:     JobResponse: The job information  Raises:     HTTPException: If the job is not found or an error occurs
+         * Get a specific job by ID.  This endpoint works across all CRM providers and returns a standardized Job schema.  Args:     job_id: The unique identifier for the job (provider-specific format)     crm_service: The CRM service instance from dependency injection  Returns:     Job: The job information in universal format  Raises:     HTTPException: If the job is not found or an error occurs
          * @summary Get Job
-         * @param {number} tenant 
-         * @param {number} jobId 
+         * @param {string} jobId 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getJobApiCrmTenantJobsJobIdGet(tenant: number, jobId: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<JobResponse>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getJobApiCrmTenantJobsJobIdGet(tenant, jobId, options);
+        async getJobApiCrmJobsJobIdGet(jobId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Job>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getJobApiCrmJobsJobIdGet(jobId, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['CRMApi.getJobApiCrmTenantJobsJobIdGet']?.[localVarOperationServerIndex]?.url;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.getJobApiCrmJobsJobIdGet']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * Get the status of a specific project by ID.  Args:     project_id: The unique identifier for the project     crm_service: The CRM service instance from dependency injection  Returns:     ProjectStatusResponse: The project status information  Raises:     HTTPException: If the project is not found or an error occurs
-         * @summary Get Project Status
+         * Get a specific project by ID.  This endpoint works across all CRM providers and returns a standardized Project schema.  Note: In flat CRMs like JobNimbus, projects and jobs are the same entity.  Args:     project_id: The unique identifier for the project (provider-specific format)     crm_service: The CRM service instance from dependency injection  Returns:     Project: The project information in universal format  Raises:     HTTPException: If the project is not found or an error occurs
+         * @summary Get Project
          * @param {string} projectId 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getProjectStatusApiCrmProjectsProjectIdStatusGet(projectId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ProjectStatusResponse>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getProjectStatusApiCrmProjectsProjectIdStatusGet(projectId, options);
+        async getProjectApiCrmProjectsProjectIdGet(projectId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<SrcIntegrationsCrmSchemasProject1>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getProjectApiCrmProjectsProjectIdGet(projectId, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['CRMApi.getProjectStatusApiCrmProjectsProjectIdStatusGet']?.[localVarOperationServerIndex]?.url;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.getProjectApiCrmProjectsProjectIdGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Update the status of a job.  This endpoint works across all CRM providers.  Args:     job_id: The unique identifier for the job     status_value: The new status value (provider-specific format)     crm_service: The CRM service instance from dependency injection  Raises:     HTTPException: If the job is not found or an error occurs
+         * @summary Update Job Status
+         * @param {string} jobId 
+         * @param {BodyUpdateJobStatusApiCrmJobsJobIdStatusPatch} bodyUpdateJobStatusApiCrmJobsJobIdStatusPatch 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async updateJobStatusApiCrmJobsJobIdStatusPatch(jobId: string, bodyUpdateJobStatusApiCrmJobsJobIdStatusPatch: BodyUpdateJobStatusApiCrmJobsJobIdStatusPatch, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.updateJobStatusApiCrmJobsJobIdStatusPatch(jobId, bodyUpdateJobStatusApiCrmJobsJobIdStatusPatch, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.updateJobStatusApiCrmJobsJobIdStatusPatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Update the status of a project.  This endpoint works across all CRM providers.  Args:     project_id: The unique identifier for the project     status_value: The new status value (provider-specific format)     crm_service: The CRM service instance from dependency injection  Raises:     HTTPException: If the project is not found or an error occurs
+         * @summary Update Project Status
+         * @param {string} projectId 
+         * @param {BodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch} bodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async updateProjectStatusApiCrmProjectsProjectIdStatusPatch(projectId: string, bodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch: BodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.updateProjectStatusApiCrmProjectsProjectIdStatusPatch(projectId, bodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.updateProjectStatusApiCrmProjectsProjectIdStatusPatch']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
@@ -2042,83 +2293,111 @@ export const CRMApiFactory = function (configuration?: Configuration, basePath?:
     const localVarFp = CRMApiFp(configuration)
     return {
         /**
-         * Add a note to a specific job.  Args:     tenant: The tenant ID     job_id: The unique identifier for the job     text: The text content of the note     pin_to_top: Whether to pin the note to the top (optional)     crm_service: The CRM service instance from dependency injection  Returns:     JobNoteResponse: The created note information  Raises:     HTTPException: If the job is not found or an error occurs
+         * Add a note to a contact.  This endpoint works across all CRM providers and returns a standardized Note schema.  Args:     contact_id: The unique identifier for the contact     text: The text content of the note     pin_to_top: Whether to pin the note to the top (provider-specific, may not be supported)     crm_service: The CRM service instance from dependency injection  Returns:     Note: The created note in universal format  Raises:     HTTPException: If the contact is not found or an error occurs
+         * @summary Add Contact Note
+         * @param {string} contactId 
+         * @param {BodyAddContactNoteApiCrmContactsContactIdNotesPost} bodyAddContactNoteApiCrmContactsContactIdNotesPost 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        addContactNoteApiCrmContactsContactIdNotesPost(contactId: string, bodyAddContactNoteApiCrmContactsContactIdNotesPost: BodyAddContactNoteApiCrmContactsContactIdNotesPost, options?: RawAxiosRequestConfig): AxiosPromise<Note> {
+            return localVarFp.addContactNoteApiCrmContactsContactIdNotesPost(contactId, bodyAddContactNoteApiCrmContactsContactIdNotesPost, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Add a note to a job.  This endpoint works across all CRM providers and returns a standardized Note schema.  Args:     job_id: The unique identifier for the job     text: The text content of the note     pin_to_top: Whether to pin the note to the top (provider-specific, may not be supported)     crm_service: The CRM service instance from dependency injection  Returns:     Note: The created note in universal format  Raises:     HTTPException: If the job is not found or an error occurs
          * @summary Add Job Note
-         * @param {number} tenant 
-         * @param {number} jobId 
-         * @param {string} text 
-         * @param {boolean | null} [pinToTop] 
+         * @param {string} jobId 
+         * @param {BodyAddJobNoteApiCrmJobsJobIdNotesPost} bodyAddJobNoteApiCrmJobsJobIdNotesPost 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        addJobNoteApiCrmTenantJobsJobIdNotesPost(tenant: number, jobId: number, text: string, pinToTop?: boolean | null, options?: RawAxiosRequestConfig): AxiosPromise<JobNoteResponse> {
-            return localVarFp.addJobNoteApiCrmTenantJobsJobIdNotesPost(tenant, jobId, text, pinToTop, options).then((request) => request(axios, basePath));
+        addJobNoteApiCrmJobsJobIdNotesPost(jobId: string, bodyAddJobNoteApiCrmJobsJobIdNotesPost: BodyAddJobNoteApiCrmJobsJobIdNotesPost, options?: RawAxiosRequestConfig): AxiosPromise<Note> {
+            return localVarFp.addJobNoteApiCrmJobsJobIdNotesPost(jobId, bodyAddJobNoteApiCrmJobsJobIdNotesPost, options).then((request) => request(axios, basePath));
         },
         /**
-         * Create a new project in the CRM provider.  Note: The `id`, `tenant`, and `job_id` fields in the request will be auto-generated and any provided values will be ignored.  Args:     project_data: The project data (ProjectData model)     crm_service: The CRM service instance from dependency injection  Raises:     HTTPException: If the provider doesn\'t support project creation or an error occurs
-         * @summary Create Project
-         * @param {ProjectData} projectData 
+         * Get all contacts with pagination.  This endpoint works across all CRM providers and returns a standardized ContactList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     ContactList: Paginated list of contacts in universal format  Raises:     HTTPException: If an error occurs while fetching contacts
+         * @summary Get All Contacts
+         * @param {number} [page] Page number (1-indexed)
+         * @param {number} [pageSize] Number of items per page
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        createProjectApiCrmProjectsPost(projectData: ProjectData, options?: RawAxiosRequestConfig): AxiosPromise<any> {
-            return localVarFp.createProjectApiCrmProjectsPost(projectData, options).then((request) => request(axios, basePath));
+        getAllContactsApiCrmContactsGet(page?: number, pageSize?: number, options?: RawAxiosRequestConfig): AxiosPromise<ContactList> {
+            return localVarFp.getAllContactsApiCrmContactsGet(page, pageSize, options).then((request) => request(axios, basePath));
         },
         /**
-         * Get the status of all projects.  Args:     crm_service: The CRM service instance from dependency injection  Returns:     ProjectStatusListResponse: List of all project statuses  Raises:     HTTPException: If an error occurs while fetching project statuses
-         * @summary Get All Project Statuses
+         * Get all jobs with pagination.  This endpoint works across all CRM providers and returns a standardized JobList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     JobList: Paginated list of jobs in universal format  Raises:     HTTPException: If an error occurs while fetching jobs
+         * @summary Get All Jobs
+         * @param {number} [page] Page number (1-indexed)
+         * @param {number} [pageSize] Number of items per page
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getAllProjectStatusesApiCrmProjectsStatusGet(options?: RawAxiosRequestConfig): AxiosPromise<ProjectStatusListResponse> {
-            return localVarFp.getAllProjectStatusesApiCrmProjectsStatusGet(options).then((request) => request(axios, basePath));
+        getAllJobsApiCrmJobsGet(page?: number, pageSize?: number, options?: RawAxiosRequestConfig): AxiosPromise<JobList> {
+            return localVarFp.getAllJobsApiCrmJobsGet(page, pageSize, options).then((request) => request(axios, basePath));
         },
         /**
-         * Get a specific estimate by ID.  Args:     tenant: The tenant ID     estimate_id: The unique identifier for the estimate     crm_service: The CRM service instance from dependency injection  Returns:     EstimateResponse: The estimate information  Raises:     HTTPException: If the estimate is not found or an error occurs
-         * @summary Get Estimate
-         * @param {number} tenant 
-         * @param {number} estimateId 
+         * Get all projects with pagination.  This endpoint works across all CRM providers and returns a standardized ProjectList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     ProjectList: Paginated list of projects in universal format  Raises:     HTTPException: If an error occurs while fetching projects
+         * @summary Get All Projects
+         * @param {number} [page] Page number (1-indexed)
+         * @param {number} [pageSize] Number of items per page
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getEstimateApiCrmTenantEstimatesEstimateIdGet(tenant: number, estimateId: number, options?: RawAxiosRequestConfig): AxiosPromise<EstimateResponse> {
-            return localVarFp.getEstimateApiCrmTenantEstimatesEstimateIdGet(tenant, estimateId, options).then((request) => request(axios, basePath));
+        getAllProjectsApiCrmProjectsGet(page?: number, pageSize?: number, options?: RawAxiosRequestConfig): AxiosPromise<ProjectList> {
+            return localVarFp.getAllProjectsApiCrmProjectsGet(page, pageSize, options).then((request) => request(axios, basePath));
         },
         /**
-         * Get estimate items with optional filters.  Args:     tenant: The tenant ID     estimate_id: Optional estimate ID to filter items     ids: Optional comma-separated string of item IDs (max 50)     active: Optional active status filter (True, False, Any)     page: Optional page number for pagination     page_size: Optional page size for pagination (max 50)     crm_service: The CRM service instance from dependency injection  Returns:     EstimateItemsResponse: The paginated list of estimate items  Raises:     HTTPException: If an error occurs
-         * @summary Get Estimate Items
-         * @param {number} tenant 
-         * @param {number | null} [estimateId] 
-         * @param {string | null} [ids] 
-         * @param {string | null} [active] 
-         * @param {number | null} [page] 
-         * @param {number | null} [pageSize] 
+         * Get a specific contact by ID.  This endpoint works across all CRM providers and returns a standardized Contact schema.  Args:     contact_id: The unique identifier for the contact (provider-specific format)     crm_service: The CRM service instance from dependency injection  Returns:     Contact: The contact information in universal format  Raises:     HTTPException: If the contact is not found or an error occurs
+         * @summary Get Contact
+         * @param {string} contactId 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getEstimateItemsApiCrmTenantEstimatesItemsGet(tenant: number, estimateId?: number | null, ids?: string | null, active?: string | null, page?: number | null, pageSize?: number | null, options?: RawAxiosRequestConfig): AxiosPromise<EstimateItemsResponse> {
-            return localVarFp.getEstimateItemsApiCrmTenantEstimatesItemsGet(tenant, estimateId, ids, active, page, pageSize, options).then((request) => request(axios, basePath));
+        getContactApiCrmContactsContactIdGet(contactId: string, options?: RawAxiosRequestConfig): AxiosPromise<Contact> {
+            return localVarFp.getContactApiCrmContactsContactIdGet(contactId, options).then((request) => request(axios, basePath));
         },
         /**
-         * Get a specific job by ID.  Args:     tenant: The tenant ID     job_id: The unique identifier for the job     crm_service: The CRM service instance from dependency injection  Returns:     JobResponse: The job information  Raises:     HTTPException: If the job is not found or an error occurs
+         * Get a specific job by ID.  This endpoint works across all CRM providers and returns a standardized Job schema.  Args:     job_id: The unique identifier for the job (provider-specific format)     crm_service: The CRM service instance from dependency injection  Returns:     Job: The job information in universal format  Raises:     HTTPException: If the job is not found or an error occurs
          * @summary Get Job
-         * @param {number} tenant 
-         * @param {number} jobId 
+         * @param {string} jobId 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getJobApiCrmTenantJobsJobIdGet(tenant: number, jobId: number, options?: RawAxiosRequestConfig): AxiosPromise<JobResponse> {
-            return localVarFp.getJobApiCrmTenantJobsJobIdGet(tenant, jobId, options).then((request) => request(axios, basePath));
+        getJobApiCrmJobsJobIdGet(jobId: string, options?: RawAxiosRequestConfig): AxiosPromise<Job> {
+            return localVarFp.getJobApiCrmJobsJobIdGet(jobId, options).then((request) => request(axios, basePath));
         },
         /**
-         * Get the status of a specific project by ID.  Args:     project_id: The unique identifier for the project     crm_service: The CRM service instance from dependency injection  Returns:     ProjectStatusResponse: The project status information  Raises:     HTTPException: If the project is not found or an error occurs
-         * @summary Get Project Status
+         * Get a specific project by ID.  This endpoint works across all CRM providers and returns a standardized Project schema.  Note: In flat CRMs like JobNimbus, projects and jobs are the same entity.  Args:     project_id: The unique identifier for the project (provider-specific format)     crm_service: The CRM service instance from dependency injection  Returns:     Project: The project information in universal format  Raises:     HTTPException: If the project is not found or an error occurs
+         * @summary Get Project
          * @param {string} projectId 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getProjectStatusApiCrmProjectsProjectIdStatusGet(projectId: string, options?: RawAxiosRequestConfig): AxiosPromise<ProjectStatusResponse> {
-            return localVarFp.getProjectStatusApiCrmProjectsProjectIdStatusGet(projectId, options).then((request) => request(axios, basePath));
+        getProjectApiCrmProjectsProjectIdGet(projectId: string, options?: RawAxiosRequestConfig): AxiosPromise<SrcIntegrationsCrmSchemasProject1> {
+            return localVarFp.getProjectApiCrmProjectsProjectIdGet(projectId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Update the status of a job.  This endpoint works across all CRM providers.  Args:     job_id: The unique identifier for the job     status_value: The new status value (provider-specific format)     crm_service: The CRM service instance from dependency injection  Raises:     HTTPException: If the job is not found or an error occurs
+         * @summary Update Job Status
+         * @param {string} jobId 
+         * @param {BodyUpdateJobStatusApiCrmJobsJobIdStatusPatch} bodyUpdateJobStatusApiCrmJobsJobIdStatusPatch 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateJobStatusApiCrmJobsJobIdStatusPatch(jobId: string, bodyUpdateJobStatusApiCrmJobsJobIdStatusPatch: BodyUpdateJobStatusApiCrmJobsJobIdStatusPatch, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.updateJobStatusApiCrmJobsJobIdStatusPatch(jobId, bodyUpdateJobStatusApiCrmJobsJobIdStatusPatch, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Update the status of a project.  This endpoint works across all CRM providers.  Args:     project_id: The unique identifier for the project     status_value: The new status value (provider-specific format)     crm_service: The CRM service instance from dependency injection  Raises:     HTTPException: If the project is not found or an error occurs
+         * @summary Update Project Status
+         * @param {string} projectId 
+         * @param {BodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch} bodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateProjectStatusApiCrmProjectsProjectIdStatusPatch(projectId: string, bodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch: BodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.updateProjectStatusApiCrmProjectsProjectIdStatusPatch(projectId, bodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -2131,96 +2410,130 @@ export const CRMApiFactory = function (configuration?: Configuration, basePath?:
  */
 export class CRMApi extends BaseAPI {
     /**
-     * Add a note to a specific job.  Args:     tenant: The tenant ID     job_id: The unique identifier for the job     text: The text content of the note     pin_to_top: Whether to pin the note to the top (optional)     crm_service: The CRM service instance from dependency injection  Returns:     JobNoteResponse: The created note information  Raises:     HTTPException: If the job is not found or an error occurs
+     * Add a note to a contact.  This endpoint works across all CRM providers and returns a standardized Note schema.  Args:     contact_id: The unique identifier for the contact     text: The text content of the note     pin_to_top: Whether to pin the note to the top (provider-specific, may not be supported)     crm_service: The CRM service instance from dependency injection  Returns:     Note: The created note in universal format  Raises:     HTTPException: If the contact is not found or an error occurs
+     * @summary Add Contact Note
+     * @param {string} contactId 
+     * @param {BodyAddContactNoteApiCrmContactsContactIdNotesPost} bodyAddContactNoteApiCrmContactsContactIdNotesPost 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CRMApi
+     */
+    public addContactNoteApiCrmContactsContactIdNotesPost(contactId: string, bodyAddContactNoteApiCrmContactsContactIdNotesPost: BodyAddContactNoteApiCrmContactsContactIdNotesPost, options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).addContactNoteApiCrmContactsContactIdNotesPost(contactId, bodyAddContactNoteApiCrmContactsContactIdNotesPost, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Add a note to a job.  This endpoint works across all CRM providers and returns a standardized Note schema.  Args:     job_id: The unique identifier for the job     text: The text content of the note     pin_to_top: Whether to pin the note to the top (provider-specific, may not be supported)     crm_service: The CRM service instance from dependency injection  Returns:     Note: The created note in universal format  Raises:     HTTPException: If the job is not found or an error occurs
      * @summary Add Job Note
-     * @param {number} tenant 
-     * @param {number} jobId 
-     * @param {string} text 
-     * @param {boolean | null} [pinToTop] 
+     * @param {string} jobId 
+     * @param {BodyAddJobNoteApiCrmJobsJobIdNotesPost} bodyAddJobNoteApiCrmJobsJobIdNotesPost 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof CRMApi
      */
-    public addJobNoteApiCrmTenantJobsJobIdNotesPost(tenant: number, jobId: number, text: string, pinToTop?: boolean | null, options?: RawAxiosRequestConfig) {
-        return CRMApiFp(this.configuration).addJobNoteApiCrmTenantJobsJobIdNotesPost(tenant, jobId, text, pinToTop, options).then((request) => request(this.axios, this.basePath));
+    public addJobNoteApiCrmJobsJobIdNotesPost(jobId: string, bodyAddJobNoteApiCrmJobsJobIdNotesPost: BodyAddJobNoteApiCrmJobsJobIdNotesPost, options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).addJobNoteApiCrmJobsJobIdNotesPost(jobId, bodyAddJobNoteApiCrmJobsJobIdNotesPost, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
-     * Create a new project in the CRM provider.  Note: The `id`, `tenant`, and `job_id` fields in the request will be auto-generated and any provided values will be ignored.  Args:     project_data: The project data (ProjectData model)     crm_service: The CRM service instance from dependency injection  Raises:     HTTPException: If the provider doesn\'t support project creation or an error occurs
-     * @summary Create Project
-     * @param {ProjectData} projectData 
+     * Get all contacts with pagination.  This endpoint works across all CRM providers and returns a standardized ContactList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     ContactList: Paginated list of contacts in universal format  Raises:     HTTPException: If an error occurs while fetching contacts
+     * @summary Get All Contacts
+     * @param {number} [page] Page number (1-indexed)
+     * @param {number} [pageSize] Number of items per page
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof CRMApi
      */
-    public createProjectApiCrmProjectsPost(projectData: ProjectData, options?: RawAxiosRequestConfig) {
-        return CRMApiFp(this.configuration).createProjectApiCrmProjectsPost(projectData, options).then((request) => request(this.axios, this.basePath));
+    public getAllContactsApiCrmContactsGet(page?: number, pageSize?: number, options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).getAllContactsApiCrmContactsGet(page, pageSize, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
-     * Get the status of all projects.  Args:     crm_service: The CRM service instance from dependency injection  Returns:     ProjectStatusListResponse: List of all project statuses  Raises:     HTTPException: If an error occurs while fetching project statuses
-     * @summary Get All Project Statuses
+     * Get all jobs with pagination.  This endpoint works across all CRM providers and returns a standardized JobList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     JobList: Paginated list of jobs in universal format  Raises:     HTTPException: If an error occurs while fetching jobs
+     * @summary Get All Jobs
+     * @param {number} [page] Page number (1-indexed)
+     * @param {number} [pageSize] Number of items per page
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof CRMApi
      */
-    public getAllProjectStatusesApiCrmProjectsStatusGet(options?: RawAxiosRequestConfig) {
-        return CRMApiFp(this.configuration).getAllProjectStatusesApiCrmProjectsStatusGet(options).then((request) => request(this.axios, this.basePath));
+    public getAllJobsApiCrmJobsGet(page?: number, pageSize?: number, options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).getAllJobsApiCrmJobsGet(page, pageSize, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
-     * Get a specific estimate by ID.  Args:     tenant: The tenant ID     estimate_id: The unique identifier for the estimate     crm_service: The CRM service instance from dependency injection  Returns:     EstimateResponse: The estimate information  Raises:     HTTPException: If the estimate is not found or an error occurs
-     * @summary Get Estimate
-     * @param {number} tenant 
-     * @param {number} estimateId 
+     * Get all projects with pagination.  This endpoint works across all CRM providers and returns a standardized ProjectList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     ProjectList: Paginated list of projects in universal format  Raises:     HTTPException: If an error occurs while fetching projects
+     * @summary Get All Projects
+     * @param {number} [page] Page number (1-indexed)
+     * @param {number} [pageSize] Number of items per page
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof CRMApi
      */
-    public getEstimateApiCrmTenantEstimatesEstimateIdGet(tenant: number, estimateId: number, options?: RawAxiosRequestConfig) {
-        return CRMApiFp(this.configuration).getEstimateApiCrmTenantEstimatesEstimateIdGet(tenant, estimateId, options).then((request) => request(this.axios, this.basePath));
+    public getAllProjectsApiCrmProjectsGet(page?: number, pageSize?: number, options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).getAllProjectsApiCrmProjectsGet(page, pageSize, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
-     * Get estimate items with optional filters.  Args:     tenant: The tenant ID     estimate_id: Optional estimate ID to filter items     ids: Optional comma-separated string of item IDs (max 50)     active: Optional active status filter (True, False, Any)     page: Optional page number for pagination     page_size: Optional page size for pagination (max 50)     crm_service: The CRM service instance from dependency injection  Returns:     EstimateItemsResponse: The paginated list of estimate items  Raises:     HTTPException: If an error occurs
-     * @summary Get Estimate Items
-     * @param {number} tenant 
-     * @param {number | null} [estimateId] 
-     * @param {string | null} [ids] 
-     * @param {string | null} [active] 
-     * @param {number | null} [page] 
-     * @param {number | null} [pageSize] 
+     * Get a specific contact by ID.  This endpoint works across all CRM providers and returns a standardized Contact schema.  Args:     contact_id: The unique identifier for the contact (provider-specific format)     crm_service: The CRM service instance from dependency injection  Returns:     Contact: The contact information in universal format  Raises:     HTTPException: If the contact is not found or an error occurs
+     * @summary Get Contact
+     * @param {string} contactId 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof CRMApi
      */
-    public getEstimateItemsApiCrmTenantEstimatesItemsGet(tenant: number, estimateId?: number | null, ids?: string | null, active?: string | null, page?: number | null, pageSize?: number | null, options?: RawAxiosRequestConfig) {
-        return CRMApiFp(this.configuration).getEstimateItemsApiCrmTenantEstimatesItemsGet(tenant, estimateId, ids, active, page, pageSize, options).then((request) => request(this.axios, this.basePath));
+    public getContactApiCrmContactsContactIdGet(contactId: string, options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).getContactApiCrmContactsContactIdGet(contactId, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
-     * Get a specific job by ID.  Args:     tenant: The tenant ID     job_id: The unique identifier for the job     crm_service: The CRM service instance from dependency injection  Returns:     JobResponse: The job information  Raises:     HTTPException: If the job is not found or an error occurs
+     * Get a specific job by ID.  This endpoint works across all CRM providers and returns a standardized Job schema.  Args:     job_id: The unique identifier for the job (provider-specific format)     crm_service: The CRM service instance from dependency injection  Returns:     Job: The job information in universal format  Raises:     HTTPException: If the job is not found or an error occurs
      * @summary Get Job
-     * @param {number} tenant 
-     * @param {number} jobId 
+     * @param {string} jobId 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof CRMApi
      */
-    public getJobApiCrmTenantJobsJobIdGet(tenant: number, jobId: number, options?: RawAxiosRequestConfig) {
-        return CRMApiFp(this.configuration).getJobApiCrmTenantJobsJobIdGet(tenant, jobId, options).then((request) => request(this.axios, this.basePath));
+    public getJobApiCrmJobsJobIdGet(jobId: string, options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).getJobApiCrmJobsJobIdGet(jobId, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
-     * Get the status of a specific project by ID.  Args:     project_id: The unique identifier for the project     crm_service: The CRM service instance from dependency injection  Returns:     ProjectStatusResponse: The project status information  Raises:     HTTPException: If the project is not found or an error occurs
-     * @summary Get Project Status
+     * Get a specific project by ID.  This endpoint works across all CRM providers and returns a standardized Project schema.  Note: In flat CRMs like JobNimbus, projects and jobs are the same entity.  Args:     project_id: The unique identifier for the project (provider-specific format)     crm_service: The CRM service instance from dependency injection  Returns:     Project: The project information in universal format  Raises:     HTTPException: If the project is not found or an error occurs
+     * @summary Get Project
      * @param {string} projectId 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof CRMApi
      */
-    public getProjectStatusApiCrmProjectsProjectIdStatusGet(projectId: string, options?: RawAxiosRequestConfig) {
-        return CRMApiFp(this.configuration).getProjectStatusApiCrmProjectsProjectIdStatusGet(projectId, options).then((request) => request(this.axios, this.basePath));
+    public getProjectApiCrmProjectsProjectIdGet(projectId: string, options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).getProjectApiCrmProjectsProjectIdGet(projectId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Update the status of a job.  This endpoint works across all CRM providers.  Args:     job_id: The unique identifier for the job     status_value: The new status value (provider-specific format)     crm_service: The CRM service instance from dependency injection  Raises:     HTTPException: If the job is not found or an error occurs
+     * @summary Update Job Status
+     * @param {string} jobId 
+     * @param {BodyUpdateJobStatusApiCrmJobsJobIdStatusPatch} bodyUpdateJobStatusApiCrmJobsJobIdStatusPatch 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CRMApi
+     */
+    public updateJobStatusApiCrmJobsJobIdStatusPatch(jobId: string, bodyUpdateJobStatusApiCrmJobsJobIdStatusPatch: BodyUpdateJobStatusApiCrmJobsJobIdStatusPatch, options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).updateJobStatusApiCrmJobsJobIdStatusPatch(jobId, bodyUpdateJobStatusApiCrmJobsJobIdStatusPatch, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Update the status of a project.  This endpoint works across all CRM providers.  Args:     project_id: The unique identifier for the project     status_value: The new status value (provider-specific format)     crm_service: The CRM service instance from dependency injection  Raises:     HTTPException: If the project is not found or an error occurs
+     * @summary Update Project Status
+     * @param {string} projectId 
+     * @param {BodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch} bodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CRMApi
+     */
+    public updateProjectStatusApiCrmProjectsProjectIdStatusPatch(projectId: string, bodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch: BodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch, options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).updateProjectStatusApiCrmProjectsProjectIdStatusPatch(projectId, bodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch, options).then((request) => request(this.axios, this.basePath));
     }
 }
 

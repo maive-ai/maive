@@ -144,14 +144,237 @@
         }
       }
     },
-    "/api/crm/projects/{project_id}/status": {
+    "/api/crm/jobs/{job_id}": {
       "get": {
         "tags": [
           "CRM"
         ],
-        "summary": "Get Project Status",
-        "description": "Get the status of a specific project by ID.\n\nArgs:\n    project_id: The unique identifier for the project\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    ProjectStatusResponse: The project status information\n\nRaises:\n    HTTPException: If the project is not found or an error occurs",
-        "operationId": "get_project_status_api_crm_projects__project_id__status_get",
+        "summary": "Get Job",
+        "description": "Get a specific job by ID.\n\nThis endpoint works across all CRM providers and returns a standardized Job schema.\n\nArgs:\n    job_id: The unique identifier for the job (provider-specific format)\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    Job: The job information in universal format\n\nRaises:\n    HTTPException: If the job is not found or an error occurs",
+        "operationId": "get_job_api_crm_jobs__job_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/crm/jobs": {
+      "get": {
+        "tags": [
+          "CRM"
+        ],
+        "summary": "Get All Jobs",
+        "description": "Get all jobs with pagination.\n\nThis endpoint works across all CRM providers and returns a standardized JobList schema.\n\nArgs:\n    page: Page number (1-indexed)\n    page_size: Number of items per page (max 100)\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    JobList: Paginated list of jobs in universal format\n\nRaises:\n    HTTPException: If an error occurs while fetching jobs",
+        "operationId": "get_all_jobs_api_crm_jobs_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number (1-indexed)",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number (1-indexed)"
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Number of items per page",
+              "default": 50,
+              "title": "Page Size"
+            },
+            "description": "Number of items per page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/crm/jobs/{job_id}/notes": {
+      "post": {
+        "tags": [
+          "CRM"
+        ],
+        "summary": "Add Job Note",
+        "description": "Add a note to a job.\n\nThis endpoint works across all CRM providers and returns a standardized Note schema.\n\nArgs:\n    job_id: The unique identifier for the job\n    text: The text content of the note\n    pin_to_top: Whether to pin the note to the top (provider-specific, may not be supported)\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    Note: The created note in universal format\n\nRaises:\n    HTTPException: If the job is not found or an error occurs",
+        "operationId": "add_job_note_api_crm_jobs__job_id__notes_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_add_job_note_api_crm_jobs__job_id__notes_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Note"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/crm/jobs/{job_id}/status": {
+      "patch": {
+        "tags": [
+          "CRM"
+        ],
+        "summary": "Update Job Status",
+        "description": "Update the status of a job.\n\nThis endpoint works across all CRM providers.\n\nArgs:\n    job_id: The unique identifier for the job\n    status_value: The new status value (provider-specific format)\n    crm_service: The CRM service instance from dependency injection\n\nRaises:\n    HTTPException: If the job is not found or an error occurs",
+        "operationId": "update_job_status_api_crm_jobs__job_id__status_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_update_job_status_api_crm_jobs__job_id__status_patch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/crm/projects/{project_id}": {
+      "get": {
+        "tags": [
+          "CRM"
+        ],
+        "summary": "Get Project",
+        "description": "Get a specific project by ID.\n\nThis endpoint works across all CRM providers and returns a standardized Project schema.\n\nNote: In flat CRMs like JobNimbus, projects and jobs are the same entity.\n\nArgs:\n    project_id: The unique identifier for the project (provider-specific format)\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    Project: The project information in universal format\n\nRaises:\n    HTTPException: If the project is not found or an error occurs",
+        "operationId": "get_project_api_crm_projects__project_id__get",
         "security": [
           {
             "HTTPBearer": []
@@ -174,7 +397,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProjectStatusResponse"
+                  "$ref": "#/components/schemas/src__integrations__crm__schemas__Project__1"
                 }
               }
             }
@@ -190,296 +413,48 @@
             }
           }
         }
-      }
-    },
-    "/api/crm/projects/status": {
-      "get": {
-        "tags": [
-          "CRM"
-        ],
-        "summary": "Get All Project Statuses",
-        "description": "Get the status of all projects.\n\nArgs:\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    ProjectStatusListResponse: List of all project statuses\n\nRaises:\n    HTTPException: If an error occurs while fetching project statuses",
-        "operationId": "get_all_project_statuses_api_crm_projects_status_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProjectStatusListResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
       }
     },
     "/api/crm/projects": {
-      "post": {
-        "tags": [
-          "CRM"
-        ],
-        "summary": "Create Project",
-        "description": "Create a new project in the CRM provider.\n\nNote: The `id`, `tenant`, and `job_id` fields in the request will be\nauto-generated and any provided values will be ignored.\n\nArgs:\n    project_data: The project data (ProjectData model)\n    crm_service: The CRM service instance from dependency injection\n\nRaises:\n    HTTPException: If the provider doesn't support project creation or an error occurs",
-        "operationId": "create_project_api_crm_projects_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ProjectData"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/api/crm/{tenant}/estimates/{estimate_id}": {
       "get": {
         "tags": [
           "CRM"
         ],
-        "summary": "Get Estimate",
-        "description": "Get a specific estimate by ID.\n\nArgs:\n    tenant: The tenant ID\n    estimate_id: The unique identifier for the estimate\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    EstimateResponse: The estimate information\n\nRaises:\n    HTTPException: If the estimate is not found or an error occurs",
-        "operationId": "get_estimate_api_crm__tenant__estimates__estimate_id__get",
+        "summary": "Get All Projects",
+        "description": "Get all projects with pagination.\n\nThis endpoint works across all CRM providers and returns a standardized ProjectList schema.\n\nArgs:\n    page: Page number (1-indexed)\n    page_size: Number of items per page (max 100)\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    ProjectList: Paginated list of projects in universal format\n\nRaises:\n    HTTPException: If an error occurs while fetching projects",
+        "operationId": "get_all_projects_api_crm_projects_get",
         "security": [
           {
             "HTTPBearer": []
           }
         ],
         "parameters": [
-          {
-            "name": "tenant",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Tenant"
-            }
-          },
-          {
-            "name": "estimate_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Estimate Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EstimateResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/crm/{tenant}/jobs/{job_id}": {
-      "get": {
-        "tags": [
-          "CRM"
-        ],
-        "summary": "Get Job",
-        "description": "Get a specific job by ID.\n\nArgs:\n    tenant: The tenant ID\n    job_id: The unique identifier for the job\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    JobResponse: The job information\n\nRaises:\n    HTTPException: If the job is not found or an error occurs",
-        "operationId": "get_job_api_crm__tenant__jobs__job_id__get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "tenant",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Tenant"
-            }
-          },
-          {
-            "name": "job_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Job Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JobResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/crm/{tenant}/estimates/items": {
-      "get": {
-        "tags": [
-          "CRM"
-        ],
-        "summary": "Get Estimate Items",
-        "description": "Get estimate items with optional filters.\n\nArgs:\n    tenant: The tenant ID\n    estimate_id: Optional estimate ID to filter items\n    ids: Optional comma-separated string of item IDs (max 50)\n    active: Optional active status filter (True, False, Any)\n    page: Optional page number for pagination\n    page_size: Optional page size for pagination (max 50)\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    EstimateItemsResponse: The paginated list of estimate items\n\nRaises:\n    HTTPException: If an error occurs",
-        "operationId": "get_estimate_items_api_crm__tenant__estimates_items_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "tenant",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Tenant"
-            }
-          },
-          {
-            "name": "estimate_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Estimate Id"
-            }
-          },
-          {
-            "name": "ids",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Ids"
-            }
-          },
-          {
-            "name": "active",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Active"
-            }
-          },
           {
             "name": "page",
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number (1-indexed)",
+              "default": 1,
               "title": "Page"
-            }
+            },
+            "description": "Page number (1-indexed)"
           },
           {
             "name": "page_size",
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Number of items per page",
+              "default": 50,
               "title": "Page Size"
-            }
+            },
+            "description": "Number of items per page"
           }
         ],
         "responses": {
@@ -488,7 +463,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EstimateItemsResponse"
+                  "$ref": "#/components/schemas/ProjectList"
                 }
               }
             }
@@ -506,14 +481,14 @@
         }
       }
     },
-    "/api/crm/{tenant}/jobs/{job_id}/notes": {
-      "post": {
+    "/api/crm/projects/{project_id}/status": {
+      "patch": {
         "tags": [
           "CRM"
         ],
-        "summary": "Add Job Note",
-        "description": "Add a note to a specific job.\n\nArgs:\n    tenant: The tenant ID\n    job_id: The unique identifier for the job\n    text: The text content of the note\n    pin_to_top: Whether to pin the note to the top (optional)\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    JobNoteResponse: The created note information\n\nRaises:\n    HTTPException: If the job is not found or an error occurs",
-        "operationId": "add_job_note_api_crm__tenant__jobs__job_id__notes_post",
+        "summary": "Update Project Status",
+        "description": "Update the status of a project.\n\nThis endpoint works across all CRM providers.\n\nArgs:\n    project_id: The unique identifier for the project\n    status_value: The new status value (provider-specific format)\n    crm_service: The CRM service instance from dependency injection\n\nRaises:\n    HTTPException: If the project is not found or an error occurs",
+        "operationId": "update_project_status_api_crm_projects__project_id__status_patch",
         "security": [
           {
             "HTTPBearer": []
@@ -521,46 +496,63 @@
         ],
         "parameters": [
           {
-            "name": "tenant",
+            "name": "project_id",
             "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Tenant"
-            }
-          },
-          {
-            "name": "job_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Job Id"
-            }
-          },
-          {
-            "name": "text",
-            "in": "query",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Text"
+              "title": "Project Id"
             }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_update_project_status_api_crm_projects__project_id__status_patch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
-          {
-            "name": "pin_to_top",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
-              ],
-              "title": "Pin To Top"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/crm/contacts/{contact_id}": {
+      "get": {
+        "tags": [
+          "CRM"
+        ],
+        "summary": "Get Contact",
+        "description": "Get a specific contact by ID.\n\nThis endpoint works across all CRM providers and returns a standardized Contact schema.\n\nArgs:\n    contact_id: The unique identifier for the contact (provider-specific format)\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    Contact: The contact information in universal format\n\nRaises:\n    HTTPException: If the contact is not found or an error occurs",
+        "operationId": "get_contact_api_crm_contacts__contact_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "contact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Contact Id"
             }
           }
         ],
@@ -570,7 +562,131 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JobNoteResponse"
+                  "$ref": "#/components/schemas/Contact"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/crm/contacts": {
+      "get": {
+        "tags": [
+          "CRM"
+        ],
+        "summary": "Get All Contacts",
+        "description": "Get all contacts with pagination.\n\nThis endpoint works across all CRM providers and returns a standardized ContactList schema.\n\nArgs:\n    page: Page number (1-indexed)\n    page_size: Number of items per page (max 100)\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    ContactList: Paginated list of contacts in universal format\n\nRaises:\n    HTTPException: If an error occurs while fetching contacts",
+        "operationId": "get_all_contacts_api_crm_contacts_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number (1-indexed)",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number (1-indexed)"
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Number of items per page",
+              "default": 50,
+              "title": "Page Size"
+            },
+            "description": "Number of items per page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/crm/contacts/{contact_id}/notes": {
+      "post": {
+        "tags": [
+          "CRM"
+        ],
+        "summary": "Add Contact Note",
+        "description": "Add a note to a contact.\n\nThis endpoint works across all CRM providers and returns a standardized Note schema.\n\nArgs:\n    contact_id: The unique identifier for the contact\n    text: The text content of the note\n    pin_to_top: Whether to pin the note to the top (provider-specific, may not be supported)\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    Note: The created note in universal format\n\nRaises:\n    HTTPException: If the contact is not found or an error occurs",
+        "operationId": "add_contact_note_api_crm_contacts__contact_id__notes_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "contact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Contact Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_add_contact_note_api_crm_contacts__contact_id__notes_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Note"
                 }
               }
             }
@@ -852,6 +968,74 @@
         ],
         "title": "AuthResponse",
         "description": "Schema for authentication responses."
+      },
+      "Body_add_contact_note_api_crm_contacts__contact_id__notes_post": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "The note text content"
+          },
+          "pin_to_top": {
+            "type": "boolean",
+            "title": "Pin To Top",
+            "description": "Whether to pin the note to the top",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "Body_add_contact_note_api_crm_contacts__contact_id__notes_post"
+      },
+      "Body_add_job_note_api_crm_jobs__job_id__notes_post": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "The note text content"
+          },
+          "pin_to_top": {
+            "type": "boolean",
+            "title": "Pin To Top",
+            "description": "Whether to pin the note to the top",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "Body_add_job_note_api_crm_jobs__job_id__notes_post"
+      },
+      "Body_update_job_status_api_crm_jobs__job_id__status_patch": {
+        "properties": {
+          "status_value": {
+            "type": "string",
+            "title": "Status Value",
+            "description": "The new status value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status_value"
+        ],
+        "title": "Body_update_job_status_api_crm_jobs__job_id__status_patch"
+      },
+      "Body_update_project_status_api_crm_projects__project_id__status_patch": {
+        "properties": {
+          "status_value": {
+            "type": "string",
+            "title": "Status Value",
+            "description": "The new status value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status_value"
+        ],
+        "title": "Body_update_project_status_api_crm_projects__project_id__status_patch"
       },
       "CRMProvider": {
         "type": "string",
@@ -1160,6 +1344,248 @@
         "title": "ClaimStatusData",
         "description": "Provider-agnostic structured data from insurance claim status calls."
       },
+      "Contact": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique contact identifier (provider-specific format)"
+          },
+          "first_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Name",
+            "description": "First name"
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Name",
+            "description": "Last name"
+          },
+          "company": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company",
+            "description": "Company name"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name",
+            "description": "Display name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email",
+            "description": "Email address"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone",
+            "description": "Primary phone number"
+          },
+          "mobile_phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mobile Phone",
+            "description": "Mobile phone"
+          },
+          "work_phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Phone",
+            "description": "Work phone"
+          },
+          "address_line1": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Line1",
+            "description": "Address line 1"
+          },
+          "address_line2": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Line2",
+            "description": "Address line 2"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City",
+            "description": "City"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State",
+            "description": "State/province"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code",
+            "description": "ZIP/postal code"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country",
+            "description": "Country"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status",
+            "description": "Contact status"
+          },
+          "workflow_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Type",
+            "description": "Workflow/record type name"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At",
+            "description": "Creation timestamp (ISO format)"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At",
+            "description": "Last update timestamp (ISO format)"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/CRMProvider",
+            "description": "CRM provider name"
+          },
+          "provider_data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Provider Data",
+            "description": "Provider-specific data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "provider"
+        ],
+        "title": "Contact",
+        "description": "Universal contact/customer model that works across all CRM providers."
+      },
       "ContactInfo": {
         "properties": {
           "name": {
@@ -1184,28 +1610,26 @@
         "title": "ContactInfo",
         "description": "Contact information model."
       },
-      "EstimateItemResponse": {
+      "ContactList": {
         "properties": {
-          "id": {
+          "contacts": {
+            "items": {
+              "$ref": "#/components/schemas/Contact"
+            },
+            "type": "array",
+            "title": "Contacts",
+            "description": "List of contacts"
+          },
+          "total_count": {
             "type": "integer",
-            "title": "Id",
-            "description": "ID of the estimate item"
+            "title": "Total Count",
+            "description": "Total number of contacts"
           },
-          "sku": {
-            "$ref": "#/components/schemas/SkuModel",
-            "description": "SKU details"
+          "provider": {
+            "$ref": "#/components/schemas/CRMProvider",
+            "description": "CRM provider name"
           },
-          "skuAccount": {
-            "type": "string",
-            "title": "Skuaccount",
-            "description": "SKU account"
-          },
-          "description": {
-            "type": "string",
-            "title": "Description",
-            "description": "Item description"
-          },
-          "membershipTypeId": {
+          "page": {
             "anyOf": [
               {
                 "type": "integer"
@@ -1214,47 +1638,10 @@
                 "type": "null"
               }
             ],
-            "title": "Membershiptypeid",
-            "description": "Membership type ID"
+            "title": "Page",
+            "description": "Current page number (if paginated)"
           },
-          "qty": {
-            "type": "number",
-            "title": "Qty",
-            "description": "Quantity"
-          },
-          "unitRate": {
-            "type": "number",
-            "title": "Unitrate",
-            "description": "Unit rate"
-          },
-          "total": {
-            "type": "number",
-            "title": "Total",
-            "description": "Total amount"
-          },
-          "unitCost": {
-            "type": "number",
-            "title": "Unitcost",
-            "description": "Unit cost"
-          },
-          "totalCost": {
-            "type": "number",
-            "title": "Totalcost",
-            "description": "Total cost"
-          },
-          "itemGroupName": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Itemgroupname",
-            "description": "Item group name"
-          },
-          "itemGroupRootId": {
+          "page_size": {
             "anyOf": [
               {
                 "type": "integer"
@@ -1263,22 +1650,10 @@
                 "type": "null"
               }
             ],
-            "title": "Itemgrouprootid",
-            "description": "Item group root ID"
+            "title": "Page Size",
+            "description": "Page size (if paginated)"
           },
-          "createdOn": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Createdon",
-            "description": "Date/time (in UTC) when the item was created"
-          },
-          "modifiedOn": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Modifiedon",
-            "description": "Date/time (in UTC) when the item was last modified"
-          },
-          "chargeable": {
+          "has_more": {
             "anyOf": [
               {
                 "type": "boolean"
@@ -1287,350 +1662,18 @@
                 "type": "null"
               }
             ],
-            "title": "Chargeable",
-            "description": "Whether the item is chargeable"
-          },
-          "invoiceItemId": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Invoiceitemid",
-            "description": "The invoice item which was created from this estimate item"
-          },
-          "budgetCodeId": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Budgetcodeid",
-            "description": "Budget code ID"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "sku",
-          "skuAccount",
-          "description",
-          "qty",
-          "unitRate",
-          "total",
-          "unitCost",
-          "totalCost",
-          "createdOn",
-          "modifiedOn"
-        ],
-        "title": "EstimateItemResponse",
-        "description": "Response model for estimate item information."
-      },
-      "EstimateItemsResponse": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/EstimateItemResponse"
-            },
-            "type": "array",
-            "title": "Items",
-            "description": "List of estimate items"
-          },
-          "total_count": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Total Count",
-            "description": "Total count of items (if requested)"
-          },
-          "page": {
-            "type": "integer",
-            "title": "Page",
-            "description": "Current page number"
-          },
-          "page_size": {
-            "type": "integer",
-            "title": "Page Size",
-            "description": "Page size"
-          },
-          "has_more": {
-            "type": "boolean",
             "title": "Has More",
-            "description": "Whether there are more items"
+            "description": "Whether more results exist"
           }
         },
         "type": "object",
         "required": [
-          "items",
-          "page",
-          "page_size",
-          "has_more"
+          "contacts",
+          "total_count",
+          "provider"
         ],
-        "title": "EstimateItemsResponse",
-        "description": "Response model for estimate items list."
-      },
-      "EstimateResponse": {
-        "properties": {
-          "id": {
-            "type": "integer",
-            "title": "Id",
-            "description": "ID of the estimate"
-          },
-          "jobId": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Jobid",
-            "description": "ID of the associated job"
-          },
-          "projectId": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Projectid",
-            "description": "ID of the associated project"
-          },
-          "locationId": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Locationid",
-            "description": "ID of the location"
-          },
-          "customerId": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Customerid",
-            "description": "ID of the customer"
-          },
-          "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name",
-            "description": "Name of the estimate"
-          },
-          "jobNumber": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Jobnumber",
-            "description": "Job number"
-          },
-          "status": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/EstimateStatus"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Status of the estimate"
-          },
-          "reviewStatus": {
-            "$ref": "#/components/schemas/EstimateReviewStatus",
-            "description": "Review status of the estimate"
-          },
-          "summary": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Summary",
-            "description": "Summary of the estimate"
-          },
-          "createdOn": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Createdon",
-            "description": "Date/time (in UTC) when the estimate was created"
-          },
-          "modifiedOn": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Modifiedon",
-            "description": "Date/time (in UTC) when estimate was last modified"
-          },
-          "soldOn": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Soldon",
-            "description": "Date/time (in UTC) when the estimate was sold"
-          },
-          "soldBy": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Soldby",
-            "description": "ID of who sold the estimate"
-          },
-          "active": {
-            "type": "boolean",
-            "title": "Active",
-            "description": "Whether the estimate is active"
-          },
-          "subtotal": {
-            "type": "number",
-            "title": "Subtotal",
-            "description": "Subtotal amount"
-          },
-          "tax": {
-            "type": "number",
-            "title": "Tax",
-            "description": "Tax amount"
-          },
-          "businessUnitId": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Businessunitid",
-            "description": "ID of the business unit"
-          },
-          "businessUnitName": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Businessunitname",
-            "description": "Name of the business unit"
-          },
-          "isRecommended": {
-            "type": "boolean",
-            "title": "Isrecommended",
-            "description": "Whether this estimate is recommended"
-          },
-          "budgetCodeId": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Budgetcodeid",
-            "description": "ID of the budget code"
-          },
-          "isChangeOrder": {
-            "type": "boolean",
-            "title": "Ischangeorder",
-            "description": "Whether this estimate is a change order"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "reviewStatus",
-          "createdOn",
-          "modifiedOn",
-          "active",
-          "subtotal",
-          "tax",
-          "isRecommended",
-          "isChangeOrder"
-        ],
-        "title": "EstimateResponse",
-        "description": "Response model for Service Titan estimate information."
-      },
-      "EstimateReviewStatus": {
-        "type": "string",
-        "enum": [
-          "None",
-          "NeedsApproval",
-          "Approved",
-          "NotApproved"
-        ],
-        "title": "EstimateReviewStatus",
-        "description": "Estimate review status values."
-      },
-      "EstimateStatus": {
-        "properties": {
-          "value": {
-            "type": "integer",
-            "title": "Value",
-            "description": "Status value"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "Status name"
-          }
-        },
-        "type": "object",
-        "required": [
-          "value",
-          "name"
-        ],
-        "title": "EstimateStatus",
-        "description": "Estimate status model with value and name."
+        "title": "ContactList",
+        "description": "Universal contact list response with pagination."
       },
       "HTTPValidationError": {
         "properties": {
@@ -1645,194 +1688,58 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
-      "JobNoteResponse": {
-        "properties": {
-          "text": {
-            "type": "string",
-            "title": "Text",
-            "description": "Text content of the note"
-          },
-          "isPinned": {
-            "type": "boolean",
-            "title": "Ispinned",
-            "description": "Whether the note is pinned to the top"
-          },
-          "createdById": {
-            "type": "integer",
-            "title": "Createdbyid",
-            "description": "ID of user who created this note"
-          },
-          "createdOn": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Createdon",
-            "description": "Date/time (in UTC) the note was created"
-          },
-          "modifiedOn": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Modifiedon",
-            "description": "Date/time (in UTC) the note was modified"
-          }
-        },
-        "type": "object",
-        "required": [
-          "text",
-          "isPinned",
-          "createdById",
-          "createdOn",
-          "modifiedOn"
-        ],
-        "title": "JobNoteResponse",
-        "description": "Response model for job note."
-      },
-      "JobResponse": {
+      "Job": {
         "properties": {
           "id": {
-            "type": "integer",
-            "title": "Id",
-            "description": "ID of the job"
-          },
-          "jobNumber": {
             "type": "string",
-            "title": "Jobnumber",
+            "title": "Id",
+            "description": "Unique job identifier (provider-specific format)"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Job name/title"
+          },
+          "number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Number",
             "description": "Job number"
           },
-          "projectId": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Current job status (provider-specific)"
+          },
+          "status_id": {
             "anyOf": [
               {
                 "type": "integer"
               },
               {
-                "type": "null"
-              }
-            ],
-            "title": "Projectid",
-            "description": "ID of the job's project"
-          },
-          "customerId": {
-            "type": "integer",
-            "title": "Customerid",
-            "description": "ID of the job's customer"
-          },
-          "locationId": {
-            "type": "integer",
-            "title": "Locationid",
-            "description": "ID of the job's location"
-          },
-          "jobStatus": {
-            "type": "string",
-            "title": "Jobstatus",
-            "description": "Status of the job"
-          },
-          "completedOn": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Completedon",
-            "description": "Date/time (in UTC) when the job was completed"
+            "title": "Status Id",
+            "description": "Status identifier"
           },
-          "businessUnitId": {
-            "type": "integer",
-            "title": "Businessunitid",
-            "description": "ID of the job's business unit"
-          },
-          "jobTypeId": {
-            "type": "integer",
-            "title": "Jobtypeid",
-            "description": "ID of job type"
-          },
-          "priority": {
-            "type": "string",
-            "title": "Priority",
-            "description": "Priority of the job"
-          },
-          "campaignId": {
-            "type": "integer",
-            "title": "Campaignid",
-            "description": "ID of the job's campaign"
-          },
-          "appointmentCount": {
-            "type": "integer",
-            "title": "Appointmentcount",
-            "description": "Number of appointments on the job"
-          },
-          "firstAppointmentId": {
-            "type": "integer",
-            "title": "Firstappointmentid",
-            "description": "ID of the first appointment on the job"
-          },
-          "lastAppointmentId": {
-            "type": "integer",
-            "title": "Lastappointmentid",
-            "description": "ID of the last appointment on the job"
-          },
-          "recallForId": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Recallforid",
-            "description": "ID of the job for which this job is a recall"
-          },
-          "warrantyId": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Warrantyid",
-            "description": "ID of the job for which this job is a warranty"
-          },
-          "noCharge": {
-            "type": "boolean",
-            "title": "Nocharge",
-            "description": "Whether the job is a no-charge job"
-          },
-          "notificationsEnabled": {
-            "type": "boolean",
-            "title": "Notificationsenabled",
-            "description": "Whether notifications will be sent to customers"
-          },
-          "createdOn": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Createdon",
-            "description": "Date/time (in UTC) when the job was created"
-          },
-          "createdById": {
-            "type": "integer",
-            "title": "Createdbyid",
-            "description": "ID of the user who created the job"
-          },
-          "modifiedOn": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Modifiedon",
-            "description": "Date/time (in UTC) when job was last modified"
-          },
-          "tagTypeIds": {
-            "items": {
-              "type": "integer"
-            },
-            "type": "array",
-            "title": "Tagtypeids",
-            "description": "Tags on the job"
-          },
-          "customerPo": {
+          "workflow_type": {
             "anyOf": [
               {
                 "type": "string"
@@ -1841,34 +1748,10 @@
                 "type": "null"
               }
             ],
-            "title": "Customerpo",
-            "description": "Customer PO"
+            "title": "Workflow Type",
+            "description": "Workflow/record type name"
           },
-          "invoiceId": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Invoiceid",
-            "description": "ID of the invoice associated with this job"
-          },
-          "total": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Total",
-            "description": "Total amount of the job"
-          },
-          "summary": {
+          "description": {
             "anyOf": [
               {
                 "type": "string"
@@ -1877,33 +1760,347 @@
                 "type": "null"
               }
             ],
-            "title": "Summary",
-            "description": "Job summary"
+            "title": "Description",
+            "description": "Job description"
+          },
+          "customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Id",
+            "description": "Associated customer/contact ID"
+          },
+          "customer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Name",
+            "description": "Customer name"
+          },
+          "address_line1": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Line1",
+            "description": "Address line 1"
+          },
+          "address_line2": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Line2",
+            "description": "Address line 2"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City",
+            "description": "City"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State",
+            "description": "State/province"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code",
+            "description": "ZIP/postal code"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country",
+            "description": "Country"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At",
+            "description": "Creation timestamp (ISO format)"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At",
+            "description": "Last update timestamp (ISO format)"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At",
+            "description": "Completion timestamp (ISO format)"
+          },
+          "sales_rep_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sales Rep Id",
+            "description": "Sales representative ID"
+          },
+          "sales_rep_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sales Rep Name",
+            "description": "Sales representative name"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/CRMProvider",
+            "description": "CRM provider name"
+          },
+          "provider_data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Provider Data",
+            "description": "Provider-specific data"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "jobNumber",
-          "customerId",
-          "locationId",
-          "jobStatus",
-          "businessUnitId",
-          "jobTypeId",
-          "priority",
-          "campaignId",
-          "appointmentCount",
-          "firstAppointmentId",
-          "lastAppointmentId",
-          "noCharge",
-          "notificationsEnabled",
-          "createdOn",
-          "createdById",
-          "modifiedOn",
-          "tagTypeIds"
+          "status",
+          "provider"
         ],
-        "title": "JobResponse",
-        "description": "Response model for Service Titan job information."
+        "title": "Job",
+        "description": "Universal job model that works across all CRM providers."
+      },
+      "JobList": {
+        "properties": {
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/Job"
+            },
+            "type": "array",
+            "title": "Jobs",
+            "description": "List of jobs"
+          },
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count",
+            "description": "Total number of jobs"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/CRMProvider",
+            "description": "CRM provider name"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page",
+            "description": "Current page number (if paginated)"
+          },
+          "page_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Size",
+            "description": "Page size (if paginated)"
+          },
+          "has_more": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Has More",
+            "description": "Whether more results exist"
+          }
+        },
+        "type": "object",
+        "required": [
+          "jobs",
+          "total_count",
+          "provider"
+        ],
+        "title": "JobList",
+        "description": "Universal job list response with pagination."
+      },
+      "Note": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id",
+            "description": "Note identifier"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "Note text content"
+          },
+          "entity_id": {
+            "type": "string",
+            "title": "Entity Id",
+            "description": "ID of the entity this note belongs to"
+          },
+          "entity_type": {
+            "type": "string",
+            "title": "Entity Type",
+            "description": "Type of entity (job, contact, project, etc.)"
+          },
+          "created_by_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By Id",
+            "description": "Creator identifier"
+          },
+          "created_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By Name",
+            "description": "Creator name"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "Creation timestamp (ISO format)"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At",
+            "description": "Last update timestamp (ISO format)"
+          },
+          "is_pinned": {
+            "type": "boolean",
+            "title": "Is Pinned",
+            "description": "Whether the note is pinned",
+            "default": false
+          },
+          "provider": {
+            "$ref": "#/components/schemas/CRMProvider",
+            "description": "CRM provider name"
+          },
+          "provider_data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Provider Data",
+            "description": "Provider-specific data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "entity_id",
+          "entity_type",
+          "created_at",
+          "provider"
+        ],
+        "title": "Note",
+        "description": "Universal note/activity model that works across all CRM providers."
       },
       "PaymentDetails": {
         "properties": {
@@ -2111,15 +2308,15 @@
         "title": "ProjectData",
         "description": "Mock project data model with all customer and claim information."
       },
-      "ProjectStatusListResponse": {
+      "ProjectList": {
         "properties": {
           "projects": {
             "items": {
-              "$ref": "#/components/schemas/ProjectStatusResponse"
+              "$ref": "#/components/schemas/src__integrations__crm__schemas__Project__2"
             },
             "type": "array",
             "title": "Projects",
-            "description": "List of project statuses"
+            "description": "List of projects"
           },
           "total_count": {
             "type": "integer",
@@ -2128,7 +2325,43 @@
           },
           "provider": {
             "$ref": "#/components/schemas/CRMProvider",
-            "description": "CRM provider"
+            "description": "CRM provider name"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page",
+            "description": "Current page number (if paginated)"
+          },
+          "page_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Size",
+            "description": "Page size (if paginated)"
+          },
+          "has_more": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Has More",
+            "description": "Whether more results exist"
           }
         },
         "type": "object",
@@ -2137,64 +2370,8 @@
           "total_count",
           "provider"
         ],
-        "title": "ProjectStatusListResponse",
-        "description": "Response model for multiple project statuses."
-      },
-      "ProjectStatusResponse": {
-        "properties": {
-          "project_id": {
-            "type": "string",
-            "title": "Project Id",
-            "description": "Unique project identifier"
-          },
-          "status": {
-            "$ref": "#/components/schemas/Status",
-            "description": "Current project status"
-          },
-          "claim_status": {
-            "$ref": "#/components/schemas/ClaimStatus",
-            "description": "Current claim status",
-            "default": "None"
-          },
-          "provider": {
-            "$ref": "#/components/schemas/CRMProvider",
-            "description": "CRM provider"
-          },
-          "updated_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Updated At",
-            "description": "Last status update timestamp"
-          },
-          "provider_data": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Provider Data",
-            "description": "Provider-specific data"
-          }
-        },
-        "type": "object",
-        "required": [
-          "project_id",
-          "status",
-          "provider"
-        ],
-        "title": "ProjectStatusResponse",
-        "description": "Response model for project status information."
+        "title": "ProjectList",
+        "description": "Universal project list response with pagination."
       },
       "RequiredActions": {
         "properties": {
@@ -2244,77 +2421,6 @@
         ],
         "title": "Role",
         "description": "User roles in the system."
-      },
-      "SkuModel": {
-        "properties": {
-          "id": {
-            "type": "integer",
-            "title": "Id",
-            "description": "SKU ID"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "SKU name"
-          },
-          "displayName": {
-            "type": "string",
-            "title": "Displayname",
-            "description": "Display name"
-          },
-          "type": {
-            "type": "string",
-            "title": "Type",
-            "description": "SKU type"
-          },
-          "soldHours": {
-            "type": "number",
-            "title": "Soldhours",
-            "description": "Sold hours"
-          },
-          "generalLedgerAccountId": {
-            "type": "integer",
-            "title": "Generalledgeraccountid",
-            "description": "General ledger account ID"
-          },
-          "generalLedgerAccountName": {
-            "type": "string",
-            "title": "Generalledgeraccountname",
-            "description": "General ledger account name"
-          },
-          "modifiedOn": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Modifiedon",
-            "description": "Date/time (in UTC) when SKU was last modified"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "name",
-          "displayName",
-          "type",
-          "soldHours",
-          "generalLedgerAccountId",
-          "generalLedgerAccountName",
-          "modifiedOn"
-        ],
-        "title": "SkuModel",
-        "description": "SKU model for estimate items."
-      },
-      "Status": {
-        "type": "string",
-        "enum": [
-          "Scheduled",
-          "Dispatched",
-          "In Progress",
-          "Hold",
-          "Completed",
-          "Canceled"
-        ],
-        "title": "Status",
-        "description": "Status values for Service Titan jobs and projects."
       },
       "User": {
         "properties": {
@@ -2464,6 +2570,362 @@
         ],
         "title": "VoiceAIProvider",
         "description": "Available Voice AI providers."
+      },
+      "src__integrations__crm__schemas__Project__1": {
+        "properties": {
+          "project_data": {
+            "$ref": "#/components/schemas/ProjectData"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "claim_status": {
+            "type": "string",
+            "title": "Claim Status",
+            "description": "Claim status",
+            "default": "None"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata",
+            "description": "Project metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_data",
+          "status",
+          "updated_at"
+        ],
+        "title": "Project",
+        "description": "Mock project with status and metadata."
+      },
+      "src__integrations__crm__schemas__Project__2": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique project identifier (provider-specific format)"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Project name/title"
+          },
+          "number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Number",
+            "description": "Project number"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Current project status (provider-specific)"
+          },
+          "status_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Id",
+            "description": "Status identifier"
+          },
+          "sub_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub Status",
+            "description": "Project sub-status name"
+          },
+          "sub_status_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub Status Id",
+            "description": "Sub-status identifier"
+          },
+          "workflow_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Type",
+            "description": "Workflow/record type name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Project description"
+          },
+          "customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Id",
+            "description": "Associated customer/contact ID"
+          },
+          "customer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Name",
+            "description": "Customer name"
+          },
+          "location_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Id",
+            "description": "Location identifier"
+          },
+          "address_line1": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Line1",
+            "description": "Address line 1"
+          },
+          "address_line2": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Line2",
+            "description": "Address line 2"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City",
+            "description": "City"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State",
+            "description": "State/province"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code",
+            "description": "ZIP/postal code"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country",
+            "description": "Country"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At",
+            "description": "Creation timestamp (ISO format)"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At",
+            "description": "Last update timestamp (ISO format)"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date",
+            "description": "Project start date (ISO format)"
+          },
+          "target_completion_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Completion Date",
+            "description": "Target completion date (ISO format)"
+          },
+          "actual_completion_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Completion Date",
+            "description": "Actual completion date (ISO format)"
+          },
+          "sales_rep_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sales Rep Id",
+            "description": "Sales representative ID"
+          },
+          "sales_rep_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sales Rep Name",
+            "description": "Sales representative name"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/CRMProvider",
+            "description": "CRM provider name"
+          },
+          "provider_data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Provider Data",
+            "description": "Provider-specific data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "provider"
+        ],
+        "title": "Project",
+        "description": "Universal project model that works across all CRM providers.\n\nIn hierarchical CRMs (Service Titan), projects are top-level containers that\nmay contain multiple jobs. In flat CRMs (JobNimbus), projects and jobs are\nthe same entity."
       }
     },
     "securitySchemes": {

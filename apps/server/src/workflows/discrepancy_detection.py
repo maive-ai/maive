@@ -22,7 +22,7 @@ from src.ai.base import ContentAnalysisRequest
 from src.ai.providers import get_ai_provider
 from src.integrations.crm.base import CRMError
 from src.integrations.crm.constants import SubStatus
-from src.integrations.crm.providers.service_titan.provider import ServiceTitanProvider
+from src.integrations.crm.providers.factory import get_crm_provider
 
 # Force Service Titan provider for this workflow
 os.environ["CRM_PROVIDER"] = "service_titan"
@@ -55,7 +55,7 @@ class DiscrepancyDetectionWorkflow:
     def __init__(self):
         """Initialize the workflow."""
         self.ai_provider = get_ai_provider()
-        self.crm_provider = ServiceTitanProvider()
+        self.crm_provider = get_crm_provider()
 
     async def execute_for_job(
         self,
