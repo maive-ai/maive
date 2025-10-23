@@ -1,4 +1,4 @@
-# SrcIntegrationsCrmSchemasProject2
+# Project
 
 Universal project model that works across all CRM providers.  In hierarchical CRMs (Service Titan), projects are top-level containers that may contain multiple jobs. In flat CRMs (JobNimbus), projects and jobs are the same entity.
 
@@ -37,9 +37,9 @@ Name | Type | Description | Notes
 ## Example
 
 ```typescript
-import { SrcIntegrationsCrmSchemasProject2 } from './api';
+import { Project } from './api';
 
-const instance: SrcIntegrationsCrmSchemasProject2 = {
+const instance: Project = {
     id,
     name,
     number,

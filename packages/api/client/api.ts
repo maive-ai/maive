@@ -489,31 +489,6 @@ export interface Contact {
 
 
 /**
- * Contact information model.
- * @export
- * @interface ContactInfo
- */
-export interface ContactInfo {
-    /**
-     * 
-     * @type {string}
-     * @memberof ContactInfo
-     */
-    'name': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof ContactInfo
-     */
-    'phone': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof ContactInfo
-     */
-    'email': string;
-}
-/**
  * Universal contact list response with pagination.
  * @export
  * @interface ContactList
@@ -864,96 +839,176 @@ export interface PaymentDetails {
     'check_number'?: string | null;
 }
 /**
- * Mock project data model with all customer and claim information.
+ * Universal project model that works across all CRM providers.  In hierarchical CRMs (Service Titan), projects are top-level containers that may contain multiple jobs. In flat CRMs (JobNimbus), projects and jobs are the same entity.
  * @export
- * @interface ProjectData
+ * @interface Project
  */
-export interface ProjectData {
+export interface Project {
     /**
-     * Project ID
+     * Unique project identifier (provider-specific format)
      * @type {string}
-     * @memberof ProjectData
+     * @memberof Project
      */
     'id': string;
     /**
-     * Customer/homeowner name
+     * 
      * @type {string}
-     * @memberof ProjectData
+     * @memberof Project
      */
-    'customerName': string;
-    /**
-     * Property address
-     * @type {string}
-     * @memberof ProjectData
-     */
-    'address': string;
-    /**
-     * Customer phone number
-     * @type {string}
-     * @memberof ProjectData
-     */
-    'phone': string;
+    'name'?: string | null;
     /**
      * 
      * @type {string}
-     * @memberof ProjectData
+     * @memberof Project
      */
-    'email'?: string | null;
+    'number'?: string | null;
+    /**
+     * Current project status (provider-specific)
+     * @type {string}
+     * @memberof Project
+     */
+    'status': string;
+    /**
+     * 
+     * @type {StatusId}
+     * @memberof Project
+     */
+    'status_id'?: StatusId | null;
     /**
      * 
      * @type {string}
-     * @memberof ProjectData
+     * @memberof Project
      */
-    'claimNumber'?: string | null;
+    'sub_status'?: string | null;
+    /**
+     * 
+     * @type {SubStatusId}
+     * @memberof Project
+     */
+    'sub_status_id'?: SubStatusId | null;
     /**
      * 
      * @type {string}
-     * @memberof ProjectData
+     * @memberof Project
      */
-    'dateOfLoss'?: string | null;
+    'workflow_type'?: string | null;
     /**
      * 
      * @type {string}
-     * @memberof ProjectData
+     * @memberof Project
      */
-    'insuranceAgency'?: string | null;
-    /**
-     * 
-     * @type {ContactInfo}
-     * @memberof ProjectData
-     */
-    'insuranceAgencyContact'?: ContactInfo | null;
+    'description'?: string | null;
     /**
      * 
      * @type {string}
-     * @memberof ProjectData
+     * @memberof Project
      */
-    'adjusterName'?: string | null;
-    /**
-     * 
-     * @type {ContactInfo}
-     * @memberof ProjectData
-     */
-    'adjusterContact'?: ContactInfo | null;
+    'customer_id'?: string | null;
     /**
      * 
      * @type {string}
-     * @memberof ProjectData
+     * @memberof Project
      */
-    'notes'?: string | null;
+    'customer_name'?: string | null;
     /**
      * 
-     * @type {number}
-     * @memberof ProjectData
+     * @type {string}
+     * @memberof Project
      */
-    'tenant'?: number | null;
+    'location_id'?: string | null;
     /**
      * 
-     * @type {number}
-     * @memberof ProjectData
+     * @type {string}
+     * @memberof Project
      */
-    'job_id'?: number | null;
+    'address_line1'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Project
+     */
+    'address_line2'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Project
+     */
+    'city'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Project
+     */
+    'state'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Project
+     */
+    'postal_code'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Project
+     */
+    'country'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Project
+     */
+    'created_at'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Project
+     */
+    'updated_at'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Project
+     */
+    'start_date'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Project
+     */
+    'target_completion_date'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Project
+     */
+    'actual_completion_date'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Project
+     */
+    'sales_rep_id'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Project
+     */
+    'sales_rep_name'?: string | null;
+    /**
+     * CRM provider name
+     * @type {CRMProvider}
+     * @memberof Project
+     */
+    'provider': CRMProvider;
+    /**
+     * Provider-specific data
+     * @type {{ [key: string]: any; }}
+     * @memberof Project
+     */
+    'provider_data'?: { [key: string]: any; };
 }
+
+
 /**
  * Universal project list response with pagination.
  * @export
@@ -962,10 +1017,10 @@ export interface ProjectData {
 export interface ProjectList {
     /**
      * List of projects
-     * @type {Array<SrcIntegrationsCrmSchemasProject2>}
+     * @type {Array<Project>}
      * @memberof ProjectList
      */
-    'projects': Array<SrcIntegrationsCrmSchemasProject2>;
+    'projects': Array<Project>;
     /**
      * Total number of projects
      * @type {number}
@@ -1037,214 +1092,6 @@ export const Role = {
 } as const;
 
 export type Role = typeof Role[keyof typeof Role];
-
-
-/**
- * Mock project with status and metadata.
- * @export
- * @interface SrcIntegrationsCrmSchemasProject1
- */
-export interface SrcIntegrationsCrmSchemasProject1 {
-    /**
-     * 
-     * @type {ProjectData}
-     * @memberof SrcIntegrationsCrmSchemasProject1
-     */
-    'project_data': ProjectData;
-    /**
-     * 
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject1
-     */
-    'status': string;
-    /**
-     * Claim status
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject1
-     */
-    'claim_status'?: string;
-    /**
-     * 
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject1
-     */
-    'updated_at': string;
-    /**
-     * 
-     * @type {{ [key: string]: any; }}
-     * @memberof SrcIntegrationsCrmSchemasProject1
-     */
-    'metadata'?: { [key: string]: any; } | null;
-}
-/**
- * Universal project model that works across all CRM providers.  In hierarchical CRMs (Service Titan), projects are top-level containers that may contain multiple jobs. In flat CRMs (JobNimbus), projects and jobs are the same entity.
- * @export
- * @interface SrcIntegrationsCrmSchemasProject2
- */
-export interface SrcIntegrationsCrmSchemasProject2 {
-    /**
-     * Unique project identifier (provider-specific format)
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'id': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'name'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'number'?: string | null;
-    /**
-     * Current project status (provider-specific)
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'status': string;
-    /**
-     * 
-     * @type {StatusId}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'status_id'?: StatusId | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'sub_status'?: string | null;
-    /**
-     * 
-     * @type {SubStatusId}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'sub_status_id'?: SubStatusId | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'workflow_type'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'description'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'customer_id'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'customer_name'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'location_id'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'address_line1'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'address_line2'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'city'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'state'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'postal_code'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'country'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'created_at'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'updated_at'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'start_date'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'target_completion_date'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'actual_completion_date'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'sales_rep_id'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'sales_rep_name'?: string | null;
-    /**
-     * CRM provider name
-     * @type {CRMProvider}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'provider': CRMProvider;
-    /**
-     * Provider-specific data
-     * @type {{ [key: string]: any; }}
-     * @memberof SrcIntegrationsCrmSchemasProject2
-     */
-    'provider_data'?: { [key: string]: any; };
-}
 
 
 /**
@@ -2228,7 +2075,7 @@ export const CRMApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getProjectApiCrmProjectsProjectIdGet(projectId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<SrcIntegrationsCrmSchemasProject1>> {
+        async getProjectApiCrmProjectsProjectIdGet(projectId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Project>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.getProjectApiCrmProjectsProjectIdGet(projectId, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['CRMApi.getProjectApiCrmProjectsProjectIdGet']?.[localVarOperationServerIndex]?.url;
@@ -2354,7 +2201,7 @@ export const CRMApiFactory = function (configuration?: Configuration, basePath?:
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getProjectApiCrmProjectsProjectIdGet(projectId: string, options?: RawAxiosRequestConfig): AxiosPromise<SrcIntegrationsCrmSchemasProject1> {
+        getProjectApiCrmProjectsProjectIdGet(projectId: string, options?: RawAxiosRequestConfig): AxiosPromise<Project> {
             return localVarFp.getProjectApiCrmProjectsProjectIdGet(projectId, options).then((request) => request(axios, basePath));
         },
         /**

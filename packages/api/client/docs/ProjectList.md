@@ -6,7 +6,7 @@ Universal project list response with pagination.
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**projects** | [**Array&lt;SrcIntegrationsCrmSchemasProject2&gt;**](SrcIntegrationsCrmSchemasProject2.md) | List of projects | [default to undefined]
+**projects** | [**Array&lt;Project&gt;**](Project.md) | List of projects | [default to undefined]
 **total_count** | **number** | Total number of projects | [default to undefined]
 **provider** | [**CRMProvider**](CRMProvider.md) | CRM provider name | [default to undefined]
 **page** | **number** |  | [optional] [default to undefined]
