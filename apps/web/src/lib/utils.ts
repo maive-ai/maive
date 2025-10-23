@@ -1,4 +1,3 @@
-import { ClaimStatus, Status } from '@maive/api/client';
 import { useMutation } from '@tanstack/react-query';
 import { clsx, type ClassValue } from 'clsx';
 import { useEffect, useRef } from 'react';
@@ -83,51 +82,20 @@ export function useAutoSave<T extends Record<string, any>>(
  */
 export function getStatusColor(status: string): string {
   switch (status) {
-    case Status.Scheduled:
+    case 'Scheduled':
       return 'bg-blue-100 text-blue-800';
-    case Status.Dispatched:
+    case 'Dispatched':
       return 'bg-purple-100 text-purple-800';
-    case Status.InProgress:
+    case 'In Progress':
       return 'bg-yellow-100 text-yellow-800';
-    case Status.Hold:
+    case 'Hold':
       return 'bg-red-100 text-red-800';
-    case Status.Completed:
+    case 'Completed':
       return 'bg-green-100 text-green-800';
-    case Status.Canceled:
+    case 'Canceled':
       return 'bg-gray-100 text-gray-800';
     default:
       return 'bg-gray-100 text-gray-800';
   }
 }
 
-/**
- * Get color classes for claim status badges
- */
-export function getClaimStatusColor(claimStatus: string): string {
-  let colorClass: string;
-
-  switch (claimStatus) {
-    case ClaimStatus.None:
-      colorClass = 'bg-gray-100 text-gray-800';
-      break;
-    case ClaimStatus.PendingReview:
-      colorClass = 'bg-yellow-100 text-yellow-800';
-      break;
-    case ClaimStatus.WorkNeeded:
-      colorClass = 'bg-blue-100 text-blue-800';
-      break;
-    case ClaimStatus.PartiallyApproved:
-      colorClass = 'bg-orange-100 text-orange-800';
-      break;
-    case ClaimStatus.FullyApproved:
-      colorClass = 'bg-green-100 text-green-800';
-      break;
-    case ClaimStatus.Denied:
-      colorClass = 'bg-red-100 text-red-800';
-      break;
-    default:
-      colorClass = 'bg-gray-100 text-gray-800';
-      console.warn(`[Utils] Unknown claim status: ${claimStatus}, using default gray color`);
-  }
-  return colorClass;
-}

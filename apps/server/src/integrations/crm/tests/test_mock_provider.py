@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.integrations.crm.constants import ClaimStatus, Status
+from src.integrations.crm.constants import Status
 from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
 from src.integrations.crm.providers.mock.provider import MockProvider
 

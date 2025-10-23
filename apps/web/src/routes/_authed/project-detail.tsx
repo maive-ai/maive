@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/ui/phone-input';
-import { getClaimStatusColor } from '@/lib/utils';
-import { ClaimStatus } from '@maive/api/client';
+import { getStatusColor } from '@/lib/utils';
 import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
 import { createFileRoute } from '@tanstack/react-router';
 import { AlertCircle, Building2, CheckCircle2, FileText, Loader2, Mail, MapPin, Phone, User } from 'lucide-react';
@@ -100,7 +99,7 @@ function ProjectDetail() {
     callAndWritetoCrmMutation.mutate({
       phone_number: phoneNumber,
       // Pass customer details from project data
-      customer_id: project.project_id,
+      customer_id: project.id,
       customer_name: providerData?.customerName,
       customer_address: providerData?.address,
       claim_number: providerData?.claimNumber,
@@ -136,12 +135,12 @@ function ProjectDetail() {
                 <div className="size-10 rounded-lg bg-gradient-to-br from-orange-400 to-pink-400 flex items-center justify-center">
                   <Building2 className="size-6 text-white" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <CardTitle className="text-2xl">{providerData?.customerName || 'Customer Name'}</CardTitle>
                 </div>
-                {project.claim_status && project.claim_status !== ClaimStatus.None && (
-                  <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getClaimStatusColor(project.claim_status)}`}>
-                    {project.claim_status}
+                {project.status && (
+                  <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
+                    {project.status}
                   </div>
                 )}
               </div>

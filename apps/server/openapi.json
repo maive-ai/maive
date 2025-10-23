@@ -1279,19 +1279,6 @@
         "title": "CallStatus",
         "description": "Call status values across Voice AI systems."
       },
-      "ClaimStatus": {
-        "type": "string",
-        "enum": [
-          "None",
-          "Pending Review",
-          "Work Needed",
-          "Partially Approved",
-          "Fully Approved",
-          "Denied"
-        ],
-        "title": "ClaimStatus",
-        "description": "Claim status values with descriptions for AI context."
-      },
       "ClaimStatusData": {
         "properties": {
           "call_outcome": {
@@ -1301,9 +1288,10 @@
             "default": "unknown"
           },
           "claim_status": {
-            "$ref": "#/components/schemas/ClaimStatus",
-            "description": "Claim status: approved, denied, pending_review, etc.",
-            "default": "None"
+            "type": "string",
+            "title": "Claim Status",
+            "description": "Project/job status from call: e.g. 'Completed', 'Hold', 'Pending Review', etc.",
+            "default": ""
           },
           "payment_details": {
             "anyOf": [
@@ -1342,7 +1330,7 @@
         },
         "type": "object",
         "title": "ClaimStatusData",
-        "description": "Provider-agnostic structured data from insurance claim status calls."
+        "description": "Provider-agnostic structured data from insurance claim status calls.\n\nNote: claim_status now represents the project/job status in the CRM.\nDifferent CRM providers have different status values."
       },
       "Contact": {
         "properties": {
