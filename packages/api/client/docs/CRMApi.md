@@ -397,7 +397,7 @@ const { status, data } = await apiInstance.getJobApiCrmJobsJobIdGet(
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **getProjectApiCrmProjectsProjectIdGet**
-> SrcIntegrationsCrmSchemasProject1 getProjectApiCrmProjectsProjectIdGet()
+> Project getProjectApiCrmProjectsProjectIdGet()
 
 Get a specific project by ID.  This endpoint works across all CRM providers and returns a standardized Project schema.  Note: In flat CRMs like JobNimbus, projects and jobs are the same entity.  Args:     project_id: The unique identifier for the project (provider-specific format)     crm_service: The CRM service instance from dependency injection  Returns:     Project: The project information in universal format  Raises:     HTTPException: If the project is not found or an error occurs
 
@@ -428,7 +428,7 @@ const { status, data } = await apiInstance.getProjectApiCrmProjectsProjectIdGet(
 
 ### Return type
 
-**SrcIntegrationsCrmSchemasProject1**
+**Project**
 
 ### Authorization
 
