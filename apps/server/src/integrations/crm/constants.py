@@ -47,37 +47,12 @@ class EstimateReviewStatus(str, Enum):
     NOT_APPROVED = "NotApproved"
 
 
-class ClaimStatus(str, Enum):
-    """Claim status values with descriptions for AI context."""
-
-    NONE = "None"
-    PENDING_REVIEW = "Pending Review"
-    WORK_NEEDED = "Work Needed"
-    PARTIALLY_APPROVED = "Partially Approved"
-    APPROVED = "Fully Approved"
-    DENIED = "Denied"
-
-    @property
-    def description(self) -> str:
-        """Get description for this claim status."""
-        descriptions = {
-            "None": "No claim status information available or claim not yet submitted",
-            "Pending Review": "Claim submitted and awaiting insurance company review/decision",
-            "Work Needed": "Claim requires contractor to take additional action, like submit documentation or gather a report, before approval",
-            "Partially Approved": "Claim approved for partial amount, needed for remaining portion",
-            "Fully Approved": "Claim completely approved and payment should be processed",
-            "Denied": "Claim fully rejected by insurance company.",
-        }
-        return descriptions.get(self.value, "")
-
-    @classmethod
-    def get_descriptions(cls) -> dict[str, str]:
-        """Get all status descriptions for AI context."""
-        return {status.value: status.description for status in cls}
-
-
 class Status(str, Enum):
-    """Status values for Service Titan jobs and projects."""
+    """Status values for Service Titan jobs and projects.
+
+    Note: This is Service Titan-specific. The universal CRM interface uses status: str
+    to support dynamic status values from different CRM providers.
+    """
 
     SCHEDULED = "Scheduled"
     DISPATCHED = "Dispatched"

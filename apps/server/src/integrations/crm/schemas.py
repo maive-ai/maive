@@ -10,7 +10,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.integrations.crm.constants import ClaimStatus, CRMProvider, EstimateReviewStatus, Status
+from src.integrations.crm.constants import CRMProvider, EstimateReviewStatus, Status
 
 
 # ============================================================================
@@ -207,13 +207,13 @@ class Note(BaseModel):
 
 
 class ProjectStatusResponse(BaseModel):
-    """Response model for project status information."""
+    """Response model for project status information.
+
+    DEPRECATED: Legacy schema. Use universal Project schema instead.
+    """
 
     project_id: str = Field(..., description="Unique project identifier")
     status: Status = Field(..., description="Current project status")
-    claim_status: ClaimStatus = Field(
-        default=ClaimStatus.NONE, description="Current claim status"
-    )
     provider: CRMProvider = Field(..., description="CRM provider")
     updated_at: datetime | None = Field(None, description="Last status update timestamp")
     provider_data: dict[str, Any] | None = Field(None, description="Provider-specific data")
@@ -571,47 +571,6 @@ class UpdateProjectRequest(BaseModel):
     name: str | None = Field(None, description="Project name")
     summary: str | None = Field(None, description="Project summary (HTML)")
     external_data: list[ExternalDataItem] | None = Field(None, description="External data to attach to project", alias="externalData")
-
-
-class ContactInfo(BaseModel):
-    """Contact information model."""
-
-    name: str
-    phone: str
-    email: str
-
-
-class ProjectData(BaseModel):
-    """Mock project data model with all customer and claim information."""
-
-    id: str = Field(..., description="Project ID")
-    customerName: str = Field(..., description="Customer/homeowner name")
-    address: str = Field(..., description="Property address")
-    phone: str = Field(..., description="Customer phone number")
-    email: str | None = Field(None, description="Customer email")
-    claimNumber: str | None = Field(None, description="Insurance claim number")
-    dateOfLoss: str | None = Field(None, description="Date of loss (ISO format)")
-    insuranceAgency: str | None = Field(None, description="Insurance company name")
-    insuranceAgencyContact: ContactInfo | None = Field(
-        None, description="Insurance agency contact"
-    )
-    adjusterName: str | None = Field(None, description="Insurance adjuster name")
-    adjusterContact: ContactInfo | None = Field(
-        None, description="Insurance adjuster contact"
-    )
-    notes: str | None = Field(None, description="Project notes")
-    tenant: int | None = Field(None, description="Tenant ID")
-    job_id: int | None = Field(None, description="Job ID")
-
-
-class Project(BaseModel):
-    """Mock project with status and metadata."""
-
-    project_data: ProjectData
-    status: str
-    claim_status: str = Field(default="None", description="Claim status")
-    updated_at: str
-    metadata: dict[str, Any] | None = Field(None, description="Project metadata")
 
 
 # Pricebook models

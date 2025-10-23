@@ -15,7 +15,6 @@ from src.ai.voice_ai.schemas import (
     VoiceAIErrorResponse,
 )
 from src.ai.voice_ai.service import VoiceAIService
-from src.integrations.crm.constants import ClaimStatus
 from src.integrations.crm.service import CRMService
 from src.utils.logger import logger
 
@@ -215,25 +214,25 @@ class CallAndWriteToCRMWorkflow:
                     f"[Call Monitoring Workflow] Successfully added CRM note for job {job_id}"
                 )
 
-            # Update claim status in CRM (skip if status is None)
-            if analysis.structured_data.claim_status != ClaimStatus.NONE:
+            # Update project status in CRM (skip if status is empty)
+            if analysis.structured_data.claim_status:
                 logger.info(
-                    f"[Call Monitoring Workflow] Updating claim status for job {job_id} to {analysis.structured_data.claim_status.value}"
+                    f"[Call Monitoring Workflow] Updating project status for job {job_id} to {analysis.structured_data.claim_status}"
                 )
                 status_update_result = (
-                    await self.crm_service.update_project_claim_status(
+                    await self.crm_service.update_job_status(
                         job_id=job_id,
-                        claim_status=analysis.structured_data.claim_status.value,
+                        status=analysis.structured_data.claim_status,
                     )
                 )
 
-                if status_update_result:
+                if isinstance(status_update_result, object) and hasattr(status_update_result, "error"):
                     logger.error(
-                        f"[Call Monitoring Workflow] Failed to update claim status for job {job_id}: {status_update_result.error}"
+                        f"[Call Monitoring Workflow] Failed to update project status for job {job_id}: {status_update_result.error}"
                     )
                 else:
                     logger.info(
-                        f"[Call Monitoring Workflow] Successfully updated claim status for job {job_id}"
+                        f"[Call Monitoring Workflow] Successfully updated project status for job {job_id}"
                     )
 
         except Exception as e:
@@ -261,8 +260,11 @@ class CallAndWriteToCRMWorkflow:
                 "🤖 Voice AI Call Summary",
                 "",
                 f"Call Outcome: {structured_data.call_outcome}",
-                f"Claim Status: {structured_data.claim_status}",
             ]
+
+            # Add status if available
+            if structured_data.claim_status:
+                note_lines.append(f"Status: {structured_data.claim_status}")
 
             # Add next steps if available
             if (

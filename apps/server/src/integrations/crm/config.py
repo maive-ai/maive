@@ -16,7 +16,7 @@ class ServiceTitanConfig(BaseSettings):
     """Service Titan-specific configuration."""
 
     model_config = SettingsConfigDict(
-        case_sensitive=False, extra="ignore", env_prefix="CRM_"
+        case_sensitive=False, extra="ignore", env_prefix="CRM_SERVICE_TITAN_"
     )
 
     tenant_id: str = Field(description="Tenant ID")
@@ -37,7 +37,7 @@ class JobNimbusConfig(BaseSettings):
     """JobNimbus-specific configuration."""
 
     model_config = SettingsConfigDict(
-        case_sensitive=False, extra="ignore", env_prefix="CRM_"
+        case_sensitive=False, extra="ignore", env_prefix="CRM_JOB_NIMBUS_"
     )
 
     api_key: str = Field(description="JobNimbus API key")
