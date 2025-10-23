@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 from src.integrations.crm.base import CRMError, CRMProvider
 from src.integrations.crm.constants import ClaimStatus, Status
 from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
-from src.integrations.crm.providers.mock.mock_data import (
+from src.integrations.crm.providers.mock.data import (
     Project,
     ProjectData,
     get_mock_projects,
@@ -23,6 +23,8 @@ from src.integrations.crm.schemas import (
     Job,
     JobList,
     Note,
+    Project as UniversalProject,
+    ProjectList as UniversalProjectList,
     ProjectStatusListResponse,
     ProjectStatusResponse,
 )
@@ -59,9 +61,7 @@ class MockProvider(CRMProvider):
         logger.info(f"Getting mock job: {job_id}")
 
         # Find project by ID
-        project = next(
-            (p for p in self._projects if p.project_data.id == job_id), None
-        )
+        project = next((p for p in self._projects if p.project_data.id == job_id), None)
 
         if not project:
             logger.warning(f"Mock job not found: {job_id}")
@@ -232,7 +232,9 @@ class MockProvider(CRMProvider):
         # Add note to project
         enhanced_text = f"{now.strftime('%Y-%m-%d %H:%M')}: {text}"
         if project.project_data.notes:
-            project.project_data.notes = enhanced_text + "\n\n" + project.project_data.notes
+            project.project_data.notes = (
+                enhanced_text + "\n\n" + project.project_data.notes
+            )
         else:
             project.project_data.notes = enhanced_text
 
@@ -300,6 +302,127 @@ class MockProvider(CRMProvider):
                 f"[MockProvider] Updated job {job_id} status from {old_status} to {status}"
             )
 
+    async def get_project(self, project_id: str) -> UniversalProject:
+        """
+        Get a specific project by ID.
+
+        In Mock CRM, projects and jobs are the same entity.
+
+        Args:
+            project_id: The unique identifier for the project
+
+        Returns:
+            UniversalProject: Universal project schema
+
+        Raises:
+            CRMError: If the project is not found
+        """
+        logger.info(f"Getting mock project: {project_id}")
+
+        # Find project by ID
+        project = next(
+            (p for p in self._projects if p.project_data.id == project_id), None
+        )
+
+        if not project:
+            logger.warning(f"Mock project not found: {project_id}")
+            raise CRMError(
+                error_code="NOT_FOUND",
+                message=f"Project with ID {project_id} not found",
+            )
+
+        return self._transform_project_to_universal_project(project)
+
+    async def get_all_projects(
+        self,
+        filters: dict | None = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> UniversalProjectList:
+        """
+        Get all projects with optional filtering and pagination.
+
+        In Mock CRM, projects and jobs are the same entity.
+
+        Args:
+            filters: Optional dictionary of filters (not implemented for mock)
+            page: Page number (1-indexed)
+            page_size: Number of items per page
+
+        Returns:
+            UniversalProjectList: Paginated list of projects
+        """
+        logger.info(f"Getting all mock projects ({len(self._projects)} total)")
+
+        # Convert all projects to UniversalProject schema
+        projects = [
+            self._transform_project_to_universal_project(project)
+            for project in self._projects
+        ]
+
+        # Apply pagination
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        paginated_projects = projects[start_idx:end_idx]
+
+        return UniversalProjectList(
+            projects=paginated_projects,
+            total_count=len(projects),
+            provider=CRMProviderEnum.MOCK,
+            page=page,
+            page_size=page_size,
+            has_more=end_idx < len(projects),
+        )
+
+    async def update_project_status(
+        self,
+        project_id: str,
+        status: str,
+        **kwargs,
+    ) -> None:
+        """
+        Update the status of a project.
+
+        In Mock CRM, this has the same effect as update_job_status().
+
+        Args:
+            project_id: The unique identifier for the project
+            status: The new status value
+            **kwargs: Optional parameters (claim_status, etc.)
+
+        Raises:
+            CRMError: If the project is not found
+        """
+        logger.info(f"[MockProvider] Updating status for project {project_id} to {status}")
+
+        # Find project
+        project: Project | None = next(
+            (p for p in self._projects if p.project_data.id == project_id), None
+        )
+
+        if not project:
+            logger.warning(f"[MockProvider] Project not found: {project_id}")
+            raise CRMError(
+                error_code="NOT_FOUND",
+                message=f"Project with ID {project_id} not found",
+            )
+
+        old_status = project.status
+        project.status = status
+
+        # Update claim status if provided
+        if "claim_status" in kwargs:
+            old_claim_status = project.claim_status
+            project.claim_status = kwargs["claim_status"]
+            logger.info(
+                f"[MockProvider] Updated project {project_id} status from {old_status} to {status}, "
+                f"claim status from {old_claim_status} to {kwargs['claim_status']}"
+            )
+        else:
+            logger.info(
+                f"[MockProvider] Updated project {project_id} status from {old_status} to {status}"
+            )
+
     # ========================================================================
     # Helper Methods (transformation functions)
     # ========================================================================
@@ -308,25 +431,34 @@ class MockProvider(CRMProvider):
         """Transform internal Project model to universal Job schema."""
         provider_data = project.project_data.model_dump(exclude={"id"}, mode="json")
 
-        # Split customer name into first/last if possible
         customer_name = project.project_data.customerName or ""
-        name_parts = customer_name.split(" ", 1)
 
         return Job(
             id=project.project_data.id,
             name=f"Job for {customer_name}",
-            number=str(project.project_data.job_id) if project.project_data.job_id else None,
+            number=str(project.project_data.job_id)
+            if project.project_data.job_id
+            else None,
             status=project.status,
             status_id=None,
             workflow_type="Project",
             description=project.project_data.notes,
             customer_id=project.project_data.id,  # Use project ID as customer ID
             customer_name=customer_name,
-            address_line1=project.project_data.address.split(",")[0] if project.project_data.address else None,
+            address_line1=project.project_data.address.split(",")[0]
+            if project.project_data.address
+            else None,
             address_line2=None,
-            city=project.project_data.address.split(",")[1].strip() if "," in (project.project_data.address or "") else None,
-            state=project.project_data.address.split(",")[2].strip().split()[0] if len((project.project_data.address or "").split(",")) > 2 else None,
-            postal_code=project.project_data.address.split(",")[2].strip().split()[1] if len((project.project_data.address or "").split(",")) > 2 and len(project.project_data.address.split(",")[2].strip().split()) > 1 else None,
+            city=project.project_data.address.split(",")[1].strip()
+            if "," in (project.project_data.address or "")
+            else None,
+            state=project.project_data.address.split(",")[2].strip().split()[0]
+            if len((project.project_data.address or "").split(",")) > 2
+            else None,
+            postal_code=project.project_data.address.split(",")[2].strip().split()[1]
+            if len((project.project_data.address or "").split(",")) > 2
+            and len(project.project_data.address.split(",")[2].strip().split()) > 1
+            else None,
             country="USA",
             created_at=project.updated_at,
             updated_at=project.updated_at,
@@ -353,11 +485,20 @@ class MockProvider(CRMProvider):
             phone=project.project_data.phone,
             mobile_phone=project.project_data.phone,
             work_phone=None,
-            address_line1=project.project_data.address.split(",")[0] if project.project_data.address else None,
+            address_line1=project.project_data.address.split(",")[0]
+            if project.project_data.address
+            else None,
             address_line2=None,
-            city=project.project_data.address.split(",")[1].strip() if "," in (project.project_data.address or "") else None,
-            state=project.project_data.address.split(",")[2].strip().split()[0] if len((project.project_data.address or "").split(",")) > 2 else None,
-            postal_code=project.project_data.address.split(",")[2].strip().split()[1] if len((project.project_data.address or "").split(",")) > 2 and len(project.project_data.address.split(",")[2].strip().split()) > 1 else None,
+            city=project.project_data.address.split(",")[1].strip()
+            if "," in (project.project_data.address or "")
+            else None,
+            state=project.project_data.address.split(",")[2].strip().split()[0]
+            if len((project.project_data.address or "").split(",")) > 2
+            else None,
+            postal_code=project.project_data.address.split(",")[2].strip().split()[1]
+            if len((project.project_data.address or "").split(",")) > 2
+            and len(project.project_data.address.split(",")[2].strip().split()) > 1
+            else None,
             country="USA",
             status="Active",
             workflow_type=None,
@@ -365,6 +506,53 @@ class MockProvider(CRMProvider):
             updated_at=project.updated_at,
             provider=CRMProviderEnum.MOCK,
             provider_data=project.project_data.model_dump(exclude={"id"}, mode="json"),
+        )
+
+    def _transform_project_to_universal_project(self, project: Project) -> UniversalProject:
+        """Transform internal Project model to universal Project schema."""
+        provider_data = project.project_data.model_dump(exclude={"id"}, mode="json")
+
+        customer_name = project.project_data.customerName or ""
+
+        return UniversalProject(
+            id=project.project_data.id,
+            name=f"Project for {customer_name}",
+            number=str(project.project_data.job_id)
+            if project.project_data.job_id
+            else None,
+            status=project.status,
+            status_id=None,
+            sub_status=None,
+            sub_status_id=None,
+            workflow_type="Project",
+            description=project.project_data.notes,
+            customer_id=project.project_data.id,  # Use project ID as customer ID
+            customer_name=customer_name,
+            location_id=None,
+            address_line1=project.project_data.address.split(",")[0]
+            if project.project_data.address
+            else None,
+            address_line2=None,
+            city=project.project_data.address.split(",")[1].strip()
+            if "," in (project.project_data.address or "")
+            else None,
+            state=project.project_data.address.split(",")[2].strip().split()[0]
+            if len((project.project_data.address or "").split(",")) > 2
+            else None,
+            postal_code=project.project_data.address.split(",")[2].strip().split()[1]
+            if len((project.project_data.address or "").split(",")) > 2
+            and len(project.project_data.address.split(",")[2].strip().split()) > 1
+            else None,
+            country="USA",
+            created_at=project.updated_at,
+            updated_at=project.updated_at,
+            start_date=None,
+            target_completion_date=None,
+            actual_completion_date=None,
+            sales_rep_id=None,
+            sales_rep_name=None,
+            provider=CRMProviderEnum.MOCK,
+            provider_data=provider_data,
         )
 
     # ========================================================================
@@ -423,7 +611,9 @@ class MockProvider(CRMProvider):
         Returns:
             ProjectStatusListResponse: List of all project statuses
         """
-        logger.warning("get_all_project_statuses() is deprecated, converting to get_all_jobs()")
+        logger.warning(
+            "get_all_project_statuses() is deprecated, converting to get_all_jobs()"
+        )
 
         # Convert all projects to ProjectStatusResponse
         project_responses = []

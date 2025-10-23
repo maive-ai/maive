@@ -12,6 +12,7 @@ Uses the AI provider abstraction, defaulting to Gemini but configurable via AI_P
 import argparse
 import asyncio
 import json
+import os
 from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
@@ -21,7 +22,10 @@ from src.ai.base import ContentAnalysisRequest
 from src.ai.providers import get_ai_provider
 from src.integrations.crm.base import CRMError
 from src.integrations.crm.constants import SubStatus
-from src.integrations.crm.providers.factory import get_crm_provider
+from src.integrations.crm.providers.service_titan.provider import ServiceTitanProvider
+
+# Force Service Titan provider for this workflow
+os.environ["CRM_PROVIDER"] = "service_titan"
 from src.integrations.crm.schemas import (
     EstimateItemsRequest,
     EstimatesRequest,
@@ -51,7 +55,7 @@ class DiscrepancyDetectionWorkflow:
     def __init__(self):
         """Initialize the workflow."""
         self.ai_provider = get_ai_provider()
-        self.crm_provider = get_crm_provider()
+        self.crm_provider = ServiceTitanProvider()
 
     async def execute_for_job(
         self,
@@ -83,9 +87,10 @@ class DiscrepancyDetectionWorkflow:
             # Step 1: Get the job details
             logger.info(f"\nStep 1: Fetching job {job_id}")
             job = await self.crm_provider.get_job(job_id)
-            logger.info(f"✅ Job fetched: {job.job_number}")
+            logger.info(f"✅ Job fetched: {job.number}")
 
-            project_id = job.project_id
+            # Get project_id from provider_data for Service Titan
+            project_id = job.provider_data.get("project_id")
             if not project_id:
                 raise CRMError(f"Job {job_id} has no associated project", "NO_PROJECT")
 

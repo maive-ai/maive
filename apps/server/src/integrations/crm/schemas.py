@@ -117,6 +117,70 @@ class ContactList(BaseModel):
     has_more: bool | None = Field(None, description="Whether more results exist")
 
 
+class Project(BaseModel):
+    """Universal project model that works across all CRM providers.
+
+    In hierarchical CRMs (Service Titan), projects are top-level containers that
+    may contain multiple jobs. In flat CRMs (JobNimbus), projects and jobs are
+    the same entity.
+    """
+
+    id: str = Field(..., description="Unique project identifier (provider-specific format)")
+    name: str | None = Field(None, description="Project name/title")
+    number: str | None = Field(None, description="Project number")
+    status: str = Field(..., description="Current project status (provider-specific)")
+    status_id: int | str | None = Field(None, description="Status identifier")
+    sub_status: str | None = Field(None, description="Project sub-status name")
+    sub_status_id: int | str | None = Field(None, description="Sub-status identifier")
+    workflow_type: str | None = Field(None, description="Workflow/record type name")
+    description: str | None = Field(None, description="Project description")
+
+    # Customer/contact information
+    customer_id: str | None = Field(None, description="Associated customer/contact ID")
+    customer_name: str | None = Field(None, description="Customer name")
+    location_id: str | None = Field(None, description="Location identifier")
+
+    # Address
+    address_line1: str | None = Field(None, description="Address line 1")
+    address_line2: str | None = Field(None, description="Address line 2")
+    city: str | None = Field(None, description="City")
+    state: str | None = Field(None, description="State/province")
+    postal_code: str | None = Field(None, description="ZIP/postal code")
+    country: str | None = Field(None, description="Country")
+
+    # Dates (ISO format strings for universality)
+    created_at: str | None = Field(None, description="Creation timestamp (ISO format)")
+    updated_at: str | None = Field(None, description="Last update timestamp (ISO format)")
+    start_date: str | None = Field(None, description="Project start date (ISO format)")
+    target_completion_date: str | None = Field(
+        None, description="Target completion date (ISO format)"
+    )
+    actual_completion_date: str | None = Field(
+        None, description="Actual completion date (ISO format)"
+    )
+
+    # Sales/team
+    sales_rep_id: str | None = Field(None, description="Sales representative ID")
+    sales_rep_name: str | None = Field(None, description="Sales representative name")
+
+    # Provider-specific data
+    provider: CRMProvider = Field(..., description="CRM provider name")
+    provider_data: dict[str, Any] = Field(
+        default_factory=dict, description="Provider-specific data"
+    )
+
+
+class ProjectList(BaseModel):
+    """Universal project list response with pagination."""
+
+    projects: list[Project] = Field(..., description="List of projects")
+    total_count: int = Field(..., description="Total number of projects")
+    provider: CRMProvider = Field(..., description="CRM provider name")
+    page: int | None = Field(None, description="Current page number (if paginated)")
+    page_size: int | None = Field(None, description="Page size (if paginated)")
+    has_more: bool | None = Field(None, description="Whether more results exist")
+
+
 class Note(BaseModel):
     """Universal note/activity model that works across all CRM providers."""
 
@@ -429,6 +493,8 @@ class ExternalDataItem(BaseModel):
 
 class ProjectByIdRequest(BaseModel):
     """Request model for getting a project by ID."""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     tenant: int = Field(..., description="Tenant ID")
     project_id: int = Field(..., description="ID of the project to retrieve", alias="projectId")
