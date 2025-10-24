@@ -23,6 +23,11 @@ class DatabaseSettings(BaseSettings):
     username: str = Field(description="Database username")
     password: str = Field(description="Database user password")
 
+    # Connection pool settings
+    pool_size: int = Field(default=5, description="Connection pool size")
+    max_overflow: int = Field(default=10, description="Maximum overflow connections")
+    echo: bool = Field(default=False, description="Echo SQL statements to logs")
+
     def get_sync_url(self) -> str:
         """
         Get synchronous database URL for psycopg2.
@@ -30,7 +35,7 @@ class DatabaseSettings(BaseSettings):
         Returns:
             str: Database connection URL for sync operations
         """
-        return f"postgresql+psycopg2://{self.username}:{self.password}@{self.host}:{self.port}/{self.name}"
+        return f"postgresql+psycopg2://{self.username}:{self.password}@{self.host}:{self.port}/{self.name}?sslmode=require"
 
     def get_async_url(self) -> str:
         """
@@ -39,7 +44,7 @@ class DatabaseSettings(BaseSettings):
         Returns:
             str: Database connection URL for async operations
         """
-        return f"postgresql+asyncpg://{self.username}:{self.password}@{self.host}:{self.port}/{self.name}"
+        return f"postgresql+asyncpg://{self.username}:{self.password}@{self.host}:{self.port}/{self.name}?ssl=require"
 
 
 # Global settings instance
