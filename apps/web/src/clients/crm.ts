@@ -3,9 +3,8 @@
 import {
   CRMApi,
   Configuration,
-  type ProjectData,
-  type ProjectStatusListResponse,
-  type ProjectStatusResponse,
+  type ProjectList,
+  type SrcIntegrationsCrmSchemasProject2 as Project,
 } from '@maive/api/client';
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 
@@ -13,7 +12,7 @@ import { getIdToken } from '@/auth';
 import { env } from '@/env';
 
 // Re-export types from the generated client
-export type { ProjectData, ProjectStatusListResponse, ProjectStatusResponse };
+export type { Project, ProjectList };
 
 /**
  * Create a configured CRM API instance
@@ -32,26 +31,26 @@ const createCRMApi = async (): Promise<CRMApi> => {
 };
 
 /**
- * Fetch all projects from CRM
+ * Fetch all projects from CRM using universal interface
  */
-export async function fetchAllProjects(): Promise<ProjectStatusListResponse> {
+export async function fetchAllProjects(page: number = 1, pageSize: number = 50): Promise<ProjectList> {
   const api = await createCRMApi();
 
-  const response = await api.getAllProjectStatusesApiCrmProjectsStatusGet();
+  const response = await api.getAllProjectsApiCrmProjectsGet(page, pageSize);
   console.log(
-    `[CRM Client] Fetched ${response.data.total_count} projects with claim statuses`
+    `[CRM Client] Fetched ${response.data.total_count} projects (page ${page})`
   );
   return response.data;
 }
 
 /**
- * Fetch a single project status by ID
+ * Fetch a single project by ID using universal interface
  */
-export async function fetchProjectStatus(projectId: string): Promise<ProjectStatusResponse> {
+export async function fetchProject(projectId: string): Promise<Project> {
   const api = await createCRMApi();
-  const response = await api.getProjectStatusApiCrmProjectsProjectIdStatusGet(projectId);
+  const response = await api.getProjectApiCrmProjectsProjectIdGet(projectId);
   console.log(
-    `[CRM Client] Fetched project ${projectId} - Status: ${response.data.status}, Claim Status: ${response.data.claim_status}`
+    `[CRM Client] Fetched project ${projectId} - Status: ${response.data.status}`
   );
   return response.data;
 }
@@ -60,10 +59,10 @@ export async function fetchProjectStatus(projectId: string): Promise<ProjectStat
  * React Query hook for fetching all projects
  * Polls every 30 seconds to keep data fresh
  */
-export function useFetchProjects(): UseQueryResult<ProjectStatusListResponse, Error> {
+export function useFetchProjects(): UseQueryResult<ProjectList, Error> {
   return useQuery({
     queryKey: ['projects'],
-    queryFn: fetchAllProjects,
+    queryFn: () => fetchAllProjects(),
     staleTime: 30 * 1000, // Data is fresh for 30 seconds
     refetchInterval: 30 * 1000, // Poll every 30 seconds
     refetchIntervalInBackground: true,
@@ -71,40 +70,16 @@ export function useFetchProjects(): UseQueryResult<ProjectStatusListResponse, Er
 }
 
 /**
- * React Query hook for fetching a single project status
+ * React Query hook for fetching a single project
  * Polls every 30 seconds to keep data fresh
  */
-export function useFetchProject(projectId: string): UseQueryResult<ProjectStatusResponse, Error> {
+export function useFetchProject(projectId: string): UseQueryResult<Project, Error> {
   return useQuery({
-    queryKey: ['project-status', projectId],
-    queryFn: () => fetchProjectStatus(projectId),
+    queryKey: ['project', projectId],
+    queryFn: () => fetchProject(projectId),
     staleTime: 30 * 1000, // Data is fresh for 30 seconds
     refetchInterval: 30 * 1000, // Poll every 30 seconds
     refetchIntervalInBackground: true,
     enabled: !!projectId, // Only run if projectId is provided
-  });
-}
-
-/**
- * Create a new project in the CRM (Mock CRM only)
- */
-export async function createProject(projectData: ProjectData): Promise<void> {
-  const api = await createCRMApi();
-  await api.createProjectApiCrmProjectsPost(projectData);
-}
-
-/**
- * React Query mutation hook for creating a new project
- * Invalidates projects query on success to refresh the list
- */
-export function useCreateProject(): ReturnType<typeof useMutation<void, Error, ProjectData>> {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: createProject,
-    onSuccess: () => {
-      // Invalidate projects query to refetch the list
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-    },
   });
 }

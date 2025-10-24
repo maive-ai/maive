@@ -1,4 +1,3 @@
-import { ClaimStatus, Status } from '@maive/api/client';
 import { useMutation } from '@tanstack/react-query';
 import { clsx, type ClassValue } from 'clsx';
 import { useEffect, useRef } from 'react';
@@ -83,17 +82,17 @@ export function useAutoSave<T extends Record<string, any>>(
  */
 export function getStatusColor(status: string): string {
   switch (status) {
-    case Status.Scheduled:
+    case 'Scheduled':
       return 'bg-blue-100 text-blue-800';
-    case Status.Dispatched:
+    case 'Dispatched':
       return 'bg-purple-100 text-purple-800';
-    case Status.InProgress:
+    case 'In Progress':
       return 'bg-yellow-100 text-yellow-800';
-    case Status.Hold:
+    case 'Hold':
       return 'bg-red-100 text-red-800';
-    case Status.Completed:
+    case 'Completed':
       return 'bg-green-100 text-green-800';
-    case Status.Canceled:
+    case 'Canceled':
       return 'bg-gray-100 text-gray-800';
     default:
       return 'bg-gray-100 text-gray-800';
@@ -101,33 +100,28 @@ export function getStatusColor(status: string): string {
 }
 
 /**
- * Get color classes for claim status badges
+ * Format a phone number for display
+ * Supports US phone numbers in various formats
+ *
+ * Examples:
+ * - "8881234568" -> "(888) 123-4568"
+ * - "+18881234568" -> "(888) 123-4568"
+ * - "888-123-4568" -> "(888) 123-4568"
  */
-export function getClaimStatusColor(claimStatus: string): string {
-  let colorClass: string;
+export function formatPhoneNumber(phone: string | null | undefined): string {
+  if (!phone) return 'Not available';
 
-  switch (claimStatus) {
-    case ClaimStatus.None:
-      colorClass = 'bg-gray-100 text-gray-800';
-      break;
-    case ClaimStatus.PendingReview:
-      colorClass = 'bg-yellow-100 text-yellow-800';
-      break;
-    case ClaimStatus.WorkNeeded:
-      colorClass = 'bg-blue-100 text-blue-800';
-      break;
-    case ClaimStatus.PartiallyApproved:
-      colorClass = 'bg-orange-100 text-orange-800';
-      break;
-    case ClaimStatus.FullyApproved:
-      colorClass = 'bg-green-100 text-green-800';
-      break;
-    case ClaimStatus.Denied:
-      colorClass = 'bg-red-100 text-red-800';
-      break;
-    default:
-      colorClass = 'bg-gray-100 text-gray-800';
-      console.warn(`[Utils] Unknown claim status: ${claimStatus}, using default gray color`);
+  // Remove all non-digit characters
+  const digits = phone.replace(/\D/g, '');
+
+  // Handle US phone numbers (10 or 11 digits)
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  } else if (digits.length === 11 && digits[0] === '1') {
+    return `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
   }
-  return colorClass;
+
+  // If not a standard format, return as-is
+  return phone;
 }
+

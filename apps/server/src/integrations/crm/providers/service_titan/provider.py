@@ -13,12 +13,13 @@ import httpx
 from src.integrations.crm.base import CRMError, CRMProvider
 from src.integrations.crm.config import get_crm_settings
 from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
-from src.integrations.crm.constants import ServiceTitanEndpoints, Status
-from src.integrations.crm.provider_schemas import (
-    CRMProviderDataFactory,
-    FormSubmissionListResponse,
-)
+from src.integrations.crm.constants import Status
+from src.integrations.crm.providers.service_titan.constants import ServiceTitanEndpoints
+from src.integrations.crm.providers.service_titan.schemas import ServiceTitanJob
 from src.integrations.crm.schemas import (
+    Contact,
+    ContactList,
+    CRMProviderDataFactory,
     EquipmentListResponse,
     EstimateItemResponse,
     EstimateItemsRequest,
@@ -26,13 +27,19 @@ from src.integrations.crm.schemas import (
     EstimateResponse,
     EstimatesListResponse,
     EstimatesRequest,
+    FormSubmissionListResponse,
     FormSubmissionsRequest,
+    Job,
     JobHoldReasonsListResponse,
+    JobList,
     JobNoteResponse,
     JobResponse,
     MaterialsListResponse,
+    Note,
     PricebookItemsRequest,
+    Project,
     ProjectByIdRequest,
+    ProjectList,
     ProjectNoteResponse,
     ProjectResponse,
     ProjectStatusListResponse,
@@ -123,6 +130,572 @@ class ServiceTitanProvider(CRMProvider):
         kwargs["headers"] = headers
 
         return await self.client.request(method, url, **kwargs)
+
+    # ========================================================================
+    # Universal CRM Interface Implementation (required abstract methods)
+    # ========================================================================
+
+    async def get_project(self, project_id: str) -> Project:
+        """
+        Get a specific project by ID.
+
+        In Service Titan, projects are top-level work containers (one per customer).
+
+        Args:
+            project_id: The unique identifier for the project
+
+        Returns:
+            Project: Universal project schema
+
+        Raises:
+            CRMError: If the project is not found or an error occurs
+        """
+        logger.info(f"Getting Service Titan project: {project_id}")
+
+        # Call existing Service Titan-specific method to get project
+        from src.integrations.crm.schemas import ProjectByIdRequest
+
+        project_request = ProjectByIdRequest(
+            tenant=self.tenant_id, project_id=int(project_id)
+        )
+        st_project = await self.get_project_by_id(project_request)
+
+        # Transform to universal Project schema
+        return self._transform_st_project_to_universal_project(st_project)
+
+    async def get_all_projects(
+        self,
+        filters: dict[str, Any] | None = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> ProjectList:
+        """
+        Get all projects with optional filtering and pagination.
+
+        Args:
+            filters: Optional dictionary of filters (not yet implemented)
+            page: Page number (1-indexed)
+            page_size: Number of items per page
+
+        Returns:
+            ProjectList: Paginated list of projects
+        """
+        logger.info(f"Getting all Service Titan projects (page={page}, size={page_size})")
+
+        # Call existing get_all_project_statuses method
+        project_list = await self.get_all_project_statuses()
+
+        # Transform to universal ProjectList
+        projects = []
+        for project_status in project_list.projects:
+            # Extract project data from provider_data
+            if project_status.provider_data:
+                project = Project(
+                    id=project_status.project_id,
+                    name=project_status.provider_data.get("name"),
+                    number=project_status.provider_data.get("number"),
+                    status=project_status.status.value,
+                    status_id=project_status.provider_data.get("statusId"),
+                    sub_status=project_status.provider_data.get("subStatus"),
+                    sub_status_id=project_status.provider_data.get("subStatusId"),
+                    workflow_type="Project",
+                    description=None,
+                    customer_id=str(project_status.provider_data.get("customerId"))
+                    if project_status.provider_data.get("customerId")
+                    else None,
+                    customer_name=None,  # Not available in project list
+                    location_id=str(project_status.provider_data.get("locationId"))
+                    if project_status.provider_data.get("locationId")
+                    else None,
+                    address_line1=None,
+                    address_line2=None,
+                    city=None,
+                    state=None,
+                    postal_code=None,
+                    country=None,
+                    created_at=project_status.provider_data.get("createdOn"),
+                    updated_at=project_status.updated_at.isoformat()
+                    if project_status.updated_at
+                    else None,
+                    start_date=project_status.provider_data.get("startDate"),
+                    target_completion_date=project_status.provider_data.get("targetCompletionDate"),
+                    actual_completion_date=project_status.provider_data.get("actualCompletionDate"),
+                    sales_rep_id=None,
+                    sales_rep_name=None,
+                    provider=CRMProviderEnum.SERVICE_TITAN,
+                    provider_data=project_status.provider_data,
+                )
+                projects.append(project)
+
+        # Apply pagination
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        paginated_projects = projects[start_idx:end_idx]
+
+        return ProjectList(
+            projects=paginated_projects,
+            total_count=project_list.total_count,
+            provider=CRMProviderEnum.SERVICE_TITAN,
+            page=page,
+            page_size=page_size,
+            has_more=end_idx < len(projects),
+        )
+
+    async def get_job(self, job_id: str) -> Job:
+        """
+        Get a specific job by ID.
+
+        In Service Titan, jobs are sub-items under projects.
+
+        Args:
+            job_id: The unique identifier for the job
+
+        Returns:
+            Job: Universal job schema
+
+        Raises:
+            CRMError: If the job is not found or an error occurs
+        """
+        logger.info(f"Getting Service Titan job: {job_id}")
+
+        # Fetch the Service Titan Job
+        try:
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.JOB_BY_ID.format(tenant_id=self.tenant_id, id=int(job_id))}"
+
+            logger.debug(f"Fetching Service Titan job {job_id}")
+
+            response = await self._make_authenticated_request("GET", url)
+            response.raise_for_status()
+
+            data = response.json()
+            logger.info(f"Successfully fetched Service Titan job {job_id}")
+
+            st_job = ServiceTitanJob(**data)
+
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise CRMError(
+                    f"Service Titan Job with ID {job_id} not found", "NOT_FOUND"
+                )
+            else:
+                logger.error(f"HTTP error fetching job {job_id}: {e}")
+                raise CRMError(f"Failed to fetch job: {e}", "HTTP_ERROR")
+        except Exception as e:
+            logger.error(f"Unexpected error fetching job {job_id}: {e}")
+            raise CRMError(f"Failed to fetch job: {str(e)}", "UNKNOWN_ERROR")
+
+        # Transform to universal Job schema
+        return self._transform_st_job_to_universal(st_job)
+
+    async def get_all_jobs(
+        self,
+        filters: dict[str, Any] | None = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> JobList:
+        """
+        Get all jobs with optional filtering and pagination.
+
+        Note: Service Titan uses projects endpoint for jobs.
+
+        Args:
+            filters: Optional dictionary of filters (not yet implemented)
+            page: Page number (1-indexed)
+            page_size: Number of items per page
+
+        Returns:
+            JobList: Paginated list of jobs
+        """
+        logger.info(f"Getting all Service Titan jobs (page={page}, size={page_size})")
+
+        # Call existing get_all_project_statuses method
+        project_list = await self.get_all_project_statuses()
+
+        # Transform to universal JobList
+        jobs = []
+        for project_status in project_list.projects:
+            # Extract job data from provider_data
+            if project_status.provider_data:
+                job = Job(
+                    id=project_status.project_id,
+                    name=project_status.provider_data.get("name"),
+                    number=project_status.provider_data.get("number"),
+                    status=project_status.status.value,
+                    status_id=project_status.provider_data.get("statusId"),
+                    workflow_type="Project",
+                    description=None,
+                    customer_id=str(project_status.provider_data.get("customerId"))
+                    if project_status.provider_data.get("customerId")
+                    else None,
+                    customer_name=None,  # Not available in project list
+                    address_line1=None,
+                    address_line2=None,
+                    city=None,
+                    state=None,
+                    postal_code=None,
+                    country=None,
+                    created_at=project_status.provider_data.get("createdOn"),
+                    updated_at=project_status.updated_at.isoformat()
+                    if project_status.updated_at
+                    else None,
+                    completed_at=project_status.provider_data.get(
+                        "actualCompletionDate"
+                    ),
+                    sales_rep_id=None,
+                    sales_rep_name=None,
+                    provider=CRMProviderEnum.SERVICE_TITAN,
+                    provider_data=project_status.provider_data,
+                )
+                jobs.append(job)
+
+        # Apply pagination
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        paginated_jobs = jobs[start_idx:end_idx]
+
+        return JobList(
+            jobs=paginated_jobs,
+            total_count=project_list.total_count,
+            provider=CRMProviderEnum.SERVICE_TITAN,
+            page=page,
+            page_size=page_size,
+            has_more=end_idx < len(jobs),
+        )
+
+    async def get_contact(self, contact_id: str) -> Contact:
+        """
+        Get a specific contact by ID.
+
+        Note: Service Titan does not have a separate contacts/customers endpoint
+        accessible via the CRM interface. Customer data is embedded in jobs/projects.
+
+        Args:
+            contact_id: The unique identifier for the contact
+
+        Returns:
+            Contact: Universal contact schema
+
+        Raises:
+            CRMError: Service Titan doesn't support standalone contacts
+        """
+        logger.warning("get_contact() called for Service Titan - not supported")
+        raise CRMError(
+            error_code="NOT_SUPPORTED",
+            message="Service Titan does not support fetching contacts as standalone entities. Customer data is embedded in jobs/projects.",
+        )
+
+    async def get_all_contacts(
+        self,
+        filters: dict[str, Any] | None = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> ContactList:
+        """
+        Get all contacts with optional filtering and pagination.
+
+        Note: Service Titan does not have a separate contacts endpoint.
+
+        Raises:
+            CRMError: Service Titan doesn't support standalone contacts
+        """
+        logger.warning("get_all_contacts() called for Service Titan - not supported")
+        raise CRMError(
+            error_code="NOT_SUPPORTED",
+            message="Service Titan does not support fetching contacts as standalone entities. Customer data is embedded in jobs/projects.",
+        )
+
+    async def add_note(
+        self,
+        entity_id: str,
+        entity_type: str,
+        text: str,
+        **kwargs: Any,
+    ) -> Note:
+        """
+        Add a note to an entity.
+
+        Note: For Service Titan, universal "job" entity_type maps to Service Titan projects.
+        Use "st_job" entity_type for Service Titan-specific job notes.
+
+        Args:
+            entity_id: The ID of the entity
+            entity_type: The type of entity ("job", "st_job", "project")
+            text: The note text
+            **kwargs: Optional parameters (pin_to_top, etc.)
+
+        Returns:
+            Note: Universal note schema
+
+        Raises:
+            CRMError: If the entity type is not supported or entity not found
+        """
+        logger.info(f"Adding note to Service Titan {entity_type} {entity_id}")
+
+        pin_to_top = kwargs.get("pin_to_top", False)
+
+        if entity_type == "job":
+            # Universal "job" maps to Service Titan "project"
+            st_note = await self.add_project_note(int(entity_id), text, pin_to_top)
+
+            return Note(
+                id=None,  # Service Titan doesn't return note ID
+                text=st_note.text,
+                entity_id=entity_id,
+                entity_type=entity_type,
+                created_at=st_note.created_on.isoformat(),
+                updated_at=st_note.modified_on.isoformat()
+                if st_note.modified_on
+                else None,
+                created_by=str(st_note.created_by_id)
+                if st_note.created_by_id
+                else None,
+                provider=CRMProviderEnum.SERVICE_TITAN,
+                provider_data={
+                    "is_pinned": st_note.is_pinned,
+                    "created_by_id": st_note.created_by_id,
+                },
+            )
+        elif entity_type == "st_job":
+            # Service Titan-specific: notes on Service Titan jobs (sub-items)
+            st_note = await self.add_job_note(int(entity_id), text, pin_to_top)
+
+            return Note(
+                id=None,
+                text=st_note.text,
+                entity_id=entity_id,
+                entity_type=entity_type,
+                created_at=st_note.created_on.isoformat(),
+                updated_at=st_note.modified_on.isoformat()
+                if st_note.modified_on
+                else None,
+                created_by=str(st_note.created_by_id)
+                if st_note.created_by_id
+                else None,
+                provider=CRMProviderEnum.SERVICE_TITAN,
+                provider_data={
+                    "is_pinned": st_note.is_pinned,
+                    "created_by_id": st_note.created_by_id,
+                },
+            )
+        elif entity_type == "project":
+            # Explicitly add to Service Titan project (same as "job")
+            st_note = await self.add_project_note(int(entity_id), text, pin_to_top)
+
+            return Note(
+                id=None,
+                text=st_note.text,
+                entity_id=entity_id,
+                entity_type=entity_type,
+                created_at=st_note.created_on.isoformat(),
+                updated_at=st_note.modified_on.isoformat()
+                if st_note.modified_on
+                else None,
+                created_by=str(st_note.created_by_id)
+                if st_note.created_by_id
+                else None,
+                provider=CRMProviderEnum.SERVICE_TITAN,
+                provider_data={
+                    "is_pinned": st_note.is_pinned,
+                    "created_by_id": st_note.created_by_id,
+                },
+            )
+        else:
+            raise CRMError(
+                error_code="NOT_SUPPORTED",
+                message=f"Service Titan does not support notes on entity type: {entity_type}. Use 'job', 'st_job', or 'project'.",
+            )
+
+    async def update_job_status(
+        self,
+        job_id: str,
+        status: str,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Update the status of a job.
+
+        Note: For Service Titan, this updates the project status/substatus.
+
+        Args:
+            job_id: The unique identifier for the job (project ID)
+            status: The new status value (status name or ID)
+            **kwargs: Optional parameters (sub_status_id, etc.)
+
+        Raises:
+            CRMError: If the job is not found or update fails
+        """
+        logger.info(f"Updating Service Titan job {job_id} status to {status}")
+
+        # For Service Titan, we need to call update_project with status_id and sub_status_id
+        # The status parameter could be a status name or ID
+        # For now, we'll use the sub_status_id from kwargs if provided
+
+        sub_status_id = kwargs.get("sub_status_id")
+
+        if not sub_status_id:
+            raise CRMError(
+                error_code="INVALID_REQUEST",
+                message="Service Titan requires 'sub_status_id' in kwargs to update job status",
+            )
+
+        # Create update request
+        from src.integrations.crm.schemas import UpdateProjectRequest
+
+        update_req = UpdateProjectRequest(
+            tenant=self.tenant_id,
+            project_id=int(job_id),
+            sub_status_id=sub_status_id,
+        )
+
+        # Call existing update_project method
+        await self.update_project(update_req)
+
+        logger.info(f"Successfully updated job {job_id} status")
+
+    async def update_project_status(
+        self,
+        project_id: str,
+        status: str,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Update the status of a project.
+
+        Args:
+            project_id: The unique identifier for the project
+            status: The new status value (status name or ID)
+            **kwargs: Optional parameters (sub_status_id, etc.)
+
+        Raises:
+            CRMError: If the project is not found or update fails
+        """
+        logger.info(f"Updating Service Titan project {project_id} status to {status}")
+
+        # For Service Titan, we need to call update_project with status_id and sub_status_id
+        # The status parameter could be a status name or ID
+        # For now, we'll use the sub_status_id from kwargs if provided
+
+        sub_status_id = kwargs.get("sub_status_id")
+
+        if not sub_status_id:
+            raise CRMError(
+                error_code="INVALID_REQUEST",
+                message="Service Titan requires 'sub_status_id' in kwargs to update project status",
+            )
+
+        # Create update request
+        from src.integrations.crm.schemas import UpdateProjectRequest
+
+        update_req = UpdateProjectRequest(
+            tenant=self.tenant_id,
+            project_id=int(project_id),
+            sub_status_id=sub_status_id,
+        )
+
+        # Call existing update_project method
+        await self.update_project(update_req)
+
+        logger.info(f"Successfully updated project {project_id} status")
+
+    # ========================================================================
+    # Helper Methods (transformation functions)
+    # ========================================================================
+
+    def _transform_st_project_to_universal_project(self, st_project: ProjectResponse) -> Project:
+        """
+        Transform Service Titan project to universal Project schema.
+
+        Service Titan projects are top-level work containers (one per customer).
+        """
+        return Project(
+            id=str(st_project.id),
+            name=st_project.name,
+            number=st_project.number,
+            status=st_project.status or "Unknown",
+            status_id=str(st_project.status_id) if st_project.status_id else None,
+            sub_status=st_project.sub_status,
+            sub_status_id=str(st_project.sub_status_id) if st_project.sub_status_id else None,
+            workflow_type="Project",
+            description=None,  # Projects don't have description in ST
+            customer_id=str(st_project.customer_id) if st_project.customer_id else None,
+            customer_name=None,  # Not in project response
+            location_id=str(st_project.location_id) if st_project.location_id else None,
+            address_line1=None,  # Not in project response
+            address_line2=None,
+            city=None,
+            state=None,
+            postal_code=None,
+            country=None,
+            created_at=st_project.created_on.isoformat(),
+            updated_at=st_project.modified_on.isoformat(),
+            start_date=st_project.start_date.isoformat()
+            if st_project.start_date
+            else None,
+            target_completion_date=st_project.target_completion_date.isoformat()
+            if st_project.target_completion_date
+            else None,
+            actual_completion_date=st_project.actual_completion_date.isoformat()
+            if st_project.actual_completion_date
+            else None,
+            sales_rep_id=None,
+            sales_rep_name=None,
+            provider=CRMProviderEnum.SERVICE_TITAN,
+            provider_data={},  # Additional ST-specific data can go here if needed
+        )
+
+    def _transform_st_job_to_universal(self, st_job: ServiceTitanJob) -> Job:
+        """
+        Transform Service Titan job to universal Job schema.
+
+        Service Titan jobs are sub-items under projects and contain references
+        to their parent project_id.
+        """
+        return Job(
+            id=str(st_job.id),
+            name=st_job.summary,
+            number=st_job.job_number,
+            status=st_job.job_status,
+            status_id=None,  # ST Jobs don't have separate status IDs
+            workflow_type="Job",
+            description=st_job.summary,
+            customer_id=str(st_job.customer_id),
+            customer_name=None,  # Not in job response
+            address_line1=None,  # Not in job response
+            address_line2=None,
+            city=None,
+            state=None,
+            postal_code=None,
+            country=None,
+            created_at=st_job.created_on.isoformat(),
+            updated_at=st_job.modified_on.isoformat(),
+            completed_at=st_job.completed_on.isoformat()
+            if st_job.completed_on
+            else None,
+            sales_rep_id=None,
+            sales_rep_name=None,
+            provider=CRMProviderEnum.SERVICE_TITAN,
+            provider_data={
+                "project_id": st_job.project_id,
+                "location_id": st_job.location_id,
+                "business_unit_id": st_job.business_unit_id,
+                "job_type_id": st_job.job_type_id,
+                "priority": st_job.priority,
+                "campaign_id": st_job.campaign_id,
+                "appointment_count": st_job.appointment_count,
+                "first_appointment_id": st_job.first_appointment_id,
+                "last_appointment_id": st_job.last_appointment_id,
+                "recall_for_id": st_job.recall_for_id,
+                "warranty_id": st_job.warranty_id,
+                "no_charge": st_job.no_charge,
+                "notifications_enabled": st_job.notifications_enabled,
+                "invoice_id": st_job.invoice_id,
+                "total": st_job.total,
+            },
+        )
+
+    # ========================================================================
+    # Legacy/Service Titan-Specific Methods
+    # ========================================================================
 
     async def get_project_status(self, project_id: str) -> ProjectStatusResponse:
         """
@@ -431,42 +1004,6 @@ class ServiceTitanProvider(CRMProvider):
             logger.error(f"Unexpected error fetching estimate {estimate_id}: {e}")
             raise CRMError(f"Failed to fetch estimate: {str(e)}", "UNKNOWN_ERROR")
 
-    async def get_job(self, job_id: int) -> JobResponse:
-        """
-        Get a specific job by ID from Service Titan.
-
-        Args:
-            job_id: The Service Titan job ID
-
-        Returns:
-            JobResponse: The job information
-
-        Raises:
-            CRMError: If the job is not found or an error occurs
-        """
-        try:
-            url = f"{self.base_api_url}{ServiceTitanEndpoints.JOB_BY_ID.format(tenant_id=self.tenant_id, id=job_id)}"
-
-            logger.debug(f"Fetching job for ID: {job_id}")
-
-            response = await self._make_authenticated_request("GET", url)
-            response.raise_for_status()
-
-            data = response.json()
-
-            # Return the raw response as JobResponse
-            return JobResponse(**data)
-
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 404:
-                raise CRMError(f"Job with ID {job_id} not found", "NOT_FOUND")
-            else:
-                logger.error(f"HTTP error fetching job {job_id}: {e}")
-                raise CRMError(f"Failed to fetch job: {e}", "HTTP_ERROR")
-        except Exception as e:
-            logger.error(f"Unexpected error fetching job {job_id}: {e}")
-            raise CRMError(f"Failed to fetch job: {str(e)}", "UNKNOWN_ERROR")
-
     async def get_estimates(
         self,
         request: EstimatesRequest,
@@ -510,7 +1047,9 @@ class ServiceTitanProvider(CRMProvider):
             estimates_data = data.get("data", [])
 
             # Convert each estimate to EstimateResponse
-            estimates = [EstimateResponse(**estimate_data) for estimate_data in estimates_data]
+            estimates = [
+                EstimateResponse(**estimate_data) for estimate_data in estimates_data
+            ]
 
             # Build the response with pagination info
             estimates_response = EstimatesListResponse(
@@ -595,7 +1134,9 @@ class ServiceTitanProvider(CRMProvider):
             logger.error(f"Unexpected error fetching estimate items: {e}")
             raise CRMError(f"Failed to fetch estimate items: {str(e)}", "UNKNOWN_ERROR")
 
-    async def add_job_note(self, job_id: int, text: str, pin_to_top: bool | None = None) -> JobNoteResponse:
+    async def add_job_note(
+        self, job_id: int, text: str, pin_to_top: bool | None = None
+    ) -> JobNoteResponse:
         """
         Add a note to a specific job in Service Titan.
 
@@ -620,7 +1161,9 @@ class ServiceTitanProvider(CRMProvider):
 
             logger.debug(f"Adding note to job {job_id}")
 
-            response = await self._make_authenticated_request("POST", url, json=request_body)
+            response = await self._make_authenticated_request(
+                "POST", url, json=request_body
+            )
             response.raise_for_status()
 
             data = response.json()
@@ -658,7 +1201,9 @@ class ServiceTitanProvider(CRMProvider):
             f"(would set to {claim_status}). This would require custom field implementation."
         )
 
-    async def get_job_hold_reasons(self, active: str | None = None) -> JobHoldReasonsListResponse:
+    async def get_job_hold_reasons(
+        self, active: str | None = None
+    ) -> JobHoldReasonsListResponse:
         """
         Get a list of job hold reasons from Service Titan.
 
@@ -693,7 +1238,9 @@ class ServiceTitanProvider(CRMProvider):
             raise CRMError(f"Failed to fetch job hold reasons: {e}", "HTTP_ERROR")
         except Exception as e:
             logger.error(f"Unexpected error fetching job hold reasons: {e}")
-            raise CRMError(f"Failed to fetch job hold reasons: {str(e)}", "UNKNOWN_ERROR")
+            raise CRMError(
+                f"Failed to fetch job hold reasons: {str(e)}", "UNKNOWN_ERROR"
+            )
 
     async def hold_job(self, job_id: int, reason_id: int, memo: str) -> None:
         """
@@ -711,14 +1258,13 @@ class ServiceTitanProvider(CRMProvider):
             url = f"{self.base_api_url}{ServiceTitanEndpoints.JOB_HOLD.format(tenant_id=self.tenant_id, id=job_id)}"
 
             # Prepare request body with camelCase field names
-            request_body = {
-                "reasonId": reason_id,
-                "memo": memo
-            }
+            request_body = {"reasonId": reason_id, "memo": memo}
 
             logger.debug(f"Putting job {job_id} on hold with reason {reason_id}")
 
-            response = await self._make_authenticated_request("PUT", url, json=request_body)
+            response = await self._make_authenticated_request(
+                "PUT", url, json=request_body
+            )
             response.raise_for_status()
 
             logger.info(f"Successfully put job {job_id} on hold")
@@ -757,12 +1303,16 @@ class ServiceTitanProvider(CRMProvider):
             if e.response.status_code == 404:
                 raise CRMError(f"Job with ID {job_id} not found", "NOT_FOUND")
             elif e.response.status_code == 400:
-                raise CRMError(f"Job {job_id} is not in a canceled state", "INVALID_STATE")
+                raise CRMError(
+                    f"Job {job_id} is not in a canceled state", "INVALID_STATE"
+                )
             else:
                 logger.error(f"HTTP error removing cancellation from job {job_id}: {e}")
                 raise CRMError(f"Failed to remove cancellation: {e}", "HTTP_ERROR")
         except Exception as e:
-            logger.error(f"Unexpected error removing cancellation from job {job_id}: {e}")
+            logger.error(
+                f"Unexpected error removing cancellation from job {job_id}: {e}"
+            )
             raise CRMError(f"Failed to remove cancellation: {str(e)}", "UNKNOWN_ERROR")
 
     async def get_project_substatuses(
@@ -811,7 +1361,9 @@ class ServiceTitanProvider(CRMProvider):
             raise CRMError(f"Failed to fetch project substatuses: {e}", "HTTP_ERROR")
         except Exception as e:
             logger.error(f"Unexpected error fetching project substatuses: {e}")
-            raise CRMError(f"Failed to fetch project substatuses: {str(e)}", "UNKNOWN_ERROR")
+            raise CRMError(
+                f"Failed to fetch project substatuses: {str(e)}", "UNKNOWN_ERROR"
+            )
 
     async def get_project_by_id(self, request: ProjectByIdRequest) -> ProjectResponse:
         """
@@ -841,7 +1393,9 @@ class ServiceTitanProvider(CRMProvider):
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
-                raise CRMError(f"Project with ID {request.project_id} not found", "NOT_FOUND")
+                raise CRMError(
+                    f"Project with ID {request.project_id} not found", "NOT_FOUND"
+                )
             else:
                 logger.error(f"HTTP error fetching project {request.project_id}: {e}")
                 raise CRMError(f"Failed to fetch project: {e}", "HTTP_ERROR")
@@ -866,7 +1420,11 @@ class ServiceTitanProvider(CRMProvider):
             url = f"{self.base_api_url}{ServiceTitanEndpoints.PROJECT_UPDATE.format(tenant_id=self.tenant_id, id=request.project_id)}"
 
             # Dump Pydantic model excluding None values and using API aliases
-            request_body = request.model_dump(exclude_none=True, by_alias=True, exclude={"tenant", "project_id", "external_data"})
+            request_body = request.model_dump(
+                exclude_none=True,
+                by_alias=True,
+                exclude={"tenant", "project_id", "external_data"},
+            )
 
             # Handle external_data separately - API expects specific format
             if request.external_data is not None:
@@ -878,12 +1436,16 @@ class ServiceTitanProvider(CRMProvider):
                     "externalData": [
                         {"key": item.key, "value": item.value}
                         for item in request.external_data
-                    ]
+                    ],
                 }
 
-            logger.debug(f"Updating project {request.project_id} with data: {request_body}")
+            logger.debug(
+                f"Updating project {request.project_id} with data: {request_body}"
+            )
 
-            response = await self._make_authenticated_request("PATCH", url, json=request_body)
+            response = await self._make_authenticated_request(
+                "PATCH", url, json=request_body
+            )
             response.raise_for_status()
 
             data = response.json()
@@ -893,19 +1455,28 @@ class ServiceTitanProvider(CRMProvider):
 
         except httpx.HTTPStatusError as e:
             error_body = e.response.text
-            logger.error(f"HTTP {e.response.status_code} error updating project {request.project_id}: {error_body}")
+            logger.error(
+                f"HTTP {e.response.status_code} error updating project {request.project_id}: {error_body}"
+            )
 
             if e.response.status_code == 404:
-                raise CRMError(f"Project with ID {request.project_id} not found", "NOT_FOUND")
+                raise CRMError(
+                    f"Project with ID {request.project_id} not found", "NOT_FOUND"
+                )
             elif e.response.status_code == 400:
-                raise CRMError(f"Invalid request data for project {request.project_id}: {error_body}", "INVALID_REQUEST")
+                raise CRMError(
+                    f"Invalid request data for project {request.project_id}: {error_body}",
+                    "INVALID_REQUEST",
+                )
             else:
                 raise CRMError(f"Failed to update project: {error_body}", "HTTP_ERROR")
         except Exception as e:
             logger.error(f"Unexpected error updating project {request.project_id}: {e}")
             raise CRMError(f"Failed to update project: {str(e)}", "UNKNOWN_ERROR")
 
-    async def add_project_note(self, project_id: int, text: str, pin_to_top: bool | None = None) -> ProjectNoteResponse:
+    async def add_project_note(
+        self, project_id: int, text: str, pin_to_top: bool | None = None
+    ) -> ProjectNoteResponse:
         """
         Add a note to a specific project in Service Titan.
 
@@ -930,7 +1501,9 @@ class ServiceTitanProvider(CRMProvider):
 
             logger.debug(f"Adding note to project {project_id}")
 
-            response = await self._make_authenticated_request("POST", url, json=request_body)
+            response = await self._make_authenticated_request(
+                "POST", url, json=request_body
+            )
             response.raise_for_status()
 
             data = response.json()
@@ -943,8 +1516,12 @@ class ServiceTitanProvider(CRMProvider):
                 raise CRMError(f"Project with ID {project_id} not found", "NOT_FOUND")
             else:
                 error_body = e.response.text
-                logger.error(f"HTTP error adding note to project {project_id}: {error_body}")
-                raise CRMError(f"Failed to add note to project: {error_body}", "HTTP_ERROR")
+                logger.error(
+                    f"HTTP error adding note to project {project_id}: {error_body}"
+                )
+                raise CRMError(
+                    f"Failed to add note to project: {error_body}", "HTTP_ERROR"
+                )
         except Exception as e:
             logger.error(f"Unexpected error adding note to project {project_id}: {e}")
             raise CRMError(f"Failed to add note to project: {str(e)}", "UNKNOWN_ERROR")
@@ -993,19 +1570,27 @@ class ServiceTitanProvider(CRMProvider):
             response.raise_for_status()
 
             data = response.json()
-            logger.info(f"Successfully fetched {len(data.get('data', []))} form submissions")
+            logger.info(
+                f"Successfully fetched {len(data.get('data', []))} form submissions"
+            )
 
             return FormSubmissionListResponse(**data)
 
         except httpx.HTTPStatusError as e:
             error_body = e.response.text
             logger.error(f"HTTP error fetching form submissions: {error_body}")
-            raise CRMError(f"Failed to fetch form submissions: {error_body}", "HTTP_ERROR")
+            raise CRMError(
+                f"Failed to fetch form submissions: {error_body}", "HTTP_ERROR"
+            )
         except Exception as e:
             logger.error(f"Unexpected error fetching form submissions: {e}")
-            raise CRMError(f"Failed to fetch form submissions: {str(e)}", "UNKNOWN_ERROR")
+            raise CRMError(
+                f"Failed to fetch form submissions: {str(e)}", "UNKNOWN_ERROR"
+            )
 
-    async def get_pricebook_materials(self, request: PricebookItemsRequest) -> MaterialsListResponse:
+    async def get_pricebook_materials(
+        self, request: PricebookItemsRequest
+    ) -> MaterialsListResponse:
         """
         Get materials from the Service Titan pricebook.
 
@@ -1040,12 +1625,18 @@ class ServiceTitanProvider(CRMProvider):
         except httpx.HTTPStatusError as e:
             error_body = e.response.text
             logger.error(f"HTTP error fetching pricebook materials: {error_body}")
-            raise CRMError(f"Failed to fetch pricebook materials: {error_body}", "HTTP_ERROR")
+            raise CRMError(
+                f"Failed to fetch pricebook materials: {error_body}", "HTTP_ERROR"
+            )
         except Exception as e:
             logger.error(f"Unexpected error fetching pricebook materials: {e}")
-            raise CRMError(f"Failed to fetch pricebook materials: {str(e)}", "UNKNOWN_ERROR")
+            raise CRMError(
+                f"Failed to fetch pricebook materials: {str(e)}", "UNKNOWN_ERROR"
+            )
 
-    async def get_pricebook_services(self, request: PricebookItemsRequest) -> ServicesListResponse:
+    async def get_pricebook_services(
+        self, request: PricebookItemsRequest
+    ) -> ServicesListResponse:
         """
         Get services from the Service Titan pricebook.
 
@@ -1080,12 +1671,18 @@ class ServiceTitanProvider(CRMProvider):
         except httpx.HTTPStatusError as e:
             error_body = e.response.text
             logger.error(f"HTTP error fetching pricebook services: {error_body}")
-            raise CRMError(f"Failed to fetch pricebook services: {error_body}", "HTTP_ERROR")
+            raise CRMError(
+                f"Failed to fetch pricebook services: {error_body}", "HTTP_ERROR"
+            )
         except Exception as e:
             logger.error(f"Unexpected error fetching pricebook services: {e}")
-            raise CRMError(f"Failed to fetch pricebook services: {str(e)}", "UNKNOWN_ERROR")
+            raise CRMError(
+                f"Failed to fetch pricebook services: {str(e)}", "UNKNOWN_ERROR"
+            )
 
-    async def get_pricebook_equipment(self, request: PricebookItemsRequest) -> EquipmentListResponse:
+    async def get_pricebook_equipment(
+        self, request: PricebookItemsRequest
+    ) -> EquipmentListResponse:
         """
         Get equipment from the Service Titan pricebook.
 
@@ -1120,10 +1717,14 @@ class ServiceTitanProvider(CRMProvider):
         except httpx.HTTPStatusError as e:
             error_body = e.response.text
             logger.error(f"HTTP error fetching pricebook equipment: {error_body}")
-            raise CRMError(f"Failed to fetch pricebook equipment: {error_body}", "HTTP_ERROR")
+            raise CRMError(
+                f"Failed to fetch pricebook equipment: {error_body}", "HTTP_ERROR"
+            )
         except Exception as e:
             logger.error(f"Unexpected error fetching pricebook equipment: {e}")
-            raise CRMError(f"Failed to fetch pricebook equipment: {str(e)}", "UNKNOWN_ERROR")
+            raise CRMError(
+                f"Failed to fetch pricebook equipment: {str(e)}", "UNKNOWN_ERROR"
+            )
 
     async def close(self):
         """Close the HTTP client."""

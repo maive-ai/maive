@@ -1,24 +1,18 @@
-# ContactInfo
+# JobId
 
-Contact information model.
+Job/Project ID (int for Service Titan, str for JobNimbus/Mock)
 
 ## Properties
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**name** | **string** |  | [default to undefined]
-**phone** | **string** |  | [default to undefined]
-**email** | **string** |  | [default to undefined]
 
 ## Example
 
 ```typescript
-import { ContactInfo } from './api';
+import { JobId } from './api';
 
-const instance: ContactInfo = {
-    name,
-    phone,
-    email,
+const instance: JobId = {
 };
 ```
 

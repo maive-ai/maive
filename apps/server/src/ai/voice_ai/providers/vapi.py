@@ -28,7 +28,7 @@ from src.ai.voice_ai.config import get_vapi_settings, get_voice_ai_settings
 from src.ai.voice_ai.constants import CallStatus, VoiceAIErrorCode
 from src.ai.voice_ai.constants import VoiceAIProvider as VoiceAIProviderEnum
 from src.ai.voice_ai.schemas import AnalysisData, CallRequest, CallResponse, ClaimStatusData
-from src.integrations.crm.constants import ClaimStatus
+from src.integrations.crm.constants import Status
 from src.utils.logger import logger
 
 
@@ -264,8 +264,8 @@ class VapiProvider(VoiceAIProvider):
                 },
                 "claim_status": {
                     "type": "string",
-                    "enum": [status.value for status in ClaimStatus],
-                    "description": f"Current status of the insurance claim. Options: {', '.join([f'{s.value} ({s.description})' for s in ClaimStatus])}",
+                    "enum": [status.value for status in Status],
+                    "description": f"Current status of the job/project. Options: {', '.join([s.value for s in Status])}",
                 },
                 "payment_details": {
                     "type": "object",

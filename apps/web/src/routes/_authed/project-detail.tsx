@@ -1,10 +1,9 @@
-import { ClaimStatus } from '@maive/api/client';
 import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
 import { createFileRoute } from '@tanstack/react-router';
 import { AlertCircle, Building2, CheckCircle2, FileText, Loader2, Mail, MapPin, Phone, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { isValidPhoneNumber } from 'react-phone-number-input';
 import type { Value as E164Number } from 'react-phone-number-input';
+import { isValidPhoneNumber } from 'react-phone-number-input';
 
 import { useEndCall } from '@/clients/ai/voice';
 import { useFetchProject } from '@/clients/crm';
@@ -14,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/ui/phone-input';
-import { getClaimStatusColor } from '@/lib/utils';
+import { formatPhoneNumber, getStatusColor } from '@/lib/utils';
 
 export const Route = createFileRoute('/_authed/project-detail')({
   component: ProjectDetail,
@@ -41,11 +40,17 @@ function ProjectDetail() {
 
   // Update phone number when project data loads
   useEffect(() => {
-    if (project && providerData) {
-      const insurancePhone = providerData?.insuranceAgencyContact?.phone || providerData?.phone || '';
-      setPhoneNumber(insurancePhone as E164Number | '');
+    if (project) {
+      let adjusterPhone = project.adjuster_phone || '';
+
+      // If phone number doesn't start with +, prepend +1 (US country code)
+      if (adjusterPhone && !adjusterPhone.startsWith('+')) {
+        adjusterPhone = '+1' + adjusterPhone.replace(/\D/g, ''); // Remove non-digits and add +1
+      }
+
+      setPhoneNumber(adjusterPhone as E164Number | '');
     }
-  }, [project, providerData]);
+  }, [project]);
 
   // Store call ID when call starts successfully
   useEffect(() => {
@@ -101,15 +106,17 @@ function ProjectDetail() {
     callAndWritetoCrmMutation.mutate({
       phone_number: phoneNumber,
       // Pass customer details from project data
-      customer_id: project.project_id,
+      customer_id: project.id,
       customer_name: providerData?.customerName,
       customer_address: providerData?.address,
-      claim_number: providerData?.claimNumber,
+      claim_number: project.claim_number || providerData?.claimNumber,
       insurance_agency: providerData?.insuranceAgency,
       adjuster_name: providerData?.adjusterName,
       adjuster_phone: providerData?.adjusterContact?.phone,
       tenant: providerData?.tenant,
-      job_id: providerData?.job_id,
+      // For flat CRMs (Mock, JobNimbus), use project.id as the job_id
+      // For hierarchical CRMs (Service Titan), this would need to be the actual job_id
+      job_id: project.id
     });
   };
 
@@ -137,12 +144,12 @@ function ProjectDetail() {
                 <div className="size-10 rounded-lg bg-gradient-to-br from-orange-400 to-pink-400 flex items-center justify-center">
                   <Building2 className="size-6 text-white" />
                 </div>
-                <div>
-                  <CardTitle className="text-2xl">{providerData?.customerName || 'Customer Name'}</CardTitle>
+                <div className="flex-1">
+                  <CardTitle className="text-2xl">{project.customer_name || providerData?.customerName || 'Customer Name'}</CardTitle>
                 </div>
-                {project.claim_status && project.claim_status !== ClaimStatus.None && (
-                  <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getClaimStatusColor(project.claim_status)}`}>
-                    {project.claim_status}
+                {project.status && (
+                  <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
+                    {project.status}
                   </div>
                 )}
               </div>
@@ -155,7 +162,7 @@ function ProjectDetail() {
                   <MapPin className="size-5 text-gray-400 mt-0.5 shrink-0" />
                   <div>
                     <p className="font-medium text-gray-700">Address</p>
-                    <p className="text-gray-600">{providerData?.address || 'Address not available'}</p>
+                    <p className="text-gray-600">{project.address_line1 || providerData?.address || 'Not available'}</p>
                   </div>
                 </div>
 
@@ -163,7 +170,7 @@ function ProjectDetail() {
                   <Phone className="size-5 text-gray-400 mt-0.5 shrink-0" />
                   <div>
                     <p className="font-medium text-gray-700">Phone</p>
-                    <p className="text-gray-600">{providerData?.phone || 'Phone not available'}</p>
+                    <p className="text-gray-600">{formatPhoneNumber(providerData?.customer_phone || providerData?.phone)}</p>
                   </div>
                 </div>
 
@@ -171,80 +178,86 @@ function ProjectDetail() {
                   <Mail className="size-5 text-gray-400 mt-0.5 shrink-0" />
                   <div>
                     <p className="font-medium text-gray-700">Email</p>
-                    <p className="text-gray-600 break-all">{providerData?.email || 'Email not available'}</p>
+                    <p className="text-gray-600 break-all">{providerData?.customer_email || providerData?.email || 'Not available'}</p>
                   </div>
                 </div>
               </div>
 
-              {/* Notes and Claim Number & Insurance */}
-              <div className="border-t pt-6 space-y-4">
-                {/* Claim Number & Insurance */}
-                <div className="flex items-start gap-3">
-                  <FileText className="size-5 text-gray-400 mt-0.5 shrink-0" />
-                  <div className="flex-1 grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="font-medium text-gray-700">Claim Number</p>
-                      <p className="text-gray-600">{providerData?.claimNumber || 'Not available'}</p>
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-700">Insurance Agency</p>
-                      <p className="text-gray-600">{providerData?.insuranceAgency || 'Not available'}</p>
+              {/* Claim Information */}
+              {(project.claim_number || project.date_of_loss || project.insurance_company) && (
+                <div className="border-t pt-6 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <FileText className="size-5 text-gray-400 mt-0.5 shrink-0" />
+                    <div className="flex-1 space-y-3">
+                      {project.claim_number && (
+                        <div>
+                          <p className="font-medium text-gray-700">Claim Number</p>
+                          <p className="text-gray-600">{project.claim_number}</p>
+                        </div>
+                      )}
+                      {project.date_of_loss && (
+                        <div>
+                          <p className="font-medium text-gray-700">Date of Loss</p>
+                          <p className="text-gray-600">
+                            {new Date(project.date_of_loss).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}
+                          </p>
+                        </div>
+                      )}
+                      {project.insurance_company && (
+                        <div>
+                          <p className="font-medium text-gray-700">Insurance Company</p>
+                          <p className="text-gray-600">{project.insurance_company}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
+              )}
 
-                {/* Notes */}
-                <div>
+              {/* Notes */}
+              {providerData?.notes && (
+                <div className="border-t pt-6">
                   <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
                     Notes
                   </p>
                   <div className="space-y-3 pl-2">
-                    <p className="text-gray-600 whitespace-pre-wrap">{providerData?.notes || 'No notes'}</p>
+                    <p className="text-gray-600 whitespace-pre-wrap">{providerData.notes}</p>
                   </div>
                 </div>
-              </div>
-
-              {/* Insurance Agency Contact */}
-              <div className="border-t pt-6">
-                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
-                  Insurance Agency Contact
-                </p>
-                <div className="space-y-3 pl-2">
-                  <div className="flex items-center gap-3">
-                    <User className="size-4 text-gray-400" />
-                    <p className="text-gray-700">{providerData?.insuranceAgencyContact?.name || 'Not available'}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Phone className="size-4 text-gray-400" />
-                    <p className="text-gray-600">{providerData?.insuranceAgencyContact?.phone || 'Not available'}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Mail className="size-4 text-gray-400" />
-                    <p className="text-gray-600 break-all">{providerData?.insuranceAgencyContact?.email || 'Not available'}</p>
-                  </div>
-                </div>
-              </div>
+              )}
 
               {/* Adjuster Contact */}
-              <div className="border-t pt-6">
-                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
-                  Adjuster Contact
-                </p>
-                <div className="space-y-3 pl-2">
-                  <div className="flex items-center gap-3">
-                    <User className="size-4 text-gray-400" />
-                    <p className="text-gray-700">{providerData?.adjusterContact?.name || 'Not available'}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Phone className="size-4 text-gray-400" />
-                    <p className="text-gray-600">{providerData?.adjusterContact?.phone || 'Not available'}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Mail className="size-4 text-gray-400" />
-                    <p className="text-gray-600 break-all">{providerData?.adjusterContact?.email || 'Not available'}</p>
+              {(project.adjuster_name || project.adjuster_phone || project.adjuster_email) && (
+                <div className="border-t pt-6">
+                  <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
+                    Adjuster Contact
+                  </p>
+                  <div className="space-y-3 pl-2">
+                    {project.adjuster_name && (
+                      <div className="flex items-center gap-3">
+                        <User className="size-4 text-gray-400" />
+                        <p className="text-gray-700">{project.adjuster_name}</p>
+                      </div>
+                    )}
+                    {project.adjuster_phone && (
+                      <div className="flex items-center gap-3">
+                        <Phone className="size-4 text-gray-400" />
+                        <p className="text-gray-600">{formatPhoneNumber(project.adjuster_phone)}</p>
+                      </div>
+                    )}
+                    {project.adjuster_email && (
+                      <div className="flex items-center gap-3">
+                        <Mail className="size-4 text-gray-400" />
+                        <p className="text-gray-600 break-all">{project.adjuster_email}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>
