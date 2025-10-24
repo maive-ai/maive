@@ -63,7 +63,7 @@ void (empty response body)
 # **getActiveCallApiVoiceAiCallsActiveGet**
 > ActiveCallState getActiveCallApiVoiceAiCallsActiveGet()
 
-Get the user\'s currently active call.  Returns the active call state if one exists, otherwise returns None (404).  Args:     current_user: The authenticated user     call_state_service: The call state service instance from dependency injection  Returns:     ActiveCallState | None: The active call state or None if no active call  Raises:     HTTPException: If an error occurs retrieving the call state
+Get the user\'s currently active call.  Returns the active call state if one exists, otherwise returns None.  Args:     current_user: The authenticated user     call_state_service: The call state service instance from dependency injection  Returns:     ActiveCallState | None: The active call state or None if no active call  Raises:     HTTPException: If an error occurs retrieving the call state
 
 ### Example
 

@@ -710,7 +710,7 @@
           "Voice AI"
         ],
         "summary": "Get Active Call",
-        "description": "Get the user's currently active call.\n\nReturns the active call state if one exists, otherwise returns None (404).\n\nArgs:\n    current_user: The authenticated user\n    call_state_service: The call state service instance from dependency injection\n\nReturns:\n    ActiveCallState | None: The active call state or None if no active call\n\nRaises:\n    HTTPException: If an error occurs retrieving the call state",
+        "description": "Get the user's currently active call.\n\nReturns the active call state if one exists, otherwise returns None.\n\nArgs:\n    current_user: The authenticated user\n    call_state_service: The call state service instance from dependency injection\n\nReturns:\n    ActiveCallState | None: The active call state or None if no active call\n\nRaises:\n    HTTPException: If an error occurs retrieving the call state",
         "operationId": "get_active_call_api_voice_ai_calls_active_get",
         "responses": {
           "200": {
