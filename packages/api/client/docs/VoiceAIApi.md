@@ -61,9 +61,9 @@ void (empty response body)
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **getActiveCallApiVoiceAiCallsActiveGet**
-> ActiveCallState getActiveCallApiVoiceAiCallsActiveGet()
+> { [key: string]: any; } getActiveCallApiVoiceAiCallsActiveGet()
 
-Get the user\'s currently active call.  Returns the active call state if one exists, otherwise returns None.  Args:     current_user: The authenticated user     call_state_service: The call state service instance from dependency injection  Returns:     ActiveCallState | None: The active call state or None if no active call  Raises:     HTTPException: If an error occurs retrieving the call state
+Get the user\'s currently active call.  Returns the active call data if one exists, otherwise returns None.  Args:     current_user: The authenticated user     call_repository: The call repository instance from dependency injection  Returns:     dict | None: The active call data or None if no active call  Raises:     HTTPException: If an error occurs retrieving the call
 
 ### Example
 
@@ -85,7 +85,7 @@ This endpoint does not have any parameters.
 
 ### Return type
 
-**ActiveCallState**
+**{ [key: string]: any; }**
 
 ### Authorization
 
