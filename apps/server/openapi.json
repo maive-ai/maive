@@ -704,6 +704,41 @@
         }
       }
     },
+    "/api/voice-ai/calls/active": {
+      "get": {
+        "tags": [
+          "Voice AI"
+        ],
+        "summary": "Get Active Call",
+        "description": "Get the user's currently active call.\n\nReturns the active call state if one exists, otherwise returns None (404).\n\nArgs:\n    current_user: The authenticated user\n    call_state_service: The call state service instance from dependency injection\n\nReturns:\n    ActiveCallState | None: The active call state or None if no active call\n\nRaises:\n    HTTPException: If an error occurs retrieving the call state",
+        "operationId": "get_active_call_api_voice_ai_calls_active_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ActiveCallState"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Active Call Api Voice Ai Calls Active Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/voice-ai/calls/{call_id}": {
       "get": {
         "tags": [
@@ -875,6 +910,81 @@
   },
   "components": {
     "schemas": {
+      "ActiveCallState": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id",
+            "description": "Cognito user ID (sub)"
+          },
+          "call_id": {
+            "type": "string",
+            "title": "Call Id",
+            "description": "Provider call ID"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id",
+            "description": "Project/Job ID"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CallStatus",
+            "description": "Current call status"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/VoiceAIProvider",
+            "description": "Voice AI provider"
+          },
+          "phone_number": {
+            "type": "string",
+            "title": "Phone Number",
+            "description": "Phone number called"
+          },
+          "listen_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listen Url",
+            "description": "WebSocket URL for listening to call"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At",
+            "description": "Call start timestamp"
+          },
+          "provider_data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Data",
+            "description": "Raw provider response data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "call_id",
+          "project_id",
+          "status",
+          "provider",
+          "phone_number",
+          "started_at"
+        ],
+        "title": "ActiveCallState",
+        "description": "Model for active call state stored in DynamoDB.\n\nThis represents a user's currently active call session."
+      },
       "AnalysisData": {
         "properties": {
           "summary": {

@@ -17,6 +17,8 @@ from src.ai.voice_ai.schemas import (
     VoiceAIErrorResponse,
 )
 from src.ai.voice_ai.service import VoiceAIService
+from src.db.call_state_service import CallStateService
+from src.db.models import ActiveCallState
 from src.integrations.crm.service import CRMService
 from src.utils.logger import logger
 
@@ -28,6 +30,7 @@ class CallAndWriteToCRMWorkflow:
         self,
         voice_ai_service: VoiceAIService,
         crm_service: CRMService,
+        call_state_service: CallStateService,
     ):
         """
         Initialize the call monitoring workflow.
@@ -35,9 +38,11 @@ class CallAndWriteToCRMWorkflow:
         Args:
             voice_ai_service: Service for Voice AI operations
             crm_service: Service for CRM operations
+            call_state_service: Service for call state management
         """
         self.voice_ai_service = voice_ai_service
         self.crm_service = crm_service
+        self.call_state_service = call_state_service
 
     async def call_and_write_results_to_crm(
         self,
@@ -49,8 +54,9 @@ class CallAndWriteToCRMWorkflow:
 
         This method orchestrates:
         1. Creating the call via Voice AI service
-        2. Starting background monitoring and writing results to CRM
-        3. Updating CRM when call completes
+        2. Persisting call state to DynamoDB
+        3. Starting background monitoring and writing results to CRM
+        4. Updating CRM when call completes
 
         Args:
             request: The call request with phone number and context
@@ -64,6 +70,55 @@ class CallAndWriteToCRMWorkflow:
 
         if isinstance(result, VoiceAIErrorResponse):
             return result
+
+        # Persist call state to DynamoDB
+        logger.info(
+            f"[Call Monitoring Workflow] Attempting to persist call state. user_id={user_id}, call_id={result.call_id}"
+        )
+
+        if not user_id:
+            logger.warning(
+                "[Call Monitoring Workflow] Cannot persist call state: user_id is None or empty"
+            )
+        else:
+            try:
+                # Extract listen URL from provider data
+                listen_url = None
+                if result.provider_data and hasattr(result.provider_data, "monitor"):
+                    listen_url = getattr(
+                        result.provider_data.monitor, "listen_url", None
+                    )
+
+                logger.info(
+                    f"[Call Monitoring Workflow] Creating ActiveCallState with listen_url={listen_url}"
+                )
+
+                call_state = ActiveCallState(
+                    user_id=user_id,
+                    call_id=result.call_id,
+                    project_id=request.job_id or "",
+                    status=result.status,
+                    provider=result.provider,
+                    phone_number=request.phone_number,
+                    listen_url=listen_url,
+                    started_at=result.created_at,
+                    provider_data=result.provider_data.model_dump(mode="json")
+                    if result.provider_data
+                    else None,
+                )
+
+                logger.info(
+                    f"[Call Monitoring Workflow] Calling set_active_call for user {user_id}"
+                )
+                await self.call_state_service.set_active_call(call_state)
+                logger.info(
+                    f"[Call Monitoring Workflow] Successfully persisted call state for {result.call_id}"
+                )
+            except Exception as e:
+                logger.error(
+                    f"[Call Monitoring Workflow] Failed to persist call state: {e}",
+                    exc_info=True,
+                )
 
         # Start background monitoring
         try:
@@ -135,6 +190,23 @@ class CallAndWriteToCRMWorkflow:
                     f"[Call Monitoring Workflow] Call {call_id} status: {status_result.status}"
                 )
 
+                # Update call status in DynamoDB
+                if user_id:
+                    try:
+                        existing_state = await self.call_state_service.get_active_call(
+                            user_id
+                        )
+                        if existing_state and existing_state.call_id == call_id:
+                            # Update status
+                            existing_state.status = status_result.status
+                            await self.call_state_service.set_active_call(
+                                existing_state
+                            )
+                    except Exception as e:
+                        logger.error(
+                            f"[Call Monitoring Workflow] Failed to update call state: {e}"
+                        )
+
                 # Check if call has ended
                 if CallStatus.is_call_ended(status_result.status):
                     logger.info(
@@ -205,6 +277,8 @@ class CallAndWriteToCRMWorkflow:
         """
         Process a completed call and update CRM with structured data.
 
+        Removes the call from DynamoDB active state and updates CRM.
+
         Args:
             call_id: The call identifier
             call_response: The final call response with provider data
@@ -212,6 +286,17 @@ class CallAndWriteToCRMWorkflow:
             user_id: The ID of the user who created the call
         """
         try:
+            # Remove from DynamoDB active calls
+            if user_id:
+                try:
+                    await self.call_state_service.remove_active_call(user_id)
+                    logger.info(
+                        f"[Call Monitoring Workflow] Removed active call state for user {user_id}"
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"[Call Monitoring Workflow] Failed to remove active call state: {e}"
+                    )
             # Extract typed analysis data from provider response
             analysis = call_response.analysis
 

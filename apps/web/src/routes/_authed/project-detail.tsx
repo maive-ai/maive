@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import type { Value as E164Number } from 'react-phone-number-input';
 import { isValidPhoneNumber } from 'react-phone-number-input';
 
-import { useEndCall } from '@/clients/ai/voice';
+import { useActiveCall, useEndCall } from '@/clients/ai/voice';
 import { useFetchProject } from '@/clients/crm';
 import { useCallAndWriteToCrm } from '@/clients/workflows';
 import { CallAudioVisualizer } from '@/components/call/CallAudioVisualizer';
@@ -36,6 +36,9 @@ function ProjectDetail() {
   const callAndWritetoCrmMutation = useCallAndWriteToCrm(projectId);
   const endCallMutation = useEndCall();
 
+  // Query for active call on mount
+  const { data: activeCall } = useActiveCall();
+
   const isValid = phoneNumber ? isValidPhoneNumber(phoneNumber) : false;
 
   // Update phone number when project data loads
@@ -52,11 +55,25 @@ function ProjectDetail() {
     }
   }, [project]);
 
+  // Restore active call state on mount
+  useEffect(() => {
+    if (activeCall && activeCall.project_id === projectId) {
+      // Active call matches current project - restore state
+      console.log('[Project Detail] Restoring active call state:', activeCall);
+      setActiveCallId(activeCall.call_id);
+      setListenUrl(activeCall.listen_url);
+    } else if (activeCall && activeCall.project_id !== projectId) {
+      // Active call for different project - show warning
+      console.log('[Project Detail] Active call exists for different project:', activeCall.project_id);
+      // TODO: Show toast/notification to user about active call on different project
+    }
+  }, [activeCall, projectId]);
+
   // Store call ID when call starts successfully
   useEffect(() => {
     if (callAndWritetoCrmMutation.isSuccess && callAndWritetoCrmMutation.data) {
       setActiveCallId(callAndWritetoCrmMutation.data.call_id);
-      
+
       // Extract listenUrl from provider_data
       const providerData = callAndWritetoCrmMutation.data.provider_data;
       console.log('[Project Detail] Provider data:', providerData);

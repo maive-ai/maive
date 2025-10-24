@@ -5,6 +5,7 @@ All URIs are relative to *http://localhost*
 |Method | HTTP request | Description|
 |------------- | ------------- | -------------|
 |[**endCallApiVoiceAiCallsCallIdDelete**](#endcallapivoiceaicallscalliddelete) | **DELETE** /api/voice-ai/calls/{call_id} | End Call|
+|[**getActiveCallApiVoiceAiCallsActiveGet**](#getactivecallapivoiceaicallsactiveget) | **GET** /api/voice-ai/calls/active | Get Active Call|
 |[**getCallStatusApiVoiceAiCallsCallIdGet**](#getcallstatusapivoiceaicallscallidget) | **GET** /api/voice-ai/calls/{call_id} | Get Call Status|
 
 # **endCallApiVoiceAiCallsCallIdDelete**
@@ -56,6 +57,50 @@ void (empty response body)
 |-------------|-------------|------------------|
 |**204** | Successful Response |  -  |
 |**422** | Validation Error |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getActiveCallApiVoiceAiCallsActiveGet**
+> ActiveCallState getActiveCallApiVoiceAiCallsActiveGet()
+
+Get the user\'s currently active call.  Returns the active call state if one exists, otherwise returns None (404).  Args:     current_user: The authenticated user     call_state_service: The call state service instance from dependency injection  Returns:     ActiveCallState | None: The active call state or None if no active call  Raises:     HTTPException: If an error occurs retrieving the call state
+
+### Example
+
+```typescript
+import {
+    VoiceAIApi,
+    Configuration
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new VoiceAIApi(configuration);
+
+const { status, data } = await apiInstance.getActiveCallApiVoiceAiCallsActiveGet();
+```
+
+### Parameters
+This endpoint does not have any parameters.
+
+
+### Return type
+
+**ActiveCallState**
+
+### Authorization
+
+[HTTPBearer](../README.md#HTTPBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | Successful Response |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
