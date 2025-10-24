@@ -10,8 +10,9 @@ Name | Type | Description | Notes
 **status** | [**CallStatus**](CallStatus.md) | Current call status | [default to undefined]
 **provider** | [**VoiceAIProvider**](VoiceAIProvider.md) | Voice AI provider | [default to undefined]
 **created_at** | **string** |  | [optional] [default to undefined]
-**provider_data** | **{ [key: string]: any; }** |  | [optional] [default to undefined]
+**provider_data** | **any** |  | [optional] [default to undefined]
 **analysis** | [**AnalysisData**](AnalysisData.md) |  | [optional] [default to undefined]
+**messages** | [**Array&lt;TranscriptMessage&gt;**](TranscriptMessage.md) | Transcript messages from the call | [optional] [default to undefined]
 
 ## Example
 
@@ -25,6 +26,7 @@ const instance: CallResponse = {
     created_at,
     provider_data,
     analysis,
+    messages,
 };
 ```
 

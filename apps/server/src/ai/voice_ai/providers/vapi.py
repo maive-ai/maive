@@ -14,10 +14,13 @@ from vapi import AsyncVapi
 from vapi.types import (
     AnalysisPlan,
     AssistantOverrides,
+    BotMessage,
     Call as VapiCall,
+    CallMessagesItem,
     CreateCustomerDto,
     JsonSchema,
     StructuredDataPlan,
+    UserMessage,
 )
 
 from src.ai.voice_ai.base import VoiceAIError, VoiceAIProvider
@@ -136,8 +139,8 @@ class VapiProvider(VoiceAIProvider):
                 "No provider data available", error_code=VoiceAIErrorCode.NOT_FOUND
             )
 
-        # Parse provider data with typed model
-        vapi_data = VapiCall(**call_response.provider_data)
+        # Use VapiCall object directly (strongly typed)
+        vapi_data: VapiCall = call_response.provider_data
 
         if not vapi_data.monitor or not vapi_data.monitor.control_url:
             raise VoiceAIError(
@@ -250,8 +253,14 @@ class VapiProvider(VoiceAIProvider):
             properties={
                 "call_outcome": {
                     "type": "string",
-                    "enum": ["success", "voicemail", "gatekeeper", "failed"],
-                    "description": "How the call ended",
+                    "enum": [
+                        "completed",      # Successfully determined claim status
+                        "voicemail",      # Reached voicemail
+                        "gatekeeper",     # Blocked by gatekeeper  
+                        "inconclusive",   # Call happened but couldn't determine status
+                        "no_answer"       # No connection established
+                    ],
+                    "description": "Result of the claim status inquiry call",
                 },
                 "claim_status": {
                     "type": "string",
@@ -330,8 +339,11 @@ class VapiProvider(VoiceAIProvider):
         }
         status = status_mapping.get(vapi_status, CallStatus.QUEUED)
 
-        # Convert to dict only for provider_data storage
-        provider_data = call.dict() if hasattr(call, "dict") else call.model_dump()
+        # Store VapiCall object directly - provides strong typing
+        provider_data: VapiCall = call
+
+        # Parse messages from Vapi format to provider-agnostic format
+        messages = self._parse_messages(call.messages) if call.messages else []
 
         # Get analysis data if available
         analysis_data = None
@@ -352,4 +364,35 @@ class VapiProvider(VoiceAIProvider):
             created_at=call.created_at,
             provider_data=provider_data,
             analysis=analysis_data,
+            messages=messages,
         )
+
+    def _parse_messages(
+        self, 
+        vapi_messages: list[CallMessagesItem]
+    ) -> list:
+        """
+        Parse Vapi-specific message types into provider-agnostic format.
+        
+        Args:
+            vapi_messages: List of Vapi CallMessagesItem (UserMessage, BotMessage, etc.)
+            
+        Returns:
+            List of provider-agnostic TranscriptMessage objects
+        """
+        from src.ai.voice_ai.schemas import TranscriptMessage
+        
+        messages = []
+        for msg in vapi_messages:
+            # Only process UserMessage and BotMessage (which have transcript content)
+            if isinstance(msg, (UserMessage, BotMessage)):
+                # Unpack Vapi message directly into our schema
+                messages.append(TranscriptMessage(
+                    role=msg.role,
+                    content=msg.message,
+                    timestamp_seconds=msg.seconds_from_start,
+                    duration_seconds=msg.duration,
+                ))
+            # ToolCallMessage, SystemMessage, etc. don't have user/bot transcript content
+        
+        return messages
