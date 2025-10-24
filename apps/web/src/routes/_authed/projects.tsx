@@ -29,16 +29,18 @@ function Projects() {
 
     return data.projects.filter((project) => {
       const providerData = project.provider_data as any;
-      
-      // Search across multiple fields (camelCase from mock CRM)
+
+      // Search across multiple fields
       const searchableFields = [
-        project.project_id,
+        project.id,
         project.status,
+        project.customer_name,
+        project.claim_number,
+        project.number,
         providerData?.customerName,
         providerData?.address,
         providerData?.phone,
         providerData?.email,
-        providerData?.claimNumber,
         providerData?.insuranceAgency,
         providerData?.insuranceAgencyContact?.name,
         providerData?.adjusterName,
@@ -166,8 +168,8 @@ function Projects() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProjects.map((project) => (
-            <ProjectCard 
-              key={project.project_id} 
+            <ProjectCard
+              key={project.id}
               project={project}
               onClick={handleProjectClick}
             />

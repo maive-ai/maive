@@ -9,15 +9,14 @@ import asyncio
 
 from src.ai.voice_ai.constants import CallStatus
 from src.ai.voice_ai.schemas import (
+    AnalysisData,
     CallRequest,
     CallResponse,
-    AnalysisData,
     ClaimStatusData,
     TranscriptMessage,
     VoiceAIErrorResponse,
 )
 from src.ai.voice_ai.service import VoiceAIService
-from src.integrations.crm.constants import ClaimStatus
 from src.integrations.crm.service import CRMService
 from src.utils.logger import logger
 
@@ -174,18 +173,18 @@ class CallAndWriteToCRMWorkflow:
     ) -> int:
         """
         Log new transcript messages from the call.
-        
+
         Args:
             call_id: The call identifier
             messages: List of transcript messages
             logged_count: Number of messages already logged
-            
+
         Returns:
             Updated count of logged messages
         """
         if not messages:
             return logged_count
-        
+
         # Log only new messages
         new_messages = messages[logged_count:]
         for msg in new_messages:
@@ -193,7 +192,7 @@ class CallAndWriteToCRMWorkflow:
                 f"[Call {call_id}] [{msg.timestamp_seconds:.1f}s] "
                 f"{msg.role.upper()}: {msg.content}"
             )
-        
+
         return len(messages)
 
     async def _process_completed_call(
@@ -240,8 +239,9 @@ class CallAndWriteToCRMWorkflow:
             note_text = self._format_crm_note(analysis)
 
             # Add note to CRM job via service (no HTTP!)
-            crm_result = await self.crm_service.add_job_note(
-                job_id=job_id,
+            crm_result = await self.crm_service.add_note(
+                entity_id=job_id,
+                entity_type="job",
                 text=note_text,
                 pin_to_top=True,  # Pin important call results
             )
@@ -255,25 +255,25 @@ class CallAndWriteToCRMWorkflow:
                     f"[Call Monitoring Workflow] Successfully added CRM note for job {job_id}"
                 )
 
-            # Update claim status in CRM (skip if status is None)
-            if analysis.structured_data.claim_status != ClaimStatus.NONE:
+            # Update project status in CRM (skip if status is empty)
+            if analysis.structured_data.claim_status:
                 logger.info(
-                    f"[Call Monitoring Workflow] Updating claim status for job {job_id} to {analysis.structured_data.claim_status.value}"
+                    f"[Call Monitoring Workflow] Updating project status for job {job_id} to {analysis.structured_data.claim_status}"
                 )
-                status_update_result = (
-                    await self.crm_service.update_project_claim_status(
-                        job_id=job_id,
-                        claim_status=analysis.structured_data.claim_status.value,
-                    )
+                status_update_result = await self.crm_service.update_job_status(
+                    job_id=job_id,
+                    status=analysis.structured_data.claim_status,
                 )
 
-                if status_update_result:
+                if isinstance(status_update_result, object) and hasattr(
+                    status_update_result, "error"
+                ):
                     logger.error(
-                        f"[Call Monitoring Workflow] Failed to update claim status for job {job_id}: {status_update_result.error}"
+                        f"[Call Monitoring Workflow] Failed to update project status for job {job_id}: {status_update_result.error}"
                     )
                 else:
                     logger.info(
-                        f"[Call Monitoring Workflow] Successfully updated claim status for job {job_id}"
+                        f"[Call Monitoring Workflow] Successfully updated project status for job {job_id}"
                     )
 
         except Exception as e:
@@ -296,7 +296,9 @@ class CallAndWriteToCRMWorkflow:
 
         try:
             if structured_data is None:
-                logger.info("[Call Monitoring Workflow] No structured data found for call")
+                logger.info(
+                    "[Call Monitoring Workflow] No structured data found for call"
+                )
                 return ""
 
             # Build formatted note
@@ -307,6 +309,10 @@ class CallAndWriteToCRMWorkflow:
                 f"Claim Status: {structured_data.claim_status.value.capitalize()}",
                 f"Summary: {summary}",
             ]
+
+            # Add status if available
+            if structured_data.claim_status:
+                note_lines.append(f"Status: {structured_data.claim_status}")
 
             # Add next steps if available
             if (

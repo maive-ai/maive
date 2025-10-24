@@ -12,7 +12,6 @@ from pydantic import BaseModel, Field
 
 from src.ai.voice_ai.constants import CallStatus, VoiceAIErrorCode
 from src.ai.voice_ai.constants import VoiceAIProvider as VoiceAIProviderEnum
-from src.integrations.crm.constants import ClaimStatus
 
 
 class CallRequest(BaseModel):
@@ -33,7 +32,7 @@ class CallRequest(BaseModel):
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )
-    job_id: int | None = Field(None, description="Job ID")
+    job_id: int | str | None = Field(None, description="Job/Project ID (int for Service Titan, str for JobNimbus/Mock)")
     tenant: int | None = Field(None, description="Tenant ID")
 
 
@@ -105,15 +104,19 @@ class RequiredActions(BaseModel):
 
 
 class ClaimStatusData(BaseModel):
-    """Provider-agnostic structured data from insurance claim status calls."""
+    """Provider-agnostic structured data from insurance claim status calls.
+
+    Note: claim_status now represents the project/job status in the CRM.
+    Different CRM providers have different status values.
+    """
 
     call_outcome: str = Field(
         default="unknown",
         description="Call outcome: success, voicemail, gatekeeper, failed",
     )
-    claim_status: ClaimStatus = Field(
-        default=ClaimStatus.NONE,
-        description="Claim status: approved, denied, pending_review, etc.",
+    claim_status: str = Field(
+        default="",
+        description="Project/job status from call: e.g. 'Completed', 'Hold', 'Pending Review', etc.",
     )
     payment_details: PaymentDetails | None = Field(None, description="Payment details")
     required_actions: RequiredActions | None = Field(
@@ -126,17 +129,8 @@ class ClaimStatusData(BaseModel):
     @classmethod
     def from_vapi(cls, vapi_data: dict[str, Any]) -> "ClaimStatusData":
         """Create from Vapi-specific structured data."""
-        # Handle claim_status - can be string or ClaimStatus enum
-        claim_status_value = vapi_data.get("claim_status", ClaimStatus.NONE)
-        if isinstance(claim_status_value, str):
-            # Try to convert string to enum
-            try:
-                claim_status = ClaimStatus(claim_status_value)
-            except ValueError:
-                # If conversion fails, use NONE as default
-                claim_status = ClaimStatus.NONE
-        else:
-            claim_status = claim_status_value or ClaimStatus.NONE
+        # Handle claim_status - always a string now
+        claim_status = vapi_data.get("claim_status", "")
 
         return cls(
             call_outcome=vapi_data.get("call_outcome", "unknown"),

@@ -10,17 +10,218 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.integrations.crm.constants import ClaimStatus, CRMProvider, EstimateReviewStatus, Status
+from src.integrations.crm.constants import CRMProvider, EstimateReviewStatus, Status
+
+
+# ============================================================================
+# UNIVERSAL SCHEMAS - Work across all CRM providers
+# ============================================================================
+
+
+class Job(BaseModel):
+    """Universal job model that works across all CRM providers."""
+
+    id: str = Field(..., description="Unique job identifier (provider-specific format)")
+    name: str | None = Field(None, description="Job name/title")
+    number: str | None = Field(None, description="Job number")
+    status: str = Field(..., description="Current job status (provider-specific)")
+    status_id: int | str | None = Field(None, description="Status identifier")
+    workflow_type: str | None = Field(None, description="Workflow/record type name")
+    description: str | None = Field(None, description="Job description")
+
+    # Customer/contact information
+    customer_id: str | None = Field(None, description="Associated customer/contact ID")
+    customer_name: str | None = Field(None, description="Customer name")
+
+    # Address
+    address_line1: str | None = Field(None, description="Address line 1")
+    address_line2: str | None = Field(None, description="Address line 2")
+    city: str | None = Field(None, description="City")
+    state: str | None = Field(None, description="State/province")
+    postal_code: str | None = Field(None, description="ZIP/postal code")
+    country: str | None = Field(None, description="Country")
+
+    # Dates (ISO format strings for universality)
+    created_at: str | None = Field(None, description="Creation timestamp (ISO format)")
+    updated_at: str | None = Field(None, description="Last update timestamp (ISO format)")
+    completed_at: str | None = Field(None, description="Completion timestamp (ISO format)")
+
+    # Sales/team
+    sales_rep_id: str | None = Field(None, description="Sales representative ID")
+    sales_rep_name: str | None = Field(None, description="Sales representative name")
+
+    # Provider-specific data
+    provider: CRMProvider = Field(..., description="CRM provider name")
+    provider_data: dict[str, Any] = Field(
+        default_factory=dict, description="Provider-specific data"
+    )
+
+
+class JobList(BaseModel):
+    """Universal job list response with pagination."""
+
+    jobs: list[Job] = Field(..., description="List of jobs")
+    total_count: int = Field(..., description="Total number of jobs")
+    provider: CRMProvider = Field(..., description="CRM provider name")
+    page: int | None = Field(None, description="Current page number (if paginated)")
+    page_size: int | None = Field(None, description="Page size (if paginated)")
+    has_more: bool | None = Field(None, description="Whether more results exist")
+
+
+class Contact(BaseModel):
+    """Universal contact/customer model that works across all CRM providers."""
+
+    id: str = Field(..., description="Unique contact identifier (provider-specific format)")
+    first_name: str | None = Field(None, description="First name")
+    last_name: str | None = Field(None, description="Last name")
+    company: str | None = Field(None, description="Company name")
+    display_name: str | None = Field(None, description="Display name")
+
+    # Contact information
+    email: str | None = Field(None, description="Email address")
+    phone: str | None = Field(None, description="Primary phone number")
+    mobile_phone: str | None = Field(None, description="Mobile phone")
+    work_phone: str | None = Field(None, description="Work phone")
+
+    # Address
+    address_line1: str | None = Field(None, description="Address line 1")
+    address_line2: str | None = Field(None, description="Address line 2")
+    city: str | None = Field(None, description="City")
+    state: str | None = Field(None, description="State/province")
+    postal_code: str | None = Field(None, description="ZIP/postal code")
+    country: str | None = Field(None, description="Country")
+
+    # Classification
+    status: str | None = Field(None, description="Contact status")
+    workflow_type: str | None = Field(None, description="Workflow/record type name")
+
+    # Dates
+    created_at: str | None = Field(None, description="Creation timestamp (ISO format)")
+    updated_at: str | None = Field(None, description="Last update timestamp (ISO format)")
+
+    # Provider-specific data
+    provider: CRMProvider = Field(..., description="CRM provider name")
+    provider_data: dict[str, Any] = Field(
+        default_factory=dict, description="Provider-specific data"
+    )
+
+
+class ContactList(BaseModel):
+    """Universal contact list response with pagination."""
+
+    contacts: list[Contact] = Field(..., description="List of contacts")
+    total_count: int = Field(..., description="Total number of contacts")
+    provider: CRMProvider = Field(..., description="CRM provider name")
+    page: int | None = Field(None, description="Current page number (if paginated)")
+    page_size: int | None = Field(None, description="Page size (if paginated)")
+    has_more: bool | None = Field(None, description="Whether more results exist")
+
+
+class Project(BaseModel):
+    """Universal project model that works across all CRM providers.
+
+    In hierarchical CRMs (Service Titan), projects are top-level containers that
+    may contain multiple jobs. In flat CRMs (JobNimbus), projects and jobs are
+    the same entity.
+    """
+
+    id: str = Field(..., description="Unique project identifier (provider-specific format)")
+    name: str | None = Field(None, description="Project name/title")
+    number: str | None = Field(None, description="Project number")
+    status: str = Field(..., description="Current project status (provider-specific)")
+    status_id: int | str | None = Field(None, description="Status identifier")
+    sub_status: str | None = Field(None, description="Project sub-status name")
+    sub_status_id: int | str | None = Field(None, description="Sub-status identifier")
+    workflow_type: str | None = Field(None, description="Workflow/record type name")
+    description: str | None = Field(None, description="Project description")
+
+    # Customer/contact information
+    customer_id: str | None = Field(None, description="Associated customer/contact ID")
+    customer_name: str | None = Field(None, description="Customer name")
+    location_id: str | None = Field(None, description="Location identifier")
+
+    # Address
+    address_line1: str | None = Field(None, description="Address line 1")
+    address_line2: str | None = Field(None, description="Address line 2")
+    city: str | None = Field(None, description="City")
+    state: str | None = Field(None, description="State/province")
+    postal_code: str | None = Field(None, description="ZIP/postal code")
+    country: str | None = Field(None, description="Country")
+
+    # Dates (ISO format strings for universality)
+    created_at: str | None = Field(None, description="Creation timestamp (ISO format)")
+    updated_at: str | None = Field(None, description="Last update timestamp (ISO format)")
+    start_date: str | None = Field(None, description="Project start date (ISO format)")
+    target_completion_date: str | None = Field(
+        None, description="Target completion date (ISO format)"
+    )
+    actual_completion_date: str | None = Field(
+        None, description="Actual completion date (ISO format)"
+    )
+
+    # Insurance/claim information
+    claim_number: str | None = Field(None, description="Insurance claim number")
+    date_of_loss: str | None = Field(None, description="Date of loss (ISO format)")
+    insurance_company: str | None = Field(None, description="Insurance company/carrier name")
+    adjuster_name: str | None = Field(None, description="Insurance adjuster name")
+    adjuster_phone: str | None = Field(None, description="Insurance adjuster phone number")
+    adjuster_email: str | None = Field(None, description="Insurance adjuster email address")
+
+    # Sales/team
+    sales_rep_id: str | None = Field(None, description="Sales representative ID")
+    sales_rep_name: str | None = Field(None, description="Sales representative name")
+
+    # Provider-specific data
+    provider: CRMProvider = Field(..., description="CRM provider name")
+    provider_data: dict[str, Any] = Field(
+        default_factory=dict, description="Provider-specific data"
+    )
+
+
+class ProjectList(BaseModel):
+    """Universal project list response with pagination."""
+
+    projects: list[Project] = Field(..., description="List of projects")
+    total_count: int = Field(..., description="Total number of projects")
+    provider: CRMProvider = Field(..., description="CRM provider name")
+    page: int | None = Field(None, description="Current page number (if paginated)")
+    page_size: int | None = Field(None, description="Page size (if paginated)")
+    has_more: bool | None = Field(None, description="Whether more results exist")
+
+
+class Note(BaseModel):
+    """Universal note/activity model that works across all CRM providers."""
+
+    id: str | None = Field(None, description="Note identifier")
+    text: str = Field(..., description="Note text content")
+    entity_id: str = Field(..., description="ID of the entity this note belongs to")
+    entity_type: str = Field(..., description="Type of entity (job, contact, project, etc.)")
+    created_by_id: str | None = Field(None, description="Creator identifier")
+    created_by_name: str | None = Field(None, description="Creator name")
+    created_at: str = Field(..., description="Creation timestamp (ISO format)")
+    updated_at: str | None = Field(None, description="Last update timestamp (ISO format)")
+    is_pinned: bool = Field(default=False, description="Whether the note is pinned")
+
+    # Provider-specific data
+    provider: CRMProvider = Field(..., description="CRM provider name")
+    provider_data: dict[str, Any] = Field(
+        default_factory=dict, description="Provider-specific data"
+    )
+
+
+# ============================================================================
+# LEGACY/PROVIDER-SPECIFIC SCHEMAS - To be deprecated/moved
+# ============================================================================
 
 
 class ProjectStatusResponse(BaseModel):
-    """Response model for project status information."""
+    """Response model for project status information.
+
+    DEPRECATED: Legacy schema. Use universal Project schema instead.
+    """
 
     project_id: str = Field(..., description="Unique project identifier")
     status: Status = Field(..., description="Current project status")
-    claim_status: ClaimStatus = Field(
-        default=ClaimStatus.NONE, description="Current claim status"
-    )
     provider: CRMProvider = Field(..., description="CRM provider")
     updated_at: datetime | None = Field(None, description="Last status update timestamp")
     provider_data: dict[str, Any] | None = Field(None, description="Provider-specific data")
@@ -301,6 +502,8 @@ class ExternalDataItem(BaseModel):
 class ProjectByIdRequest(BaseModel):
     """Request model for getting a project by ID."""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     tenant: int = Field(..., description="Tenant ID")
     project_id: int = Field(..., description="ID of the project to retrieve", alias="projectId")
 
@@ -376,47 +579,6 @@ class UpdateProjectRequest(BaseModel):
     name: str | None = Field(None, description="Project name")
     summary: str | None = Field(None, description="Project summary (HTML)")
     external_data: list[ExternalDataItem] | None = Field(None, description="External data to attach to project", alias="externalData")
-
-
-class ContactInfo(BaseModel):
-    """Contact information model."""
-
-    name: str
-    phone: str
-    email: str
-
-
-class ProjectData(BaseModel):
-    """Mock project data model with all customer and claim information."""
-
-    id: str = Field(..., description="Project ID")
-    customerName: str = Field(..., description="Customer/homeowner name")
-    address: str = Field(..., description="Property address")
-    phone: str = Field(..., description="Customer phone number")
-    email: str | None = Field(None, description="Customer email")
-    claimNumber: str | None = Field(None, description="Insurance claim number")
-    dateOfLoss: str | None = Field(None, description="Date of loss (ISO format)")
-    insuranceAgency: str | None = Field(None, description="Insurance company name")
-    insuranceAgencyContact: ContactInfo | None = Field(
-        None, description="Insurance agency contact"
-    )
-    adjusterName: str | None = Field(None, description="Insurance adjuster name")
-    adjusterContact: ContactInfo | None = Field(
-        None, description="Insurance adjuster contact"
-    )
-    notes: str | None = Field(None, description="Project notes")
-    tenant: int | None = Field(None, description="Tenant ID")
-    job_id: int | None = Field(None, description="Job ID")
-
-
-class Project(BaseModel):
-    """Mock project with status and metadata."""
-
-    project_data: ProjectData
-    status: str
-    claim_status: str = Field(default="None", description="Claim status")
-    updated_at: str
-    metadata: dict[str, Any] | None = Field(None, description="Project metadata")
 
 
 # Pricebook models
@@ -532,3 +694,154 @@ class EquipmentListResponse(BaseModel):
     page_size: int = Field(..., description="Page size", alias="pageSize")
     total_count: int | None = Field(None, description="Total count of equipment", alias="totalCount")
     has_more: bool = Field(..., description="Whether there are more pages", alias="hasMore")
+
+
+# ============================================================================
+# PROVIDER-SPECIFIC DATA SCHEMAS
+# ============================================================================
+
+
+class ServiceTitanProviderData(BaseModel):
+    """Service Titan specific provider data."""
+
+    appointment_number: str = Field(..., description="Service Titan appointment number")
+    job_id: int = Field(..., description="Associated job ID")
+    customer_id: int = Field(..., description="Customer identifier")
+    active: bool = Field(..., description="Whether appointment is active")
+    is_confirmed: bool = Field(..., description="Whether appointment is confirmed")
+    original_status: str = Field(
+        ..., description="Original Service Titan status string"
+    )
+
+    # Optional fields that might be available
+    start_time: datetime | None = Field(None, description="Appointment start time")
+    end_time: datetime | None = Field(None, description="Appointment end time")
+    special_instructions: str | None = Field(None, description="Special instructions")
+    arrival_window_start: datetime | None = Field(
+        None, description="Arrival window start"
+    )
+    arrival_window_end: datetime | None = Field(None, description="Arrival window end")
+
+    class Config:
+        """Pydantic configuration."""
+
+        # Allow extra fields for future extensibility
+        extra = "allow"
+        # Use enum values for serialization
+        use_enum_values = True
+
+
+class FormSubmissionOwner(BaseModel):
+    """Form submission owner object."""
+
+    type: str = Field(..., description="Owner type (e.g., 'Job')")
+    id: int = Field(..., description="Owner ID")
+
+
+class FormSubmissionRequest(BaseModel):
+    """Request model for form submissions."""
+
+    form_id: int = Field(..., description="Form ID to get submissions for")
+    owners: list[FormSubmissionOwner] = Field(..., description="List of owner objects")
+
+
+class FormSubmissionResponse(BaseModel):
+    """Individual form submission response from Service Titan API."""
+
+    id: int = Field(..., description="Form submission ID")
+    form_id: int = Field(..., description="Form ID", alias="formId")
+    form_name: str | None = Field(None, description="Form name", alias="formName")
+    submitted_on: datetime = Field(
+        ..., description="Submission timestamp", alias="submittedOn"
+    )
+    created_by_id: int = Field(
+        ..., description="ID of user who created the submission", alias="createdById"
+    )
+    status: str = Field(..., description="Submission status")
+    owners: list[FormSubmissionOwner] | None = Field(None, description="Form owners")
+    units: list[dict[str, Any]] | None = Field(None, description="Form units/fields")
+
+    class Config:
+        """Pydantic configuration."""
+
+        validate_by_name = True
+
+
+class FormSubmissionListResponse(BaseModel):
+    """Paginated response for form submissions from Service Titan API."""
+
+    page: int = Field(..., description="From which page this output has started")
+    page_size: int = Field(
+        ..., description="Page size for this query", alias="pageSize"
+    )
+    has_more: bool = Field(
+        ..., description="True if there are more records", alias="hasMore"
+    )
+    total_count: int | None = Field(
+        None, description="Total count of records", alias="totalCount"
+    )
+    data: list[FormSubmissionResponse] = Field(
+        ..., description="The collection of form submissions"
+    )
+
+    class Config:
+        """Pydantic configuration."""
+
+        validate_by_name = True
+
+
+class CRMProviderDataFactory:
+    """Factory for creating provider-specific data models."""
+
+    @staticmethod
+    def create_service_titan_data(raw_data: dict[str, Any]) -> ServiceTitanProviderData:
+        """Create Service Titan provider data from raw API response."""
+        try:
+            # Parse datetime fields
+            start_time = None
+            if raw_data.get("start"):
+                start_time = datetime.fromisoformat(
+                    raw_data["start"].replace("Z", "+00:00")
+                )
+
+            end_time = None
+            if raw_data.get("end"):
+                end_time = datetime.fromisoformat(
+                    raw_data["end"].replace("Z", "+00:00")
+                )
+
+            arrival_window_start = None
+            if raw_data.get("arrivalWindowStart"):
+                arrival_window_start = datetime.fromisoformat(
+                    raw_data["arrivalWindowStart"].replace("Z", "+00:00")
+                )
+
+            arrival_window_end = None
+            if raw_data.get("arrivalWindowEnd"):
+                arrival_window_end = datetime.fromisoformat(
+                    raw_data["arrivalWindowEnd"].replace("Z", "+00:00")
+                )
+
+            return ServiceTitanProviderData(
+                appointment_number=raw_data.get("appointmentNumber", ""),
+                job_id=raw_data.get("jobId", 0),
+                customer_id=raw_data.get("customerId", 0),
+                active=raw_data.get("active", False),
+                is_confirmed=raw_data.get("isConfirmed", False),
+                original_status=raw_data.get("status") or "unknown",
+                start_time=start_time,
+                end_time=end_time,
+                special_instructions=raw_data.get("specialInstructions"),
+                arrival_window_start=arrival_window_start,
+                arrival_window_end=arrival_window_end,
+            )
+        except Exception:
+            # Fallback to basic data if parsing fails
+            return ServiceTitanProviderData(
+                appointment_number=raw_data.get("appointmentNumber", ""),
+                job_id=raw_data.get("jobId", 0),
+                customer_id=raw_data.get("customerId", 0),
+                active=raw_data.get("active", False),
+                is_confirmed=raw_data.get("isConfirmed", False),
+                original_status=raw_data.get("status") or "unknown",
+            )

@@ -3,37 +3,166 @@ Abstract base classes for CRM providers.
 
 This module defines the abstract interface that all CRM providers
 must implement, ensuring consistent behavior across different CRM systems.
+
+The interface is designed around universal CRM primitives (jobs, contacts, notes)
+that work across all providers, with provider-specific data stored in the
+provider_data field of each universal schema.
 """
 
 from abc import ABC, abstractmethod
+from typing import Any
 
-from src.integrations.crm.provider_schemas import FormSubmissionListResponse
-from src.integrations.crm.schemas import (
-    EquipmentListResponse,
-    EstimateResponse,
-    JobNoteResponse,
-    JobResponse,
-    MaterialsListResponse,
-    PricebookItemsRequest,
-    ProjectStatusListResponse,
-    ProjectStatusResponse,
-    ServicesListResponse,
-)
+from src.integrations.crm.schemas import Contact, ContactList, Job, JobList, Note, Project, ProjectList
 
 
 class CRMProvider(ABC):
-    """Abstract interface for CRM providers."""
+    """
+    Universal abstract interface for CRM providers.
+
+    All CRM providers must implement these 6 core methods that work with
+    universal schemas. Providers can add additional provider-specific methods
+    as regular (non-abstract) instance methods.
+    """
 
     @abstractmethod
-    async def get_project_status(self, project_id: str) -> ProjectStatusResponse:
+    async def get_job(self, job_id: str) -> Job:
         """
-        Get the status of a specific project by ID.
+        Get a specific job by ID.
 
         Args:
-            project_id: The unique identifier for the project
+            job_id: The unique identifier for the job (provider-specific format)
 
         Returns:
-            ProjectStatusResponse: The project status information
+            Job: Universal job schema with provider-specific data in provider_data
+
+        Raises:
+            CRMError: If the job is not found or an error occurs
+        """
+        pass
+
+    @abstractmethod
+    async def get_all_jobs(
+        self,
+        filters: dict[str, Any] | None = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> JobList:
+        """
+        Get all jobs with optional filtering and pagination.
+
+        Args:
+            filters: Optional dictionary of provider-specific filters
+            page: Page number (1-indexed)
+            page_size: Number of items per page
+
+        Returns:
+            JobList: Paginated list of jobs in universal schema
+
+        Raises:
+            CRMError: If an error occurs while fetching jobs
+        """
+        pass
+
+    @abstractmethod
+    async def get_contact(self, contact_id: str) -> Contact:
+        """
+        Get a specific contact/customer by ID.
+
+        Args:
+            contact_id: The unique identifier for the contact (provider-specific format)
+
+        Returns:
+            Contact: Universal contact schema with provider-specific data
+
+        Raises:
+            CRMError: If the contact is not found or an error occurs
+            CRMError: If the provider doesn't support contacts as separate entities
+        """
+        pass
+
+    @abstractmethod
+    async def get_all_contacts(
+        self,
+        filters: dict[str, Any] | None = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> ContactList:
+        """
+        Get all contacts with optional filtering and pagination.
+
+        Args:
+            filters: Optional dictionary of provider-specific filters
+            page: Page number (1-indexed)
+            page_size: Number of items per page
+
+        Returns:
+            ContactList: Paginated list of contacts in universal schema
+
+        Raises:
+            CRMError: If an error occurs while fetching contacts
+            CRMError: If the provider doesn't support contacts as separate entities
+        """
+        pass
+
+    @abstractmethod
+    async def add_note(
+        self,
+        entity_id: str,
+        entity_type: str,
+        text: str,
+        **kwargs: Any,
+    ) -> Note:
+        """
+        Add a note/activity to an entity (job, contact, project, etc.).
+
+        Args:
+            entity_id: The ID of the entity to add the note to
+            entity_type: The type of entity (e.g., "job", "contact", "project")
+            text: The text content of the note
+            **kwargs: Provider-specific optional parameters (e.g., pin_to_top, private, etc.)
+
+        Returns:
+            Note: Universal note schema with provider-specific metadata
+
+        Raises:
+            CRMError: If the entity is not found or an error occurs
+        """
+        pass
+
+    @abstractmethod
+    async def update_job_status(
+        self,
+        job_id: str,
+        status: str,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Update the status of a job.
+
+        Args:
+            job_id: The unique identifier for the job
+            status: The new status value (provider-specific format)
+            **kwargs: Provider-specific optional parameters (e.g., sub_status, reason, etc.)
+
+        Raises:
+            CRMError: If the job is not found or an error occurs
+        """
+        pass
+
+    @abstractmethod
+    async def get_project(self, project_id: str) -> Project:
+        """
+        Get a specific project by ID.
+
+        In hierarchical CRMs (Service Titan), projects are top-level containers
+        that may contain multiple jobs. In flat CRMs (JobNimbus), this returns
+        the same entity as get_job().
+
+        Args:
+            project_id: The unique identifier for the project (provider-specific format)
+
+        Returns:
+            Project: Universal project schema with provider-specific data in provider_data
 
         Raises:
             CRMError: If the project is not found or an error occurs
@@ -41,181 +170,49 @@ class CRMProvider(ABC):
         pass
 
     @abstractmethod
-    async def get_all_project_statuses(self) -> ProjectStatusListResponse:
-        """
-        Get the status of all projects.
-
-        Returns:
-            ProjectStatusListResponse: List of all project statuses
-
-        Raises:
-            CRMError: If an error occurs while fetching project statuses
-        """
-        pass
-
-    @abstractmethod
-    async def get_appointment_status(
-        self, appointment_id: str
-    ) -> ProjectStatusResponse:
-        """
-        Get the status of a specific appointment by ID.
-
-        Args:
-            appointment_id: The unique identifier for the appointment
-
-        Returns:
-            ProjectStatusResponse: The appointment status information
-
-        Raises:
-            CRMError: If the appointment is not found or an error occurs
-        """
-        pass
-
-    @abstractmethod
-    async def get_all_appointment_statuses(self) -> ProjectStatusListResponse:
-        """
-        Get the status of all appointments.
-
-        Returns:
-            ProjectStatusListResponse: List of all appointment statuses
-
-        Raises:
-            CRMError: If an error occurs while fetching appointment statuses
-        """
-        pass
-
-    @abstractmethod
-    async def get_all_form_submissions(
+    async def get_all_projects(
         self,
-        form_ids: list[int],
-        status: str | None = None,
-        owners: list[dict] | None = None,
-    ) -> FormSubmissionListResponse:
+        filters: dict[str, Any] | None = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> ProjectList:
         """
-        Get all form submissions for a specific form.
+        Get all projects with optional filtering and pagination.
+
+        In flat CRMs (JobNimbus), this returns the same data as get_all_jobs().
 
         Args:
-            form_ids: List of form IDs to get submissions for
-            status: Optional form status to filter by (Started, Completed, Any)
-            owners: Optional list of owner objects with type and id
+            filters: Optional dictionary of provider-specific filters
+            page: Page number (1-indexed)
+            page_size: Number of items per page
 
         Returns:
-            FormSubmissionListResponse: List of all form submissions
+            ProjectList: Paginated list of projects in universal schema
 
         Raises:
-            CRMError: If an error occurs while fetching form submissions
+            CRMError: If an error occurs while fetching projects
         """
         pass
 
     @abstractmethod
-    async def get_job(self, job_id: int) -> JobResponse:
+    async def update_project_status(
+        self,
+        project_id: str,
+        status: str,
+        **kwargs: Any,
+    ) -> None:
         """
-        Get a specific job by ID.
+        Update the status of a project.
+
+        In flat CRMs (JobNimbus), this has the same effect as update_job_status().
 
         Args:
-            job_id: The unique identifier for the job
-
-        Returns:
-            JobResponse: The job information
-
-        Raises:
-            CRMError: If the job is not found or an error occurs
-        """
-        pass
-
-    @abstractmethod
-    async def get_estimate(self, estimate_id: int) -> EstimateResponse:
-        """
-        Get a specific estimate by ID.
-
-        Args:
-            estimate_id: The unique identifier for the estimate
-
-        Returns:
-            EstimateResponse: The estimate information
+            project_id: The unique identifier for the project
+            status: The new status value (provider-specific format)
+            **kwargs: Provider-specific optional parameters (e.g., sub_status, reason, etc.)
 
         Raises:
-            CRMError: If the estimate is not found or an error occurs
-        """
-        pass
-
-    @abstractmethod
-    async def add_job_note(self, job_id: int, text: str, pin_to_top: bool | None = None) -> JobNoteResponse:
-        """
-        Add a note to a specific job.
-
-        Args:
-            job_id: The unique identifier for the job
-            text: The text content of the note
-            pin_to_top: Whether to pin the note to the top (optional)
-
-        Returns:
-            JobNoteResponse: The created note information
-
-        Raises:
-            CRMError: If the job is not found or an error occurs
-        """
-        pass
-
-    @abstractmethod
-    async def update_project_claim_status(self, job_id: int, claim_status: str) -> None:
-        """
-        Update the claim status for a specific project/job.
-
-        Args:
-            job_id: The unique identifier for the job
-            claim_status: The new claim status value
-
-        Raises:
-            CRMError: If the job is not found or an error occurs
-        """
-        pass
-
-    @abstractmethod
-    async def get_pricebook_materials(self, request: PricebookItemsRequest) -> MaterialsListResponse:
-        """
-        Get materials from the pricebook.
-
-        Args:
-            request: Request parameters including pagination and filters
-
-        Returns:
-            MaterialsListResponse: Paginated list of materials
-
-        Raises:
-            CRMError: If an error occurs while fetching materials
-        """
-        pass
-
-    @abstractmethod
-    async def get_pricebook_services(self, request: PricebookItemsRequest) -> ServicesListResponse:
-        """
-        Get services from the pricebook.
-
-        Args:
-            request: Request parameters including pagination and filters
-
-        Returns:
-            ServicesListResponse: Paginated list of services
-
-        Raises:
-            CRMError: If an error occurs while fetching services
-        """
-        pass
-
-    @abstractmethod
-    async def get_pricebook_equipment(self, request: PricebookItemsRequest) -> EquipmentListResponse:
-        """
-        Get equipment from the pricebook.
-
-        Args:
-            request: Request parameters including pagination and filters
-
-        Returns:
-            EquipmentListResponse: Paginated list of equipment
-
-        Raises:
-            CRMError: If an error occurs while fetching equipment
+            CRMError: If the project is not found or an error occurs
         """
         pass
 
@@ -229,7 +226,7 @@ class CRMError(Exception):
 
         Args:
             message: Error message
-            error_code: Optional provider-specific error code
+            error_code: Optional provider-specific error code (e.g., "NOT_FOUND", "NOT_SUPPORTED", "UNAUTHORIZED")
         """
         super().__init__(message)
         self.message = message

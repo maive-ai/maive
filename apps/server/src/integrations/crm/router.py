@@ -1,176 +1,52 @@
 """
-CRM router with project status endpoints.
+CRM router with universal interface endpoints.
 
-This module contains all the API endpoints for CRM operations,
-including project status retrieval and management.
+This module contains all the API endpoints for CRM operations using
+the universal interface that works across all CRM providers.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 
 from src.auth.dependencies import get_current_user, get_current_user_optional
 from src.auth.schemas import User
 from src.integrations.crm.dependencies import get_crm_service
 from src.integrations.crm.schemas import (
+    Contact,
+    ContactList,
     CRMErrorResponse,
-    EstimateItemsResponse,
-    EstimateResponse,
-    JobNoteResponse,
-    JobResponse,
-    ProjectData,
-    ProjectStatusListResponse,
-    ProjectStatusResponse,
+    Job,
+    JobList,
+    Note,
+    Project,
+    ProjectList,
 )
 from src.integrations.crm.service import CRMService
 
 router = APIRouter(prefix="/crm", tags=["CRM"])
 
 
-@router.get("/projects/{project_id}/status", response_model=ProjectStatusResponse)
-async def get_project_status(
-    project_id: str,
-    current_user: User = Depends(get_current_user),
-    crm_service: CRMService = Depends(get_crm_service),
-) -> ProjectStatusResponse:
-    """
-    Get the status of a specific project by ID.
-
-    Args:
-        project_id: The unique identifier for the project
-        crm_service: The CRM service instance from dependency injection
-
-    Returns:
-        ProjectStatusResponse: The project status information
-
-    Raises:
-        HTTPException: If the project is not found or an error occurs
-    """
-    result = await crm_service.get_project_status(project_id)
-
-    if isinstance(result, CRMErrorResponse):
-        if result.error_code == "NOT_FOUND":
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=result.error
-            )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result.error
-            )
-
-    return result
+# ========================================================================
+# Job Endpoints
+# ========================================================================
 
 
-@router.get("/projects/status", response_model=ProjectStatusListResponse)
-async def get_all_project_statuses(
-    current_user: User = Depends(get_current_user),
-    crm_service: CRMService = Depends(get_crm_service),
-) -> ProjectStatusListResponse:
-    """
-    Get the status of all projects.
-
-    Args:
-        crm_service: The CRM service instance from dependency injection
-
-    Returns:
-        ProjectStatusListResponse: List of all project statuses
-
-    Raises:
-        HTTPException: If an error occurs while fetching project statuses
-    """
-    result = await crm_service.get_all_project_statuses()
-
-    if isinstance(result, CRMErrorResponse):
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result.error
-        )
-
-    return result
-
-
-@router.post("/projects", status_code=status.HTTP_201_CREATED)
-async def create_project(
-    project_data: ProjectData,
-    current_user: User = Depends(get_current_user),
-    crm_service: CRMService = Depends(get_crm_service),
-) -> None:
-    """
-    Create a new project in the CRM provider.
-
-    Note: The `id`, `tenant`, and `job_id` fields in the request will be
-    auto-generated and any provided values will be ignored.
-
-    Args:
-        project_data: The project data (ProjectData model)
-        crm_service: The CRM service instance from dependency injection
-
-    Raises:
-        HTTPException: If the provider doesn't support project creation or an error occurs
-    """
-    result = await crm_service.create_project(project_data)
-
-    if isinstance(result, CRMErrorResponse):
-        if result.error_code == "NOT_SUPPORTED":
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail=result.error
-            )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result.error
-            )
-
-
-@router.get("/{tenant}/estimates/{estimate_id}", response_model=EstimateResponse)
-async def get_estimate(
-    tenant: int,
-    estimate_id: int,
-    current_user: User = Depends(get_current_user),
-    crm_service: CRMService = Depends(get_crm_service),
-) -> EstimateResponse:
-    """
-    Get a specific estimate by ID.
-
-    Args:
-        tenant: The tenant ID
-        estimate_id: The unique identifier for the estimate
-        crm_service: The CRM service instance from dependency injection
-
-    Returns:
-        EstimateResponse: The estimate information
-
-    Raises:
-        HTTPException: If the estimate is not found or an error occurs
-    """
-    result = await crm_service.get_estimate(estimate_id)
-
-    if isinstance(result, CRMErrorResponse):
-        if result.error_code == "NOT_FOUND":
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=result.error
-            )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result.error
-            )
-
-    return result
-
-
-@router.get("/{tenant}/jobs/{job_id}", response_model=JobResponse)
+@router.get("/jobs/{job_id}", response_model=Job)
 async def get_job(
-    tenant: int,
-    job_id: int,
+    job_id: str,
     current_user: User = Depends(get_current_user),
     crm_service: CRMService = Depends(get_crm_service),
-) -> JobResponse:
+) -> Job:
     """
     Get a specific job by ID.
 
+    This endpoint works across all CRM providers and returns a standardized Job schema.
+
     Args:
-        tenant: The tenant ID
-        job_id: The unique identifier for the job
+        job_id: The unique identifier for the job (provider-specific format)
         crm_service: The CRM service instance from dependency injection
 
     Returns:
-        JobResponse: The job information
+        Job: The job information in universal format
 
     Raises:
         HTTPException: If the job is not found or an error occurs
@@ -190,42 +66,30 @@ async def get_job(
     return result
 
 
-@router.get("/{tenant}/estimates/items", response_model=EstimateItemsResponse)
-async def get_estimate_items(
-    tenant: int,
-    estimate_id: int | None = None,
-    ids: str | None = None,
-    active: str | None = None,
-    page: int | None = None,
-    page_size: int | None = None,
+@router.get("/jobs", response_model=JobList)
+async def get_all_jobs(
+    page: int = Query(1, ge=1, description="Page number (1-indexed)"),
+    page_size: int = Query(50, ge=1, le=100, description="Number of items per page"),
     current_user: User = Depends(get_current_user),
     crm_service: CRMService = Depends(get_crm_service),
-) -> EstimateItemsResponse:
+) -> JobList:
     """
-    Get estimate items with optional filters.
+    Get all jobs with pagination.
+
+    This endpoint works across all CRM providers and returns a standardized JobList schema.
 
     Args:
-        tenant: The tenant ID
-        estimate_id: Optional estimate ID to filter items
-        ids: Optional comma-separated string of item IDs (max 50)
-        active: Optional active status filter (True, False, Any)
-        page: Optional page number for pagination
-        page_size: Optional page size for pagination (max 50)
+        page: Page number (1-indexed)
+        page_size: Number of items per page (max 100)
         crm_service: The CRM service instance from dependency injection
 
     Returns:
-        EstimateItemsResponse: The paginated list of estimate items
+        JobList: Paginated list of jobs in universal format
 
     Raises:
-        HTTPException: If an error occurs
+        HTTPException: If an error occurs while fetching jobs
     """
-    result = await crm_service.get_estimate_items(
-        estimate_id=estimate_id,
-        ids=ids,
-        active=active,
-        page=page,
-        page_size=page_size,
-    )
+    result = await crm_service.get_all_jobs(page=page, page_size=page_size)
 
     if isinstance(result, CRMErrorResponse):
         raise HTTPException(
@@ -235,37 +99,316 @@ async def get_estimate_items(
     return result
 
 
-@router.post("/{tenant}/jobs/{job_id}/notes", response_model=JobNoteResponse)
+@router.post("/jobs/{job_id}/notes", response_model=Note, status_code=status.HTTP_201_CREATED)
 async def add_job_note(
-    tenant: int,
-    job_id: int,
-    text: str,
-    pin_to_top: bool | None = None,
+    job_id: str,
+    text: str = Body(..., description="The note text content"),
+    pin_to_top: bool = Body(False, description="Whether to pin the note to the top"),
     current_user: User | None = Depends(get_current_user_optional),
     crm_service: CRMService = Depends(get_crm_service),
-) -> JobNoteResponse:
+) -> Note:
     """
-    Add a note to a specific job.
+    Add a note to a job.
+
+    This endpoint works across all CRM providers and returns a standardized Note schema.
 
     Args:
-        tenant: The tenant ID
         job_id: The unique identifier for the job
         text: The text content of the note
-        pin_to_top: Whether to pin the note to the top (optional)
+        pin_to_top: Whether to pin the note to the top (provider-specific, may not be supported)
         crm_service: The CRM service instance from dependency injection
 
     Returns:
-        JobNoteResponse: The created note information
+        Note: The created note in universal format
 
     Raises:
         HTTPException: If the job is not found or an error occurs
     """
-    result = await crm_service.add_job_note(job_id, text, pin_to_top)
+    result = await crm_service.add_note(
+        entity_id=job_id,
+        entity_type="job",
+        text=text,
+        pin_to_top=pin_to_top,
+    )
 
     if isinstance(result, CRMErrorResponse):
         if result.error_code == "NOT_FOUND":
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail=result.error
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result.error
+            )
+
+    return result
+
+
+@router.patch("/jobs/{job_id}/status", status_code=status.HTTP_204_NO_CONTENT)
+async def update_job_status(
+    job_id: str,
+    status_value: str = Body(..., embed=True, alias="status", description="The new status value"),
+    current_user: User = Depends(get_current_user),
+    crm_service: CRMService = Depends(get_crm_service),
+) -> None:
+    """
+    Update the status of a job.
+
+    This endpoint works across all CRM providers.
+
+    Args:
+        job_id: The unique identifier for the job
+        status_value: The new status value (provider-specific format)
+        crm_service: The CRM service instance from dependency injection
+
+    Raises:
+        HTTPException: If the job is not found or an error occurs
+    """
+    result = await crm_service.update_job_status(job_id=job_id, status=status_value)
+
+    if isinstance(result, CRMErrorResponse):
+        if result.error_code == "NOT_FOUND":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=result.error
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result.error
+            )
+
+
+# ========================================================================
+# Project Endpoints
+# ========================================================================
+
+
+@router.get("/projects/{project_id}", response_model=Project)
+async def get_project(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    crm_service: CRMService = Depends(get_crm_service),
+) -> Project:
+    """
+    Get a specific project by ID.
+
+    This endpoint works across all CRM providers and returns a standardized Project schema.
+
+    Note: In flat CRMs like JobNimbus, projects and jobs are the same entity.
+
+    Args:
+        project_id: The unique identifier for the project (provider-specific format)
+        crm_service: The CRM service instance from dependency injection
+
+    Returns:
+        Project: The project information in universal format
+
+    Raises:
+        HTTPException: If the project is not found or an error occurs
+    """
+    result = await crm_service.get_project(project_id)
+
+    if isinstance(result, CRMErrorResponse):
+        if result.error_code == "NOT_FOUND":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=result.error
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result.error
+            )
+
+    return result
+
+
+@router.get("/projects", response_model=ProjectList)
+async def get_all_projects(
+    page: int = Query(1, ge=1, description="Page number (1-indexed)"),
+    page_size: int = Query(50, ge=1, le=100, description="Number of items per page"),
+    current_user: User = Depends(get_current_user),
+    crm_service: CRMService = Depends(get_crm_service),
+) -> ProjectList:
+    """
+    Get all projects with pagination.
+
+    This endpoint works across all CRM providers and returns a standardized ProjectList schema.
+
+    Args:
+        page: Page number (1-indexed)
+        page_size: Number of items per page (max 100)
+        crm_service: The CRM service instance from dependency injection
+
+    Returns:
+        ProjectList: Paginated list of projects in universal format
+
+    Raises:
+        HTTPException: If an error occurs while fetching projects
+    """
+    result = await crm_service.get_all_projects(page=page, page_size=page_size)
+
+    if isinstance(result, CRMErrorResponse):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result.error
+        )
+
+    return result
+
+
+@router.patch("/projects/{project_id}/status", status_code=status.HTTP_204_NO_CONTENT)
+async def update_project_status(
+    project_id: str,
+    status_value: str = Body(..., embed=True, alias="status", description="The new status value"),
+    current_user: User = Depends(get_current_user),
+    crm_service: CRMService = Depends(get_crm_service),
+) -> None:
+    """
+    Update the status of a project.
+
+    This endpoint works across all CRM providers.
+
+    Args:
+        project_id: The unique identifier for the project
+        status_value: The new status value (provider-specific format)
+        crm_service: The CRM service instance from dependency injection
+
+    Raises:
+        HTTPException: If the project is not found or an error occurs
+    """
+    result = await crm_service.update_project_status(project_id=project_id, status=status_value)
+
+    if isinstance(result, CRMErrorResponse):
+        if result.error_code == "NOT_FOUND":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=result.error
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result.error
+            )
+
+
+# ========================================================================
+# Contact Endpoints
+# ========================================================================
+
+
+@router.get("/contacts/{contact_id}", response_model=Contact)
+async def get_contact(
+    contact_id: str,
+    current_user: User = Depends(get_current_user),
+    crm_service: CRMService = Depends(get_crm_service),
+) -> Contact:
+    """
+    Get a specific contact by ID.
+
+    This endpoint works across all CRM providers and returns a standardized Contact schema.
+
+    Args:
+        contact_id: The unique identifier for the contact (provider-specific format)
+        crm_service: The CRM service instance from dependency injection
+
+    Returns:
+        Contact: The contact information in universal format
+
+    Raises:
+        HTTPException: If the contact is not found or an error occurs
+    """
+    result = await crm_service.get_contact(contact_id)
+
+    if isinstance(result, CRMErrorResponse):
+        if result.error_code == "NOT_FOUND":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=result.error
+            )
+        elif result.error_code == "NOT_SUPPORTED":
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=result.error
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result.error
+            )
+
+    return result
+
+
+@router.get("/contacts", response_model=ContactList)
+async def get_all_contacts(
+    page: int = Query(1, ge=1, description="Page number (1-indexed)"),
+    page_size: int = Query(50, ge=1, le=100, description="Number of items per page"),
+    current_user: User = Depends(get_current_user),
+    crm_service: CRMService = Depends(get_crm_service),
+) -> ContactList:
+    """
+    Get all contacts with pagination.
+
+    This endpoint works across all CRM providers and returns a standardized ContactList schema.
+
+    Args:
+        page: Page number (1-indexed)
+        page_size: Number of items per page (max 100)
+        crm_service: The CRM service instance from dependency injection
+
+    Returns:
+        ContactList: Paginated list of contacts in universal format
+
+    Raises:
+        HTTPException: If an error occurs while fetching contacts
+    """
+    result = await crm_service.get_all_contacts(page=page, page_size=page_size)
+
+    if isinstance(result, CRMErrorResponse):
+        if result.error_code == "NOT_SUPPORTED":
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=result.error
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result.error
+            )
+
+    return result
+
+
+@router.post("/contacts/{contact_id}/notes", response_model=Note, status_code=status.HTTP_201_CREATED)
+async def add_contact_note(
+    contact_id: str,
+    text: str = Body(..., description="The note text content"),
+    pin_to_top: bool = Body(False, description="Whether to pin the note to the top"),
+    current_user: User | None = Depends(get_current_user_optional),
+    crm_service: CRMService = Depends(get_crm_service),
+) -> Note:
+    """
+    Add a note to a contact.
+
+    This endpoint works across all CRM providers and returns a standardized Note schema.
+
+    Args:
+        contact_id: The unique identifier for the contact
+        text: The text content of the note
+        pin_to_top: Whether to pin the note to the top (provider-specific, may not be supported)
+        crm_service: The CRM service instance from dependency injection
+
+    Returns:
+        Note: The created note in universal format
+
+    Raises:
+        HTTPException: If the contact is not found or an error occurs
+    """
+    result = await crm_service.add_note(
+        entity_id=contact_id,
+        entity_type="contact",
+        text=text,
+        pin_to_top=pin_to_top,
+    )
+
+    if isinstance(result, CRMErrorResponse):
+        if result.error_code == "NOT_FOUND":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=result.error
+            )
+        elif result.error_code == "NOT_SUPPORTED":
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=result.error
             )
         else:
             raise HTTPException(

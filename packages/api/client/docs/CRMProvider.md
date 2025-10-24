@@ -6,6 +6,8 @@ Available CRM providers.
 
 * `ServiceTitan` (value: `'service_titan'`)
 
-* `MockCrm` (value: `'mock_crm'`)
+* `JobNimbus` (value: `'job_nimbus'`)
+
+* `Mock` (value: `'mock'`)
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
