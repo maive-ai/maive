@@ -25,3 +25,6 @@ class JobNimbusEndpoints:
     # Files endpoints
     FILES = "/files"
     FILE_BY_ID = "/files/{jnid}"
+
+    # Statuses endpoint
+    STATUSES = "/statuses"

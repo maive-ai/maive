@@ -597,6 +597,56 @@ class ServiceTitanProvider(CRMProvider):
 
         logger.info(f"Successfully updated project {project_id} status")
 
+    async def get_available_statuses(self) -> list[str]:
+        """
+        Get list of valid status values for Service Titan.
+
+        Attempts to fetch project substatuses from Service Titan API.
+        Falls back to hardcoded Status enum if API call fails.
+
+        Returns:
+            List of valid status strings
+        """
+        logger.info("[ServiceTitanProvider] Fetching available statuses")
+
+        try:
+            # Fetch all project substatuses (these are the actual status values in ST)
+            from src.integrations.crm.schemas import ProjectSubStatusesRequest
+
+            substatus_req = ProjectSubStatusesRequest(
+                tenant=self.tenant_id,
+                active="Any",  # Get all statuses, active and inactive
+                page=1,
+                page_size=500,  # Get a large batch
+            )
+
+            substatus_response = await self.get_project_substatuses(substatus_req)
+
+            # Extract unique status names from substatuses
+            statuses = []
+            for substatus in substatus_response.data:
+                if substatus.name and substatus.name not in statuses:
+                    statuses.append(substatus.name)
+
+            if statuses:
+                logger.info(
+                    f"[ServiceTitanProvider] Fetched {len(statuses)} statuses from API"
+                )
+                return statuses
+
+            # If no statuses returned, fall back to hardcoded enum
+            logger.warning(
+                "[ServiceTitanProvider] No statuses returned from API, using fallback"
+            )
+            return [status.value for status in Status]
+
+        except Exception as e:
+            logger.error(
+                f"[ServiceTitanProvider] Failed to fetch statuses from API: {e}"
+            )
+            # Fallback to hardcoded Status enum values
+            return [status.value for status in Status]
+
     # ========================================================================
     # Helper Methods (transformation functions)
     # ========================================================================

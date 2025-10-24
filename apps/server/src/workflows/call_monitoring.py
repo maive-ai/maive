@@ -45,12 +45,13 @@ class CallAndWriteToCRMWorkflow:
         user_id: str | None = None,
     ) -> CallResponse | VoiceAIErrorResponse:
         """
-        Create an outbound call and start monitoring it and writing results to CRM.
+        Create an outbound call with tenant-specific status options and start monitoring.
 
         This method orchestrates:
-        1. Creating the call via Voice AI service
-        2. Starting background monitoring and writing results to CRM
-        3. Updating CRM when call completes
+        1. Fetching valid statuses from CRM
+        2. Creating the call via Voice AI service with dynamic statuses
+        3. Starting background monitoring and writing results to CRM
+        4. Updating CRM when call completes
 
         Args:
             request: The call request with phone number and context
@@ -59,8 +60,17 @@ class CallAndWriteToCRMWorkflow:
         Returns:
             CallResponse or VoiceAIErrorResponse: The result of the operation
         """
-        # Create the call
-        result = await self.voice_ai_service.create_outbound_call(request)
+        # Fetch valid statuses from CRM
+        valid_statuses = await self.crm_service.get_available_statuses()
+
+        logger.info(
+            f"[Call Monitoring Workflow] Creating call with {len(valid_statuses)} valid statuses: {', '.join(valid_statuses)}"
+        )
+
+        # Create the call with dynamic statuses
+        result = await self.voice_ai_service.create_outbound_call(
+            request, valid_statuses=valid_statuses
+        )
 
         if isinstance(result, VoiceAIErrorResponse):
             return result

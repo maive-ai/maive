@@ -416,6 +416,24 @@ class MockProvider(CRMProvider):
                 f"[MockProvider] Updated project {project_id} status from {old_status} to {status}"
             )
 
+    async def get_available_statuses(self) -> list[str]:
+        """
+        Get list of valid status values for Mock CRM.
+
+        Returns hardcoded list of Mock CRM statuses.
+
+        Returns:
+            List of valid status strings
+        """
+        logger.info("[MockProvider] Returning available statuses")
+        return [
+            "New",
+            "In Progress",
+            "Hold",
+            "Completed",
+            "Canceled"
+        ]
+
     # ========================================================================
     # Helper Methods (transformation functions)
     # ========================================================================

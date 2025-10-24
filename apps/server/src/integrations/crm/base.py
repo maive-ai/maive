@@ -216,6 +216,22 @@ class CRMProvider(ABC):
         """
         pass
 
+    @abstractmethod
+    async def get_available_statuses(self) -> list[str]:
+        """
+        Get list of valid status values for this CRM provider.
+
+        This returns the available status values that can be used for jobs/projects
+        in this CRM. Each tenant may have custom-defined statuses.
+
+        Returns:
+            List of valid status strings (e.g., ["Scheduled", "Completed", "Hold"])
+
+        Raises:
+            CRMError: If unable to fetch statuses from provider
+        """
+        pass
+
 
 class CRMError(Exception):
     """Base exception for CRM-related errors."""
