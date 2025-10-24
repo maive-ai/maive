@@ -9,6 +9,7 @@ from pulumi_aws import (
     apigatewayv2,
     cloudwatch,
     cognito,
+    dynamodb,
     ec2,
     ecr,
     ecs,
@@ -291,6 +292,7 @@ task_role = iam.Role(
         "Environment": environment,
     },
 )
+
 
 # CloudWatch Log Group
 log_group = cloudwatch.LogGroup(
@@ -715,6 +717,28 @@ cognito_domain_url = pulumi.Output.format(
     aws_cfg.require("region"),
 )
 
+# DynamoDB table for active call state management
+active_calls_table = dynamodb.Table(
+    f"{app_name}-active-calls-{stack_name}",
+    name=f"{app_name}-active-calls-{stack_name}",
+    billing_mode="PAY_PER_REQUEST",  # On-demand pricing
+    hash_key="PK",
+    range_key="SK",
+    attributes=[
+        dynamodb.TableAttributeArgs(name="PK", type="S"),
+        dynamodb.TableAttributeArgs(name="SK", type="S"),
+    ],
+    ttl=dynamodb.TableTtlArgs(
+        enabled=True,
+        attribute_name="ttl",
+    ),
+    tags={
+        "Name": f"{app_name}-active-calls",
+        "Environment": environment,
+        "Stack": stack_name,
+    },
+)
+
 # S3 bucket for PDF uploads
 upload_bucket = s3.Bucket(
     f"{app_name}-upload-bucket-{stack_name}",
@@ -820,6 +844,33 @@ if deploy_containers:
         ],
     )
 
+
+# IAM Policy for DynamoDB access (for active calls table)
+dynamodb_policy = iam.RolePolicy(
+    f"{app_name}-dynamodb-policy-{stack_name}",
+    role=task_role.id,
+    policy=active_calls_table.arn.apply(
+        lambda table_arn: pulumi.Output.json_dumps(
+            {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Action": [
+                            "dynamodb:PutItem",
+                            "dynamodb:GetItem",
+                            "dynamodb:UpdateItem",
+                            "dynamodb:DeleteItem",
+                            "dynamodb:Query",
+                        ],
+                        "Resource": table_arn,
+                    }
+                ],
+            }
+        )
+    ),
+)
+
 # ECS Task Definition (conditional)
 task_definition = None
 if deploy_containers:
@@ -844,6 +895,10 @@ if deploy_containers:
                         {
                             "name": "AWS_REGION",
                             "value": aws_cfg.require("region"),
+                        },
+                        {
+                            "name": "DYNAMODB_ACTIVE_CALLS",
+                            "value": active_calls_table.name,
                         },
                         {
                             "name": "COGNITO_USER_POOL_ID",
@@ -1045,6 +1100,7 @@ pulumi.export("cognito_user_pool_client_id", pool_client.id)
 pulumi.export("cognito_user_pool_client_secret", pool_client.client_secret)
 pulumi.export("uploadBucketName", upload_bucket.bucket)
 pulumi.export("uploadApiEndpoint", upload_api.api_endpoint)
+pulumi.export("dynamodb_table_name", active_calls_table.name)
 
 # Conditional container exports
 if deploy_containers:
