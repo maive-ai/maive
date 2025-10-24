@@ -1232,17 +1232,8 @@
             "description": "Call creation timestamp"
           },
           "provider_data": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Provider Data",
-            "description": "Provider-specific data"
+            "description": "Provider-specific data (VapiCall for Vapi, dict for others)"
           },
           "analysis": {
             "anyOf": [
@@ -1254,6 +1245,14 @@
               }
             ],
             "description": "Typed analysis data (extracted from provider_data)"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/TranscriptMessage"
+            },
+            "type": "array",
+            "title": "Messages",
+            "description": "Transcript messages from the call"
           }
         },
         "type": "object",
@@ -2623,6 +2622,45 @@
         ],
         "title": "Role",
         "description": "User roles in the system."
+      },
+      "TranscriptMessage": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "description": "Speaker role: user, assistant, system"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Message content"
+          },
+          "timestamp_seconds": {
+            "type": "number",
+            "title": "Timestamp Seconds",
+            "description": "Seconds from call start"
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds",
+            "description": "Message duration"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role",
+          "content",
+          "timestamp_seconds"
+        ],
+        "title": "TranscriptMessage",
+        "description": "Provider-agnostic transcript message."
       },
       "User": {
         "properties": {

@@ -281,16 +281,22 @@ export interface CallResponse {
     'created_at'?: string | null;
     /**
      * 
-     * @type {{ [key: string]: any; }}
+     * @type {any}
      * @memberof CallResponse
      */
-    'provider_data'?: { [key: string]: any; } | null;
+    'provider_data'?: any;
     /**
      * 
      * @type {AnalysisData}
      * @memberof CallResponse
      */
     'analysis'?: AnalysisData | null;
+    /**
+     * Transcript messages from the call
+     * @type {Array<TranscriptMessage>}
+     * @memberof CallResponse
+     */
+    'messages'?: Array<TranscriptMessage>;
 }
 
 
@@ -1150,6 +1156,37 @@ export interface StatusId {
  * @interface SubStatusId
  */
 export interface SubStatusId {
+}
+/**
+ * Provider-agnostic transcript message.
+ * @export
+ * @interface TranscriptMessage
+ */
+export interface TranscriptMessage {
+    /**
+     * Speaker role: user, assistant, system
+     * @type {string}
+     * @memberof TranscriptMessage
+     */
+    'role': string;
+    /**
+     * Message content
+     * @type {string}
+     * @memberof TranscriptMessage
+     */
+    'content': string;
+    /**
+     * Seconds from call start
+     * @type {number}
+     * @memberof TranscriptMessage
+     */
+    'timestamp_seconds': number;
+    /**
+     * 
+     * @type {number}
+     * @memberof TranscriptMessage
+     */
+    'duration_seconds'?: number | null;
 }
 /**
  * User information.

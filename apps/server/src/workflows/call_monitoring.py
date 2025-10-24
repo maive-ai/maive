@@ -9,9 +9,11 @@ import asyncio
 
 from src.ai.voice_ai.constants import CallStatus
 from src.ai.voice_ai.schemas import (
+    AnalysisData,
     CallRequest,
     CallResponse,
     ClaimStatusData,
+    TranscriptMessage,
     VoiceAIErrorResponse,
 )
 from src.ai.voice_ai.service import VoiceAIService
@@ -102,6 +104,7 @@ class CallAndWriteToCRMWorkflow:
         poll_interval_seconds = 10
         max_polling_duration = 60 * 60 * 24  # 24 hours
         start_time = asyncio.get_event_loop().time()
+        logged_message_count = 0  # Track message count
 
         try:
             while True:
@@ -120,6 +123,13 @@ class CallAndWriteToCRMWorkflow:
                         f"[Call Monitoring Workflow] Error polling call {call_id}: {status_result.error}"
                     )
                     break
+
+                # Log new transcript messages
+                logged_message_count = self._log_new_transcript_messages(
+                    call_id=call_id,
+                    messages=status_result.messages,
+                    logged_count=logged_message_count,
+                )
 
                 logger.info(
                     f"[Call Monitoring Workflow] Call {call_id} status: {status_result.status}"
@@ -154,6 +164,36 @@ class CallAndWriteToCRMWorkflow:
             logger.error(
                 f"[Call Monitoring Workflow] Unexpected error monitoring call {call_id}: {e}"
             )
+
+    def _log_new_transcript_messages(
+        self,
+        call_id: str,
+        messages: list[TranscriptMessage],
+        logged_count: int,
+    ) -> int:
+        """
+        Log new transcript messages from the call.
+
+        Args:
+            call_id: The call identifier
+            messages: List of transcript messages
+            logged_count: Number of messages already logged
+
+        Returns:
+            Updated count of logged messages
+        """
+        if not messages:
+            return logged_count
+
+        # Log only new messages
+        new_messages = messages[logged_count:]
+        for msg in new_messages:
+            logger.info(
+                f"[Call {call_id}] [{msg.timestamp_seconds:.1f}s] "
+                f"{msg.role.upper()}: {msg.content}"
+            )
+
+        return len(messages)
 
     async def _process_completed_call(
         self,
@@ -196,7 +236,7 @@ class CallAndWriteToCRMWorkflow:
                 return
 
             # Format note text from structured data
-            note_text = self._format_crm_note(analysis.structured_data)
+            note_text = self._format_crm_note(analysis)
 
             # Add note to CRM job via service (no HTTP!)
             crm_result = await self.crm_service.add_note(
@@ -220,14 +260,14 @@ class CallAndWriteToCRMWorkflow:
                 logger.info(
                     f"[Call Monitoring Workflow] Updating project status for job {job_id} to {analysis.structured_data.claim_status}"
                 )
-                status_update_result = (
-                    await self.crm_service.update_job_status(
-                        job_id=job_id,
-                        status=analysis.structured_data.claim_status,
-                    )
+                status_update_result = await self.crm_service.update_job_status(
+                    job_id=job_id,
+                    status=analysis.structured_data.claim_status,
                 )
 
-                if isinstance(status_update_result, object) and hasattr(status_update_result, "error"):
+                if isinstance(status_update_result, object) and hasattr(
+                    status_update_result, "error"
+                ):
                     logger.error(
                         f"[Call Monitoring Workflow] Failed to update project status for job {job_id}: {status_update_result.error}"
                     )
@@ -241,26 +281,33 @@ class CallAndWriteToCRMWorkflow:
                 f"[Call Monitoring Workflow] Error processing completed call {call_id}: {e}"
             )
 
-    def _format_crm_note(self, structured_data: ClaimStatusData | None) -> str:
+    def _format_crm_note(self, analysis: AnalysisData | None) -> str:
         """
         Format structured data into a CRM note.
 
         Args:
-            structured_data: The extracted typed structured data
+            analysis: The extracted typed analysis data
 
         Returns:
             Formatted note text
         """
+        structured_data: ClaimStatusData | None = analysis.structured_data
+        summary: str | None = analysis.summary
+
         try:
             if structured_data is None:
-                logger.info("[Call Monitoring Workflow] No structured data found for call")
+                logger.info(
+                    "[Call Monitoring Workflow] No structured data found for call"
+                )
                 return ""
 
             # Build formatted note
             note_lines = [
                 "🤖 Voice AI Call Summary",
                 "",
-                f"Call Outcome: {structured_data.call_outcome}",
+                f"Call Outcome: {structured_data.call_outcome.capitalize()}",
+                f"Claim Status: {structured_data.claim_status.value.capitalize()}",
+                f"Summary: {summary}",
             ]
 
             # Add status if available
