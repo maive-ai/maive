@@ -1174,11 +1174,14 @@
                 "type": "integer"
               },
               {
+                "type": "string"
+              },
+              {
                 "type": "null"
               }
             ],
             "title": "Job Id",
-            "description": "Job ID"
+            "description": "Job/Project ID (int for Service Titan, str for JobNimbus/Mock)"
           },
           "tenant": {
             "anyOf": [

@@ -199,8 +199,9 @@ class CallAndWriteToCRMWorkflow:
             note_text = self._format_crm_note(analysis.structured_data)
 
             # Add note to CRM job via service (no HTTP!)
-            crm_result = await self.crm_service.add_job_note(
-                job_id=job_id,
+            crm_result = await self.crm_service.add_note(
+                entity_id=job_id,
+                entity_type="job",
                 text=note_text,
                 pin_to_top=True,  # Pin important call results
             )

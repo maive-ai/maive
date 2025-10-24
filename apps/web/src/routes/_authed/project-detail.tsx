@@ -113,7 +113,9 @@ function ProjectDetail() {
       adjuster_name: providerData?.adjusterName,
       adjuster_phone: providerData?.adjusterContact?.phone,
       tenant: providerData?.tenant,
-      job_id: providerData?.job_id,
+      // For flat CRMs (Mock, JobNimbus), use project.id as the job_id
+      // For hierarchical CRMs (Service Titan), this would need to be the actual job_id
+      job_id: project.id
     });
   };
 

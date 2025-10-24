@@ -32,7 +32,7 @@ class CallRequest(BaseModel):
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )
-    job_id: int | None = Field(None, description="Job ID")
+    job_id: int | str | None = Field(None, description="Job/Project ID (int for Service Titan, str for JobNimbus/Mock)")
     tenant: int | None = Field(None, description="Tenant ID")
 
 

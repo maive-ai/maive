@@ -238,10 +238,10 @@ export interface CallRequest {
     'metadata'?: { [key: string]: any; };
     /**
      * 
-     * @type {number}
+     * @type {JobId}
      * @memberof CallRequest
      */
-    'job_id'?: number | null;
+    'job_id'?: JobId | null;
     /**
      * 
      * @type {number}
@@ -687,6 +687,13 @@ export interface Job {
 }
 
 
+/**
+ * Job/Project ID (int for Service Titan, str for JobNimbus/Mock)
+ * @export
+ * @interface JobId
+ */
+export interface JobId {
+}
 /**
  * Universal job list response with pagination.
  * @export
