@@ -480,6 +480,58 @@ class JobNimbusProvider(CRMProvider):
         logger.info(f"Updating JobNimbus project {project_id} status to {status}")
         await self.update_job_status(project_id, status, **kwargs)
 
+    async def get_available_statuses(self) -> list[str]:
+        """
+        Get list of valid status values for JobNimbus.
+
+        Fetches statuses from JobNimbus API.
+        Falls back to common statuses if API call fails.
+
+        Returns:
+            List of valid status strings
+        """
+        logger.info("[JobNimbusProvider] Fetching available statuses")
+
+        try:
+            endpoint = JobNimbusEndpoints.STATUSES
+            response = await self._make_request("GET", endpoint)
+            response.raise_for_status()
+
+            data = response.json()
+
+            # Extract status names from the response
+            # JobNimbus returns an array of status objects with "name" field
+            statuses = []
+            if isinstance(data, dict) and "results" in data:
+                # If response is paginated
+                for status_obj in data.get("results", []):
+                    if isinstance(status_obj, dict) and "name" in status_obj:
+                        statuses.append(status_obj["name"])
+            elif isinstance(data, list):
+                # If response is a list
+                for status_obj in data:
+                    if isinstance(status_obj, dict) and "name" in status_obj:
+                        statuses.append(status_obj["name"])
+
+            if statuses:
+                logger.info(
+                    f"[JobNimbusProvider] Fetched {len(statuses)} statuses from API"
+                )
+                return statuses
+
+            # If no statuses returned, fall back to common values
+            logger.warning(
+                "[JobNimbusProvider] No statuses returned from API, using fallback"
+            )
+            return ["New", "In Progress", "Completed", "Canceled"]
+
+        except Exception as e:
+            logger.error(
+                f"[JobNimbusProvider] Failed to fetch statuses from API: {e}"
+            )
+            # Fallback to common status values
+            return ["New", "In Progress", "Completed", "Canceled"]
+
     # ========================================================================
     # Helper Methods (transformation functions)
     # ========================================================================

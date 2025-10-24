@@ -5,6 +5,7 @@ This module provides the business logic layer for CRM operations using
 the universal interface that works across all CRM providers.
 """
 
+from datetime import datetime, timedelta
 from typing import Any
 
 from src.integrations.crm.base import CRMError, CRMProvider
@@ -32,6 +33,8 @@ class CRMService:
             crm_provider: The CRM provider to use
         """
         self.crm_provider = crm_provider
+        self._status_cache: dict[str, tuple[list[str], datetime]] = {}
+        self._status_cache_ttl = timedelta(minutes=5)  # 5-minute cache
 
     # ========================================================================
     # Job Methods
@@ -115,7 +118,10 @@ class CRMService:
         **kwargs: Any,
     ) -> None | CRMErrorResponse:
         """
-        Update the status of a job.
+        Update the status of a job with validation.
+
+        Validates status against available statuses before updating.
+        If validation fails, logs error but doesn't raise exception.
 
         Args:
             job_id: The job identifier
@@ -126,6 +132,23 @@ class CRMService:
             None on success, CRMErrorResponse on error
         """
         try:
+            # Validate status
+            valid_statuses = await self.get_available_statuses()
+
+            if status not in valid_statuses:
+                error_msg = (
+                    f"Invalid status '{status}' for job {job_id}. "
+                    f"Valid options: {', '.join(valid_statuses)}"
+                )
+                logger.error(f"[CRM Service] {error_msg}")
+                # Don't raise exception - fail gracefully
+                # This allows call monitoring to continue even if status is invalid
+                return CRMErrorResponse(
+                    error=error_msg,
+                    error_code="INVALID_STATUS",
+                    provider=getattr(self.crm_provider, 'provider_name', None)
+                )
+
             logger.info(f"Updating status for job {job_id} to {status}")
             await self.crm_provider.update_job_status(
                 job_id=job_id,
@@ -387,3 +410,35 @@ class CRMService:
                 error_code="UNKNOWN_ERROR",
                 provider=getattr(self.crm_provider, 'provider_name', None)
             )
+
+    # ========================================================================
+    # Status Methods
+    # ========================================================================
+
+    async def get_available_statuses(self, force_refresh: bool = False) -> list[str]:
+        """
+        Get available statuses with caching.
+
+        Args:
+            force_refresh: If True, bypass cache and fetch fresh data
+
+        Returns:
+            List of valid status strings
+        """
+        cache_key = f"{self.crm_provider.__class__.__name__}"
+
+        # Check cache
+        if not force_refresh and cache_key in self._status_cache:
+            cached_statuses, cached_at = self._status_cache[cache_key]
+            if datetime.now() - cached_at < self._status_cache_ttl:
+                logger.debug(f"[CRM Service] Using cached statuses for {cache_key}")
+                return cached_statuses
+
+        # Fetch fresh data
+        logger.info(f"[CRM Service] Fetching fresh statuses for {cache_key}")
+        statuses = await self.crm_provider.get_available_statuses()
+
+        # Update cache
+        self._status_cache[cache_key] = (statuses, datetime.now())
+
+        return statuses

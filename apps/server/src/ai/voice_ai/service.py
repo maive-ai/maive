@@ -24,23 +24,26 @@ class VoiceAIService:
         self.voice_ai_provider = voice_ai_provider
 
     async def create_outbound_call(
-        self, request: CallRequest
+        self, request: CallRequest, valid_statuses: list[str] | None = None
     ) -> CallResponse | VoiceAIErrorResponse:
         """
-        Create an outbound call.
+        Create an outbound call with dynamic status options.
 
         Note: This method only creates the call. Call monitoring and CRM updates
         should be handled by the CallAndWriteToCRMWorkflow orchestration layer.
 
         Args:
             request: The call request with phone number and context
+            valid_statuses: List of valid status values for this tenant's CRM
 
         Returns:
             CallResponse or VoiceAIErrorResponse: The result of the operation
         """
         try:
             logger.info(f"Creating outbound call to: {request.phone_number}")
-            result = await self.voice_ai_provider.create_outbound_call(request)
+            result = await self.voice_ai_provider.create_outbound_call(
+                request, valid_statuses
+            )
             logger.info(
                 f"Successfully created call {result.call_id} with status: {result.status}"
             )

@@ -51,12 +51,15 @@ class VapiProvider(VoiceAIProvider):
             timeout=self._voice_ai_settings.request_timeout,
         )
 
-    async def create_outbound_call(self, request: CallRequest) -> CallResponse:
+    async def create_outbound_call(
+        self, request: CallRequest, valid_statuses: list[str] | None = None
+    ) -> CallResponse:
         """
-        Create outbound call via Vapi SDK.
+        Create outbound call via Vapi SDK with dynamic status options.
 
         Args:
             request: The call request with phone number and context
+            valid_statuses: List of valid status values for this tenant's CRM
 
         Returns:
             CallResponse: The call response with call_id and status
@@ -73,7 +76,7 @@ class VapiProvider(VoiceAIProvider):
                 number=formatted_phone,
                 external_id=request.customer_id,  # Use external_id for customer_id tracking
             )
-            assistant_overrides = self._build_assistant_overrides(request)
+            assistant_overrides = self._build_assistant_overrides(request, valid_statuses)
             
             # Create call using SDK with typed objects
             call: VapiCall = await self._client.calls.create(
@@ -221,14 +224,22 @@ class VapiProvider(VoiceAIProvider):
         # Fallback: return as-is if parsing fails
         return phone_number
 
-    def _build_assistant_overrides(self, request: CallRequest) -> AssistantOverrides:
-        """Build assistant overrides with customer variables and structured outputs using SDK types."""
+    def _build_assistant_overrides(
+        self, request: CallRequest, valid_statuses: list[str] | None = None
+    ) -> AssistantOverrides:
+        """
+        Build assistant overrides with customer variables and structured outputs.
+
+        Args:
+            request: The call request with context
+            valid_statuses: List of valid status values for this tenant's CRM
+        """
         # Extract customer context variables
         variable_values = self._extract_customer_variables(request)
-        
-        # Build analysis plan with structured data extraction
-        analysis_plan = self._build_claim_status_analysis_plan()
-        
+
+        # Build analysis plan with structured data extraction (dynamic statuses)
+        analysis_plan = self._build_claim_status_analysis_plan(valid_statuses)
+
         # Return typed AssistantOverrides object
         return AssistantOverrides(
             variable_values=variable_values if variable_values else None,
@@ -245,8 +256,19 @@ class VapiProvider(VoiceAIProvider):
             exclude={"phone_number", "metadata", "customer_id", "company_name"},
         )
 
-    def _build_claim_status_analysis_plan(self) -> AnalysisPlan:
-        """Build analysis plan for claim status structured data extraction using SDK types."""
+    def _build_claim_status_analysis_plan(
+        self, valid_statuses: list[str] | None = None
+    ) -> AnalysisPlan:
+        """
+        Build analysis plan for claim status structured data extraction.
+
+        Args:
+            valid_statuses: List of valid status values from CRM. If None, uses fallback.
+        """
+        # Use provided statuses or fallback to hardcoded Status enum
+        if valid_statuses is None:
+            valid_statuses = [status.value for status in Status]
+
         # Build typed JSON Schema for structured data extraction
         schema = JsonSchema(
             type="object",
@@ -256,7 +278,7 @@ class VapiProvider(VoiceAIProvider):
                     "enum": [
                         "completed",      # Successfully determined claim status
                         "voicemail",      # Reached voicemail
-                        "gatekeeper",     # Blocked by gatekeeper  
+                        "gatekeeper",     # Blocked by gatekeeper
                         "inconclusive",   # Call happened but couldn't determine status
                         "no_answer"       # No connection established
                     ],
@@ -264,8 +286,8 @@ class VapiProvider(VoiceAIProvider):
                 },
                 "claim_status": {
                     "type": "string",
-                    "enum": [status.value for status in Status],
-                    "description": f"Current status of the job/project. Options: {', '.join([s.value for s in Status])}",
+                    "enum": valid_statuses,  # Dynamic statuses from CRM
+                    "description": f"Current status of the job/project. Options: {', '.join(valid_statuses)}",
                 },
                 "payment_details": {
                     "type": "object",

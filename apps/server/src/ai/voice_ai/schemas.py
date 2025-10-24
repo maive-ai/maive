@@ -8,7 +8,7 @@ call management, and status tracking across different Voice AI providers.
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from src.ai.voice_ai.constants import CallStatus, VoiceAIErrorCode
 from src.ai.voice_ai.constants import VoiceAIProvider as VoiceAIProviderEnum
