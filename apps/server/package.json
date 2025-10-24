@@ -17,6 +17,11 @@
     "format": "uv run ruff format . --check",
     "format:fix": "uv run ruff format .",
     "format:check": "uv run ruff format . --check",
-    "typecheck": "echo 'Python typechecking handled by ruff'"
+    "typecheck": "echo 'Python typechecking handled by ruff'",
+    "db:migrate": "uv run alembic upgrade head",
+    "db:migrate:create": "uv run alembic revision --autogenerate -m",
+    "db:migrate:down": "uv run alembic downgrade -1",
+    "db:status": "uv run alembic current",
+    "db:history": "uv run alembic history --verbose"
   }
 }

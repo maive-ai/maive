@@ -4,19 +4,23 @@ FastAPI dependencies for database services.
 Provides dependency injection for database-related services.
 """
 
-from functools import lru_cache
+from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.call_state_service import CallStateService
+from src.db.calls.repository import CallRepository
+from src.db.database import get_db
 
 
-@lru_cache(maxsize=1)
-def get_call_state_service() -> CallStateService:
+def get_call_repository(
+    session: AsyncSession = Depends(get_db),
+) -> CallRepository:
     """
-    FastAPI dependency for getting the call state service.
+    FastAPI dependency for getting the call repository.
 
-    Returns a singleton instance of CallStateService.
+    Args:
+        session: Database session from get_db dependency
 
     Returns:
-        CallStateService: The call state service instance
+        CallRepository: Repository instance with injected session
     """
-    return CallStateService()
+    return CallRepository(session)

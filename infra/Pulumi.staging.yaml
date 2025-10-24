@@ -1,5 +1,4 @@
 config:
-  maive-infra:environment: testing
   maive-infra:certificate_domain: testing.maive.ai
   maive-infra:deploy_containers: "true"
   maive-infra:transport_protocol: https

@@ -15,36 +15,50 @@ from src.ai.voice_ai.constants import VoiceAIErrorCode
 from src.ai.voice_ai.dependencies import get_voice_ai_service
 from src.ai.voice_ai.schemas import CallResponse, VoiceAIErrorResponse
 from src.ai.voice_ai.service import VoiceAIService
-from src.db.call_state_service import CallStateService
-from src.db.dependencies import get_call_state_service
-from src.db.models import ActiveCallState
+from src.db.calls.repository import CallRepository
+from src.db.dependencies import get_call_repository
 
 router = APIRouter(prefix="/voice-ai", tags=["Voice AI"])
 
 
-@router.get("/calls/active", response_model=ActiveCallState | None)
+@router.get("/calls/active")
 async def get_active_call(
     current_user: User = Depends(get_current_user),
-    call_state_service: CallStateService = Depends(get_call_state_service),
-) -> ActiveCallState | None:
+    call_repository: CallRepository = Depends(get_call_repository),
+) -> dict | None:
     """
     Get the user's currently active call.
 
-    Returns the active call state if one exists, otherwise returns None.
+    Returns the active call data if one exists, otherwise returns None.
 
     Args:
         current_user: The authenticated user
-        call_state_service: The call state service instance from dependency injection
+        call_repository: The call repository instance from dependency injection
 
     Returns:
-        ActiveCallState | None: The active call state or None if no active call
+        dict | None: The active call data or None if no active call
 
     Raises:
-        HTTPException: If an error occurs retrieving the call state
+        HTTPException: If an error occurs retrieving the call
     """
     try:
-        active_call = await call_state_service.get_active_call(current_user.id)
-        return active_call  # Returns None if no active call, which is fine
+        active_call = await call_repository.get_active_call(current_user.id)
+
+        if active_call is None:
+            return None
+
+        # Return a dict compatible with frontend expectations
+        return {
+            "user_id": active_call.user_id,
+            "call_id": active_call.call_id,
+            "project_id": active_call.project_id,
+            "status": active_call.status,
+            "provider": active_call.provider,
+            "phone_number": active_call.phone_number,
+            "listen_url": active_call.listen_url,
+            "started_at": active_call.started_at.isoformat(),
+            "provider_data": active_call.provider_data,
+        }
 
     except Exception as e:
         raise HTTPException(

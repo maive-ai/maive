@@ -2717,7 +2717,7 @@ export const VoiceAIApiAxiosParamCreator = function (configuration?: Configurati
             };
         },
         /**
-         * Get the user\'s currently active call.  Returns the active call state if one exists, otherwise returns None (404).  Args:     current_user: The authenticated user     call_state_service: The call state service instance from dependency injection  Returns:     ActiveCallState | None: The active call state or None if no active call  Raises:     HTTPException: If an error occurs retrieving the call state
+         * Get the user\'s currently active call.  Returns the active call state if one exists, otherwise returns None.  Args:     current_user: The authenticated user     call_state_service: The call state service instance from dependency injection  Returns:     ActiveCallState | None: The active call state or None if no active call  Raises:     HTTPException: If an error occurs retrieving the call state
          * @summary Get Active Call
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -2812,7 +2812,7 @@ export const VoiceAIApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * Get the user\'s currently active call.  Returns the active call state if one exists, otherwise returns None (404).  Args:     current_user: The authenticated user     call_state_service: The call state service instance from dependency injection  Returns:     ActiveCallState | None: The active call state or None if no active call  Raises:     HTTPException: If an error occurs retrieving the call state
+         * Get the user\'s currently active call.  Returns the active call state if one exists, otherwise returns None.  Args:     current_user: The authenticated user     call_state_service: The call state service instance from dependency injection  Returns:     ActiveCallState | None: The active call state or None if no active call  Raises:     HTTPException: If an error occurs retrieving the call state
          * @summary Get Active Call
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -2857,7 +2857,7 @@ export const VoiceAIApiFactory = function (configuration?: Configuration, basePa
             return localVarFp.endCallApiVoiceAiCallsCallIdDelete(callId, options).then((request) => request(axios, basePath));
         },
         /**
-         * Get the user\'s currently active call.  Returns the active call state if one exists, otherwise returns None (404).  Args:     current_user: The authenticated user     call_state_service: The call state service instance from dependency injection  Returns:     ActiveCallState | None: The active call state or None if no active call  Raises:     HTTPException: If an error occurs retrieving the call state
+         * Get the user\'s currently active call.  Returns the active call state if one exists, otherwise returns None.  Args:     current_user: The authenticated user     call_state_service: The call state service instance from dependency injection  Returns:     ActiveCallState | None: The active call state or None if no active call  Raises:     HTTPException: If an error occurs retrieving the call state
          * @summary Get Active Call
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -2898,7 +2898,7 @@ export class VoiceAIApi extends BaseAPI {
     }
 
     /**
-     * Get the user\'s currently active call.  Returns the active call state if one exists, otherwise returns None (404).  Args:     current_user: The authenticated user     call_state_service: The call state service instance from dependency injection  Returns:     ActiveCallState | None: The active call state or None if no active call  Raises:     HTTPException: If an error occurs retrieving the call state
+     * Get the user\'s currently active call.  Returns the active call state if one exists, otherwise returns None.  Args:     current_user: The authenticated user     call_state_service: The call state service instance from dependency injection  Returns:     ActiveCallState | None: The active call state or None if no active call  Raises:     HTTPException: If an error occurs retrieving the call state
      * @summary Get Active Call
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
