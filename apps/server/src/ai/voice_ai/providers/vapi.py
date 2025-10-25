@@ -244,7 +244,7 @@ class VapiProvider(VoiceAIProvider):
         # metadata is handled separately, customer_id goes in main metadata)
         return request.model_dump(
             exclude_none=True,
-            exclude={"phone_number", "metadata", "customer_id", "company_name"},
+            exclude={"phone_number", "metadata", "customer_id"},
         )
 
     def _build_claim_status_analysis_plan(self) -> AnalysisPlan:
