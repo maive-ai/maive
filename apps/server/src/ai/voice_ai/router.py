@@ -41,17 +41,8 @@ async def get_active_call(
     Raises:
         HTTPException: If an error occurs retrieving the call
     """
-    from src.utils.logger import logger
-
     try:
         active_call = await call_repository.get_active_call(current_user.id)
-
-        logger.debug(
-            f"[GET /calls/active] Poll request from user {current_user.id[:8]}... - "
-            f"Active call: {active_call.call_id if active_call else 'None'} - "
-            f"Status: {active_call.status if active_call else 'N/A'} - "
-            f"is_active: {active_call.is_active if active_call else 'N/A'}"
-        )
 
         if active_call is None:
             return None

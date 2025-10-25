@@ -11,7 +11,7 @@ All URIs are relative to *http://localhost*
 # **endCallApiVoiceAiCallsCallIdDelete**
 > endCallApiVoiceAiCallsCallIdDelete()
 
-End an ongoing call programmatically.  Args:     call_id: The unique identifier for the call to end     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection      Raises:     HTTPException: If the call is not found or cannot be ended
+End an ongoing call programmatically.  Args:     call_id: The unique identifier for the call to end     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection  Raises:     HTTPException: If the call is not found or cannot be ended
 
 ### Example
 

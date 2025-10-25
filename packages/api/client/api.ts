@@ -2616,7 +2616,7 @@ export class DefaultApi extends BaseAPI {
 export const VoiceAIApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
         /**
-         * End an ongoing call programmatically.  Args:     call_id: The unique identifier for the call to end     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection      Raises:     HTTPException: If the call is not found or cannot be ended
+         * End an ongoing call programmatically.  Args:     call_id: The unique identifier for the call to end     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection  Raises:     HTTPException: If the call is not found or cannot be ended
          * @summary End Call
          * @param {string} callId 
          * @param {*} [options] Override http request option.
@@ -2736,7 +2736,7 @@ export const VoiceAIApiFp = function(configuration?: Configuration) {
     const localVarAxiosParamCreator = VoiceAIApiAxiosParamCreator(configuration)
     return {
         /**
-         * End an ongoing call programmatically.  Args:     call_id: The unique identifier for the call to end     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection      Raises:     HTTPException: If the call is not found or cannot be ended
+         * End an ongoing call programmatically.  Args:     call_id: The unique identifier for the call to end     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection  Raises:     HTTPException: If the call is not found or cannot be ended
          * @summary End Call
          * @param {string} callId 
          * @param {*} [options] Override http request option.
@@ -2784,7 +2784,7 @@ export const VoiceAIApiFactory = function (configuration?: Configuration, basePa
     const localVarFp = VoiceAIApiFp(configuration)
     return {
         /**
-         * End an ongoing call programmatically.  Args:     call_id: The unique identifier for the call to end     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection      Raises:     HTTPException: If the call is not found or cannot be ended
+         * End an ongoing call programmatically.  Args:     call_id: The unique identifier for the call to end     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection  Raises:     HTTPException: If the call is not found or cannot be ended
          * @summary End Call
          * @param {string} callId 
          * @param {*} [options] Override http request option.
@@ -2823,7 +2823,7 @@ export const VoiceAIApiFactory = function (configuration?: Configuration, basePa
  */
 export class VoiceAIApi extends BaseAPI {
     /**
-     * End an ongoing call programmatically.  Args:     call_id: The unique identifier for the call to end     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection      Raises:     HTTPException: If the call is not found or cannot be ended
+     * End an ongoing call programmatically.  Args:     call_id: The unique identifier for the call to end     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection  Raises:     HTTPException: If the call is not found or cannot be ended
      * @summary End Call
      * @param {string} callId 
      * @param {*} [options] Override http request option.
