@@ -53,24 +53,16 @@ export function useActiveCallPolling(options: UseActiveCallPollingOptions = {}) 
   // Query active call with custom polling interval
   const query = useQuery({
     queryKey: ['active-call'],
-    queryFn: async () => {
-      console.log('[Active Call Polling] Making API request to /calls/active');
-      const result = await getActiveCall();
-      console.log('[Active Call Polling] API response:', result);
-      return result;
-    },
+    queryFn: getActiveCall,
     enabled,
     refetchOnMount: true,
     // Only poll if we have an active call or if we don't know yet (first query)
     refetchInterval: (query) => {
       const data = query.state.data;
-      console.log('[Active Call Polling] Determining refetch interval. Data:', data, 'Will poll:', data === undefined || (data && data.call_id));
       // If we have data and call is not active, don't poll
       if (data !== undefined && (!data || !data.call_id)) {
-        console.log('[Active Call Polling] Stopping polling - no active call');
         return false;
       }
-      console.log(`[Active Call Polling] Continuing to poll every ${pollingInterval}ms`);
       return pollingInterval;
     },
     refetchIntervalInBackground: true,
@@ -81,16 +73,9 @@ export function useActiveCallPolling(options: UseActiveCallPollingOptions = {}) 
 
   // Detect when call ends
   useEffect(() => {
-    console.log('[Active Call Polling] Effect triggered:', {
-      previousCall: previousCallRef.current?.call_id || 'none',
-      currentCall: activeCall?.call_id || 'none',
-      callbackFired: callbackFiredRef.current,
-    });
-
     // Skip if no previous call to compare against
     if (!previousCallRef.current) {
       if (activeCall) {
-        console.log('[Active Call Polling] Initializing with call:', activeCall.call_id);
         previousCallRef.current = activeCall;
         callbackFiredRef.current = false;
       }
@@ -100,11 +85,8 @@ export function useActiveCallPolling(options: UseActiveCallPollingOptions = {}) 
     const wasActive = previousCallRef.current.call_id != null;
     const isActive = activeCall?.call_id != null;
 
-    console.log('[Active Call Polling] State check:', { wasActive, isActive });
-
     // Call ended: was active, now inactive
     if (wasActive && !isActive && !callbackFiredRef.current) {
-      console.log('[Active Call Polling] Call ended - triggering callback');
       callbackFiredRef.current = true;
 
       if (onCallEnded) {
@@ -117,7 +99,6 @@ export function useActiveCallPolling(options: UseActiveCallPollingOptions = {}) 
 
     // Reset callback flag when new call starts
     if (!wasActive && isActive) {
-      console.log('[Active Call Polling] New call started, resetting callback flag');
       callbackFiredRef.current = false;
     }
   }, [activeCall, onCallEnded]);
