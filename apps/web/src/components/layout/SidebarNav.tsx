@@ -1,12 +1,13 @@
-import { Button } from '@/components/ui/button';
-import { navItems } from '@/config/navRoutes';
-import { cn } from '@/lib/utils';
-import type { User } from '@maive/api/client';
 import collapsedLogo from '@maive/brand/logos/Maive-Light-Avatar.png';
 import fullLogo from '@maive/brand/logos/Maive-Main-Logo.png';
 import { Link } from '@tanstack/react-router';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 import { useState } from 'react';
+import type { User } from '@maive/api/client';
+import { SettingsModal } from './SettingsModal';
+import { Button } from '@/components/ui/button';
+import { navItems } from '@/config/navRoutes';
+import { cn } from '@/lib/utils';
 
 export type SidebarNavProps = {
   user: User | null;
@@ -14,6 +15,7 @@ export type SidebarNavProps = {
 
 export default function SidebarNav({ user }: SidebarNavProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const role = user?.role;
 
   return (
@@ -37,9 +39,9 @@ export default function SidebarNav({ user }: SidebarNavProps) {
           <img src={fullLogo} alt="Maive Logo" className="w-32" />
         )}
       </div>
-      <div className="h-[calc(100vh-4rem)] overflow-auto py-6">
+      <div className="h-[calc(100vh-4rem)] overflow-auto py-6 flex flex-col">
         <nav
-          className={cn('flex flex-col space-y-1', collapsed ? 'px-2' : 'px-4')}
+          className={cn('flex flex-col space-y-1 flex-1', collapsed ? 'px-2' : 'px-4')}
         >
           {navItems
             .filter(
@@ -73,6 +75,17 @@ export default function SidebarNav({ user }: SidebarNavProps) {
                 </Link>
               );
             })}
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className={cn(
+              'flex items-center text-sm font-medium transition-colors rounded-md hover:bg-neutral-700/10 cursor-pointer mt-auto',
+              collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
+            )}
+            aria-label="Settings"
+          >
+            <Settings className="h-5 w-5 flex-shrink-0 text-gray-500" />
+            {!collapsed && 'Settings'}
+          </button>
         </nav>
       </div>
       <Button
@@ -88,6 +101,7 @@ export default function SidebarNav({ user }: SidebarNavProps) {
           <ChevronLeft className="h-4 w-4 text-primary-600" />
         )}
       </Button>
+      <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
     </aside>
   );
 }
