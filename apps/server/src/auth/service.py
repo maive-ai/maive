@@ -279,7 +279,6 @@ class CognitoAuthProvider(AuthProvider):
             logger.info(
                 f"Successfully refreshed session. New access token starts with: {session.access_token[:5]}..."
             )
-            logger.debug(f"ID Token: {session.id_token}")
             return AuthResult(success=True, session=session)
 
         except ClientError as e:

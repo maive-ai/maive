@@ -55,6 +55,10 @@ export function useCallAndWriteToCrm(projectId?: string): UseMutationResult<Call
     onSuccess: async (callResponse) => {
       console.log(`[Workflows] Voice AI call created: ${callResponse.call_id}`);
 
+      // Invalidate active call query to restart polling
+      console.log('[Workflows] Invalidating active-call query to restart polling');
+      await queryClient.invalidateQueries({ queryKey: ['active-call'] });
+
       // Invalidate project queries to refetch updated status
       if (projectId) {
         console.log(`[Workflows] Invalidating project query for: ${projectId}`);
