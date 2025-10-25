@@ -23,6 +23,16 @@ class AppSettings(BaseSettings):
         default="http://localhost:3000", description="Frontend base URL"
     )
 
+    # AWS Configuration
+    aws_region: str = Field(
+        default="us-east-1",
+        description="AWS region for services (DynamoDB, Cognito, etc.)",
+    )
+    dynamodb_table_name: str = Field(
+        default="maive-active-calls-dev",
+        description="DynamoDB table name for active call state",
+    )
+
 
 _app_settings: AppSettings | None = None
 

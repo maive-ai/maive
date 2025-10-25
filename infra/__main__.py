@@ -9,11 +9,13 @@ from pulumi_aws import (
     apigatewayv2,
     cloudwatch,
     cognito,
+    dynamodb,
     ec2,
     ecr,
     ecs,
     iam,
     lb,
+    rds,
     route53,
     s3,
 )
@@ -136,6 +138,56 @@ public_route_table_association_2 = ec2.RouteTableAssociation(
     route_table_id=public_route_table.id,
 )
 
+# Private Subnet 1 (for RDS)
+private_subnet_1 = ec2.Subnet(
+    f"{app_name}-private-subnet-1-{stack_name}",
+    vpc_id=vpc.id,
+    cidr_block="10.0.5.0/24",
+    availability_zone=f"{aws_cfg.require('region')}a",
+    map_public_ip_on_launch=False,
+    tags={
+        "Name": f"{app_name}-private-subnet-1-{environment}",
+        "Environment": environment,
+    },
+)
+
+# Private Subnet 2 (for RDS)
+private_subnet_2 = ec2.Subnet(
+    f"{app_name}-private-subnet-2-{stack_name}",
+    vpc_id=vpc.id,
+    cidr_block="10.0.6.0/24",
+    availability_zone=f"{aws_cfg.require('region')}c",
+    map_public_ip_on_launch=False,
+    tags={
+        "Name": f"{app_name}-private-subnet-2-{environment}",
+        "Environment": environment,
+    },
+)
+
+# Route Table for Private Subnets (no internet gateway - database only)
+private_route_table = ec2.RouteTable(
+    f"{app_name}-private-rt-{stack_name}",
+    vpc_id=vpc.id,
+    tags={
+        "Name": f"{app_name}-private-rt-{environment}",
+        "Environment": environment,
+    },
+)
+
+# Route Table Association for Private Subnet 1
+private_route_table_association_1 = ec2.RouteTableAssociation(
+    f"{app_name}-private-rta-1-{stack_name}",
+    subnet_id=private_subnet_1.id,
+    route_table_id=private_route_table.id,
+)
+
+# Route Table Association for Private Subnet 2
+private_route_table_association_2 = ec2.RouteTableAssociation(
+    f"{app_name}-private-rta-2-{stack_name}",
+    subnet_id=private_subnet_2.id,
+    route_table_id=private_route_table.id,
+)
+
 # Security Group for ALB
 alb_security_group = ec2.SecurityGroup(
     f"{app_name}-alb-sg-{stack_name}",
@@ -230,6 +282,51 @@ web_security_group = ec2.SecurityGroup(
     },
 )
 
+# Security Group for RDS
+# In dev: allow public access for local development
+# In prod: only allow ECS tasks to connect
+rds_ingress_rules = [
+    ec2.SecurityGroupIngressArgs(
+        protocol="tcp",
+        from_port=5432,
+        to_port=5432,
+        security_groups=[ecs_security_group.id],
+        description="Allow PostgreSQL access from ECS tasks",
+    )
+]
+
+# Add public access for dev environments only
+if environment == "dev":
+    rds_ingress_rules.append(
+        ec2.SecurityGroupIngressArgs(
+            protocol="tcp",
+            from_port=5432,
+            to_port=5432,
+            cidr_blocks=["0.0.0.0/0"],
+            description="Allow PostgreSQL access from anywhere (DEV ONLY)",
+        )
+    )
+
+rds_security_group = ec2.SecurityGroup(
+    f"{app_name}-rds-sg-{stack_name}",
+    description="Security group for RDS PostgreSQL",
+    vpc_id=vpc.id,
+    ingress=rds_ingress_rules,
+    egress=[
+        ec2.SecurityGroupEgressArgs(
+            protocol="-1",
+            from_port=0,
+            to_port=0,
+            cidr_blocks=["0.0.0.0/0"],
+            description="Allow all outbound traffic",
+        )
+    ],
+    tags={
+        "Name": f"{app_name}-rds-sg-{environment}",
+        "Environment": environment,
+    },
+)
+
 # ECS Cluster
 cluster = ecs.Cluster(
     f"{app_name}-cluster-{stack_name}",
@@ -291,6 +388,7 @@ task_role = iam.Role(
         "Environment": environment,
     },
 )
+
 
 # CloudWatch Log Group
 log_group = cloudwatch.LogGroup(
@@ -715,6 +813,80 @@ cognito_domain_url = pulumi.Output.format(
     aws_cfg.require("region"),
 )
 
+# DynamoDB table for active call state management
+active_calls_table = dynamodb.Table(
+    f"{app_name}-active-calls-{stack_name}",
+    name=f"{app_name}-active-calls-{stack_name}",
+    billing_mode="PAY_PER_REQUEST",  # On-demand pricing
+    hash_key="PK",
+    range_key="SK",
+    attributes=[
+        dynamodb.TableAttributeArgs(name="PK", type="S"),
+        dynamodb.TableAttributeArgs(name="SK", type="S"),
+    ],
+    ttl=dynamodb.TableTtlArgs(
+        enabled=True,
+        attribute_name="ttl",
+    ),
+    tags={
+        "Name": f"{app_name}-active-calls",
+        "Environment": environment,
+        "Stack": stack_name,
+    },
+)
+
+# Database configuration
+db_config = pulumi.Config("db")
+# Use underscores for database name and username (RDS requirement)
+db_name = f"{app_name}_{stack_name}".replace("-", "_")  # e.g., "maive_will_dev"
+
+# RDS Subnet Group
+# In dev: use public subnets for direct access
+# In prod: use private subnets for security
+db_subnet_ids = (
+    [public_subnet_1.id, public_subnet_2.id]
+    if environment == "dev"
+    else [private_subnet_1.id, private_subnet_2.id]
+)
+
+db_subnet_group = rds.SubnetGroup(
+    f"{app_name}-db-subnet-group-{stack_name}",
+    name=f"{app_name}-db-subnet-group-{stack_name}",
+    subnet_ids=db_subnet_ids,
+    tags={
+        "Name": f"{app_name}-db-subnet-group-{environment}",
+        "Environment": environment,
+    },
+)
+
+# RDS PostgreSQL Instance
+db_instance = rds.Instance(
+    f"{app_name}-db-{stack_name}",
+    identifier=f"{app_name}-db-{stack_name}",
+    engine="postgres",
+    engine_version="17.6",
+    instance_class="db.t3.micro",  # Free tier eligible / low cost for dev
+    allocated_storage=20,
+    storage_type="gp3",
+    db_name=db_name,
+    username=db_config.require("username"),
+    password=db_config.require_secret("password"),
+    db_subnet_group_name=db_subnet_group.name,
+    vpc_security_group_ids=[rds_security_group.id],
+    publicly_accessible=environment == "dev",  # True for dev, False for prod
+    skip_final_snapshot=True,  # Set to False in production
+    backup_retention_period=7,
+    backup_window="03:00-04:00",  # UTC
+    maintenance_window="mon:04:00-mon:05:00",  # UTC
+    auto_minor_version_upgrade=True,
+    deletion_protection=False,  # Set to True in production
+    tags={
+        "Name": f"{app_name}-db-{environment}",
+        "Environment": environment,
+        "Stack": stack_name,
+    },
+)
+
 # S3 bucket for PDF uploads
 upload_bucket = s3.Bucket(
     f"{app_name}-upload-bucket-{stack_name}",
@@ -820,6 +992,33 @@ if deploy_containers:
         ],
     )
 
+
+# IAM Policy for DynamoDB access (for active calls table)
+dynamodb_policy = iam.RolePolicy(
+    f"{app_name}-dynamodb-policy-{stack_name}",
+    role=task_role.id,
+    policy=active_calls_table.arn.apply(
+        lambda table_arn: pulumi.Output.json_dumps(
+            {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Action": [
+                            "dynamodb:PutItem",
+                            "dynamodb:GetItem",
+                            "dynamodb:UpdateItem",
+                            "dynamodb:DeleteItem",
+                            "dynamodb:Query",
+                        ],
+                        "Resource": table_arn,
+                    }
+                ],
+            }
+        )
+    ),
+)
+
 # ECS Task Definition (conditional)
 task_definition = None
 if deploy_containers:
@@ -844,6 +1043,10 @@ if deploy_containers:
                         {
                             "name": "AWS_REGION",
                             "value": aws_cfg.require("region"),
+                        },
+                        {
+                            "name": "DYNAMODB_ACTIVE_CALLS",
+                            "value": active_calls_table.name,
                         },
                         {
                             "name": "COGNITO_USER_POOL_ID",
@@ -889,6 +1092,27 @@ if deploy_containers:
                         {
                             "name": "COOKIE_HTTPONLY",
                             "value": config.require("cookie_httponly"),
+                        },
+                        # Database configuration
+                        {
+                            "name": "DB_HOST",
+                            "value": db_instance.address,
+                        },
+                        {
+                            "name": "DB_PORT",
+                            "value": str(db_instance.port),
+                        },
+                        {
+                            "name": "DB_NAME",
+                            "value": db_name,
+                        },
+                        {
+                            "name": "DB_USERNAME",
+                            "value": db_config.require("username"),
+                        },
+                        {
+                            "name": "DB_PASSWORD",
+                            "value": db_config.require_secret("password"),
                         },
                     ],
                     "logConfiguration": {
@@ -1045,6 +1269,11 @@ pulumi.export("cognito_user_pool_client_id", pool_client.id)
 pulumi.export("cognito_user_pool_client_secret", pool_client.client_secret)
 pulumi.export("uploadBucketName", upload_bucket.bucket)
 pulumi.export("uploadApiEndpoint", upload_api.api_endpoint)
+pulumi.export("dynamodb_table_name", active_calls_table.name)
+pulumi.export("db_host", db_instance.address)
+pulumi.export("db_port", db_instance.port)
+pulumi.export("db_name", db_instance.db_name)
+pulumi.export("db_username", db_instance.username)
 
 # Conditional container exports
 if deploy_containers:
