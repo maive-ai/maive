@@ -2,8 +2,8 @@ import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
 import { createFileRoute } from '@tanstack/react-router';
 import { AlertCircle, Building2, CheckCircle2, FileText, Loader2, Mail, MapPin, Phone, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import type { Value as E164Number } from 'react-phone-number-input';
 import { isValidPhoneNumber } from 'react-phone-number-input';
+import type { Value as E164Number } from 'react-phone-number-input';
 
 import { useEndCall } from '@/clients/ai/voice';
 import { useFetchProject } from '@/clients/crm';
@@ -138,11 +138,14 @@ function ProjectDetail() {
       return;
     }
 
+    const companyName = localStorage.getItem('companyName') || undefined;
+
     callAndWritetoCrmMutation.mutate({
       phone_number: phoneNumber,
       // Pass customer details from project data
       customer_id: project.id,
       customer_name: providerData?.customerName,
+      company_name: companyName,
       customer_address: providerData?.address,
       claim_number: project.claim_number || providerData?.claimNumber,
       insurance_agency: providerData?.insuranceAgency,
