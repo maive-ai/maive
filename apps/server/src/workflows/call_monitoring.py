@@ -152,75 +152,92 @@ class CallAndWriteToCRMWorkflow:
             request: The original call request (contains tenant/job_id)
             user_id: The ID of the user who created the call
         """
+        # Import here to avoid circular dependencies
+        from src.db.database import get_async_session_local
+
         poll_interval_seconds = 10
         max_polling_duration = 60 * 60 * 24  # 24 hours
         start_time = asyncio.get_event_loop().time()
         logged_message_count = 0  # Track message count
 
+        # Create a new database session for this background task
+        # The session from the HTTP request will be closed, so we need our own
+        session_factory = get_async_session_local()
+
         try:
-            while True:
-                elapsed = asyncio.get_event_loop().time() - start_time
-                if elapsed > max_polling_duration:
-                    logger.warning(
-                        f"[Call Monitoring Workflow] Monitoring timed out for call {call_id}"
-                    )
-                    break
+            async with session_factory() as session:
+                # Create a repository with our own session
+                task_repository = CallRepository(session)
 
-                # Poll call status
-                status_result = await self.voice_ai_service.get_call_status(call_id)
-
-                if isinstance(status_result, VoiceAIErrorResponse):
-                    logger.error(
-                        f"[Call Monitoring Workflow] Error polling call {call_id}: {status_result.error}"
-                    )
-                    break
-
-                # Log new transcript messages
-                logged_message_count = self._log_new_transcript_messages(
-                    call_id=call_id,
-                    messages=status_result.messages,
-                    logged_count=logged_message_count,
-                )
-
-                logger.info(
-                    f"[Call Monitoring Workflow] Call {call_id} status: {status_result.status}"
-                )
-
-                # Update call status in database
-                if user_id:
-                    try:
-                        await self.call_repository.update_call_status(
-                            call_id=call_id,
-                            status=status_result.status,
-                            provider_data=status_result.provider_data.model_dump(mode="json")
-                            if status_result.provider_data
-                            else None,
+                while True:
+                    elapsed = asyncio.get_event_loop().time() - start_time
+                    if elapsed > max_polling_duration:
+                        logger.warning(
+                            f"[Call Monitoring Workflow] Monitoring timed out for call {call_id}"
                         )
-                    except Exception as e:
+                        break
+
+                    # Poll call status
+                    status_result = await self.voice_ai_service.get_call_status(call_id)
+
+                    if isinstance(status_result, VoiceAIErrorResponse):
                         logger.error(
-                            f"[Call Monitoring Workflow] Failed to update call status: {e}"
+                            f"[Call Monitoring Workflow] Error polling call {call_id}: {status_result.error}"
+                        )
+                        break
+
+                    # Log new transcript messages
+                    logged_message_count = self._log_new_transcript_messages(
+                        call_id=call_id,
+                        messages=status_result.messages,
+                        logged_count=logged_message_count,
+                    )
+
+                    logger.info(
+                        f"[Call Monitoring Workflow] Call {call_id} status: {status_result.status}"
+                    )
+
+                    # Update call status in database
+                    if user_id:
+                        try:
+                            await task_repository.update_call_status(
+                                call_id=call_id,
+                                status=status_result.status,
+                                provider_data=status_result.provider_data.model_dump(mode="json")
+                                if status_result.provider_data
+                                else None,
+                            )
+                            await session.commit()
+                            logger.debug(f"[Call Monitoring Workflow] Committed status update for call {call_id}")
+                        except Exception as e:
+                            logger.error(
+                                f"[Call Monitoring Workflow] Failed to update call status: {e}"
+                            )
+                            await session.rollback()
+
+                    # Check if call has ended
+                    if CallStatus.is_call_ended(status_result.status):
+                        logger.info(
+                            f"[Call Monitoring Workflow] Call {call_id} ended with status: {status_result.status}"
                         )
 
-                # Check if call has ended
-                if CallStatus.is_call_ended(status_result.status):
-                    logger.info(
-                        f"[Call Monitoring Workflow] Call {call_id} ended with status: {status_result.status}"
-                    )
+                        # Extract structured data and update CRM
+                        # At this point, status_result is guaranteed to be CallResponse due to the isinstance check above
+                        assert isinstance(status_result, CallResponse), (
+                            "status_result should be CallResponse at this point"
+                        )
+                        await self._process_completed_call(
+                            call_id=call_id,
+                            call_response=status_result,
+                            request=request,
+                            user_id=user_id,
+                            repository=task_repository,
+                        )
+                        await session.commit()
+                        logger.info(f"[Call Monitoring Workflow] Committed final call state for {call_id}")
+                        break
 
-                    # Extract structured data and update CRM
-                    # At this point, status_result is guaranteed to be CallResponse due to the isinstance check above
-                    assert isinstance(status_result, CallResponse), (
-                        "status_result should be CallResponse at this point"
-                    )
-                    await self._process_completed_call(
-                        call_id=call_id,
-                        call_response=status_result,
-                        request=request,
-                        user_id=user_id,
-                    )
-                    break
-
-                await asyncio.sleep(poll_interval_seconds)
+                    await asyncio.sleep(poll_interval_seconds)
 
         except asyncio.CancelledError:
             logger.info(
@@ -267,6 +284,7 @@ class CallAndWriteToCRMWorkflow:
         call_response: CallResponse,
         request: CallRequest,
         user_id: str | None,
+        repository: CallRepository,
     ) -> None:
         """
         Process a completed call and update CRM with structured data.
@@ -278,10 +296,11 @@ class CallAndWriteToCRMWorkflow:
             call_response: The final call response with provider data
             request: The original call request (contains tenant/job_id)
             user_id: The ID of the user who created the call
+            repository: The call repository with an active session
         """
         try:
             # Mark call as ended in database
-            await self.call_repository.end_call(
+            await repository.end_call(
                 call_id=call_id,
                 final_status=call_response.status,
                 ended_at=call_response.ended_at if hasattr(call_response, "ended_at") else None,
