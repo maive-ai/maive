@@ -24,6 +24,69 @@ import type { RequestArgs } from './base';
 import { BASE_PATH, COLLECTION_FORMATS, BaseAPI, RequiredError, operationServerMap } from './base';
 
 /**
+ * Response model for the user\'s currently active call.
+ * @export
+ * @interface ActiveCallResponse
+ */
+export interface ActiveCallResponse {
+    /**
+     * User identifier
+     * @type {string}
+     * @memberof ActiveCallResponse
+     */
+    'user_id': string;
+    /**
+     * Unique call identifier
+     * @type {string}
+     * @memberof ActiveCallResponse
+     */
+    'call_id': string;
+    /**
+     * Associated project identifier
+     * @type {string}
+     * @memberof ActiveCallResponse
+     */
+    'project_id': string;
+    /**
+     * Current call status
+     * @type {CallStatus}
+     * @memberof ActiveCallResponse
+     */
+    'status': CallStatus;
+    /**
+     * Voice AI provider
+     * @type {VoiceAIProvider}
+     * @memberof ActiveCallResponse
+     */
+    'provider': VoiceAIProvider;
+    /**
+     * Phone number being called
+     * @type {string}
+     * @memberof ActiveCallResponse
+     */
+    'phone_number': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ActiveCallResponse
+     */
+    'listen_url'?: string | null;
+    /**
+     * Call start timestamp (ISO format)
+     * @type {string}
+     * @memberof ActiveCallResponse
+     */
+    'started_at': string;
+    /**
+     * 
+     * @type {any}
+     * @memberof ActiveCallResponse
+     */
+    'provider_data'?: any;
+}
+
+
+/**
  * Provider-agnostic analysis data from completed calls.
  * @export
  * @interface AnalysisData
@@ -2616,7 +2679,7 @@ export class DefaultApi extends BaseAPI {
 export const VoiceAIApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
         /**
-         * End an ongoing call programmatically.  Args:     call_id: The unique identifier for the call to end     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection      Raises:     HTTPException: If the call is not found or cannot be ended
+         * End an ongoing call programmatically.  Args:     call_id: The unique identifier for the call to end     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection     call_repository: The call repository instance from dependency injection  Raises:     HTTPException: If the call is not found or cannot be ended
          * @summary End Call
          * @param {string} callId 
          * @param {*} [options] Override http request option.
@@ -2635,6 +2698,40 @@ export const VoiceAIApiAxiosParamCreator = function (configuration?: Configurati
             }
 
             const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Get the user\'s currently active call.  Returns the active call data if one exists, otherwise returns None.  Args:     current_user: The authenticated user     call_repository: The call repository instance from dependency injection  Returns:     ActiveCallResponse | None: The active call data or None if no active call  Raises:     HTTPException: If an error occurs retrieving the call
+         * @summary Get Active Call
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getActiveCallApiVoiceAiCallsActiveGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/voice-ai/calls/active`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
 
@@ -2702,7 +2799,7 @@ export const VoiceAIApiFp = function(configuration?: Configuration) {
     const localVarAxiosParamCreator = VoiceAIApiAxiosParamCreator(configuration)
     return {
         /**
-         * End an ongoing call programmatically.  Args:     call_id: The unique identifier for the call to end     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection      Raises:     HTTPException: If the call is not found or cannot be ended
+         * End an ongoing call programmatically.  Args:     call_id: The unique identifier for the call to end     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection     call_repository: The call repository instance from dependency injection  Raises:     HTTPException: If the call is not found or cannot be ended
          * @summary End Call
          * @param {string} callId 
          * @param {*} [options] Override http request option.
@@ -2712,6 +2809,18 @@ export const VoiceAIApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await localVarAxiosParamCreator.endCallApiVoiceAiCallsCallIdDelete(callId, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['VoiceAIApi.endCallApiVoiceAiCallsCallIdDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Get the user\'s currently active call.  Returns the active call data if one exists, otherwise returns None.  Args:     current_user: The authenticated user     call_repository: The call repository instance from dependency injection  Returns:     ActiveCallResponse | None: The active call data or None if no active call  Raises:     HTTPException: If an error occurs retrieving the call
+         * @summary Get Active Call
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getActiveCallApiVoiceAiCallsActiveGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ActiveCallResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getActiveCallApiVoiceAiCallsActiveGet(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['VoiceAIApi.getActiveCallApiVoiceAiCallsActiveGet']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
@@ -2738,7 +2847,7 @@ export const VoiceAIApiFactory = function (configuration?: Configuration, basePa
     const localVarFp = VoiceAIApiFp(configuration)
     return {
         /**
-         * End an ongoing call programmatically.  Args:     call_id: The unique identifier for the call to end     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection      Raises:     HTTPException: If the call is not found or cannot be ended
+         * End an ongoing call programmatically.  Args:     call_id: The unique identifier for the call to end     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection     call_repository: The call repository instance from dependency injection  Raises:     HTTPException: If the call is not found or cannot be ended
          * @summary End Call
          * @param {string} callId 
          * @param {*} [options] Override http request option.
@@ -2746,6 +2855,15 @@ export const VoiceAIApiFactory = function (configuration?: Configuration, basePa
          */
         endCallApiVoiceAiCallsCallIdDelete(callId: string, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.endCallApiVoiceAiCallsCallIdDelete(callId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Get the user\'s currently active call.  Returns the active call data if one exists, otherwise returns None.  Args:     current_user: The authenticated user     call_repository: The call repository instance from dependency injection  Returns:     ActiveCallResponse | None: The active call data or None if no active call  Raises:     HTTPException: If an error occurs retrieving the call
+         * @summary Get Active Call
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getActiveCallApiVoiceAiCallsActiveGet(options?: RawAxiosRequestConfig): AxiosPromise<ActiveCallResponse> {
+            return localVarFp.getActiveCallApiVoiceAiCallsActiveGet(options).then((request) => request(axios, basePath));
         },
         /**
          * Get the status of a specific call by ID.  Args:     call_id: The unique identifier for the call     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection  Returns:     CallResponse: The call status information  Raises:     HTTPException: If the call is not found or an error occurs
@@ -2768,7 +2886,7 @@ export const VoiceAIApiFactory = function (configuration?: Configuration, basePa
  */
 export class VoiceAIApi extends BaseAPI {
     /**
-     * End an ongoing call programmatically.  Args:     call_id: The unique identifier for the call to end     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection      Raises:     HTTPException: If the call is not found or cannot be ended
+     * End an ongoing call programmatically.  Args:     call_id: The unique identifier for the call to end     current_user: The authenticated user     voice_ai_service: The Voice AI service instance from dependency injection     call_repository: The call repository instance from dependency injection  Raises:     HTTPException: If the call is not found or cannot be ended
      * @summary End Call
      * @param {string} callId 
      * @param {*} [options] Override http request option.
@@ -2777,6 +2895,17 @@ export class VoiceAIApi extends BaseAPI {
      */
     public endCallApiVoiceAiCallsCallIdDelete(callId: string, options?: RawAxiosRequestConfig) {
         return VoiceAIApiFp(this.configuration).endCallApiVoiceAiCallsCallIdDelete(callId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Get the user\'s currently active call.  Returns the active call data if one exists, otherwise returns None.  Args:     current_user: The authenticated user     call_repository: The call repository instance from dependency injection  Returns:     ActiveCallResponse | None: The active call data or None if no active call  Raises:     HTTPException: If an error occurs retrieving the call
+     * @summary Get Active Call
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof VoiceAIApi
+     */
+    public getActiveCallApiVoiceAiCallsActiveGet(options?: RawAxiosRequestConfig) {
+        return VoiceAIApiFp(this.configuration).getActiveCallApiVoiceAiCallsActiveGet(options).then((request) => request(this.axios, this.basePath));
     }
 
     /**

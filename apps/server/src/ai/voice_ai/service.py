@@ -94,19 +94,20 @@ class VoiceAIService:
                 provider=getattr(self.voice_ai_provider, "provider_name", None),
             )
 
-    async def end_call(self, call_id: str) -> bool | VoiceAIErrorResponse:
+    async def end_call(self, call_id: str, control_url: str | None = None) -> bool | VoiceAIErrorResponse:
         """
         End an ongoing call programmatically.
 
         Args:
             call_id: The call identifier
+            control_url: Optional control URL for ending the call
 
         Returns:
             bool (True if successful) or VoiceAIErrorResponse on error
         """
         try:
             logger.info(f"Ending call: {call_id}")
-            result = await self.voice_ai_provider.end_call(call_id)
+            result = await self.voice_ai_provider.end_call(call_id, control_url=control_url)
             logger.info(f"Successfully ended call {call_id}")
             return result
         except VoiceAIError as e:

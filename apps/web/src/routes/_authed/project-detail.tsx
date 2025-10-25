@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/ui/phone-input';
+import { useActiveCallPolling } from '@/hooks/useActiveCallPolling';
 import { formatPhoneNumber, getStatusColor } from '@/lib/utils';
 
 export const Route = createFileRoute('/_authed/project-detail')({
@@ -33,8 +34,23 @@ function ProjectDetail() {
   const [phoneNumber, setPhoneNumber] = useState<E164Number | ''>('');
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
   const [listenUrl, setListenUrl] = useState<string | null>(null);
+  const [controlUrl, setControlUrl] = useState<string | null>(null);
   const callAndWritetoCrmMutation = useCallAndWriteToCrm(projectId);
   const endCallMutation = useEndCall();
+
+  // Poll for active call status every 2.5 seconds
+  const { data: activeCall } = useActiveCallPolling({
+    onCallEnded: () => {
+      console.log('[Project Detail] Call ended - clearing active call state');
+      setActiveCallId(null);
+      setListenUrl(null);
+      setControlUrl(null);
+      callAndWritetoCrmMutation.reset();
+    },
+  });
+
+  // Only allow ending the call when we have the control URL
+  const canEndCall = controlUrl !== null;
 
   const isValid = phoneNumber ? isValidPhoneNumber(phoneNumber) : false;
 
@@ -52,19 +68,38 @@ function ProjectDetail() {
     }
   }, [project]);
 
+  // Restore active call state on mount
+  useEffect(() => {
+    if (activeCall && activeCall.project_id === projectId) {
+      // Active call matches current project - restore state
+      console.log('[Project Detail] Restoring active call state:', activeCall);
+      setActiveCallId(activeCall.call_id);
+      setListenUrl(activeCall.listen_url);
+
+      // Extract control URL from provider_data
+      const providerData = activeCall.provider_data as any;
+      if (providerData?.monitor?.control_url) {
+        setControlUrl(providerData.monitor.control_url);
+      }
+    } else if (activeCall && activeCall.project_id !== projectId) {
+      // Active call for different project - show warning
+      console.log('[Project Detail] Active call exists for different project:', activeCall.project_id);
+      // TODO: Show toast/notification to user about active call on different project
+    }
+  }, [activeCall, projectId]);
+
   // Store call ID when call starts successfully
   useEffect(() => {
     if (callAndWritetoCrmMutation.isSuccess && callAndWritetoCrmMutation.data) {
       setActiveCallId(callAndWritetoCrmMutation.data.call_id);
-      
-      // Extract listenUrl from provider_data
+
+      // Extract listenUrl and controlUrl from provider_data
       const providerData = callAndWritetoCrmMutation.data.provider_data;
-      console.log('[Project Detail] Provider data:', providerData);
       if (providerData?.monitor?.listen_url) {
-        console.log('[Project Detail] Setting listenUrl:', providerData.monitor.listen_url);
         setListenUrl(providerData.monitor.listen_url);
-      } else {
-        console.log('[Project Detail] No listenUrl found in provider_data');
+      }
+      if (providerData?.monitor?.control_url) {
+        setControlUrl(providerData.monitor.control_url);
       }
     }
   }, [callAndWritetoCrmMutation.isSuccess, callAndWritetoCrmMutation.data]);
@@ -340,8 +375,8 @@ function ProjectDetail() {
                 size="lg"
                 variant={activeCallId ? "destructive" : "default"}
                 disabled={
-                  activeCallId 
-                    ? endCallMutation.isPending 
+                  activeCallId
+                    ? (endCallMutation.isPending || !canEndCall)
                     : (callAndWritetoCrmMutation.isPending || !phoneNumber || !isValid)
                 }
               >
@@ -350,6 +385,11 @@ function ProjectDetail() {
                     <>
                       <Loader2 className="size-4 animate-spin" />
                       Ending Call...
+                    </>
+                  ) : !canEndCall ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      Connecting...
                     </>
                   ) : (
                     'End Call'

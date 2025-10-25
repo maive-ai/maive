@@ -17,6 +17,7 @@ from src.ai.voice_ai.schemas import (
     VoiceAIErrorResponse,
 )
 from src.ai.voice_ai.service import VoiceAIService
+from src.db.calls.repository import CallRepository
 from src.integrations.crm.service import CRMService
 from src.utils.logger import logger
 
@@ -28,6 +29,7 @@ class CallAndWriteToCRMWorkflow:
         self,
         voice_ai_service: VoiceAIService,
         crm_service: CRMService,
+        call_repository: CallRepository,
     ):
         """
         Initialize the call monitoring workflow.
@@ -35,9 +37,11 @@ class CallAndWriteToCRMWorkflow:
         Args:
             voice_ai_service: Service for Voice AI operations
             crm_service: Service for CRM operations
+            call_repository: Repository for call data persistence
         """
         self.voice_ai_service = voice_ai_service
         self.crm_service = crm_service
+        self.call_repository = call_repository
 
     async def call_and_write_results_to_crm(
         self,
@@ -49,8 +53,9 @@ class CallAndWriteToCRMWorkflow:
 
         This method orchestrates:
         1. Creating the call via Voice AI service
-        2. Starting background monitoring and writing results to CRM
-        3. Updating CRM when call completes
+        2. Persisting call state to DynamoDB
+        3. Starting background monitoring and writing results to CRM
+        4. Updating CRM when call completes
 
         Args:
             request: The call request with phone number and context
@@ -64,6 +69,57 @@ class CallAndWriteToCRMWorkflow:
 
         if isinstance(result, VoiceAIErrorResponse):
             return result
+
+        # Persist call to database
+        logger.info(
+            f"[Call Monitoring Workflow] Attempting to persist call. user_id={user_id}, call_id={result.call_id}"
+        )
+
+        if not user_id:
+            logger.warning(
+                "[Call Monitoring Workflow] Cannot persist call: user_id is None or empty"
+            )
+        else:
+            try:
+                # Extract listen URL from provider data
+                listen_url = None
+                if result.provider_data and hasattr(result.provider_data, "monitor"):
+                    listen_url = getattr(
+                        result.provider_data.monitor, "listen_url", None
+                    )
+
+                logger.info(
+                    f"[Call Monitoring Workflow] Creating Call record with listen_url={listen_url}"
+                )
+
+                # Create call record using repository
+                await self.call_repository.create_call(
+                    user_id=user_id,
+                    call_id=result.call_id,
+                    project_id=request.job_id or "",
+                    status=result.status,
+                    provider=result.provider,
+                    phone_number=request.phone_number,
+                    started_at=result.created_at,
+                    listen_url=listen_url,
+                    provider_data=result.provider_data.model_dump(mode="json")
+                    if result.provider_data
+                    else None,
+                )
+
+                # Explicitly commit the transaction to prevent race condition
+                # The background monitoring task creates its own session and might query
+                # the database before the HTTP request handler commits
+                await self.call_repository.session.commit()
+
+                logger.info(
+                    f"[Call Monitoring Workflow] Successfully persisted call for {result.call_id}"
+                )
+            except Exception as e:
+                logger.error(
+                    f"[Call Monitoring Workflow] Failed to persist call: {e}",
+                    exc_info=True,
+                )
 
         # Start background monitoring
         try:
@@ -101,60 +157,98 @@ class CallAndWriteToCRMWorkflow:
             request: The original call request (contains tenant/job_id)
             user_id: The ID of the user who created the call
         """
-        poll_interval_seconds = 10
+        # Import here to avoid circular dependencies
+        from src.db.database import get_async_session_local
+
+        poll_interval_seconds = 3
         max_polling_duration = 60 * 60 * 24  # 24 hours
         start_time = asyncio.get_event_loop().time()
         logged_message_count = 0  # Track message count
 
+        # Create a new database session for this background task
+        # The session from the HTTP request will be closed, so we need our own
+        session_factory = get_async_session_local()
+
         try:
-            while True:
-                elapsed = asyncio.get_event_loop().time() - start_time
-                if elapsed > max_polling_duration:
-                    logger.warning(
-                        f"[Call Monitoring Workflow] Monitoring timed out for call {call_id}"
-                    )
-                    break
+            async with session_factory() as session:
+                # Create a repository with our own session
+                task_repository = CallRepository(session)
 
-                # Poll call status
-                status_result = await self.voice_ai_service.get_call_status(call_id)
+                while True:
+                    elapsed = asyncio.get_event_loop().time() - start_time
+                    if elapsed > max_polling_duration:
+                        logger.warning(
+                            f"[Call Monitoring Workflow] Monitoring timed out for call {call_id}"
+                        )
+                        break
 
-                if isinstance(status_result, VoiceAIErrorResponse):
-                    logger.error(
-                        f"[Call Monitoring Workflow] Error polling call {call_id}: {status_result.error}"
-                    )
-                    break
+                    # Poll call status
+                    status_result = await self.voice_ai_service.get_call_status(call_id)
 
-                # Log new transcript messages
-                logged_message_count = self._log_new_transcript_messages(
-                    call_id=call_id,
-                    messages=status_result.messages,
-                    logged_count=logged_message_count,
-                )
+                    if isinstance(status_result, VoiceAIErrorResponse):
+                        logger.error(
+                            f"[Call Monitoring Workflow] Error polling call {call_id}: {status_result.error}"
+                        )
+                        break
 
-                logger.info(
-                    f"[Call Monitoring Workflow] Call {call_id} status: {status_result.status}"
-                )
-
-                # Check if call has ended
-                if CallStatus.is_call_ended(status_result.status):
-                    logger.info(
-                        f"[Call Monitoring Workflow] Call {call_id} ended with status: {status_result.status}"
-                    )
-
-                    # Extract structured data and update CRM
-                    # At this point, status_result is guaranteed to be CallResponse due to the isinstance check above
-                    assert isinstance(status_result, CallResponse), (
-                        "status_result should be CallResponse at this point"
-                    )
-                    await self._process_completed_call(
+                    # Log new transcript messages
+                    logged_message_count = self._log_new_transcript_messages(
                         call_id=call_id,
-                        call_response=status_result,
-                        request=request,
-                        user_id=user_id,
+                        messages=status_result.messages,
+                        logged_count=logged_message_count,
                     )
-                    break
 
-                await asyncio.sleep(poll_interval_seconds)
+                    logger.info(
+                        f"[Call Monitoring Workflow] Call {call_id} status: {status_result.status}"
+                    )
+
+                    # Update call status in database
+                    if user_id:
+                        try:
+                            await task_repository.update_call_status(
+                                call_id=call_id,
+                                status=status_result.status,
+                                provider_data=status_result.provider_data.model_dump(
+                                    mode="json"
+                                )
+                                if status_result.provider_data
+                                else None,
+                            )
+                            await session.commit()
+                            logger.debug(
+                                f"[Call Monitoring Workflow] Committed status update for call {call_id}"
+                            )
+                        except Exception as e:
+                            logger.error(
+                                f"[Call Monitoring Workflow] Failed to update call status: {e}"
+                            )
+                            await session.rollback()
+
+                    # Check if call has ended
+                    if CallStatus.is_call_ended(status_result.status):
+                        logger.info(
+                            f"[Call Monitoring Workflow] Call {call_id} ended with status: {status_result.status}"
+                        )
+
+                        # Extract structured data and update CRM
+                        # At this point, status_result is guaranteed to be CallResponse due to the isinstance check above
+                        assert isinstance(status_result, CallResponse), (
+                            "status_result should be CallResponse at this point"
+                        )
+                        await self._process_completed_call(
+                            call_id=call_id,
+                            call_response=status_result,
+                            request=request,
+                            user_id=user_id,
+                            repository=task_repository,
+                        )
+                        await session.commit()
+                        logger.info(
+                            f"[Call Monitoring Workflow] Committed final call state for {call_id}"
+                        )
+                        break
+
+                    await asyncio.sleep(poll_interval_seconds)
 
         except asyncio.CancelledError:
             logger.info(
@@ -201,17 +295,39 @@ class CallAndWriteToCRMWorkflow:
         call_response: CallResponse,
         request: CallRequest,
         user_id: str | None,
+        repository: CallRepository,
     ) -> None:
         """
         Process a completed call and update CRM with structured data.
+
+        Removes the call from DynamoDB active state and updates CRM.
 
         Args:
             call_id: The call identifier
             call_response: The final call response with provider data
             request: The original call request (contains tenant/job_id)
             user_id: The ID of the user who created the call
+            repository: The call repository with an active session
         """
         try:
+            # Mark call as ended in database
+            await repository.end_call(
+                call_id=call_id,
+                final_status=call_response.status,
+                ended_at=call_response.ended_at
+                if hasattr(call_response, "ended_at")
+                else None,
+                provider_data=call_response.provider_data.model_dump(mode="json")
+                if call_response.provider_data
+                else None,
+                analysis_data=call_response.analysis.model_dump(mode="json")
+                if call_response.analysis
+                else None,
+            )
+            logger.info(
+                f"[Call Monitoring Workflow] Marked call {call_id} as ended in database"
+            )
+
             # Extract typed analysis data from provider response
             analysis = call_response.analysis
 

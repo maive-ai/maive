@@ -163,9 +163,15 @@ You can read more about this
 - Create your own Pulumi ESC environment by cloning mine:
 - `esc env clone maive/maive-infra/will-dev maive/maive-infra/<your-stack-name>`
 - Attach it to your stack: `pulumi config env add maive-infra/<your-stack-name>`
-- In the `infra/` directory, run `pulumi up -y` 
+- In the `infra/` directory, run `pulumi up -y`
+- **Run database migrations** (first time only):
+  ```bash
+  cd apps/server
+  esc run maive-infra/<your-stack-name> -- pnpm db:migrate
+  ```
+  This creates the database tables. Verify with: `esc run maive-infra/<your-stack-name> -- pnpm db:status`
 - Manually create a style in the AWS cognito GUI for our managed login page
-- Get vars in console for the next step 
+- Get vars in console for the next step
 `pulumi stack output --show-secrets `
 - Update the esc vars in your esc env you created earlier to use these outputs
 - In the root directory, run `pnpm dev'`
@@ -176,6 +182,7 @@ You can read more about this
 - If `Pulumi.test.yaml` contains config changes or secrets not present in your stack's config, then you must copy them over
 -- `pulumi stack select test && pulumi config cp --dest <your-name>-dev`
 -- Must manually copy secrets via `pulumi config get my:key` and `pulumi config set my:key` (these are encrypted per stack)
+- **If there are new database migrations**: Run `esc run maive-infra/<your-stack-name> -- pnpm db:migrate` from `apps/server/`
 - Any change to a lambda function means you need to rerun `bash scripts/package_lambda.sh functions/{function_name}`
 - Other changes need to be redeployed with `pulumi up -y`
 - Login to the site using your previously setup credentials
