@@ -155,7 +155,7 @@ class CallAndWriteToCRMWorkflow:
         # Import here to avoid circular dependencies
         from src.db.database import get_async_session_local
 
-        poll_interval_seconds = 10
+        poll_interval_seconds = 3
         max_polling_duration = 60 * 60 * 24  # 24 hours
         start_time = asyncio.get_event_loop().time()
         logged_message_count = 0  # Track message count
@@ -203,12 +203,16 @@ class CallAndWriteToCRMWorkflow:
                             await task_repository.update_call_status(
                                 call_id=call_id,
                                 status=status_result.status,
-                                provider_data=status_result.provider_data.model_dump(mode="json")
+                                provider_data=status_result.provider_data.model_dump(
+                                    mode="json"
+                                )
                                 if status_result.provider_data
                                 else None,
                             )
                             await session.commit()
-                            logger.debug(f"[Call Monitoring Workflow] Committed status update for call {call_id}")
+                            logger.debug(
+                                f"[Call Monitoring Workflow] Committed status update for call {call_id}"
+                            )
                         except Exception as e:
                             logger.error(
                                 f"[Call Monitoring Workflow] Failed to update call status: {e}"
@@ -234,7 +238,9 @@ class CallAndWriteToCRMWorkflow:
                             repository=task_repository,
                         )
                         await session.commit()
-                        logger.info(f"[Call Monitoring Workflow] Committed final call state for {call_id}")
+                        logger.info(
+                            f"[Call Monitoring Workflow] Committed final call state for {call_id}"
+                        )
                         break
 
                     await asyncio.sleep(poll_interval_seconds)
@@ -303,7 +309,9 @@ class CallAndWriteToCRMWorkflow:
             await repository.end_call(
                 call_id=call_id,
                 final_status=call_response.status,
-                ended_at=call_response.ended_at if hasattr(call_response, "ended_at") else None,
+                ended_at=call_response.ended_at
+                if hasattr(call_response, "ended_at")
+                else None,
                 provider_data=call_response.provider_data.model_dump(mode="json")
                 if call_response.provider_data
                 else None,
@@ -311,7 +319,9 @@ class CallAndWriteToCRMWorkflow:
                 if call_response.analysis
                 else None,
             )
-            logger.info(f"[Call Monitoring Workflow] Marked call {call_id} as ended in database")
+            logger.info(
+                f"[Call Monitoring Workflow] Marked call {call_id} as ended in database"
+            )
 
             # Extract typed analysis data from provider response
             analysis = call_response.analysis

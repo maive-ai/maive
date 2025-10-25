@@ -9,12 +9,12 @@ from http import HTTPStatus
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from src.auth.dependencies import get_current_user
-from src.auth.schemas import User
 from src.ai.voice_ai.constants import VoiceAIErrorCode
 from src.ai.voice_ai.dependencies import get_voice_ai_service
 from src.ai.voice_ai.schemas import CallResponse, VoiceAIErrorResponse
 from src.ai.voice_ai.service import VoiceAIService
+from src.auth.dependencies import get_current_user
+from src.auth.schemas import User
 from src.db.calls.repository import CallRepository
 from src.db.dependencies import get_call_repository
 
@@ -41,8 +41,17 @@ async def get_active_call(
     Raises:
         HTTPException: If an error occurs retrieving the call
     """
+    from src.utils.logger import logger
+
     try:
         active_call = await call_repository.get_active_call(current_user.id)
+
+        logger.debug(
+            f"[GET /calls/active] Poll request from user {current_user.id[:8]}... - "
+            f"Active call: {active_call.call_id if active_call else 'None'} - "
+            f"Status: {active_call.status if active_call else 'N/A'} - "
+            f"is_active: {active_call.is_active if active_call else 'N/A'}"
+        )
 
         if active_call is None:
             return None
@@ -92,7 +101,9 @@ async def get_call_status(
     if isinstance(result, VoiceAIErrorResponse):
         if result.error_code == VoiceAIErrorCode.NOT_FOUND:
             raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=result.error)
-        raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail=result.error)
+        raise HTTPException(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail=result.error
+        )
 
     return result
 
@@ -105,22 +116,23 @@ async def end_call(
 ) -> None:
     """
     End an ongoing call programmatically.
-    
+
     Args:
         call_id: The unique identifier for the call to end
         current_user: The authenticated user
         voice_ai_service: The Voice AI service instance from dependency injection
-        
+
     Raises:
         HTTPException: If the call is not found or cannot be ended
     """
     result = await voice_ai_service.end_call(call_id)
-    
+
     if isinstance(result, VoiceAIErrorResponse):
         if result.error_code == VoiceAIErrorCode.NOT_FOUND:
             raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=result.error)
-        raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail=result.error)
-    
+        raise HTTPException(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail=result.error
+        )
+
     # Success - 204 No Content response
     return None
-

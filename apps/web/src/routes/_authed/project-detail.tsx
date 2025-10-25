@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import type { Value as E164Number } from 'react-phone-number-input';
 import { isValidPhoneNumber } from 'react-phone-number-input';
 
-import { useActiveCall, useEndCall } from '@/clients/ai/voice';
+import { useEndCall } from '@/clients/ai/voice';
 import { useFetchProject } from '@/clients/crm';
 import { useCallAndWriteToCrm } from '@/clients/workflows';
 import { CallAudioVisualizer } from '@/components/call/CallAudioVisualizer';
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/ui/phone-input';
+import { useActiveCallPolling } from '@/hooks/useActiveCallPolling';
 import { formatPhoneNumber, getStatusColor } from '@/lib/utils';
 
 export const Route = createFileRoute('/_authed/project-detail')({
@@ -36,8 +37,15 @@ function ProjectDetail() {
   const callAndWritetoCrmMutation = useCallAndWriteToCrm(projectId);
   const endCallMutation = useEndCall();
 
-  // Query for active call on mount
-  const { data: activeCall } = useActiveCall();
+  // Poll for active call status every 2.5 seconds
+  const { data: activeCall } = useActiveCallPolling({
+    onCallEnded: () => {
+      console.log('[Project Detail] Call ended - clearing active call state');
+      setActiveCallId(null);
+      setListenUrl(null);
+      callAndWritetoCrmMutation.reset();
+    },
+  });
 
   const isValid = phoneNumber ? isValidPhoneNumber(phoneNumber) : false;
 
