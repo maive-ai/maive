@@ -1,3 +1,8 @@
+import { createFileRoute } from '@tanstack/react-router';
+import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { isValidPhoneNumber } from 'react-phone-number-input';
+import type { Value as E164Number } from 'react-phone-number-input';
 import { useCallAndWriteToCrm } from '@/clients/workflows';
 import { E164PhoneInput } from '@/components/E164PhoneInput';
 import { Button } from '@/components/ui/button';
@@ -9,11 +14,6 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { createFileRoute } from '@tanstack/react-router';
-import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
-import { useState } from 'react';
-import type { E164Number } from 'react-phone-number-input';
-import { isValidPhoneNumber } from 'react-phone-number-input';
 
 export const Route = createFileRoute('/_authed/simple-phone-input')({
   component: SimplePhoneInput,
@@ -30,8 +30,11 @@ function SimplePhoneInput() {
       return;
     }
 
+    const companyName = localStorage.getItem('companyName') || undefined;
+
     createCallMutation.mutate({
       phone_number: phoneNumber,
+      company_name: companyName,
     });
   };
 
