@@ -24,6 +24,69 @@ import type { RequestArgs } from './base';
 import { BASE_PATH, COLLECTION_FORMATS, BaseAPI, RequiredError, operationServerMap } from './base';
 
 /**
+ * Response model for the user\'s currently active call.
+ * @export
+ * @interface ActiveCallResponse
+ */
+export interface ActiveCallResponse {
+    /**
+     * User identifier
+     * @type {string}
+     * @memberof ActiveCallResponse
+     */
+    'user_id': string;
+    /**
+     * Unique call identifier
+     * @type {string}
+     * @memberof ActiveCallResponse
+     */
+    'call_id': string;
+    /**
+     * Associated project identifier
+     * @type {string}
+     * @memberof ActiveCallResponse
+     */
+    'project_id': string;
+    /**
+     * Current call status
+     * @type {CallStatus}
+     * @memberof ActiveCallResponse
+     */
+    'status': CallStatus;
+    /**
+     * Voice AI provider
+     * @type {VoiceAIProvider}
+     * @memberof ActiveCallResponse
+     */
+    'provider': VoiceAIProvider;
+    /**
+     * Phone number being called
+     * @type {string}
+     * @memberof ActiveCallResponse
+     */
+    'phone_number': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ActiveCallResponse
+     */
+    'listen_url'?: string | null;
+    /**
+     * Call start timestamp (ISO format)
+     * @type {string}
+     * @memberof ActiveCallResponse
+     */
+    'started_at': string;
+    /**
+     * 
+     * @type {any}
+     * @memberof ActiveCallResponse
+     */
+    'provider_data'?: any;
+}
+
+
+/**
  * Provider-agnostic analysis data from completed calls.
  * @export
  * @interface AnalysisData
@@ -2654,7 +2717,7 @@ export const VoiceAIApiAxiosParamCreator = function (configuration?: Configurati
             };
         },
         /**
-         * Get the user\'s currently active call.  Returns the active call data if one exists, otherwise returns None.  Args:     current_user: The authenticated user     call_repository: The call repository instance from dependency injection  Returns:     dict | None: The active call data or None if no active call  Raises:     HTTPException: If an error occurs retrieving the call
+         * Get the user\'s currently active call.  Returns the active call data if one exists, otherwise returns None.  Args:     current_user: The authenticated user     call_repository: The call repository instance from dependency injection  Returns:     ActiveCallResponse | None: The active call data or None if no active call  Raises:     HTTPException: If an error occurs retrieving the call
          * @summary Get Active Call
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -2749,12 +2812,12 @@ export const VoiceAIApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * Get the user\'s currently active call.  Returns the active call data if one exists, otherwise returns None.  Args:     current_user: The authenticated user     call_repository: The call repository instance from dependency injection  Returns:     dict | None: The active call data or None if no active call  Raises:     HTTPException: If an error occurs retrieving the call
+         * Get the user\'s currently active call.  Returns the active call data if one exists, otherwise returns None.  Args:     current_user: The authenticated user     call_repository: The call repository instance from dependency injection  Returns:     ActiveCallResponse | None: The active call data or None if no active call  Raises:     HTTPException: If an error occurs retrieving the call
          * @summary Get Active Call
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getActiveCallApiVoiceAiCallsActiveGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<{ [key: string]: any; }>> {
+        async getActiveCallApiVoiceAiCallsActiveGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ActiveCallResponse>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.getActiveCallApiVoiceAiCallsActiveGet(options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['VoiceAIApi.getActiveCallApiVoiceAiCallsActiveGet']?.[localVarOperationServerIndex]?.url;
@@ -2794,12 +2857,12 @@ export const VoiceAIApiFactory = function (configuration?: Configuration, basePa
             return localVarFp.endCallApiVoiceAiCallsCallIdDelete(callId, options).then((request) => request(axios, basePath));
         },
         /**
-         * Get the user\'s currently active call.  Returns the active call data if one exists, otherwise returns None.  Args:     current_user: The authenticated user     call_repository: The call repository instance from dependency injection  Returns:     dict | None: The active call data or None if no active call  Raises:     HTTPException: If an error occurs retrieving the call
+         * Get the user\'s currently active call.  Returns the active call data if one exists, otherwise returns None.  Args:     current_user: The authenticated user     call_repository: The call repository instance from dependency injection  Returns:     ActiveCallResponse | None: The active call data or None if no active call  Raises:     HTTPException: If an error occurs retrieving the call
          * @summary Get Active Call
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getActiveCallApiVoiceAiCallsActiveGet(options?: RawAxiosRequestConfig): AxiosPromise<{ [key: string]: any; }> {
+        getActiveCallApiVoiceAiCallsActiveGet(options?: RawAxiosRequestConfig): AxiosPromise<ActiveCallResponse> {
             return localVarFp.getActiveCallApiVoiceAiCallsActiveGet(options).then((request) => request(axios, basePath));
         },
         /**
@@ -2835,7 +2898,7 @@ export class VoiceAIApi extends BaseAPI {
     }
 
     /**
-     * Get the user\'s currently active call.  Returns the active call data if one exists, otherwise returns None.  Args:     current_user: The authenticated user     call_repository: The call repository instance from dependency injection  Returns:     dict | None: The active call data or None if no active call  Raises:     HTTPException: If an error occurs retrieving the call
+     * Get the user\'s currently active call.  Returns the active call data if one exists, otherwise returns None.  Args:     current_user: The authenticated user     call_repository: The call repository instance from dependency injection  Returns:     ActiveCallResponse | None: The active call data or None if no active call  Raises:     HTTPException: If an error occurs retrieving the call
      * @summary Get Active Call
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}

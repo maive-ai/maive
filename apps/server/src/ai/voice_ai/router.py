@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from src.ai.voice_ai.constants import VoiceAIErrorCode
 from src.ai.voice_ai.dependencies import get_voice_ai_service
-from src.ai.voice_ai.schemas import CallResponse, VoiceAIErrorResponse
+from src.ai.voice_ai.schemas import ActiveCallResponse, CallResponse, VoiceAIErrorResponse
 from src.ai.voice_ai.service import VoiceAIService
 from src.auth.dependencies import get_current_user
 from src.auth.schemas import User
@@ -21,11 +21,11 @@ from src.db.dependencies import get_call_repository
 router = APIRouter(prefix="/voice-ai", tags=["Voice AI"])
 
 
-@router.get("/calls/active")
+@router.get("/calls/active", response_model=ActiveCallResponse | None)
 async def get_active_call(
     current_user: User = Depends(get_current_user),
     call_repository: CallRepository = Depends(get_call_repository),
-) -> dict | None:
+) -> ActiveCallResponse | None:
     """
     Get the user's currently active call.
 
@@ -36,7 +36,7 @@ async def get_active_call(
         call_repository: The call repository instance from dependency injection
 
     Returns:
-        dict | None: The active call data or None if no active call
+        ActiveCallResponse | None: The active call data or None if no active call
 
     Raises:
         HTTPException: If an error occurs retrieving the call
@@ -47,18 +47,17 @@ async def get_active_call(
         if active_call is None:
             return None
 
-        # Return a dict compatible with frontend expectations
-        return {
-            "user_id": active_call.user_id,
-            "call_id": active_call.call_id,
-            "project_id": active_call.project_id,
-            "status": active_call.status,
-            "provider": active_call.provider,
-            "phone_number": active_call.phone_number,
-            "listen_url": active_call.listen_url,
-            "started_at": active_call.started_at.isoformat(),
-            "provider_data": active_call.provider_data,
-        }
+        return ActiveCallResponse(
+            user_id=active_call.user_id,
+            call_id=active_call.call_id,
+            project_id=active_call.project_id,
+            status=active_call.status,
+            provider=active_call.provider,
+            phone_number=active_call.phone_number,
+            listen_url=active_call.listen_url,
+            started_at=active_call.started_at.isoformat(),
+            provider_data=active_call.provider_data,
+        )
 
     except Exception as e:
         raise HTTPException(

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { getActiveCall, type ActiveCallState } from '@/clients/ai/voice';
+import { getActiveCall, type ActiveCallResponse } from '@/clients/ai/voice';
 
 interface UseActiveCallPollingOptions {
   /**
@@ -47,7 +47,7 @@ export function useActiveCallPolling(options: UseActiveCallPollingOptions = {}) 
     onCallEnded,
   } = options;
 
-  const previousCallRef = useRef<ActiveCallState | null>(null);
+  const previousCallRef = useRef<ActiveCallResponse | null>(null);
   const callbackFiredRef = useRef(false);
 
   // Query active call with custom polling interval

@@ -710,7 +710,7 @@
           "Voice AI"
         ],
         "summary": "Get Active Call",
-        "description": "Get the user's currently active call.\n\nReturns the active call data if one exists, otherwise returns None.\n\nArgs:\n    current_user: The authenticated user\n    call_repository: The call repository instance from dependency injection\n\nReturns:\n    dict | None: The active call data or None if no active call\n\nRaises:\n    HTTPException: If an error occurs retrieving the call",
+        "description": "Get the user's currently active call.\n\nReturns the active call data if one exists, otherwise returns None.\n\nArgs:\n    current_user: The authenticated user\n    call_repository: The call repository instance from dependency injection\n\nReturns:\n    ActiveCallResponse | None: The active call data or None if no active call\n\nRaises:\n    HTTPException: If an error occurs retrieving the call",
         "operationId": "get_active_call_api_voice_ai_calls_active_get",
         "responses": {
           "200": {
@@ -720,8 +720,7 @@
                 "schema": {
                   "anyOf": [
                     {
-                      "additionalProperties": true,
-                      "type": "object"
+                      "$ref": "#/components/schemas/ActiveCallResponse"
                     },
                     {
                       "type": "null"
@@ -911,6 +910,71 @@
   },
   "components": {
     "schemas": {
+      "ActiveCallResponse": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id",
+            "description": "User identifier"
+          },
+          "call_id": {
+            "type": "string",
+            "title": "Call Id",
+            "description": "Unique call identifier"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id",
+            "description": "Associated project identifier"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CallStatus",
+            "description": "Current call status"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/VoiceAIProvider",
+            "description": "Voice AI provider"
+          },
+          "phone_number": {
+            "type": "string",
+            "title": "Phone Number",
+            "description": "Phone number being called"
+          },
+          "listen_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listen Url",
+            "description": "URL to listen to the call"
+          },
+          "started_at": {
+            "type": "string",
+            "title": "Started At",
+            "description": "Call start timestamp (ISO format)"
+          },
+          "provider_data": {
+            "title": "Provider Data",
+            "description": "Provider-specific data for the call"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "call_id",
+          "project_id",
+          "status",
+          "provider",
+          "phone_number",
+          "started_at"
+        ],
+        "title": "ActiveCallResponse",
+        "description": "Response model for the user's currently active call."
+      },
       "AnalysisData": {
         "properties": {
           "summary": {

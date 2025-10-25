@@ -189,6 +189,22 @@ class CallResponse(BaseModel):
     )
 
 
+class ActiveCallResponse(BaseModel):
+    """Response model for the user's currently active call."""
+
+    user_id: str = Field(..., description="User identifier")
+    call_id: str = Field(..., description="Unique call identifier")
+    project_id: str = Field(..., description="Associated project identifier")
+    status: CallStatus = Field(..., description="Current call status")
+    provider: VoiceAIProviderEnum = Field(..., description="Voice AI provider")
+    phone_number: str = Field(..., description="Phone number being called")
+    listen_url: str | None = Field(None, description="URL to listen to the call")
+    started_at: str = Field(..., description="Call start timestamp (ISO format)")
+    provider_data: Any = Field(
+        None, description="Provider-specific data for the call"
+    )
+
+
 class CallListResponse(BaseModel):
     """Response model for multiple calls."""
 
