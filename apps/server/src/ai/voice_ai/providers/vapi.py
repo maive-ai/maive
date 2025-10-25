@@ -116,14 +116,13 @@ class VapiProvider(VoiceAIProvider):
             logger.error(f"[Vapi Provider] {error_msg}")
             raise VoiceAIError(error_msg, error_code=VoiceAIErrorCode.HTTP_ERROR)
 
-    async def end_call(self, call_id: str) -> bool:
+    async def end_call(self, call_id: str, control_url: str | None = None) -> bool:
         """
-        End an ongoing call programmatically.
-
-        First fetches call details to get the controlUrl, then sends end-call command.
+        End an ongoing call programmatically using Vapi's control URL.
 
         Args:
             call_id: The unique identifier for the call
+            control_url: Optional control URL. If not provided, will fetch from call status.
 
         Returns:
             bool: True if call was successfully ended
@@ -131,30 +130,33 @@ class VapiProvider(VoiceAIProvider):
         Raises:
             VoiceAIError: If the call is not found or cannot be ended
         """
-        # Step 1: Get call details to extract controlUrl
-        call_response = await self.get_call_status(call_id)
+        logger.info(f"[Vapi Provider] Ending call {call_id}")
 
-        if not call_response.provider_data:
-            raise VoiceAIError(
-                "No provider data available", error_code=VoiceAIErrorCode.NOT_FOUND
-            )
+        # If control_url not provided, fetch it from call status
+        if not control_url:
+            call_response = await self.get_call_status(call_id)
 
-        # Use VapiCall object directly (strongly typed)
-        vapi_data: VapiCall = call_response.provider_data
+            if not call_response.provider_data:
+                raise VoiceAIError(
+                    "No provider data available", error_code=VoiceAIErrorCode.NOT_FOUND
+                )
 
-        if not vapi_data.monitor or not vapi_data.monitor.control_url:
-            raise VoiceAIError(
-                f"No control URL found for call {call_id}",
-                error_code=VoiceAIErrorCode.NOT_FOUND,
-            )
+            # Use VapiCall object directly (strongly typed)
+            vapi_data: VapiCall = call_response.provider_data
 
-        control_url = vapi_data.monitor.control_url
+            if not vapi_data.monitor or not vapi_data.monitor.control_url:
+                raise VoiceAIError(
+                    f"No control URL found for call {call_id}",
+                    error_code=VoiceAIErrorCode.NOT_FOUND,
+                )
 
-        # Step 2: Send end-call command
+            control_url = vapi_data.monitor.control_url
+
+        # Send end-call command to control URL
         headers = {"Content-Type": "application/json"}
         payload = {"type": "end-call"}
 
-        logger.info(f"[Vapi Provider] Ending call {call_id}")
+        logger.info(f"[Vapi Provider] Sending end-call to control URL: {control_url}")
 
         try:
             async with httpx.AsyncClient(
