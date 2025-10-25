@@ -107,6 +107,11 @@ class CallAndWriteToCRMWorkflow:
                     else None,
                 )
 
+                # Explicitly commit the transaction to prevent race condition
+                # The background monitoring task creates its own session and might query
+                # the database before the HTTP request handler commits
+                await self.call_repository.session.commit()
+
                 logger.info(
                     f"[Call Monitoring Workflow] Successfully persisted call for {result.call_id}"
                 )
