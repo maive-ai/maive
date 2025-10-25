@@ -3,7 +3,7 @@
 import {
     Configuration,
     VoiceAIApi,
-    type ActiveCallState,
+    type ActiveCallResponse,
     type CallRequest,
     type CallResponse,
 } from '@maive/api/client';
@@ -13,7 +13,7 @@ import { getIdToken } from '@/auth';
 import { env } from '@/env';
 
 // Re-export types from the generated client
-export type { ActiveCallState, CallRequest, CallResponse };
+export type { ActiveCallResponse, CallRequest, CallResponse };
 
 /**
  * Create a configured Voice AI API instance
@@ -44,7 +44,7 @@ export async function getCallStatus(callId: string): Promise<CallResponse> {
 /**
  * Get user's active call (if any)
  */
-export async function getActiveCall(): Promise<ActiveCallState | null> {
+export async function getActiveCall(): Promise<ActiveCallResponse | null> {
   const api = await createVoiceAIApi();
   const response = await api.getActiveCallApiVoiceAiCallsActiveGet();
   return response.data; // Will be null if no active call
@@ -62,7 +62,7 @@ export async function endCall(callId: string): Promise<void> {
 /**
  * React Query hook for getting active call
  */
-export function useActiveCall(options?: { enabled?: boolean }): UseQueryResult<ActiveCallState | null, Error> {
+export function useActiveCall(options?: { enabled?: boolean }): UseQueryResult<ActiveCallResponse | null, Error> {
   return useQuery({
     queryKey: ['active-call'],
     queryFn: getActiveCall,
