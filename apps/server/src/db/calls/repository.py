@@ -4,7 +4,7 @@ Repository for call database operations.
 Provides CRUD operations for Call records using SQLAlchemy async sessions.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import desc, select, update
@@ -140,7 +140,7 @@ class CallRepository:
             return None
 
         call.status = status.value
-        call.updated_at = datetime.utcnow()
+        call.updated_at = datetime.now(UTC)
 
         if provider_data is not None:
             call.provider_data = provider_data
@@ -176,13 +176,15 @@ class CallRepository:
         """
         call = await self.get_call_by_call_id(call_id)
         if not call:
-            logger.warning(f"[CallRepository] Cannot end call: call {call_id} not found")
+            logger.warning(
+                f"[CallRepository] Cannot end call: call {call_id} not found"
+            )
             return None
 
         call.status = final_status.value
         call.is_active = False
-        call.ended_at = ended_at or datetime.utcnow()
-        call.updated_at = datetime.utcnow()
+        call.ended_at = ended_at or datetime.now(UTC)
+        call.updated_at = datetime.now(UTC)
 
         if provider_data is not None:
             call.provider_data = provider_data
@@ -215,7 +217,7 @@ class CallRepository:
             update(Call)
             .where(Call.user_id == user_id)
             .where(Call.is_active == True)  # noqa: E712
-            .values(is_active=False, updated_at=datetime.utcnow())
+            .values(is_active=False, updated_at=datetime.now(UTC))
         )
 
         result = await self.session.execute(stmt)
