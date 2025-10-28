@@ -15,6 +15,7 @@ Name | Type | Description | Notes
 **listen_url** | **string** |  | [optional] [default to undefined]
 **started_at** | **string** | Call start timestamp (ISO format) | [default to undefined]
 **provider_data** | **any** |  | [optional] [default to undefined]
+**transcript** | [**Array&lt;TranscriptMessage&gt;**](TranscriptMessage.md) | Transcript messages from the call | [optional] [default to undefined]
 
 ## Example
 
@@ -31,6 +32,7 @@ const instance: ActiveCallResponse = {
     listen_url,
     started_at,
     provider_data,
+    transcript,
 };
 ```
 

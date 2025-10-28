@@ -83,6 +83,12 @@ export interface ActiveCallResponse {
      * @memberof ActiveCallResponse
      */
     'provider_data'?: any;
+    /**
+     * Transcript messages from the call
+     * @type {Array<TranscriptMessage>}
+     * @memberof ActiveCallResponse
+     */
+    'transcript'?: Array<TranscriptMessage>;
 }
 
 
