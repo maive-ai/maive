@@ -1,6 +1,6 @@
-import Loading from '@/components/Loading';
 import HeaderBar from '@/components/layout/HeaderBar';
 import SidebarNav from '@/components/layout/SidebarNav';
+import { Spinner } from '@/components/ui/spinner';
 import { Outlet, createFileRoute } from '@tanstack/react-router';
 import { useAuth } from '../auth';
 
@@ -8,11 +8,11 @@ export const Route: any = createFileRoute('/_authed')({
   component: () => {
     const auth = useAuth();
     if (auth.isLoading) {
-      return <Loading />;
+      return <Spinner />;
     }
     if (!auth.isAuthenticated) {
       auth.signIn();
-      return <Loading />;
+      return <Spinner />;
     }
 
     return (
