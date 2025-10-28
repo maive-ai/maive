@@ -1,8 +1,10 @@
-import { Info, X } from 'lucide-react';
+import { Info, Phone, PhoneOff, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
+import { useActiveCall, useEndCall } from '@/clients/ai/voice';
 import { useCallList, useRemoveFromCallList } from '@/clients/callList';
 import { useFetchProjects } from '@/clients/crm';
+import { useCallAndWriteToCrm } from '@/clients/workflows';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -30,7 +32,10 @@ interface CallListSheetProps {
 export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   const { data: callListData, isLoading: isLoadingCallList } = useCallList();
   const { data: projectsData, isLoading: isLoadingProjects } = useFetchProjects();
+  const { data: activeCall, isLoading: isLoadingActiveCall } = useActiveCall();
   const removeFromCallList = useRemoveFromCallList();
+  const callAndWriteToCrm = useCallAndWriteToCrm();
+  const endCall = useEndCall();
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
   const [removingProjectId, setRemovingProjectId] = useState<string | null>(null);
 
@@ -40,9 +45,55 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   // Create a map of project IDs to projects for quick lookup
   const projectMap = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
 
+  // Find the first uncompleted call
+  const nextCall = useMemo(() => {
+    const uncompletedItem = callListItems.find(item => !item.call_completed);
+    if (!uncompletedItem) return null;
+
+    const project = projectMap.get(uncompletedItem.project_id);
+    if (!project) return null;
+
+    // Extract adjuster info from provider_data
+    const providerData = project.provider_data as any;
+    const adjusterPhone =
+      project.adjuster_phone ||
+      providerData?.adjusterPhone ||
+      providerData?.adjusterContact?.phone ||
+      null;
+
+    return {
+      projectId: project.id,
+      phone: adjusterPhone,
+      callListItem: uncompletedItem,
+    };
+  }, [callListItems, projectMap]);
+
   const handleRemove = (projectId: string) => {
     setRemovingProjectId(projectId);
     removeFromCallList.mutate(projectId);
+  };
+
+  // Handler to start dialing the next uncompleted call
+  const handleStartDialing = () => {
+    if (!nextCall || !nextCall.phone) {
+      console.error('[Dialer] No valid phone number for next call');
+      return;
+    }
+
+    callAndWriteToCrm.mutate({
+      phone_number: nextCall.phone,
+      job_id: nextCall.projectId,
+    });
+  };
+
+  // Handler to end the active call
+  const handleEndCall = () => {
+    if (!activeCall?.call_id) {
+      console.error('[Dialer] No active call to end');
+      return;
+    }
+
+    endCall.mutate(activeCall.call_id);
   };
 
   // Clear removing state when the item is actually gone from the list
@@ -146,9 +197,71 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
           </div>
 
           {/* Actions */}
-          <div className="pt-12 mt-12 px-4">
+          <div className="pt-12 mt-12 px-4 space-y-3">
+            {/* Active call controls */}
+            {activeCall ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <Phone className="size-4 text-green-600 animate-pulse" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-green-900">Call in progress</p>
+                    <p className="text-xs text-green-700">{formatPhoneNumber(activeCall.phone_number)}</p>
+                  </div>
+                </div>
+                <Button
+                  onClick={handleEndCall}
+                  disabled={endCall.isPending}
+                  variant="destructive"
+                  className="w-full"
+                >
+                  {endCall.isPending ? (
+                    <>
+                      <Spinner className="size-4 mr-2" />
+                      Ending Call...
+                    </>
+                  ) : (
+                    <>
+                      <PhoneOff className="size-4 mr-2" />
+                      End Call
+                    </>
+                  )}
+                </Button>
+              </div>
+            ) : (
+              /* Start dialing button */
+              <Button
+                onClick={handleStartDialing}
+                disabled={
+                  !nextCall ||
+                  !nextCall.phone ||
+                  callAndWriteToCrm.isPending ||
+                  isLoadingCallList ||
+                  isLoadingProjects
+                }
+                className="w-full"
+              >
+                {callAndWriteToCrm.isPending ? (
+                  <>
+                    <Spinner className="size-4 mr-2" />
+                    Starting Call...
+                  </>
+                ) : (
+                  <>
+                    <Phone className="size-4 mr-2" />
+                    Start Dialing
+                    {nextCall && nextCall.phone && (
+                      <span className="ml-2 text-xs opacity-75">
+                        ({formatPhoneNumber(nextCall.phone)})
+                      </span>
+                    )}
+                  </>
+                )}
+              </Button>
+            )}
+
             <Button
               onClick={() => onOpenChange(false)}
+              variant="outline"
               className="w-full"
             >
               Close
