@@ -38,6 +38,7 @@ class CallRepository:
         started_at: datetime,
         listen_url: str | None = None,
         provider_data: dict[str, Any] | None = None,
+        transcript: list[dict[str, Any]] | None = None,
     ) -> Call:
         """
         Create a new call record.
@@ -52,6 +53,7 @@ class CallRepository:
             started_at: Call start timestamp
             listen_url: WebSocket URL for listening (optional)
             provider_data: Raw provider data (optional)
+            transcript: Initial transcript messages (optional)
 
         Returns:
             Call: Created call record
@@ -70,6 +72,9 @@ class CallRepository:
             listen_url=listen_url,
             provider_data=provider_data,
         )
+
+        if transcript is not None:
+            call.transcript = transcript
 
         self.session.add(call)
         await self.session.flush()  # Get the ID without committing
@@ -160,6 +165,7 @@ class CallRepository:
         ended_at: datetime | None = None,
         provider_data: dict[str, Any] | None = None,
         analysis_data: dict[str, Any] | None = None,
+        transcript: list[dict[str, Any]] | None = None,
     ) -> Call | None:
         """
         Mark a call as ended and inactive.
@@ -170,6 +176,7 @@ class CallRepository:
             ended_at: Call end timestamp (defaults to now)
             provider_data: Final provider data (optional)
             analysis_data: Structured analysis results (optional)
+            transcript: Final transcript messages (optional)
 
         Returns:
             Call | None: Updated call record if found, None otherwise
@@ -191,6 +198,9 @@ class CallRepository:
 
         if analysis_data is not None:
             call.analysis_data = analysis_data
+
+        if transcript is not None:
+            call.transcript = transcript
 
         await self.session.flush()
         await self.session.refresh(call)

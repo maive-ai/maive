@@ -203,6 +203,10 @@ class ActiveCallResponse(BaseModel):
     provider_data: Any = Field(
         None, description="Provider-specific data for the call"
     )
+    transcript: list[TranscriptMessage] = Field(
+        default_factory=list,
+        description="Transcript messages from the call"
+    )
 
 
 class CallListResponse(BaseModel):
