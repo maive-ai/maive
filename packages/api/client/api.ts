@@ -87,6 +87,19 @@ export interface ActiveCallResponse {
 
 
 /**
+ * Request model for adding projects to call list.
+ * @export
+ * @interface AddToCallListRequest
+ */
+export interface AddToCallListRequest {
+    /**
+     * List of project/job IDs to add to call list
+     * @type {Array<string>}
+     * @memberof AddToCallListRequest
+     */
+    'project_ids': Array<string>;
+}
+/**
  * Provider-agnostic analysis data from completed calls.
  * @export
  * @interface AnalysisData
@@ -227,6 +240,74 @@ export const CRMProvider = {
 export type CRMProvider = typeof CRMProvider[keyof typeof CRMProvider];
 
 
+/**
+ * Response model for a single call list item.
+ * @export
+ * @interface CallListItemResponse
+ */
+export interface CallListItemResponse {
+    /**
+     * Database ID of the call list item
+     * @type {number}
+     * @memberof CallListItemResponse
+     */
+    'id': number;
+    /**
+     * Cognito user ID
+     * @type {string}
+     * @memberof CallListItemResponse
+     */
+    'user_id': string;
+    /**
+     * Project/Job ID from CRM
+     * @type {string}
+     * @memberof CallListItemResponse
+     */
+    'project_id': string;
+    /**
+     * Whether the call has been completed
+     * @type {boolean}
+     * @memberof CallListItemResponse
+     */
+    'call_completed': boolean;
+    /**
+     * Position in the call list for ordering
+     * @type {number}
+     * @memberof CallListItemResponse
+     */
+    'position': number;
+    /**
+     * When the item was added to the list
+     * @type {string}
+     * @memberof CallListItemResponse
+     */
+    'created_at': string;
+    /**
+     * When the item was last updated
+     * @type {string}
+     * @memberof CallListItemResponse
+     */
+    'updated_at': string;
+}
+/**
+ * Response model for the complete call list.
+ * @export
+ * @interface CallListResponse
+ */
+export interface CallListResponse {
+    /**
+     * List of call list items
+     * @type {Array<CallListItemResponse>}
+     * @memberof CallListResponse
+     */
+    'items': Array<CallListItemResponse>;
+    /**
+     * Total number of items in the call list
+     * @type {number}
+     * @memberof CallListResponse
+     */
+    'total': number;
+}
 /**
  * Request model for creating an outbound call.
  * @export
@@ -808,6 +889,19 @@ export interface JobList {
 }
 
 
+/**
+ * Request model for marking a call as completed.
+ * @export
+ * @interface MarkCallCompletedRequest
+ */
+export interface MarkCallCompletedRequest {
+    /**
+     * Whether the call is completed
+     * @type {boolean}
+     * @memberof MarkCallCompletedRequest
+     */
+    'completed'?: boolean;
+}
 /**
  * Universal note/activity model that works across all CRM providers.
  * @export
@@ -2504,6 +2598,407 @@ export class CRMApi extends BaseAPI {
      */
     public updateProjectStatusApiCrmProjectsProjectIdStatusPatch(projectId: string, bodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch: BodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch, options?: RawAxiosRequestConfig) {
         return CRMApiFp(this.configuration).updateProjectStatusApiCrmProjectsProjectIdStatusPatch(projectId, bodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch, options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+
+/**
+ * CallListApi - axios parameter creator
+ * @export
+ */
+export const CallListApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * Add projects to the user\'s call list.  Adds multiple projects to the authenticated user\'s call list. Duplicate projects are silently ignored.  Args:     request: Request containing list of project IDs to add     current_user: The authenticated user     call_list_repository: The call list repository instance from dependency injection  Returns:     CallListResponse: The updated call list  Raises:     HTTPException: If an error occurs adding projects
+         * @summary Add To Call List
+         * @param {AddToCallListRequest} addToCallListRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        addToCallListApiCallListAddPost: async (addToCallListRequest: AddToCallListRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'addToCallListRequest' is not null or undefined
+            assertParamExists('addToCallListApiCallListAddPost', 'addToCallListRequest', addToCallListRequest)
+            const localVarPath = `/api/call-list/add`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(addToCallListRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Clear all items from the user\'s call list.  Args:     current_user: The authenticated user     call_list_repository: The call list repository instance from dependency injection  Raises:     HTTPException: If an error occurs clearing the call list
+         * @summary Clear Call List
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        clearCallListApiCallListDelete: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/call-list`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Get the user\'s call list.  Returns all items in the authenticated user\'s call list, ordered by position.  Args:     current_user: The authenticated user     call_list_repository: The call list repository instance from dependency injection  Returns:     CallListResponse: The user\'s call list  Raises:     HTTPException: If an error occurs retrieving the call list
+         * @summary Get Call List
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getCallListApiCallListGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/call-list`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Mark a call as completed or not completed.  Args:     project_id: The project ID to update     request: Request containing completion status     current_user: The authenticated user     call_list_repository: The call list repository instance from dependency injection  Returns:     CallListItemResponse: The updated call list item  Raises:     HTTPException: If the project is not found or an error occurs
+         * @summary Mark Call Completed
+         * @param {string} projectId 
+         * @param {MarkCallCompletedRequest} markCallCompletedRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        markCallCompletedApiCallListProjectIdCompletedPatch: async (projectId: string, markCallCompletedRequest: MarkCallCompletedRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'projectId' is not null or undefined
+            assertParamExists('markCallCompletedApiCallListProjectIdCompletedPatch', 'projectId', projectId)
+            // verify required parameter 'markCallCompletedRequest' is not null or undefined
+            assertParamExists('markCallCompletedApiCallListProjectIdCompletedPatch', 'markCallCompletedRequest', markCallCompletedRequest)
+            const localVarPath = `/api/call-list/{project_id}/completed`
+                .replace(`{${"project_id"}}`, encodeURIComponent(String(projectId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'PATCH', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(markCallCompletedRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Remove a project from the user\'s call list.  Args:     project_id: The project ID to remove     current_user: The authenticated user     call_list_repository: The call list repository instance from dependency injection  Raises:     HTTPException: If the project is not found or an error occurs
+         * @summary Remove From Call List
+         * @param {string} projectId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        removeFromCallListApiCallListProjectIdDelete: async (projectId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'projectId' is not null or undefined
+            assertParamExists('removeFromCallListApiCallListProjectIdDelete', 'projectId', projectId)
+            const localVarPath = `/api/call-list/{project_id}`
+                .replace(`{${"project_id"}}`, encodeURIComponent(String(projectId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * CallListApi - functional programming interface
+ * @export
+ */
+export const CallListApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = CallListApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * Add projects to the user\'s call list.  Adds multiple projects to the authenticated user\'s call list. Duplicate projects are silently ignored.  Args:     request: Request containing list of project IDs to add     current_user: The authenticated user     call_list_repository: The call list repository instance from dependency injection  Returns:     CallListResponse: The updated call list  Raises:     HTTPException: If an error occurs adding projects
+         * @summary Add To Call List
+         * @param {AddToCallListRequest} addToCallListRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async addToCallListApiCallListAddPost(addToCallListRequest: AddToCallListRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CallListResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.addToCallListApiCallListAddPost(addToCallListRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CallListApi.addToCallListApiCallListAddPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Clear all items from the user\'s call list.  Args:     current_user: The authenticated user     call_list_repository: The call list repository instance from dependency injection  Raises:     HTTPException: If an error occurs clearing the call list
+         * @summary Clear Call List
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async clearCallListApiCallListDelete(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.clearCallListApiCallListDelete(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CallListApi.clearCallListApiCallListDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Get the user\'s call list.  Returns all items in the authenticated user\'s call list, ordered by position.  Args:     current_user: The authenticated user     call_list_repository: The call list repository instance from dependency injection  Returns:     CallListResponse: The user\'s call list  Raises:     HTTPException: If an error occurs retrieving the call list
+         * @summary Get Call List
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getCallListApiCallListGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CallListResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getCallListApiCallListGet(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CallListApi.getCallListApiCallListGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Mark a call as completed or not completed.  Args:     project_id: The project ID to update     request: Request containing completion status     current_user: The authenticated user     call_list_repository: The call list repository instance from dependency injection  Returns:     CallListItemResponse: The updated call list item  Raises:     HTTPException: If the project is not found or an error occurs
+         * @summary Mark Call Completed
+         * @param {string} projectId 
+         * @param {MarkCallCompletedRequest} markCallCompletedRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async markCallCompletedApiCallListProjectIdCompletedPatch(projectId: string, markCallCompletedRequest: MarkCallCompletedRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CallListItemResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.markCallCompletedApiCallListProjectIdCompletedPatch(projectId, markCallCompletedRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CallListApi.markCallCompletedApiCallListProjectIdCompletedPatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Remove a project from the user\'s call list.  Args:     project_id: The project ID to remove     current_user: The authenticated user     call_list_repository: The call list repository instance from dependency injection  Raises:     HTTPException: If the project is not found or an error occurs
+         * @summary Remove From Call List
+         * @param {string} projectId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async removeFromCallListApiCallListProjectIdDelete(projectId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.removeFromCallListApiCallListProjectIdDelete(projectId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CallListApi.removeFromCallListApiCallListProjectIdDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+    }
+};
+
+/**
+ * CallListApi - factory interface
+ * @export
+ */
+export const CallListApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = CallListApiFp(configuration)
+    return {
+        /**
+         * Add projects to the user\'s call list.  Adds multiple projects to the authenticated user\'s call list. Duplicate projects are silently ignored.  Args:     request: Request containing list of project IDs to add     current_user: The authenticated user     call_list_repository: The call list repository instance from dependency injection  Returns:     CallListResponse: The updated call list  Raises:     HTTPException: If an error occurs adding projects
+         * @summary Add To Call List
+         * @param {AddToCallListRequest} addToCallListRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        addToCallListApiCallListAddPost(addToCallListRequest: AddToCallListRequest, options?: RawAxiosRequestConfig): AxiosPromise<CallListResponse> {
+            return localVarFp.addToCallListApiCallListAddPost(addToCallListRequest, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Clear all items from the user\'s call list.  Args:     current_user: The authenticated user     call_list_repository: The call list repository instance from dependency injection  Raises:     HTTPException: If an error occurs clearing the call list
+         * @summary Clear Call List
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        clearCallListApiCallListDelete(options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.clearCallListApiCallListDelete(options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Get the user\'s call list.  Returns all items in the authenticated user\'s call list, ordered by position.  Args:     current_user: The authenticated user     call_list_repository: The call list repository instance from dependency injection  Returns:     CallListResponse: The user\'s call list  Raises:     HTTPException: If an error occurs retrieving the call list
+         * @summary Get Call List
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getCallListApiCallListGet(options?: RawAxiosRequestConfig): AxiosPromise<CallListResponse> {
+            return localVarFp.getCallListApiCallListGet(options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Mark a call as completed or not completed.  Args:     project_id: The project ID to update     request: Request containing completion status     current_user: The authenticated user     call_list_repository: The call list repository instance from dependency injection  Returns:     CallListItemResponse: The updated call list item  Raises:     HTTPException: If the project is not found or an error occurs
+         * @summary Mark Call Completed
+         * @param {string} projectId 
+         * @param {MarkCallCompletedRequest} markCallCompletedRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        markCallCompletedApiCallListProjectIdCompletedPatch(projectId: string, markCallCompletedRequest: MarkCallCompletedRequest, options?: RawAxiosRequestConfig): AxiosPromise<CallListItemResponse> {
+            return localVarFp.markCallCompletedApiCallListProjectIdCompletedPatch(projectId, markCallCompletedRequest, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Remove a project from the user\'s call list.  Args:     project_id: The project ID to remove     current_user: The authenticated user     call_list_repository: The call list repository instance from dependency injection  Raises:     HTTPException: If the project is not found or an error occurs
+         * @summary Remove From Call List
+         * @param {string} projectId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        removeFromCallListApiCallListProjectIdDelete(projectId: string, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.removeFromCallListApiCallListProjectIdDelete(projectId, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * CallListApi - object-oriented interface
+ * @export
+ * @class CallListApi
+ * @extends {BaseAPI}
+ */
+export class CallListApi extends BaseAPI {
+    /**
+     * Add projects to the user\'s call list.  Adds multiple projects to the authenticated user\'s call list. Duplicate projects are silently ignored.  Args:     request: Request containing list of project IDs to add     current_user: The authenticated user     call_list_repository: The call list repository instance from dependency injection  Returns:     CallListResponse: The updated call list  Raises:     HTTPException: If an error occurs adding projects
+     * @summary Add To Call List
+     * @param {AddToCallListRequest} addToCallListRequest 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CallListApi
+     */
+    public addToCallListApiCallListAddPost(addToCallListRequest: AddToCallListRequest, options?: RawAxiosRequestConfig) {
+        return CallListApiFp(this.configuration).addToCallListApiCallListAddPost(addToCallListRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Clear all items from the user\'s call list.  Args:     current_user: The authenticated user     call_list_repository: The call list repository instance from dependency injection  Raises:     HTTPException: If an error occurs clearing the call list
+     * @summary Clear Call List
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CallListApi
+     */
+    public clearCallListApiCallListDelete(options?: RawAxiosRequestConfig) {
+        return CallListApiFp(this.configuration).clearCallListApiCallListDelete(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Get the user\'s call list.  Returns all items in the authenticated user\'s call list, ordered by position.  Args:     current_user: The authenticated user     call_list_repository: The call list repository instance from dependency injection  Returns:     CallListResponse: The user\'s call list  Raises:     HTTPException: If an error occurs retrieving the call list
+     * @summary Get Call List
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CallListApi
+     */
+    public getCallListApiCallListGet(options?: RawAxiosRequestConfig) {
+        return CallListApiFp(this.configuration).getCallListApiCallListGet(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Mark a call as completed or not completed.  Args:     project_id: The project ID to update     request: Request containing completion status     current_user: The authenticated user     call_list_repository: The call list repository instance from dependency injection  Returns:     CallListItemResponse: The updated call list item  Raises:     HTTPException: If the project is not found or an error occurs
+     * @summary Mark Call Completed
+     * @param {string} projectId 
+     * @param {MarkCallCompletedRequest} markCallCompletedRequest 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CallListApi
+     */
+    public markCallCompletedApiCallListProjectIdCompletedPatch(projectId: string, markCallCompletedRequest: MarkCallCompletedRequest, options?: RawAxiosRequestConfig) {
+        return CallListApiFp(this.configuration).markCallCompletedApiCallListProjectIdCompletedPatch(projectId, markCallCompletedRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Remove a project from the user\'s call list.  Args:     project_id: The project ID to remove     current_user: The authenticated user     call_list_repository: The call list repository instance from dependency injection  Raises:     HTTPException: If the project is not found or an error occurs
+     * @summary Remove From Call List
+     * @param {string} projectId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CallListApi
+     */
+    public removeFromCallListApiCallListProjectIdDelete(projectId: string, options?: RawAxiosRequestConfig) {
+        return CallListApiFp(this.configuration).removeFromCallListApiCallListProjectIdDelete(projectId, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
