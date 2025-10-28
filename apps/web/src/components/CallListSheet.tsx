@@ -19,7 +19,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { getStatusColor } from '@/lib/utils';
+import { formatPhoneNumber, getStatusColor } from '@/lib/utils';
 
 interface CallListSheetProps {
   open: boolean;
@@ -88,28 +88,26 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
                   'No phone';
 
                 return (
-                  <Card key={item.id} className="p-5 relative shadow-sm">
-                    {/* Remove button */}
-                    <button
-                      onClick={() => handleRemove(item.project_id)}
-                      className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100 transition-colors"
-                      aria-label="Remove from call list"
-                    >
-                      <X className="size-4 text-gray-400 hover:text-gray-600" />
-                    </button>
+                  <Card key={item.id} className="p-5 shadow-sm">
+                    {/* Top row: Badge and close button */}
+                    <div className="flex justify-between items-center mb-2">
+                      <Badge className={`${getStatusColor(project.status)} pointer-events-none`}>
+                        {project.status}
+                      </Badge>
+                      <button
+                        onClick={() => handleRemove(item.project_id)}
+                        className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+                        aria-label="Remove from call list"
+                      >
+                        <X className="size-4 text-gray-400 hover:text-gray-600" />
+                      </button>
+                    </div>
 
-                    {/* Project info */}
-                    <div className="space-y-3 pr-8">
-                      {/* Status badge */}
-                      <div>
-                        <Badge className={getStatusColor(project.status)}>
-                          {project.status}
-                        </Badge>
-                      </div>
-
+                    {/* Adjuster info - horizontal layout */}
+                    <div className="flex gap-6">
                       {/* Adjuster name */}
                       <div>
-                        <p className="text-sm font-medium text-gray-700">
+                        <p className="text-sm font-semibold text-gray-700">
                           Adjuster
                         </p>
                         <p className="text-sm text-gray-900">{adjusterName}</p>
@@ -117,10 +115,10 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
 
                       {/* Adjuster phone */}
                       <div>
-                        <p className="text-sm font-medium text-gray-700">
+                        <p className="text-sm font-semibold text-gray-700">
                           Phone
                         </p>
-                        <p className="text-sm text-gray-900">{adjusterPhone}</p>
+                        <p className="text-sm text-gray-900">{formatPhoneNumber(adjusterPhone)}</p>
                       </div>
                     </div>
                   </Card>
