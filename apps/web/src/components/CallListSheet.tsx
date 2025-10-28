@@ -3,6 +3,16 @@ import { useState } from 'react';
 
 import { useCallList, useClearCallList, useRemoveFromCallList } from '@/clients/callList';
 import { useFetchProjects } from '@/clients/crm';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -32,6 +42,7 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   const removeFromCallList = useRemoveFromCallList();
   const clearCallList = useClearCallList();
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
+  const [isClearAlertOpen, setIsClearAlertOpen] = useState(false);
 
   const callListItems = callListData?.items || [];
   const projects = projectsData?.projects || [];
@@ -44,9 +55,8 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   };
 
   const handleClearList = () => {
-    if (window.confirm('Are you sure you want to clear the entire call list?')) {
-      clearCallList.mutate();
-    }
+    clearCallList.mutate();
+    setIsClearAlertOpen(false);
   };
 
   return (
@@ -141,7 +151,7 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
             <div className="pt-6 border-t mt-6 pr-2">
               <Button
                 variant="outline"
-                onClick={handleClearList}
+                onClick={() => setIsClearAlertOpen(true)}
                 disabled={clearCallList.isPending}
                 className="w-full"
               >
@@ -163,6 +173,24 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
           </DialogHeader>
         </DialogContent>
       </Dialog>
+
+      {/* Clear List Confirmation Alert */}
+      <AlertDialog open={isClearAlertOpen} onOpenChange={setIsClearAlertOpen}>
+        <AlertDialogContent className="bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear Call List</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to clear the entire call list? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClearList}>
+              Clear List
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 }
