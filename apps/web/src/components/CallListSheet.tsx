@@ -1,12 +1,11 @@
 import { Info, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useCallList, useRemoveFromCallList } from '@/clients/callList';
 import { useFetchProjects } from '@/clients/crm';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Spinner } from '@/components/ui/spinner';
 import {
   Dialog,
   DialogContent,
@@ -20,6 +19,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import { Spinner } from '@/components/ui/spinner';
 import { formatPhoneNumber, getStatusColor } from '@/lib/utils';
 
 interface CallListSheetProps {
@@ -34,11 +34,11 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
   const [removingProjectId, setRemovingProjectId] = useState<string | null>(null);
 
-  const callListItems = callListData?.items || [];
-  const projects = projectsData?.projects || [];
+  const callListItems = useMemo(() => callListData?.items || [], [callListData?.items]);
+  const projects = useMemo(() => projectsData?.projects || [], [projectsData?.projects]);
 
   // Create a map of project IDs to projects for quick lookup
-  const projectMap = new Map(projects.map((p) => [p.id, p]));
+  const projectMap = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
 
   const handleRemove = (projectId: string) => {
     setRemovingProjectId(projectId);
@@ -46,9 +46,11 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   };
 
   // Clear removing state when the item is actually gone from the list
-  if (removingProjectId && !callListItems.some(item => item.project_id === removingProjectId)) {
-    setRemovingProjectId(null);
-  }
+  useEffect(() => {
+    if (removingProjectId && !callListItems.some(item => item.project_id === removingProjectId)) {
+      setRemovingProjectId(null);
+    }
+  }, [removingProjectId, callListItems]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
