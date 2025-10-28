@@ -1,18 +1,8 @@
 import { Info, X } from 'lucide-react';
 import { useState } from 'react';
 
-import { useCallList, useClearCallList, useRemoveFromCallList } from '@/clients/callList';
+import { useCallList, useRemoveFromCallList } from '@/clients/callList';
 import { useFetchProjects } from '@/clients/crm';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -40,9 +30,7 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   const { data: callListData, isLoading: isLoadingCallList } = useCallList();
   const { data: projectsData } = useFetchProjects();
   const removeFromCallList = useRemoveFromCallList();
-  const clearCallList = useClearCallList();
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
-  const [isClearAlertOpen, setIsClearAlertOpen] = useState(false);
 
   const callListItems = callListData?.items || [];
   const projects = projectsData?.projects || [];
@@ -52,11 +40,6 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
 
   const handleRemove = (projectId: string) => {
     removeFromCallList.mutate(projectId);
-  };
-
-  const handleClearList = () => {
-    clearCallList.mutate();
-    setIsClearAlertOpen(false);
   };
 
   return (
@@ -147,18 +130,14 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
           </div>
 
           {/* Actions */}
-          {callListItems.length > 0 && (
-            <div className="pt-6 border-t mt-6 pr-2">
-              <Button
-                variant="outline"
-                onClick={() => setIsClearAlertOpen(true)}
-                disabled={clearCallList.isPending}
-                className="w-full"
-              >
-                {clearCallList.isPending ? 'Clearing...' : 'Clear List'}
-              </Button>
-            </div>
-          )}
+          <div className="pt-12 mt-12 px-4">
+            <Button
+              onClick={() => onOpenChange(false)}
+              className="w-full"
+            >
+              Close
+            </Button>
+          </div>
         </div>
       </SheetContent>
 
@@ -173,24 +152,6 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
           </DialogHeader>
         </DialogContent>
       </Dialog>
-
-      {/* Clear List Confirmation Alert */}
-      <AlertDialog open={isClearAlertOpen} onOpenChange={setIsClearAlertOpen}>
-        <AlertDialogContent className="bg-white">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Clear Call List</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to clear the entire call list? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleClearList}>
-              Clear List
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </Sheet>
   );
 }
