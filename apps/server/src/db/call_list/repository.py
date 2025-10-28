@@ -44,7 +44,9 @@ class CallListRepository:
             list[CallListItem]: List of created call list items (excludes duplicates)
         """
         if not project_ids:
-            logger.debug(f"[CallListRepository] No project IDs provided for user {user_id}")
+            logger.debug(
+                f"[CallListRepository] No project IDs provided for user {user_id}"
+            )
             return []
 
         # Get current max position for this user
@@ -60,6 +62,11 @@ class CallListRepository:
 
         created_items = []
         for i, project_id in enumerate(project_ids):
+            # Create a savepoint for this item
+            # This allows us to rollback just this item if it's a duplicate,
+            # without affecting items added before it
+            nested = await self.session.begin_nested()
+
             try:
                 item = CallListItem(
                     user_id=user_id,
@@ -75,9 +82,13 @@ class CallListRepository:
                 logger.debug(
                     f"[CallListRepository] Added item: id={item.id}, user_id={user_id}, project_id={project_id}"
                 )
+
+                # Commit the nested transaction (savepoint)
+                await nested.commit()
+
             except IntegrityError:
-                # Duplicate (user_id, project_id) - skip it
-                await self.session.rollback()
+                # Duplicate (user_id, project_id) - rollback just this item
+                await nested.rollback()
                 logger.debug(
                     f"[CallListRepository] Skipped duplicate project {project_id} for user {user_id}"
                 )
