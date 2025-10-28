@@ -1,6 +1,3 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { AlertCircle, FileSearch, Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
 import { useAddToCallList, useCallList } from '@/clients/callList';
 import { useFetchProjects } from '@/clients/crm';
 import { CallListSheet } from '@/components/CallListSheet';
@@ -8,6 +5,9 @@ import { ProjectCard } from '@/components/ProjectCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { AlertCircle, Eye, FileSearch, Search } from 'lucide-react';
+import { useMemo, useState } from 'react';
 
 export const Route = createFileRoute('/_authed/projects')({
   component: Projects,
@@ -180,10 +180,10 @@ function Projects() {
         {/* View Call List button - shown when call list has items */}
         {!isSelectMode && callListData && callListData.total > 0 && (
           <Button
-            variant="outline"
             onClick={() => setIsCallListOpen(true)}
           >
-            View Call List ({callListData.total})
+            <Eye />
+            Call List
           </Button>
         )}
 
@@ -199,7 +199,7 @@ function Projects() {
 
         {/* Select / Cancel button */}
         <Button
-          variant={isSelectMode ? 'outline' : 'secondary'}
+          variant="outline"
           onClick={toggleSelectMode}
         >
           {isSelectMode ? 'Cancel' : 'Select'}

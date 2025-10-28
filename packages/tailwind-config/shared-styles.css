@@ -16,6 +16,10 @@
   --color-primary-900: #0E1317; /* Midnight Onix - primary text color */
   --color-primary-950: #080a0c;
 
+  /* Shadcn color mappings */
+  --color-primary: var(--color-primary-900); /* Dark button background */
+  --color-primary-foreground: var(--color-primary-50); /* White text on dark bg */
+
   /* Secondary brand color - Amber Glow */
   --color-secondary-50: #fffbf0;
   --color-secondary-100: #fef3c7;
@@ -29,6 +33,10 @@
   --color-secondary-900: #78350f;
   --color-secondary-950: #451a03;
 
+  /* Shadcn secondary mapping */
+  --color-secondary: var(--color-secondary-100);
+  --color-secondary-foreground: var(--color-secondary-900);
+
   /* Accent color - Solar Flare */
   --color-accent-50: #fefce8;
   --color-accent-100: #fef9c3;
@@ -41,6 +49,10 @@
   --color-accent-800: #854d0e;
   --color-accent-900: #713f12;
   --color-accent-950: #422006;
+
+  /* Shadcn accent mapping - using gray for hover states */
+  --color-accent: var(--color-primary-100); /* Light gray for hover */
+  --color-accent-foreground: var(--color-primary-900); /* Dark text */
 
   /* Neutral color - Frosted Silk */
   --color-neutral-50: #FFF9EF; /* Frosted Silk - lightest */
@@ -68,6 +80,26 @@
   --color-destructive-800: #7f1d1d;
   --color-destructive-900: #5f1515;
   --color-destructive-950: #450a0a;
+
+  /* Shadcn destructive foreground */
+  --color-destructive-foreground: var(--color-destructive-50);
+
+  /* Additional shadcn UI color mappings */
+  --color-background: var(--color-primary-50); /* White background */
+  --color-foreground: var(--color-primary-900); /* Dark text */
+
+  --color-muted: var(--color-primary-100);
+  --color-muted-foreground: var(--color-primary-600);
+
+  --color-card: var(--color-primary-50);
+  --color-card-foreground: var(--color-primary-900);
+
+  --color-popover: var(--color-primary-50);
+  --color-popover-foreground: var(--color-primary-900);
+
+  --color-border: var(--color-primary-300); /* Lighter gray for borders */
+  --color-input: var(--color-primary-300); /* Lighter gray for input borders */
+  --color-ring: var(--color-primary-900);
 
   /* Font families */
   --font-family-sans: MonaSans, Inter, system-ui, sans-serif;
