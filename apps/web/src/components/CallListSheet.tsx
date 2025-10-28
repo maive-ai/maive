@@ -6,6 +6,7 @@ import { useFetchProjects } from '@/clients/crm';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Spinner } from '@/components/ui/spinner';
 import {
   Dialog,
   DialogContent,
@@ -28,9 +29,10 @@ interface CallListSheetProps {
 
 export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   const { data: callListData, isLoading: isLoadingCallList } = useCallList();
-  const { data: projectsData } = useFetchProjects();
+  const { data: projectsData, isLoading: isLoadingProjects } = useFetchProjects();
   const removeFromCallList = useRemoveFromCallList();
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
+  const [removingProjectId, setRemovingProjectId] = useState<string | null>(null);
 
   const callListItems = callListData?.items || [];
   const projects = projectsData?.projects || [];
@@ -39,8 +41,14 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   const projectMap = new Map(projects.map((p) => [p.id, p]));
 
   const handleRemove = (projectId: string) => {
+    setRemovingProjectId(projectId);
     removeFromCallList.mutate(projectId);
   };
+
+  // Clear removing state when the item is actually gone from the list
+  if (removingProjectId && !callListItems.some(item => item.project_id === removingProjectId)) {
+    setRemovingProjectId(null);
+  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -61,9 +69,12 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
         <div className="mt-6 flex flex-col h-[calc(100vh-140px)]">
           {/* Call list items */}
           <div className="flex-1 overflow-y-auto space-y-4 px-2">
-            {isLoadingCallList ? (
-              <div className="flex items-center justify-center py-12">
-                <p className="text-gray-500">Loading call list...</p>
+            {isLoadingCallList || isLoadingProjects ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <Spinner className="size-8 text-gray-400" />
+                <p className="text-gray-500">
+                  {isLoadingProjects ? 'Loading projects...' : 'Loading call list...'}
+                </p>
               </div>
             ) : callListItems.length === 0 ? (
               <div className="flex items-center justify-center py-12">
@@ -96,10 +107,15 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
                       </Badge>
                       <button
                         onClick={() => handleRemove(item.project_id)}
-                        className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+                        disabled={removingProjectId === item.project_id}
+                        className="p-1 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         aria-label="Remove from call list"
                       >
-                        <X className="size-4 text-gray-400 hover:text-gray-600" />
+                        {removingProjectId === item.project_id ? (
+                          <Spinner className="size-4 text-gray-400" />
+                        ) : (
+                          <X className="size-4 text-gray-400 hover:text-gray-600" />
+                        )}
                       </button>
                     </div>
 
