@@ -99,6 +99,13 @@ class Call(Base):
         comment="Structured analysis data from call (claims, payments, etc.)",
     )
 
+    # Transcript messages (flexible JSON storage for conversation)
+    transcript: Mapped[list[dict[str, Any]] | None] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="Transcript messages from the call",
+    )
+
     # Composite indexes for common queries
     __table_args__ = (
         # Find active call for a user
@@ -139,6 +146,7 @@ class Call(Base):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "provider_data": self.provider_data,
             "analysis_data": self.analysis_data,
+            "transcript": self.transcript,
         }
 
     @staticmethod
