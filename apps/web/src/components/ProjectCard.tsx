@@ -1,4 +1,4 @@
-import { Building2, Mail, MapPin, Phone } from 'lucide-react';
+import { Building2, CheckCircle2, Circle, Mail, MapPin, Phone } from 'lucide-react';
 
 import type { Project } from '@/clients/crm';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -7,9 +7,18 @@ import { formatPhoneNumber, getStatusColor } from '@/lib/utils';
 interface ProjectCardProps {
   project: Project;
   onClick?: (projectId: string) => void;
+  isSelectMode?: boolean;
+  isSelected?: boolean;
+  onSelect?: (projectId: string) => void;
 }
 
-export function ProjectCard({ project, onClick }: ProjectCardProps) {
+export function ProjectCard({
+  project,
+  onClick,
+  isSelectMode = false,
+  isSelected = false,
+  onSelect
+}: ProjectCardProps) {
   // Extract data from provider_data
   const providerData = project.provider_data as any;
 
@@ -19,16 +28,31 @@ export function ProjectCard({ project, onClick }: ProjectCardProps) {
   const email = providerData?.customer_email || providerData?.email || 'Not available';
 
   const handleClick = (): void => {
-    if (onClick) {
+    if (isSelectMode && onSelect) {
+      onSelect(project.id);
+    } else if (onClick) {
       onClick(project.id);
     }
   };
 
   return (
-    <Card 
-      className="cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]"
+    <Card
+      className={`cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] relative ${
+        isSelected ? 'ring-2 ring-blue-500 border-blue-500' : ''
+      }`}
       onClick={handleClick}
     >
+      {/* Selection indicator */}
+      {isSelectMode && (
+        <div className="absolute top-3 right-3 z-10">
+          {isSelected ? (
+            <CheckCircle2 className="size-6 text-blue-500 fill-white" />
+          ) : (
+            <Circle className="size-6 text-gray-400" />
+          )}
+        </div>
+      )}
+
       <CardHeader className="pb-4">
         <div className="flex items-center gap-3">
           <div className="size-10 rounded-lg bg-gradient-to-br from-orange-400 to-pink-400 flex items-center justify-center">
