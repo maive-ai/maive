@@ -8,7 +8,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 
 import { AuthProvider, useAuth } from './auth';
-import Loading from './components/Loading';
+import { Spinner } from './components/ui/spinner';
 import { routeTree } from './routeTree.gen';
 import './style.css';
 
@@ -35,7 +35,7 @@ declare module '@tanstack/react-router' {
 function InnerApp() {
   const auth = useAuth();
   if (auth.isLoading) {
-    return <Loading />;
+    return <Spinner />;
   }
   return <RouterProvider router={router} context={{ auth }} />;
 }
