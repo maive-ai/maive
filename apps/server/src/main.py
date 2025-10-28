@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.ai.voice_ai.router import router as voice_ai_router
 from src.auth.router import router as auth_router
 from src.config import get_client_base_url
+from src.db.call_list.router import router as call_list_router
 from src.integrations.crm.router import router as crm_router
 from src.workflows.router import router as workflows_router
 from src.utils.logger import logger
@@ -52,6 +53,7 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api")
 app.include_router(crm_router, prefix="/api")
 app.include_router(voice_ai_router, prefix="/api")
+app.include_router(call_list_router, prefix="/api")
 app.include_router(workflows_router, prefix="/api")
 
 

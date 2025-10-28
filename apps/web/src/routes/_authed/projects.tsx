@@ -1,10 +1,13 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { AlertCircle, FileSearch, Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useAddToCallList, useCallList } from '@/clients/callList';
 import { useFetchProjects } from '@/clients/crm';
+import { CallListSheet } from '@/components/CallListSheet';
 import { ProjectCard } from '@/components/ProjectCard';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { AlertCircle, Eye, FileSearch, Search } from 'lucide-react';
+import { useMemo, useState } from 'react';
 
 export const Route = createFileRoute('/_authed/projects')({
   component: Projects,
@@ -12,11 +15,50 @@ export const Route = createFileRoute('/_authed/projects')({
 
 function Projects() {
   const { data, isLoading, isError, error } = useFetchProjects();
+  const { data: callListData } = useCallList();
+  const addToCallList = useAddToCallList();
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [isSelectMode, setIsSelectMode] = useState<boolean>(false);
+  const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
+  const [isCallListOpen, setIsCallListOpen] = useState<boolean>(false);
   const navigate = useNavigate();
 
   const handleProjectClick = (projectId: string): void => {
     navigate({ to: '/project-detail', search: { projectId } });
+  };
+
+  const toggleSelectMode = (): void => {
+    setIsSelectMode(!isSelectMode);
+    if (isSelectMode) {
+      // Exiting select mode, clear selections
+      setSelectedProjectIds(new Set());
+    }
+  };
+
+  const toggleProjectSelection = (projectId: string): void => {
+    setSelectedProjectIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(projectId)) {
+        newSet.delete(projectId);
+      } else {
+        newSet.add(projectId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleAddToCallList = (): void => {
+    const projectIds = Array.from(selectedProjectIds);
+    // Call API to add selected projects to call list
+    addToCallList.mutate(projectIds, {
+      onSuccess: () => {
+        // Open the call list sheet
+        setIsCallListOpen(true);
+        // Exit select mode and clear selections
+        setIsSelectMode(false);
+        setSelectedProjectIds(new Set());
+      },
+    });
   };
 
   // Filter projects based on search query
@@ -133,6 +175,37 @@ function Projects() {
         <h1 className="text-3xl font-bold text-gray-900">Projects</h1>
       </div>
 
+      {/* Action Buttons - Above Search Bar */}
+      <div className="mb-4 flex justify-end gap-2">
+        {/* View Call List button - shown when call list has items */}
+        {!isSelectMode && callListData && callListData.total > 0 && (
+          <Button
+            onClick={() => setIsCallListOpen(true)}
+          >
+            <Eye />
+            Call List
+          </Button>
+        )}
+
+        {/* Add to Call List button - shown in select mode when items are selected */}
+        {isSelectMode && selectedProjectIds.size > 0 && (
+          <Button
+            onClick={handleAddToCallList}
+            disabled={addToCallList.isPending}
+          >
+            {addToCallList.isPending ? 'Adding...' : `Add to Call List (${selectedProjectIds.size})`}
+          </Button>
+        )}
+
+        {/* Select / Cancel button */}
+        <Button
+          variant="outline"
+          onClick={toggleSelectMode}
+        >
+          {isSelectMode ? 'Cancel' : 'Select'}
+        </Button>
+      </div>
+
       {/* Search Bar */}
       <div className="mb-6">
         <div className="relative">
@@ -172,10 +245,16 @@ function Projects() {
               key={project.id}
               project={project}
               onClick={handleProjectClick}
+              isSelectMode={isSelectMode}
+              isSelected={selectedProjectIds.has(project.id)}
+              onSelect={toggleProjectSelection}
             />
           ))}
         </div>
       )}
+
+      {/* Call List Sheet */}
+      <CallListSheet open={isCallListOpen} onOpenChange={setIsCallListOpen} />
     </div>
   );
 }

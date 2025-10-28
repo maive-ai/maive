@@ -826,6 +826,197 @@
         }
       }
     },
+    "/api/call-list/add": {
+      "post": {
+        "tags": [
+          "Call List"
+        ],
+        "summary": "Add To Call List",
+        "description": "Add projects to the user's call list.\n\nAdds multiple projects to the authenticated user's call list.\nDuplicate projects are silently ignored.\n\nArgs:\n    request: Request containing list of project IDs to add\n    current_user: The authenticated user\n    call_list_repository: The call list repository instance from dependency injection\n\nReturns:\n    CallListResponse: The updated call list\n\nRaises:\n    HTTPException: If an error occurs adding projects",
+        "operationId": "add_to_call_list_api_call_list_add_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddToCallListRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/call-list": {
+      "get": {
+        "tags": [
+          "Call List"
+        ],
+        "summary": "Get Call List",
+        "description": "Get the user's call list.\n\nReturns all items in the authenticated user's call list, ordered by position.\n\nArgs:\n    current_user: The authenticated user\n    call_list_repository: The call list repository instance from dependency injection\n\nReturns:\n    CallListResponse: The user's call list\n\nRaises:\n    HTTPException: If an error occurs retrieving the call list",
+        "operationId": "get_call_list_api_call_list_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Call List"
+        ],
+        "summary": "Clear Call List",
+        "description": "Clear all items from the user's call list.\n\nArgs:\n    current_user: The authenticated user\n    call_list_repository: The call list repository instance from dependency injection\n\nRaises:\n    HTTPException: If an error occurs clearing the call list",
+        "operationId": "clear_call_list_api_call_list_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/call-list/{project_id}": {
+      "delete": {
+        "tags": [
+          "Call List"
+        ],
+        "summary": "Remove From Call List",
+        "description": "Remove a project from the user's call list.\n\nArgs:\n    project_id: The project ID to remove\n    current_user: The authenticated user\n    call_list_repository: The call list repository instance from dependency injection\n\nRaises:\n    HTTPException: If the project is not found or an error occurs",
+        "operationId": "remove_from_call_list_api_call_list__project_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/call-list/{project_id}/completed": {
+      "patch": {
+        "tags": [
+          "Call List"
+        ],
+        "summary": "Mark Call Completed",
+        "description": "Mark a call as completed or not completed.\n\nArgs:\n    project_id: The project ID to update\n    request: Request containing completion status\n    current_user: The authenticated user\n    call_list_repository: The call list repository instance from dependency injection\n\nReturns:\n    CallListItemResponse: The updated call list item\n\nRaises:\n    HTTPException: If the project is not found or an error occurs",
+        "operationId": "mark_call_completed_api_call_list__project_id__completed_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkCallCompletedRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallListItemResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/workflows/call-and-write-results-to-crm": {
       "post": {
         "tags": [
@@ -974,6 +1165,24 @@
         ],
         "title": "ActiveCallResponse",
         "description": "Response model for the user's currently active call."
+      },
+      "AddToCallListRequest": {
+        "properties": {
+          "project_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Project Ids",
+            "description": "List of project/job IDs to add to call list"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_ids"
+        ],
+        "title": "AddToCallListRequest",
+        "description": "Request model for adding projects to call list."
       },
       "AnalysisData": {
         "properties": {
@@ -1146,6 +1355,83 @@
         ],
         "title": "CRMProvider",
         "description": "Available CRM providers."
+      },
+      "CallListItemResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "Database ID of the call list item"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id",
+            "description": "Cognito user ID"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id",
+            "description": "Project/Job ID from CRM"
+          },
+          "call_completed": {
+            "type": "boolean",
+            "title": "Call Completed",
+            "description": "Whether the call has been completed"
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position",
+            "description": "Position in the call list for ordering"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When the item was added to the list"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At",
+            "description": "When the item was last updated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "project_id",
+          "call_completed",
+          "position",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CallListItemResponse",
+        "description": "Response model for a single call list item."
+      },
+      "CallListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CallListItemResponse"
+            },
+            "type": "array",
+            "title": "Items",
+            "description": "List of call list items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Total number of items in the call list"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "CallListResponse",
+        "description": "Response model for the complete call list."
       },
       "CallRequest": {
         "properties": {
@@ -2069,6 +2355,19 @@
         ],
         "title": "JobList",
         "description": "Universal job list response with pagination."
+      },
+      "MarkCallCompletedRequest": {
+        "properties": {
+          "completed": {
+            "type": "boolean",
+            "title": "Completed",
+            "description": "Whether the call is completed",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "MarkCallCompletedRequest",
+        "description": "Request model for marking a call as completed."
       },
       "Note": {
         "properties": {

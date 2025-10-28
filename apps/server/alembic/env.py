@@ -9,6 +9,7 @@ from alembic import context
 from src.db.database import Base, get_database_url
 
 # Import all models to ensure they're registered with Base.metadata
+from src.db.call_list.model import CallListItem  # noqa: F401
 from src.db.calls.model import Call  # noqa: F401
 
 # this is the Alembic Config object, which provides
