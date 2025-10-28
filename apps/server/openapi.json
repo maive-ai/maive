@@ -1151,6 +1151,14 @@
           "provider_data": {
             "title": "Provider Data",
             "description": "Provider-specific data for the call"
+          },
+          "transcript": {
+            "items": {
+              "$ref": "#/components/schemas/TranscriptMessage"
+            },
+            "type": "array",
+            "title": "Transcript",
+            "description": "Transcript messages from the call"
           }
         },
         "type": "object",
