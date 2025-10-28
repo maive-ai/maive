@@ -1,6 +1,6 @@
 import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
 import { createFileRoute } from '@tanstack/react-router';
-import { AlertCircle, Building2, CheckCircle2, FileText, Loader2, Mail, MapPin, Phone, User } from 'lucide-react';
+import { AlertCircle, Building2, CheckCircle2, Clock, FileText, Loader2, Mail, MapPin, Phone, PhoneCall, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { isValidPhoneNumber } from 'react-phone-number-input';
 import type { Value as E164Number } from 'react-phone-number-input';
@@ -33,6 +33,7 @@ function ProjectDetail() {
   const providerData = project?.provider_data as any;
   const [phoneNumber, setPhoneNumber] = useState<E164Number | ''>('');
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
+  const [callStatus, setCallStatus] = useState<string | null>(null);
   const [listenUrl, setListenUrl] = useState<string | null>(null);
   const [controlUrl, setControlUrl] = useState<string | null>(null);
   const callAndWritetoCrmMutation = useCallAndWriteToCrm(projectId);
@@ -43,6 +44,7 @@ function ProjectDetail() {
     onCallEnded: () => {
       console.log('[Project Detail] Call ended - clearing active call state');
       setActiveCallId(null);
+      setCallStatus(null);
       setListenUrl(null);
       setControlUrl(null);
       callAndWritetoCrmMutation.reset();
@@ -68,13 +70,14 @@ function ProjectDetail() {
     }
   }, [project]);
 
-  // Restore active call state on mount
+  // Restore active call state on mount and update status when polling
   useEffect(() => {
     if (activeCall && activeCall.project_id === projectId) {
-      // Active call matches current project - restore state
+      // Active call matches current project - restore/update state
       console.log('[Project Detail] Restoring active call state:', activeCall);
       setActiveCallId(activeCall.call_id);
-      setListenUrl(activeCall.listen_url);
+      setCallStatus(activeCall.status ?? null);
+      setListenUrl(activeCall.listen_url ?? null);
 
       // Extract control URL from provider_data
       const providerData = activeCall.provider_data as any;
@@ -88,10 +91,11 @@ function ProjectDetail() {
     }
   }, [activeCall, projectId]);
 
-  // Store call ID when call starts successfully
+  // Store call ID and status when call starts successfully
   useEffect(() => {
     if (callAndWritetoCrmMutation.isSuccess && callAndWritetoCrmMutation.data) {
       setActiveCallId(callAndWritetoCrmMutation.data.call_id);
+      setCallStatus(callAndWritetoCrmMutation.data.status);
 
       // Extract listenUrl and controlUrl from provider_data
       const providerData = callAndWritetoCrmMutation.data.provider_data;
@@ -336,19 +340,48 @@ function ProjectDetail() {
                 )}
               </div>
 
-              {/* Success Message */}
-              {callAndWritetoCrmMutation.isSuccess && callAndWritetoCrmMutation.data && (
-                <div className="flex items-start gap-3 rounded-lg bg-green-50 border border-green-200 p-4">
-                  <CheckCircle2 className="size-5 text-green-600 mt-0.5" />
+              {/* Call Status Message */}
+              {activeCallId && callStatus && (
+                <div className={`flex items-start gap-3 rounded-lg p-4 ${
+                  callStatus === 'in_progress' 
+                    ? 'bg-green-50 border border-green-200' 
+                    : callStatus === 'ringing' || callStatus === 'queued'
+                    ? 'bg-blue-50 border border-blue-200'
+                    : 'bg-gray-50 border border-gray-200'
+                }`}>
+                  {callStatus === 'in_progress' ? (
+                    <PhoneCall className="size-5 text-green-600 mt-0.5 animate-pulse" />
+                  ) : callStatus === 'ringing' ? (
+                    <Loader2 className="size-5 text-blue-600 mt-0.5 animate-spin" />
+                  ) : callStatus === 'queued' ? (
+                    <Clock className="size-5 text-blue-600 mt-0.5" />
+                  ) : (
+                    <CheckCircle2 className="size-5 text-gray-600 mt-0.5" />
+                  )}
                   <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium text-green-900">
-                      Call started!
+                    <p className={`text-sm font-medium ${
+                      callStatus === 'in_progress' 
+                        ? 'text-green-900' 
+                        : callStatus === 'ringing' || callStatus === 'queued'
+                        ? 'text-blue-900'
+                        : 'text-gray-900'
+                    }`}>
+                      {callStatus === 'queued' && 'Call queued'}
+                      {callStatus === 'ringing' && 'Call ringing...'}
+                      {callStatus === 'in_progress' && 'Call in progress'}
+                      {!['queued', 'ringing', 'in_progress'].includes(callStatus) && 'Call started'}
                     </p>
-                    <p className="text-sm text-green-700">
-                      Call ID: {callAndWritetoCrmMutation.data.call_id}
-                    </p>
-                    <p className="text-xs text-green-600">
-                      Status: {callAndWritetoCrmMutation.data.status}
+                    <p className={`text-xs ${
+                      callStatus === 'in_progress' 
+                        ? 'text-green-700' 
+                        : callStatus === 'ringing' || callStatus === 'queued'
+                        ? 'text-blue-700'
+                        : 'text-gray-700'
+                    }`}>
+                      {callStatus === 'queued' && 'Waiting in queue...'}
+                      {callStatus === 'ringing' && 'Waiting for answer...'}
+                      {callStatus === 'in_progress' && 'Connected - You can now listen to the call'}
+                      {!['queued', 'ringing', 'in_progress'].includes(callStatus) && `Status: ${callStatus}`}
                     </p>
                   </div>
                 </div>
@@ -407,7 +440,8 @@ function ProjectDetail() {
               </Button>
 
               <CallAudioVisualizer 
-                listenUrl={listenUrl} 
+                listenUrl={listenUrl}
+                callStatus={callStatus}
                 onDisconnect={() => setListenUrl(null)}
               />
             </CardContent>
