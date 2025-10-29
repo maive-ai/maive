@@ -3,18 +3,29 @@
 import base64
 import json
 from pathlib import Path
-from typing import Any, AsyncGenerator, TypeVar
+from typing import AsyncGenerator, TypeVar
 
 from openai import AsyncOpenAI
+from openai.types.responses import (
+    EasyInputMessageParam,
+    ResponseCompletedEvent,
+    ResponseFailedEvent,
+    ResponseOutputTextAnnotationAddedEvent,
+    ResponseTextDeltaEvent,
+    WebSearchToolParam,
+)
+from openai.types.responses.response_output_text import AnnotationURLCitation
 from pydantic import BaseModel
 
 from src.ai.base import (
     AIProvider,
     AudioAnalysisRequest,
+    ChatMessage,
     ChatStreamChunk,
     ContentAnalysisRequest,
     ContentGenerationResult,
     FileMetadata,
+    ResponseStreamParams,
     SearchCitation,
     TranscriptionResult,
 )
@@ -582,7 +593,8 @@ class OpenAIProvider(AIProvider):
 
     async def stream_chat(
         self,
-        messages: list[dict[str, Any]],
+        messages: list[ChatMessage],
+        instructions: str | None = None,
         enable_web_search: bool = False,
         **kwargs,
     ) -> AsyncGenerator[ChatStreamChunk, None]:
@@ -591,7 +603,8 @@ class OpenAIProvider(AIProvider):
         Uses OpenAI's Responses API which supports web search tools.
 
         Args:
-            messages: List of chat messages
+            messages: List of chat messages (user and assistant only, no system messages)
+            instructions: Optional system prompt/instructions
             enable_web_search: Whether to enable web search capability
             **kwargs: Provider-specific options (temperature, max_tokens, model, etc.)
 
@@ -607,107 +620,60 @@ class OpenAIProvider(AIProvider):
 
             logger.info(f"Streaming chat with web_search={enable_web_search}, model={model}")
 
-            # Configure tools for web search if enabled (Responses API format)
-            tools = [{"type": "web_search"}] if enable_web_search else []
+            # Configure tools for web search if enabled (using OpenAI's official type)
+            tools: list[WebSearchToolParam] = (
+                [WebSearchToolParam(type="web_search")] if enable_web_search else []
+            )
 
-            # Extract system prompt (instructions) from messages
-            # Responses API uses 'instructions' parameter for system prompts
-            instructions = None
-            input_items = []
-            
-            for msg in messages:
-                if msg.get("role") == "system":
-                    # Extract system message as instructions
-                    if instructions:
-                        # If multiple system messages, combine them
-                        instructions = f"{instructions}\n\n{msg.get('content', '')}"
-                    else:
-                        instructions = msg.get("content", "")
-                else:
-                    # User and assistant messages go in input
-                    # Responses API expects messages in format: {"type": "message", "role": "...", "content": "..."}
-                    input_items.append({
-                        "type": "message",
-                        "role": msg["role"],
-                        "content": msg.get("content", "")
-                    })
+            # Convert messages to Responses API format (using OpenAI's official type)
+            input_items: list[EasyInputMessageParam] = [
+                EasyInputMessageParam(
+                    role=msg.role,  # type: ignore[typeddict-item]
+                    content=msg.content,
+                )
+                for msg in messages
+            ]
 
-            # Validate: must have at least input messages or instructions
-            if not input_items and not instructions:
-                raise ValueError("Must provide at least input messages or instructions")
+            # Create streaming response using Responses API with validated params
+            stream_params = ResponseStreamParams(
+                model=model,
+                input=input_items,  # type: ignore[arg-type]
+                temperature=temperature,
+                max_output_tokens=max_tokens,
+                stream=True,
+                instructions=instructions,
+                tools=tools if tools else None,  # type: ignore[arg-type]
+            )
 
-            # Create streaming response using Responses API
-            # Use 'instructions' for system prompt, 'input' for conversation messages
-            # Note: input should be a list (can be empty), not None
-            stream_params = {
-                "model": model,
-                "input": input_items,  # List of messages (can be empty if only instructions)
-                "temperature": temperature,
-                "max_output_tokens": max_tokens,
-                "stream": True,
-            }
+            logger.debug(
+                f"Stream params: model={model}, input_items={len(input_items)}, "
+                f"has_instructions={bool(instructions)}, tools={bool(tools)}"
+            )
             
-            # Add instructions if we have a system prompt
-            if instructions:
-                stream_params["instructions"] = instructions
-            
-            # Add tools if web search is enabled
-            if tools:
-                stream_params["tools"] = tools
-
-            logger.debug(f"Stream params: model={model}, input_items={len(input_items)}, has_instructions={bool(instructions)}, tools={tools}")
-            
-            stream = await client.responses.create(**stream_params)
+            stream = await client.responses.create(**stream_params.model_dump(exclude_none=True))
 
             # Track citations from web search
             accumulated_citations: list[SearchCitation] = []
 
             async for event in stream:
-                # Handle different event types from Responses API
+                # Handle different event types from Responses API using official types
                 content = ""
                 citations: list[SearchCitation] = []
                 finish_reason = None
 
                 try:
-                    # Get event type (should be a string like "response.output_text.delta")
-                    event_type = getattr(event, "type", None)
-                    
-                    if not event_type:
-                        logger.warning(f"Event missing type attribute: {type(event)}")
-                        continue
-
                     # Handle text delta events (streaming content)
-                    if event_type == "response.output_text.delta":
-                        delta = getattr(event, "delta", "")
-                        # Delta should be a string, but handle other types gracefully
-                        content = delta if isinstance(delta, str) else str(delta) if delta else ""
+                    if isinstance(event, ResponseTextDeltaEvent):
+                        content = event.delta
 
                     # Handle annotation events (citations from web search)
-                    elif event_type == "response.output_text.annotation.added":
-                        annotation = getattr(event, "annotation", None)
-                        if annotation is None:
-                            logger.warning("Annotation event missing annotation data")
-                            continue
-                        
-                        # Parse annotation - handle both dict and object formats
-                        if isinstance(annotation, dict):
-                            url = annotation.get("url", "")
-                            title = annotation.get("title")
-                            snippet = annotation.get("text") or annotation.get("snippet")
-                        elif hasattr(annotation, "url"):
-                            url = getattr(annotation, "url", "")
-                            title = getattr(annotation, "title", None)
-                            snippet = getattr(annotation, "text", None) or getattr(annotation, "snippet", None)
-                        else:
-                            logger.warning(f"Unsupported annotation format: {type(annotation)}")
-                            continue
-                        
-                        # Create citation if URL is present
-                        if url:
+                    elif isinstance(event, ResponseOutputTextAnnotationAddedEvent):
+                        # Check if annotation is a URL citation (web search result)
+                        if isinstance(event.annotation, AnnotationURLCitation):
                             citation = SearchCitation(
-                                url=url,
-                                title=title,
-                                snippet=snippet,
+                                url=event.annotation.url,
+                                title=event.annotation.title,
+                                snippet=None,  # URL citations don't include snippets
                                 accessed_at=None,
                             )
                             citations.append(citation)
@@ -716,10 +682,10 @@ class OpenAIProvider(AIProvider):
                                 accumulated_citations.append(citation)
 
                     # Handle completion events
-                    elif event_type == "response.completed":
+                    elif isinstance(event, ResponseCompletedEvent):
                         finish_reason = "completed"
                     
-                    elif event_type == "response.failed":
+                    elif isinstance(event, ResponseFailedEvent):
                         finish_reason = "failed"
 
                     # Yield chunk if there's content, citations, or finish reason
@@ -731,7 +697,7 @@ class OpenAIProvider(AIProvider):
                         )
                         
                 except Exception as e:
-                    logger.error(f"Error parsing event: {e}, event_type={getattr(event, 'type', 'unknown')}")
+                    logger.error(f"Error parsing event: {e}, event_type={type(event).__name__}")
                     continue
 
             logger.info(

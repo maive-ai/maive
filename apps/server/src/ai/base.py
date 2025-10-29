@@ -43,6 +43,34 @@ class SearchCitation(BaseModel):
     accessed_at: str | None = None
 
 
+class ChatMessage(BaseModel):
+    """Chat message model for streaming chat responses.
+
+    Represents a single message in a conversation (user or assistant).
+    System messages should be passed separately via the instructions parameter.
+    """
+
+    role: str
+    content: str
+
+
+class ResponseStreamParams(BaseModel):
+    """Parameters for OpenAI Responses API streaming requests.
+    
+    Mirrors the structure of ResponseCreateParams from the OpenAI SDK.
+    """
+
+    model: str
+    input: list[dict]  # List of EasyInputMessageParam dicts
+    temperature: float | None = None
+    max_output_tokens: int | None = None
+    stream: bool = True
+    instructions: str | None = None
+    tools: list[dict] | None = None  # List of ToolParam dicts
+
+    model_config = {"extra": "forbid"}
+
+
 class ChatStreamChunk(BaseModel):
     """Chunk from streaming chat response with optional citations.
 
@@ -218,14 +246,16 @@ class AIProvider(ABC):
     @abstractmethod
     async def stream_chat(
         self,
-        messages: list[dict[str, Any]],
+        messages: list[ChatMessage],
+        instructions: str | None = None,
         enable_web_search: bool = False,
         **kwargs,
     ) -> AsyncGenerator[ChatStreamChunk, None]:
         """Stream chat responses with optional web search and citations.
 
         Args:
-            messages: List of chat messages
+            messages: List of chat messages (user and assistant only, no system messages)
+            instructions: Optional system prompt/instructions
             enable_web_search: Whether to enable web search capability
             **kwargs: Provider-specific options (temperature, max_tokens, etc.)
 
