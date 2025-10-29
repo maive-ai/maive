@@ -1,0 +1,35 @@
+# Local Building Code - Roofing Requirements
+
+## Section 1507 - Roof Covering Requirements
+
+### 1507.1 General
+All roof coverings shall be installed in accordance with the applicable provisions of this section and the manufacturer's installation instructions.
+
+### 1507.2 Asphalt Shingles
+1. Wind Resistance: Shingles shall be rated for a minimum wind speed of 110 mph
+2. Underlayment: Required on all roof decks. Ice barrier required where specified
+3. Fasteners: Minimum 4 fasteners per shingle, 6 in high wind areas
+4. Deck Requirements: Minimum 15/32" OSB or 5/8" plywood
+5. Ventilation: Minimum 1:150 ratio of vent area to attic area
+
+### 1507.3 Metal Roof Panels
+1. Panel thickness: Minimum 26 gauge for residential
+2. Fastener spacing: Maximum 24" on center
+3. Underlayment: Synthetic underlayment required
+4. Slope requirements: Minimum 3:12 pitch for standing seam
+
+### 1507.4 Ice Dam Protection
+In areas where average daily temperature in January is 25°F or less:
+- Ice barrier required extending from eave edge to 24" inside exterior wall
+- Multiple layers of underlayment may be used as alternative
+
+### 1507.5 Flashing Requirements
+1. Valley flashing: Minimum 24" wide
+2. Step flashing: Minimum 4" x 4" bent at 90 degrees
+3. Chimney cricket: Required for chimneys wider than 30"
+4. Kickout flashing: Required at wall-to-roof intersections
+
+### 1507.6 Reroofing Provisions
+1. Maximum layers: 2 layers maximum (varies by jurisdiction)
+2. Deck inspection: Required before installing over existing roof
+3. Tear-off required if existing roof is water damaged or deteriorated

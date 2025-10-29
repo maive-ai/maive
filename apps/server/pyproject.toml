@@ -18,6 +18,7 @@ dependencies = [
     "alembic>=1.15.1",
     "asyncpg>=0.30.0",
     "sqlalchemy[asyncio]>=2.0.44",
+    "pypdf>=5.1.0",
 ]
 
 [dependency-groups]
