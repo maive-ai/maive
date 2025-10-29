@@ -473,6 +473,38 @@ export type CallStatus = typeof CallStatus[keyof typeof CallStatus];
 
 
 /**
+ * Chat message model.
+ * @export
+ * @interface ChatMessage
+ */
+export interface ChatMessage {
+    /**
+     * 
+     * @type {string}
+     * @memberof ChatMessage
+     */
+    'role': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ChatMessage
+     */
+    'content': string;
+}
+/**
+ * Chat request with message history.
+ * @export
+ * @interface ChatRequest
+ */
+export interface ChatRequest {
+    /**
+     * 
+     * @type {Array<ChatMessage>}
+     * @memberof ChatRequest
+     */
+    'messages': Array<ChatMessage>;
+}
+/**
  * Provider-agnostic structured data from insurance claim status calls.  Note: claim_status now represents the project/job status in the CRM. Different CRM providers have different status values.
  * @export
  * @interface ClaimStatusData
@@ -3005,6 +3037,120 @@ export class CallListApi extends BaseAPI {
      */
     public removeFromCallListApiCallListProjectIdDelete(projectId: string, options?: RawAxiosRequestConfig) {
         return CallListApiFp(this.configuration).removeFromCallListApiCallListProjectIdDelete(projectId, options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+
+/**
+ * ChatApi - axios parameter creator
+ * @export
+ */
+export const ChatApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * Stream roofing chat responses via Server-Sent Events.  Args:     request: Chat request with message history     current_user: Authenticated user (from JWT)     chat_service: Chat service dependency  Returns:     StreamingResponse: SSE stream of chat responses
+         * @summary Stream Roofing Chat
+         * @param {ChatRequest} chatRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        streamRoofingChatApiChatRoofingPost: async (chatRequest: ChatRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'chatRequest' is not null or undefined
+            assertParamExists('streamRoofingChatApiChatRoofingPost', 'chatRequest', chatRequest)
+            const localVarPath = `/api/chat/roofing`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(chatRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * ChatApi - functional programming interface
+ * @export
+ */
+export const ChatApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = ChatApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * Stream roofing chat responses via Server-Sent Events.  Args:     request: Chat request with message history     current_user: Authenticated user (from JWT)     chat_service: Chat service dependency  Returns:     StreamingResponse: SSE stream of chat responses
+         * @summary Stream Roofing Chat
+         * @param {ChatRequest} chatRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async streamRoofingChatApiChatRoofingPost(chatRequest: ChatRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<any>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.streamRoofingChatApiChatRoofingPost(chatRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ChatApi.streamRoofingChatApiChatRoofingPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+    }
+};
+
+/**
+ * ChatApi - factory interface
+ * @export
+ */
+export const ChatApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = ChatApiFp(configuration)
+    return {
+        /**
+         * Stream roofing chat responses via Server-Sent Events.  Args:     request: Chat request with message history     current_user: Authenticated user (from JWT)     chat_service: Chat service dependency  Returns:     StreamingResponse: SSE stream of chat responses
+         * @summary Stream Roofing Chat
+         * @param {ChatRequest} chatRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        streamRoofingChatApiChatRoofingPost(chatRequest: ChatRequest, options?: RawAxiosRequestConfig): AxiosPromise<any> {
+            return localVarFp.streamRoofingChatApiChatRoofingPost(chatRequest, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * ChatApi - object-oriented interface
+ * @export
+ * @class ChatApi
+ * @extends {BaseAPI}
+ */
+export class ChatApi extends BaseAPI {
+    /**
+     * Stream roofing chat responses via Server-Sent Events.  Args:     request: Chat request with message history     current_user: Authenticated user (from JWT)     chat_service: Chat service dependency  Returns:     StreamingResponse: SSE stream of chat responses
+     * @summary Stream Roofing Chat
+     * @param {ChatRequest} chatRequest 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ChatApi
+     */
+    public streamRoofingChatApiChatRoofingPost(chatRequest: ChatRequest, options?: RawAxiosRequestConfig) {
+        return ChatApiFp(this.configuration).streamRoofingChatApiChatRoofingPost(chatRequest, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
