@@ -216,10 +216,10 @@ class AIProvider(ABC):
         pass
 
     @abstractmethod
-    async def stream_chat_with_search(
+    async def stream_chat(
         self,
         messages: list[dict[str, Any]],
-        enable_web_search: bool = True,
+        enable_web_search: bool = False,
         **kwargs,
     ) -> AsyncGenerator[ChatStreamChunk, None]:
         """Stream chat responses with optional web search and citations.
