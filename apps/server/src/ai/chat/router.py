@@ -78,8 +78,10 @@ async def stream_roofing_chat(
         """Generate SSE events from chat stream."""
         try:
             async for chunk in chat_service.stream_chat_response(messages):
-                # Format as SSE event
-                yield f"data: {chunk}\n\n"
+                # Escape newlines in chunk for SSE format
+                # SSE spec requires each line to start with "data: "
+                escaped_chunk = chunk.replace("\n", "\\n")
+                yield f"data: {escaped_chunk}\n\n"
 
             # Send done signal
             yield "data: [DONE]\n\n"

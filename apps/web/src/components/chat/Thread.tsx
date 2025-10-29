@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { MarkdownText } from '@/components/assistant-ui/markdown-text';
 
 export const Thread: FC = () => {
   return (
@@ -131,7 +132,7 @@ const AssistantMessage: FC = () => {
   return (
     <MessagePrimitive.Root className="relative grid w-full max-w-2xl grid-cols-[auto_auto_1fr] grid-rows-[auto_1fr] py-4">
       <div className="col-span-2 col-start-2 row-start-1 my-1.5 max-w-xl break-words leading-7 text-foreground">
-        <MessagePrimitive.Content />
+        <MessagePrimitive.Parts components={{ Text: MarkdownText }} />
       </div>
 
       <AssistantActionBar />
