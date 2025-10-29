@@ -3,17 +3,30 @@
 import base64
 import json
 from pathlib import Path
-from typing import TypeVar
+from typing import AsyncGenerator, TypeVar
 
 from openai import AsyncOpenAI
+from openai.types.responses import (
+    EasyInputMessageParam,
+    ResponseCompletedEvent,
+    ResponseFailedEvent,
+    ResponseOutputTextAnnotationAddedEvent,
+    ResponseTextDeltaEvent,
+    WebSearchToolParam,
+)
+from openai.types.responses.response_output_text import AnnotationURLCitation
 from pydantic import BaseModel
 
 from src.ai.base import (
     AIProvider,
     AudioAnalysisRequest,
+    ChatMessage,
+    ChatStreamChunk,
     ContentAnalysisRequest,
     ContentGenerationResult,
     FileMetadata,
+    ResponseStreamParams,
+    SearchCitation,
     TranscriptionResult,
 )
 from src.ai.openai.config import get_openai_settings
@@ -576,4 +589,146 @@ class OpenAIProvider(AIProvider):
             logger.error(f"Structured content analysis failed: {e}")
             raise OpenAIContentGenerationError(
                 f"Failed to analyze content with structured output: {e}", e
+            )
+
+    async def stream_chat(
+        self,
+        messages: list[ChatMessage],
+        instructions: str | None = None,
+        enable_web_search: bool = False,
+        **kwargs,
+    ) -> AsyncGenerator[ChatStreamChunk, None]:
+        """Stream chat responses with optional web search and citations.
+
+        Uses OpenAI's Responses API which supports web search tools.
+
+        Args:
+            messages: List of chat messages (user and assistant only, no system messages)
+            instructions: Optional system prompt/instructions
+            enable_web_search: Whether to enable web search capability
+            **kwargs: Provider-specific options (temperature, max_tokens, model, etc.)
+
+        Yields:
+            ChatStreamChunk: Stream chunks with content and optional citations
+        """
+        try:
+            client = self._get_client()
+
+            model = kwargs.get("model", self.settings.model_name)
+            temperature = kwargs.get("temperature", self.settings.temperature)
+            max_tokens = kwargs.get("max_tokens", self.settings.max_tokens)
+
+            logger.info(f"Streaming chat with web_search={enable_web_search}, model={model}")
+
+            # Configure tools for web search if enabled (using OpenAI's official type)
+            tools: list[WebSearchToolParam] = (
+                [WebSearchToolParam(type="web_search")] if enable_web_search else []
+            )
+
+            # Convert messages to Responses API format (using OpenAI's official type)
+            input_items: list[EasyInputMessageParam] = [
+                EasyInputMessageParam(
+                    role=msg.role,  # type: ignore[typeddict-item]
+                    content=msg.content,
+                )
+                for msg in messages
+            ]
+
+            # Create streaming response using Responses API with validated params
+            stream_params = ResponseStreamParams(
+                model=model,
+                input=input_items,  # type: ignore[arg-type]
+                temperature=temperature,
+                max_output_tokens=max_tokens,
+                stream=True,
+                instructions=instructions,
+                tools=tools if tools else None,  # type: ignore[arg-type]
+            )
+
+            logger.debug(
+                f"Stream params: model={model}, input_items={len(input_items)}, "
+                f"has_instructions={bool(instructions)}, tools={bool(tools)}"
+            )
+            
+            stream = await client.responses.create(**stream_params.model_dump(exclude_none=True))
+
+            # Track citations from web search
+            accumulated_citations: list[SearchCitation] = []
+
+            async for event in stream:
+                # Handle different event types from Responses API using official types
+                content = ""
+                citations: list[SearchCitation] = []
+                finish_reason = None
+
+                try:
+                    # Handle text delta events (streaming content)
+                    if isinstance(event, ResponseTextDeltaEvent):
+                        content = event.delta
+
+                    # Handle annotation events (citations from web search)
+                    elif isinstance(event, ResponseOutputTextAnnotationAddedEvent):
+                        annotation = event.annotation
+                        
+                        # Parse annotation as AnnotationURLCitation (handles both dict and object)
+                        try:
+                            # If it's a dict, parse it; if it's already an object, use as-is
+                            if isinstance(annotation, dict):
+                                if annotation.get("type") == "url_citation":
+                                    url_citation = AnnotationURLCitation(**annotation)
+                                else:
+                                    logger.debug(f"Skipped non-URL citation type: {annotation.get('type')}")
+                                    continue  # Skip non-URL citation types
+                            elif isinstance(annotation, AnnotationURLCitation):
+                                url_citation = annotation
+                            else:
+                                logger.debug(f"Skipped unknown annotation format: {type(annotation).__name__}")
+                                continue  # Skip unknown annotation formats
+                            
+                            # Create citation from parsed annotation
+                            citation = SearchCitation(
+                                url=url_citation.url,
+                                title=url_citation.title,
+                                snippet=None,
+                                accessed_at=None,
+                            )
+                            citations.append(citation)
+                            
+                            # Track unique citations
+                            if citation not in accumulated_citations:
+                                accumulated_citations.append(citation)
+                                
+                        except Exception as e:
+                            logger.error(f"Failed to parse annotation: {e}")
+
+                    # Handle completion events
+                    elif isinstance(event, ResponseCompletedEvent):
+                        finish_reason = "completed"
+                    
+                    elif isinstance(event, ResponseFailedEvent):
+                        finish_reason = "failed"
+
+                    # Yield chunk if there's content, citations, or finish reason
+                    if content or citations or finish_reason:
+                        yield ChatStreamChunk(
+                            content=content,
+                            citations=citations,
+                            finish_reason=finish_reason,
+                        )
+                        
+                except Exception as e:
+                    logger.error(f"Error parsing event: {e}, event_type={type(event).__name__}")
+                    continue
+
+            logger.info(
+                f"Chat stream completed with {len(accumulated_citations)} total citations"
+            )
+
+        except Exception as e:
+            logger.error(f"Streaming chat with search failed: {e}")
+            # Yield error as content
+            yield ChatStreamChunk(
+                content=f"\n\nError: {str(e)}",
+                citations=[],
+                finish_reason="error",
             )
