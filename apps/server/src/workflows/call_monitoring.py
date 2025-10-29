@@ -387,13 +387,15 @@ class CallAndWriteToCRMWorkflow:
                 "🤖 Voice AI Call Summary",
                 "",
                 f"Call Outcome: {structured_data.call_outcome.capitalize()}",
-                f"Claim Status: {structured_data.claim_status.value.capitalize()}",
-                f"Summary: {summary}",
             ]
 
-            # Add status if available
+            # Add claim status if available
             if structured_data.claim_status:
-                note_lines.append(f"Status: {structured_data.claim_status}")
+                note_lines.append(f"Claim Status: {structured_data.claim_status}")
+            
+            # Add summary if available
+            if summary:
+                note_lines.append(f"Summary: {summary}")
 
             # Add next steps if available
             if (
