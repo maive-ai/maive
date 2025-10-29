@@ -144,6 +144,51 @@
         }
       }
     },
+    "/api/chat/roofing": {
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Stream Roofing Chat",
+        "description": "Stream roofing chat responses via Server-Sent Events.\n\nArgs:\n    request: Chat request with message history\n    current_user: Authenticated user (from JWT)\n    chat_service: Chat service dependency\n\nReturns:\n    StreamingResponse: SSE stream of chat responses",
+        "operationId": "stream_roofing_chat_api_chat_roofing_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/crm/jobs/{job_id}": {
       "get": {
         "tags": [
@@ -1674,6 +1719,42 @@
         ],
         "title": "CallStatus",
         "description": "Call status values across Voice AI systems."
+      },
+      "ChatMessage": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role",
+          "content"
+        ],
+        "title": "ChatMessage",
+        "description": "Chat message model."
+      },
+      "ChatRequest": {
+        "properties": {
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/ChatMessage"
+            },
+            "type": "array",
+            "title": "Messages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "messages"
+        ],
+        "title": "ChatRequest",
+        "description": "Chat request with message history."
       },
       "ClaimStatusData": {
         "properties": {

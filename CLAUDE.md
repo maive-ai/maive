@@ -123,6 +123,7 @@ When adding new APIs:
 ### Backend / Server Development
 - For FastAPI best practices, please reference .cursor/rules/fastapi.mdc
 - For python code quality best practices, please reference .cursor/rules/python.mdc
+- We use our own logger, which can be imported via: `from src.utils.logger import logger`
 
 ## Relevant Docs
 

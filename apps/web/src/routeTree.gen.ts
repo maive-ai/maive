@@ -17,6 +17,7 @@ import { Route as AuthedSimplePhoneInputRouteImport } from './routes/_authed/sim
 import { Route as AuthedProjectsRouteImport } from './routes/_authed/projects'
 import { Route as AuthedProjectDetailRouteImport } from './routes/_authed/project-detail'
 import { Route as AuthedCreateProjectRouteImport } from './routes/_authed/create-project'
+import { Route as AuthedChatRouteImport } from './routes/_authed/chat'
 import { Route as AuthedWorkflowsIndexRouteImport } from './routes/_authed/workflows/index'
 import { Route as AuthedVoiceAiIndexRouteImport } from './routes/_authed/voice-ai/index'
 import { Route as AuthedWorkflowsNew_workflowRouteImport } from './routes/_authed/workflows/new_workflow'
@@ -62,6 +63,11 @@ const AuthedCreateProjectRoute = AuthedCreateProjectRouteImport.update({
   path: '/create-project',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedChatRoute = AuthedChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedWorkflowsIndexRoute = AuthedWorkflowsIndexRouteImport.update({
   id: '/workflows/',
   path: '/workflows/',
@@ -92,6 +98,7 @@ const AuthedVoiceAiCustomerIdRoute = AuthedVoiceAiCustomerIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/chat': typeof AuthedChatRoute
   '/create-project': typeof AuthedCreateProjectRoute
   '/project-detail': typeof AuthedProjectDetailRoute
   '/projects': typeof AuthedProjectsRoute
@@ -106,6 +113,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/chat': typeof AuthedChatRoute
   '/create-project': typeof AuthedCreateProjectRoute
   '/project-detail': typeof AuthedProjectDetailRoute
   '/projects': typeof AuthedProjectsRoute
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteWithChildren
+  '/_authed/chat': typeof AuthedChatRoute
   '/_authed/create-project': typeof AuthedCreateProjectRoute
   '/_authed/project-detail': typeof AuthedProjectDetailRoute
   '/_authed/projects': typeof AuthedProjectsRoute
@@ -138,6 +147,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/chat'
     | '/create-project'
     | '/project-detail'
     | '/projects'
@@ -152,6 +162,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/chat'
     | '/create-project'
     | '/project-detail'
     | '/projects'
@@ -167,6 +178,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authed'
+    | '/_authed/chat'
     | '/_authed/create-project'
     | '/_authed/project-detail'
     | '/_authed/projects'
@@ -245,6 +257,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedCreateProjectRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/chat': {
+      id: '/_authed/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof AuthedChatRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/workflows/': {
       id: '/_authed/workflows/'
       path: '/workflows'
@@ -284,6 +303,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthedRouteChildren {
+  AuthedChatRoute: typeof AuthedChatRoute
   AuthedCreateProjectRoute: typeof AuthedCreateProjectRoute
   AuthedProjectDetailRoute: typeof AuthedProjectDetailRoute
   AuthedProjectsRoute: typeof AuthedProjectsRoute
@@ -296,6 +316,7 @@ interface AuthedRouteChildren {
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedChatRoute: AuthedChatRoute,
   AuthedCreateProjectRoute: AuthedCreateProjectRoute,
   AuthedProjectDetailRoute: AuthedProjectDetailRoute,
   AuthedProjectsRoute: AuthedProjectsRoute,
