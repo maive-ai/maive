@@ -5,7 +5,6 @@ This service provides streaming chat capabilities with roofing domain knowledge,
 loading context from document files and using OpenAI for responses.
 """
 
-import logging
 from pathlib import Path
 from typing import AsyncGenerator
 
@@ -14,8 +13,7 @@ from openai.types.chat import ChatCompletionMessageParam
 from pypdf import PdfReader
 
 from src.ai.openai.config import get_openai_settings
-
-logger = logging.getLogger(__name__)
+from src.utils.logger import logger
 
 
 class RoofingChatService:
@@ -51,7 +49,9 @@ class RoofingChatService:
                 content = file_path.read_text(encoding="utf-8")
                 # Get relative path for better context
                 relative_path = file_path.relative_to(self.documents_dir)
-                documents.append(f"## {file_path.stem} ({relative_path.parent})\n\n{content}\n\n")
+                documents.append(
+                    f"## {file_path.stem} ({relative_path.parent})\n\n{content}\n\n"
+                )
                 logger.info(f"Loaded text document: {relative_path}")
             except Exception as e:
                 logger.error(f"Failed to load document {file_path}: {e}")
@@ -61,7 +61,9 @@ class RoofingChatService:
             try:
                 content = file_path.read_text(encoding="utf-8")
                 relative_path = file_path.relative_to(self.documents_dir)
-                documents.append(f"## {file_path.stem} ({relative_path.parent})\n\n{content}\n\n")
+                documents.append(
+                    f"## {file_path.stem} ({relative_path.parent})\n\n{content}\n\n"
+                )
                 logger.info(f"Loaded markdown document: {relative_path}")
             except Exception as e:
                 logger.error(f"Failed to load document {file_path}: {e}")

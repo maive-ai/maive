@@ -1,6 +1,5 @@
 """Google Gemini API client implementation."""
 
-import logging
 import mimetypes
 from pathlib import Path
 from typing import TypeVar
@@ -19,8 +18,7 @@ from src.ai.gemini.schemas import (
     GenerateContentResponse,
     GenerateStructuredContentRequest,
 )
-
-logger = logging.getLogger(__name__)
+from src.utils.logger import logger
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -91,12 +89,13 @@ class GeminiClient:
             # Convert to our metadata format
             metadata = FileMetadata(
                 name=uploaded_file.name,
-                display_name=getattr(uploaded_file, 'display_name', None) or file_path.name,
-                mime_type=getattr(uploaded_file, 'mime_type', None),
-                size_bytes=getattr(uploaded_file, 'size_bytes', None),
-                sha256_hash=getattr(uploaded_file, 'sha256_hash', None),
-                uri=getattr(uploaded_file, 'uri', None),
-                state=getattr(uploaded_file, 'state', None),
+                display_name=getattr(uploaded_file, "display_name", None)
+                or file_path.name,
+                mime_type=getattr(uploaded_file, "mime_type", None),
+                size_bytes=getattr(uploaded_file, "size_bytes", None),
+                sha256_hash=getattr(uploaded_file, "sha256_hash", None),
+                uri=getattr(uploaded_file, "uri", None),
+                state=getattr(uploaded_file, "state", None),
             )
 
             logger.info(f"File uploaded successfully: {metadata.name}")
@@ -212,7 +211,9 @@ class GeminiClient:
             import json
 
             try:
-                logger.debug(f"Response text: {response.text[:500]}")  # Log first 500 chars
+                logger.debug(
+                    f"Response text: {response.text[:500]}"
+                )  # Log first 500 chars
                 if not response.text:
                     logger.error("Response text is empty!")
                     logger.error(f"Response usage: {response.usage}")
@@ -250,12 +251,12 @@ class GeminiClient:
 
             return FileMetadata(
                 name=file.name,
-                display_name=getattr(file, 'display_name', None),
-                mime_type=getattr(file, 'mime_type', None),
-                size_bytes=getattr(file, 'size_bytes', None),
-                sha256_hash=getattr(file, 'sha256_hash', None),
-                uri=getattr(file, 'uri', None),
-                state=getattr(file, 'state', None),
+                display_name=getattr(file, "display_name", None),
+                mime_type=getattr(file, "mime_type", None),
+                size_bytes=getattr(file, "size_bytes", None),
+                sha256_hash=getattr(file, "sha256_hash", None),
+                uri=getattr(file, "uri", None),
+                state=getattr(file, "state", None),
             )
 
         except Exception as e:
