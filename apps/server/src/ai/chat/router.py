@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from src.ai.base import SSEEvent
 from src.ai.chat.service import RoofingChatService
 from src.auth.dependencies import get_current_user
 from src.auth.schemas import User
@@ -75,20 +76,33 @@ async def stream_roofing_chat(
 
     # Create async generator for SSE
     async def event_generator():
-        """Generate SSE events from chat stream."""
+        """Generate SSE events from chat stream with citations."""
         try:
             async for chunk in chat_service.stream_chat_response(messages):
-                # Escape newlines in chunk for SSE format
-                # SSE spec requires each line to start with "data: "
-                escaped_chunk = chunk.replace("\n", "\\n")
-                yield f"data: {escaped_chunk}\n\n"
+                # Send content if present
+                if chunk.content:
+                    # Escape newlines in content for SSE format
+                    escaped_content = chunk.content.replace("\n", "\\n")
+                    yield SSEEvent(data=escaped_content).format()
 
-            # Send done signal
-            yield "data: [DONE]\n\n"
+                # Send citations as separate events
+                for citation in chunk.citations:
+                    yield SSEEvent(
+                        event="citation",
+                        data=citation.model_dump_json(),
+                    ).format()
+
+                # Send finish signal if stream is complete
+                if chunk.finish_reason:
+                    yield SSEEvent(event="done", data=chunk.finish_reason).format()
+                    break
+
+            # Send done signal if not already sent
+            yield SSEEvent(event="done", data="complete").format()
 
         except Exception as e:
             logger.error(f"Error in chat stream: {e}")
-            yield f"data: Error: {str(e)}\n\n"
+            yield SSEEvent(event="error", data=str(e)).format()
 
     return StreamingResponse(
         event_generator(),

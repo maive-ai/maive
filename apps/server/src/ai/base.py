@@ -1,7 +1,7 @@
 """Base classes for AI provider abstraction."""
 
 from abc import ABC, abstractmethod
-from typing import Any, TypeVar
+from typing import Any, AsyncGenerator, Literal, TypeVar
 
 from pydantic import BaseModel
 
@@ -32,6 +32,85 @@ class ContentGenerationResult(BaseModel):
     text: str
     usage: dict[str, Any] | None = None
     finish_reason: str | None = None
+
+
+class SearchCitation(BaseModel):
+    """Citation from web search results."""
+
+    url: str
+    title: str | None = None
+    snippet: str | None = None
+    accessed_at: str | None = None
+
+
+class ChatMessage(BaseModel):
+    """Chat message model for streaming chat responses.
+
+    Represents a single message in a conversation (user or assistant).
+    System messages should be passed separately via the instructions parameter.
+    """
+
+    role: str
+    content: str
+
+
+class ResponseStreamParams(BaseModel):
+    """Parameters for OpenAI Responses API streaming requests.
+    
+    Mirrors the structure of ResponseCreateParams from the OpenAI SDK.
+    """
+
+    model: str
+    input: list[dict]  # List of EasyInputMessageParam dicts
+    temperature: float | None = None
+    max_output_tokens: int | None = None
+    stream: bool = True
+    instructions: str | None = None
+    tools: list[dict] | None = None  # List of ToolParam dicts
+
+    model_config = {"extra": "forbid"}
+
+
+class ChatStreamChunk(BaseModel):
+    """Chunk from streaming chat response with optional citations.
+
+    This model represents a piece of a streaming response that may include
+    both content text and citations from web search results.
+    """
+
+    content: str = ""
+    citations: list[SearchCitation] = []
+    finish_reason: str | None = None
+
+
+class SSEEvent(BaseModel):
+    """Server-Sent Event wrapper for type-safe SSE formatting.
+
+    Follows the W3C Server-Sent Events specification:
+    https://html.spec.whatwg.org/multipage/server-sent-events.html
+    """
+
+    data: str
+    event: Literal["citation", "done", "error"] | None = None
+    id: str | None = None
+    retry: int | None = None
+
+    def format(self) -> str:
+        """Format as SSE protocol string.
+
+        Returns:
+            str: Properly formatted SSE event with trailing newlines
+        """
+        lines = []
+        if self.event:
+            lines.append(f"event: {self.event}")
+        if self.id:
+            lines.append(f"id: {self.id}")
+        if self.retry is not None:
+            lines.append(f"retry: {self.retry}")
+        lines.append(f"data: {self.data}")
+        lines.append("")  # Empty line as event delimiter
+        return "\n".join(lines) + "\n"
 
 
 class AudioAnalysisRequest(BaseModel):
@@ -191,5 +270,26 @@ class AIProvider(ABC):
 
         Returns:
             Instance of response_model with analysis results
+        """
+        pass
+
+    @abstractmethod
+    async def stream_chat(
+        self,
+        messages: list[ChatMessage],
+        instructions: str | None = None,
+        enable_web_search: bool = False,
+        **kwargs,
+    ) -> AsyncGenerator[ChatStreamChunk, None]:
+        """Stream chat responses with optional web search and citations.
+
+        Args:
+            messages: List of chat messages (user and assistant only, no system messages)
+            instructions: Optional system prompt/instructions
+            enable_web_search: Whether to enable web search capability
+            **kwargs: Provider-specific options (temperature, max_tokens, etc.)
+
+        Yields:
+            ChatStreamChunk: Stream chunks with content and optional citations
         """
         pass
