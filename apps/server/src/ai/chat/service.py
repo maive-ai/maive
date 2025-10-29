@@ -24,6 +24,7 @@ class RoofingChatService:
         self.settings = get_openai_settings()
         self.client = AsyncOpenAI(api_key=self.settings.api_key)
         self.documents_dir = Path(__file__).parent / "documents"
+        self.system_prompt_file = Path(__file__).parent / "system_prompt.md"
         self.document_context = self._load_documents()
         self.system_prompt = self._build_system_prompt()
 
@@ -104,42 +105,33 @@ class RoofingChatService:
 
     def _build_system_prompt(self) -> str:
         """
-        Build the system prompt with document context.
+        Build the system prompt from file and append document context.
 
         Returns:
             str: System prompt for the AI
         """
-        base_prompt = """You are RoofGPT, an expert roofing consultant with deep knowledge of:
-- Local building codes and regulations
-- Manufacturer warranties and specifications
-- Roofing system design and installation
-- Material selection and compatibility
-- Safety standards and best practices
-- Common roofing problems and solutions
+        # Load base prompt from markdown file
+        try:
+            base_prompt = self.system_prompt_file.read_text(encoding="utf-8")
+            logger.info(f"Loaded system prompt from {self.system_prompt_file.name}")
+        except Exception as e:
+            logger.error(f"Failed to load system prompt file: {e}")
+            # Fallback to a minimal prompt
+            base_prompt = "You are RoofGPT, an expert roofing consultant."
 
-You provide accurate, professional advice based on industry standards and the documentation provided to you.
-When answering questions, cite specific codes, warranties, or standards when relevant.
-If you're unsure about something, acknowledge the limits of your knowledge.
-
-Be conversational and helpful, but maintain professional expertise.
-"""
-
+        # Append document context if available
         if self.document_context:
             return f"""{base_prompt}
 
-# Reference Documentation
+---
 
-You have access to the following reference materials:
+# Available Reference Documents
 
 {self.document_context}
-
-Use this documentation to inform your answers. When citing specific information, mention the source document.
 """
         else:
-            return f"""{base_prompt}
-
-Note: No reference documents are currently loaded. Provide answers based on general roofing expertise.
-"""
+            logger.warning("No reference documents loaded")
+            return base_prompt
 
     async def stream_chat_response(
         self,
