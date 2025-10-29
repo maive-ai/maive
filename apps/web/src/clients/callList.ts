@@ -6,6 +6,7 @@ import {
   type AddToCallListRequest,
   type CallListItemResponse,
   type CallListResponse,
+  type MarkCallCompletedRequest,
 } from '@maive/api/client';
 import { useMutation, useQuery, useQueryClient, type UseQueryResult, type UseMutationResult } from '@tanstack/react-query';
 
@@ -13,7 +14,7 @@ import { getIdToken } from '@/auth';
 import { env } from '@/env';
 
 // Re-export types from the generated client
-export type { AddToCallListRequest, CallListItemResponse, CallListResponse };
+export type { AddToCallListRequest, CallListItemResponse, CallListResponse, MarkCallCompletedRequest };
 
 /**
  * Create a configured Call List API instance
@@ -76,6 +77,24 @@ export async function clearCallList(): Promise<void> {
 }
 
 /**
+ * Mark a call as completed or not completed
+ */
+export async function markCallCompleted(
+  projectId: string,
+  completed: boolean = true
+): Promise<CallListItemResponse> {
+  const api = await createCallListApi();
+  const response = await api.markCallCompletedApiCallListProjectIdCompletedPatch(
+    projectId,
+    { completed }
+  );
+  console.log(
+    `[Call List Client] Marked project ${projectId} as ${completed ? 'completed' : 'not completed'}`
+  );
+  return response.data;
+}
+
+/**
  * React Query hook for fetching the call list
  */
 export function useCallList(): UseQueryResult<CallListResponse, Error> {
@@ -124,6 +143,25 @@ export function useClearCallList(): UseMutationResult<void, Error, void> {
 
   return useMutation({
     mutationFn: () => clearCallList(),
+    onSuccess: () => {
+      // Invalidate call list query to refetch
+      queryClient.invalidateQueries({ queryKey: ['callList'] });
+    },
+  });
+}
+
+/**
+ * React Query mutation for marking a call as completed
+ */
+export function useMarkCallCompleted(): UseMutationResult<
+  CallListItemResponse,
+  Error,
+  { projectId: string; completed?: boolean }
+> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, completed = true }) => markCallCompleted(projectId, completed),
     onSuccess: () => {
       // Invalidate call list query to refetch
       queryClient.invalidateQueries({ queryKey: ['callList'] });

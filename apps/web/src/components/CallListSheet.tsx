@@ -2,7 +2,7 @@ import { Info, Phone, PhoneOff, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { useActiveCall, useEndCall } from '@/clients/ai/voice';
-import { useCallList, useRemoveFromCallList } from '@/clients/callList';
+import { useCallList, useRemoveFromCallList, useMarkCallCompleted } from '@/clients/callList';
 import { useFetchProjects } from '@/clients/crm';
 import { useCallAndWriteToCrm } from '@/clients/workflows';
 import { Badge } from '@/components/ui/badge';
@@ -36,8 +36,10 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   const removeFromCallList = useRemoveFromCallList();
   const callAndWriteToCrm = useCallAndWriteToCrm();
   const endCall = useEndCall();
+  const markCallCompleted = useMarkCallCompleted();
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
   const [removingProjectId, setRemovingProjectId] = useState<string | null>(null);
+  const [previousCall, setPreviousCall] = useState<{ callId: string; projectId: string } | null>(null);
 
   const callListItems = useMemo(() => callListData?.items || [], [callListData?.items]);
   const projects = useMemo(() => projectsData?.projects || [], [projectsData?.projects]);
@@ -102,6 +104,29 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
       setRemovingProjectId(null);
     }
   }, [removingProjectId, callListItems]);
+
+  // Detect when a call ends and mark it as completed
+  useEffect(() => {
+    // If there was an active call but now there isn't, the call has ended
+    if (previousCall && !activeCall) {
+      console.log('[Dialer] Call ended, marking project as completed:', previousCall.projectId);
+
+      // Mark the call as completed in the call list
+      markCallCompleted.mutate({
+        projectId: previousCall.projectId,
+        completed: true
+      });
+
+      setPreviousCall(null);
+    } else if (activeCall?.call_id && activeCall.call_id !== previousCall?.callId) {
+      // New call started, track it
+      console.log('[Dialer] New call started:', activeCall.call_id, 'for project:', activeCall.project_id);
+      setPreviousCall({
+        callId: activeCall.call_id,
+        projectId: activeCall.project_id
+      });
+    }
+  }, [activeCall, previousCall, markCallCompleted]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
