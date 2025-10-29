@@ -347,10 +347,10 @@ class GeminiProvider(AIProvider):
             logger.error(f"Structured content analysis failed: {e}")
             raise
 
-    async def stream_chat_with_search(
+    async def stream_chat(
         self,
         messages: list[dict[str, Any]],
-        enable_web_search: bool = True,
+        enable_web_search: bool = False,
         **kwargs,
     ) -> AsyncGenerator[ChatStreamChunk, None]:
         """Stream chat responses with optional web search and citations.
@@ -366,8 +366,11 @@ class GeminiProvider(AIProvider):
         Yields:
             ChatStreamChunk: Stream chunks with content
         """
-        raise NotImplementedError(
-            "Web search is not yet implemented for Gemini provider. "
-            "Please use OpenAI provider for web search capabilities."
-        )
+        if enable_web_search:
+            raise NotImplementedError(
+                "Web search is not yet implemented for Gemini provider. "
+                "Please use OpenAI provider for web search capabilities."
+            )
+        # TODO: Implement basic streaming chat for Gemini
+        raise NotImplementedError("Stream chat not yet implemented for Gemini provider")
         yield  # Make this a generator for type compatibility

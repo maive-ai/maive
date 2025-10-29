@@ -156,7 +156,7 @@ class RoofingChatService:
             logger.info(f"Streaming chat with {len(messages)} messages")
 
             # Stream response from provider with web search enabled
-            async for chunk in self.provider.stream_chat_with_search(
+            async for chunk in self.provider.stream_chat(
                 messages=full_messages,
                 enable_web_search=True,
                 model=self.settings.model_name,

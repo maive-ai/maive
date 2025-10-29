@@ -580,10 +580,10 @@ class OpenAIProvider(AIProvider):
                 f"Failed to analyze content with structured output: {e}", e
             )
 
-    async def stream_chat_with_search(
+    async def stream_chat(
         self,
         messages: list[dict[str, Any]],
-        enable_web_search: bool = True,
+        enable_web_search: bool = False,
         **kwargs,
     ) -> AsyncGenerator[ChatStreamChunk, None]:
         """Stream chat responses with optional web search and citations.
@@ -608,7 +608,7 @@ class OpenAIProvider(AIProvider):
             logger.info(f"Streaming chat with web_search={enable_web_search}, model={model}")
 
             # Configure tools for web search if enabled (Responses API format)
-            tools = [{"type": "web_search_preview"}] if enable_web_search else []
+            tools = [{"type": "web_search"}] if enable_web_search else []
 
             # Extract system prompt (instructions) from messages
             # Responses API uses 'instructions' parameter for system prompts
