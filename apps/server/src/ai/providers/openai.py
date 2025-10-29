@@ -668,18 +668,38 @@ class OpenAIProvider(AIProvider):
 
                     # Handle annotation events (citations from web search)
                     elif isinstance(event, ResponseOutputTextAnnotationAddedEvent):
-                        # Check if annotation is a URL citation (web search result)
-                        if isinstance(event.annotation, AnnotationURLCitation):
+                        annotation = event.annotation
+                        
+                        # Parse annotation as AnnotationURLCitation (handles both dict and object)
+                        try:
+                            # If it's a dict, parse it; if it's already an object, use as-is
+                            if isinstance(annotation, dict):
+                                if annotation.get("type") == "url_citation":
+                                    url_citation = AnnotationURLCitation(**annotation)
+                                else:
+                                    logger.debug(f"Skipped non-URL citation type: {annotation.get('type')}")
+                                    continue  # Skip non-URL citation types
+                            elif isinstance(annotation, AnnotationURLCitation):
+                                url_citation = annotation
+                            else:
+                                logger.debug(f"Skipped unknown annotation format: {type(annotation).__name__}")
+                                continue  # Skip unknown annotation formats
+                            
+                            # Create citation from parsed annotation
                             citation = SearchCitation(
-                                url=event.annotation.url,
-                                title=event.annotation.title,
-                                snippet=None,  # URL citations don't include snippets
+                                url=url_citation.url,
+                                title=url_citation.title,
+                                snippet=None,
                                 accessed_at=None,
                             )
                             citations.append(citation)
+                            
                             # Track unique citations
                             if citation not in accumulated_citations:
                                 accumulated_citations.append(citation)
+                                
+                        except Exception as e:
+                            logger.error(f"Failed to parse annotation: {e}")
 
                     # Handle completion events
                     elif isinstance(event, ResponseCompletedEvent):
