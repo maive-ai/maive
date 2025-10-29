@@ -2,13 +2,14 @@
 
 import json
 from pathlib import Path
-from typing import TypeVar
+from typing import Any, AsyncGenerator, TypeVar
 
 from pydantic import BaseModel
 
 from src.ai.base import (
     AIProvider,
     AudioAnalysisRequest,
+    ChatStreamChunk,
     ContentAnalysisRequest,
     ContentGenerationResult,
     FileMetadata,
@@ -345,3 +346,28 @@ class GeminiProvider(AIProvider):
         except Exception as e:
             logger.error(f"Structured content analysis failed: {e}")
             raise
+
+    async def stream_chat_with_search(
+        self,
+        messages: list[dict[str, Any]],
+        enable_web_search: bool = True,
+        **kwargs,
+    ) -> AsyncGenerator[ChatStreamChunk, None]:
+        """Stream chat responses with optional web search and citations.
+
+        Note: Gemini does not currently support web search in the same way as OpenAI.
+        This is a placeholder implementation.
+
+        Args:
+            messages: List of chat messages
+            enable_web_search: Whether to enable web search capability (not supported)
+            **kwargs: Provider-specific options
+
+        Yields:
+            ChatStreamChunk: Stream chunks with content
+        """
+        raise NotImplementedError(
+            "Web search is not yet implemented for Gemini provider. "
+            "Please use OpenAI provider for web search capabilities."
+        )
+        yield  # Make this a generator for type compatibility

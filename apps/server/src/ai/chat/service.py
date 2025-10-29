@@ -2,17 +2,17 @@
 Roofing Chat Service for AI-powered roofing expertise.
 
 This service provides streaming chat capabilities with roofing domain knowledge,
-loading context from document files and using OpenAI for responses.
+loading context from document files and using AI providers with web search.
 """
 
 from pathlib import Path
-from typing import AsyncGenerator
+from typing import Any, AsyncGenerator
 
-from openai import AsyncOpenAI
-from openai.types.chat import ChatCompletionMessageParam
 from pypdf import PdfReader
 
+from src.ai.base import ChatStreamChunk
 from src.ai.openai.config import get_openai_settings
+from src.ai.providers.factory import AIProviderType, create_ai_provider
 from src.utils.logger import logger
 
 
@@ -22,7 +22,7 @@ class RoofingChatService:
     def __init__(self):
         """Initialize the roofing chat service."""
         self.settings = get_openai_settings()
-        self.client = AsyncOpenAI(api_key=self.settings.api_key)
+        self.provider = create_ai_provider(AIProviderType.OPENAI)
         self.documents_dir = Path(__file__).parent / "documents"
         self.system_prompt_file = Path(__file__).parent / "system_prompt.md"
         self.document_context = self._load_documents()
@@ -135,16 +135,16 @@ class RoofingChatService:
 
     async def stream_chat_response(
         self,
-        messages: list[ChatCompletionMessageParam],
-    ) -> AsyncGenerator[str, None]:
+        messages: list[dict[str, Any]],
+    ) -> AsyncGenerator[ChatStreamChunk, None]:
         """
-        Stream chat responses using OpenAI.
+        Stream chat responses using AI provider with web search capabilities.
 
         Args:
-            messages: List of chat messages in OpenAI format
+            messages: List of chat messages
 
         Yields:
-            str: Response chunks as they arrive
+            ChatStreamChunk: Response chunks with content and optional citations
         """
         try:
             # Prepend system prompt
@@ -155,22 +155,22 @@ class RoofingChatService:
 
             logger.info(f"Streaming chat with {len(messages)} messages")
 
-            # Stream response from OpenAI
-            stream = await self.client.chat.completions.create(
-                model=self.settings.model_name,
+            # Stream response from provider with web search enabled
+            async for chunk in self.provider.stream_chat_with_search(
                 messages=full_messages,
+                enable_web_search=True,
+                model=self.settings.model_name,
                 temperature=0.7,  # Slightly creative but focused
                 max_tokens=2000,
-                stream=True,
-            )
-
-            async for chunk in stream:
-                if chunk.choices[0].delta.content is not None:
-                    content = chunk.choices[0].delta.content
-                    yield content
+            ):
+                yield chunk
 
             logger.info("Chat stream completed successfully")
 
         except Exception as e:
             logger.error(f"Error streaming chat response: {e}")
-            yield f"\n\nError: {str(e)}"
+            yield ChatStreamChunk(
+                content=f"\n\nError: {str(e)}",
+                citations=[],
+                finish_reason="error",
+            )

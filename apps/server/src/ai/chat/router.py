@@ -75,20 +75,32 @@ async def stream_roofing_chat(
 
     # Create async generator for SSE
     async def event_generator():
-        """Generate SSE events from chat stream."""
+        """Generate SSE events from chat stream with citations."""
         try:
             async for chunk in chat_service.stream_chat_response(messages):
-                # Escape newlines in chunk for SSE format
-                # SSE spec requires each line to start with "data: "
-                escaped_chunk = chunk.replace("\n", "\\n")
-                yield f"data: {escaped_chunk}\n\n"
+                # Send content if present
+                if chunk.content:
+                    # Escape newlines in content for SSE format
+                    # SSE spec requires each line to start with "data: "
+                    escaped_content = chunk.content.replace("\n", "\\n")
+                    yield f"data: {escaped_content}\n\n"
 
-            # Send done signal
-            yield "data: [DONE]\n\n"
+                # Send citations as separate events
+                for citation in chunk.citations:
+                    citation_json = citation.model_dump_json()
+                    yield f"event: citation\ndata: {citation_json}\n\n"
+
+                # Send finish signal if stream is complete
+                if chunk.finish_reason:
+                    yield f"event: done\ndata: {chunk.finish_reason}\n\n"
+                    break
+
+            # Send done signal if not already sent
+            yield "event: done\ndata: complete\n\n"
 
         except Exception as e:
             logger.error(f"Error in chat stream: {e}")
-            yield f"data: Error: {str(e)}\n\n"
+            yield f"event: error\ndata: {str(e)}\n\n"
 
     return StreamingResponse(
         event_generator(),

@@ -1,7 +1,7 @@
 """Base classes for AI provider abstraction."""
 
 from abc import ABC, abstractmethod
-from typing import Any, TypeVar
+from typing import Any, AsyncGenerator, TypeVar
 
 from pydantic import BaseModel
 
@@ -31,6 +31,27 @@ class ContentGenerationResult(BaseModel):
 
     text: str
     usage: dict[str, Any] | None = None
+    finish_reason: str | None = None
+
+
+class SearchCitation(BaseModel):
+    """Citation from web search results."""
+
+    url: str
+    title: str | None = None
+    snippet: str | None = None
+    accessed_at: str | None = None
+
+
+class ChatStreamChunk(BaseModel):
+    """Chunk from streaming chat response with optional citations.
+
+    This model represents a piece of a streaming response that may include
+    both content text and citations from web search results.
+    """
+
+    content: str = ""
+    citations: list[SearchCitation] = []
     finish_reason: str | None = None
 
 
@@ -191,5 +212,24 @@ class AIProvider(ABC):
 
         Returns:
             Instance of response_model with analysis results
+        """
+        pass
+
+    @abstractmethod
+    async def stream_chat_with_search(
+        self,
+        messages: list[dict[str, Any]],
+        enable_web_search: bool = True,
+        **kwargs,
+    ) -> AsyncGenerator[ChatStreamChunk, None]:
+        """Stream chat responses with optional web search and citations.
+
+        Args:
+            messages: List of chat messages
+            enable_web_search: Whether to enable web search capability
+            **kwargs: Provider-specific options (temperature, max_tokens, etc.)
+
+        Yields:
+            ChatStreamChunk: Stream chunks with content and optional citations
         """
         pass

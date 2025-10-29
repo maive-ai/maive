@@ -3,7 +3,7 @@
 import base64
 import json
 from pathlib import Path
-from typing import TypeVar
+from typing import Any, AsyncGenerator, TypeVar
 
 from openai import AsyncOpenAI
 from pydantic import BaseModel
@@ -11,9 +11,11 @@ from pydantic import BaseModel
 from src.ai.base import (
     AIProvider,
     AudioAnalysisRequest,
+    ChatStreamChunk,
     ContentAnalysisRequest,
     ContentGenerationResult,
     FileMetadata,
+    SearchCitation,
     TranscriptionResult,
 )
 from src.ai.openai.config import get_openai_settings
@@ -576,4 +578,171 @@ class OpenAIProvider(AIProvider):
             logger.error(f"Structured content analysis failed: {e}")
             raise OpenAIContentGenerationError(
                 f"Failed to analyze content with structured output: {e}", e
+            )
+
+    async def stream_chat_with_search(
+        self,
+        messages: list[dict[str, Any]],
+        enable_web_search: bool = True,
+        **kwargs,
+    ) -> AsyncGenerator[ChatStreamChunk, None]:
+        """Stream chat responses with optional web search and citations.
+
+        Uses OpenAI's Responses API which supports web search tools.
+
+        Args:
+            messages: List of chat messages
+            enable_web_search: Whether to enable web search capability
+            **kwargs: Provider-specific options (temperature, max_tokens, model, etc.)
+
+        Yields:
+            ChatStreamChunk: Stream chunks with content and optional citations
+        """
+        try:
+            client = self._get_client()
+
+            model = kwargs.get("model", self.settings.model_name)
+            temperature = kwargs.get("temperature", self.settings.temperature)
+            max_tokens = kwargs.get("max_tokens", self.settings.max_tokens)
+
+            logger.info(f"Streaming chat with web_search={enable_web_search}, model={model}")
+
+            # Configure tools for web search if enabled (Responses API format)
+            tools = [{"type": "web_search_preview"}] if enable_web_search else []
+
+            # Extract system prompt (instructions) from messages
+            # Responses API uses 'instructions' parameter for system prompts
+            instructions = None
+            input_items = []
+            
+            for msg in messages:
+                if msg.get("role") == "system":
+                    # Extract system message as instructions
+                    if instructions:
+                        # If multiple system messages, combine them
+                        instructions = f"{instructions}\n\n{msg.get('content', '')}"
+                    else:
+                        instructions = msg.get("content", "")
+                else:
+                    # User and assistant messages go in input
+                    # Responses API expects messages in format: {"type": "message", "role": "...", "content": "..."}
+                    input_items.append({
+                        "type": "message",
+                        "role": msg["role"],
+                        "content": msg.get("content", "")
+                    })
+
+            # Validate: must have at least input messages or instructions
+            if not input_items and not instructions:
+                raise ValueError("Must provide at least input messages or instructions")
+
+            # Create streaming response using Responses API
+            # Use 'instructions' for system prompt, 'input' for conversation messages
+            # Note: input should be a list (can be empty), not None
+            stream_params = {
+                "model": model,
+                "input": input_items,  # List of messages (can be empty if only instructions)
+                "temperature": temperature,
+                "max_output_tokens": max_tokens,
+                "stream": True,
+            }
+            
+            # Add instructions if we have a system prompt
+            if instructions:
+                stream_params["instructions"] = instructions
+            
+            # Add tools if web search is enabled
+            if tools:
+                stream_params["tools"] = tools
+
+            logger.debug(f"Stream params: model={model}, input_items={len(input_items)}, has_instructions={bool(instructions)}, tools={tools}")
+            
+            stream = await client.responses.create(**stream_params)
+
+            # Track citations from web search
+            accumulated_citations: list[SearchCitation] = []
+
+            async for event in stream:
+                # Handle different event types from Responses API
+                content = ""
+                citations: list[SearchCitation] = []
+                finish_reason = None
+
+                try:
+                    # Get event type (should be a string like "response.output_text.delta")
+                    event_type = getattr(event, "type", None)
+                    
+                    if not event_type:
+                        logger.warning(f"Event missing type attribute: {type(event)}")
+                        continue
+
+                    # Handle text delta events (streaming content)
+                    if event_type == "response.output_text.delta":
+                        delta = getattr(event, "delta", "")
+                        # Delta should be a string, but handle other types gracefully
+                        content = delta if isinstance(delta, str) else str(delta) if delta else ""
+
+                    # Handle annotation events (citations from web search)
+                    elif event_type == "response.output_text.annotation.added":
+                        annotation = getattr(event, "annotation", None)
+                        if annotation is None:
+                            logger.warning("Annotation event missing annotation data")
+                            continue
+                        
+                        # Parse annotation - handle both dict and object formats
+                        if isinstance(annotation, dict):
+                            url = annotation.get("url", "")
+                            title = annotation.get("title")
+                            snippet = annotation.get("text") or annotation.get("snippet")
+                        elif hasattr(annotation, "url"):
+                            url = getattr(annotation, "url", "")
+                            title = getattr(annotation, "title", None)
+                            snippet = getattr(annotation, "text", None) or getattr(annotation, "snippet", None)
+                        else:
+                            logger.warning(f"Unsupported annotation format: {type(annotation)}")
+                            continue
+                        
+                        # Create citation if URL is present
+                        if url:
+                            citation = SearchCitation(
+                                url=url,
+                                title=title,
+                                snippet=snippet,
+                                accessed_at=None,
+                            )
+                            citations.append(citation)
+                            # Track unique citations
+                            if citation not in accumulated_citations:
+                                accumulated_citations.append(citation)
+
+                    # Handle completion events
+                    elif event_type == "response.completed":
+                        finish_reason = "completed"
+                    
+                    elif event_type == "response.failed":
+                        finish_reason = "failed"
+
+                    # Yield chunk if there's content, citations, or finish reason
+                    if content or citations or finish_reason:
+                        yield ChatStreamChunk(
+                            content=content,
+                            citations=citations,
+                            finish_reason=finish_reason,
+                        )
+                        
+                except Exception as e:
+                    logger.error(f"Error parsing event: {e}, event_type={getattr(event, 'type', 'unknown')}")
+                    continue
+
+            logger.info(
+                f"Chat stream completed with {len(accumulated_citations)} total citations"
+            )
+
+        except Exception as e:
+            logger.error(f"Streaming chat with search failed: {e}")
+            # Yield error as content
+            yield ChatStreamChunk(
+                content=f"\n\nError: {str(e)}",
+                citations=[],
+                finish_reason="error",
             )
