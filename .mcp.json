@@ -87,6 +87,15 @@
         "./.cursor/external_docs/service_titan/pricebook"
       ],
       "env": {}
+    },
+    "assistant-ui": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@assistant-ui/mcp-docs-server"
+      ],
+      "env": {}
     }
   }
 }
