@@ -19,6 +19,7 @@ dependencies = [
     "asyncpg>=0.30.0",
     "sqlalchemy[asyncio]>=2.0.44",
     "pypdf>=5.1.0",
+    "httpx>=0.28.1",
 ]
 
 [dependency-groups]

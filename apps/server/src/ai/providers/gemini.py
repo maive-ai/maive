@@ -351,16 +351,18 @@ class GeminiProvider(AIProvider):
         self,
         messages: list[dict[str, Any]],
         enable_web_search: bool = False,
+        vector_store_ids: list[str] | None = None,
         **kwargs,
     ) -> AsyncGenerator[ChatStreamChunk, None]:
         """Stream chat responses with optional web search and citations.
 
-        Note: Gemini does not currently support web search in the same way as OpenAI.
-        This is a placeholder implementation.
+        Note: Gemini does not currently support web search or vector stores
+        in the same way as OpenAI. This is a placeholder implementation.
 
         Args:
             messages: List of chat messages
             enable_web_search: Whether to enable web search capability (not supported)
+            vector_store_ids: Vector store IDs for file search (not supported)
             **kwargs: Provider-specific options
 
         Yields:

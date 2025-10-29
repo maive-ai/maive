@@ -584,15 +584,17 @@ class OpenAIProvider(AIProvider):
         self,
         messages: list[dict[str, Any]],
         enable_web_search: bool = False,
+        vector_store_ids: list[str] | None = None,
         **kwargs,
     ) -> AsyncGenerator[ChatStreamChunk, None]:
-        """Stream chat responses with optional web search and citations.
+        """Stream chat responses with optional web search, file search, and citations.
 
-        Uses OpenAI's Responses API which supports web search tools.
+        Uses OpenAI's Responses API which supports web search and file search tools.
 
         Args:
             messages: List of chat messages
             enable_web_search: Whether to enable web search capability
+            vector_store_ids: Optional list of vector store IDs for file search
             **kwargs: Provider-specific options (temperature, max_tokens, model, etc.)
 
         Yields:
@@ -605,10 +607,26 @@ class OpenAIProvider(AIProvider):
             temperature = kwargs.get("temperature", self.settings.temperature)
             max_tokens = kwargs.get("max_tokens", self.settings.max_tokens)
 
-            logger.info(f"Streaming chat with web_search={enable_web_search}, model={model}")
+            logger.info(
+                f"Streaming chat with web_search={enable_web_search}, "
+                f"file_search={bool(vector_store_ids)}, model={model}"
+            )
 
-            # Configure tools for web search if enabled (Responses API format)
-            tools = [{"type": "web_search"}] if enable_web_search else []
+            # Configure tools (Responses API format)
+            tools = []
+
+            # Add web search if enabled
+            if enable_web_search:
+                tools.append({"type": "web_search"})
+
+            # Add file search if vector store IDs provided
+            if vector_store_ids:
+                tools.append({
+                    "type": "file_search",
+                    "file_search": {
+                        "vector_store_ids": vector_store_ids
+                    }
+                })
 
             # Extract system prompt (instructions) from messages
             # Responses API uses 'instructions' parameter for system prompts
