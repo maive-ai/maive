@@ -1,7 +1,7 @@
 """Base classes for AI provider abstraction."""
 
 from abc import ABC, abstractmethod
-from typing import Any, AsyncGenerator, TypeVar
+from typing import Any, AsyncGenerator, Literal, TypeVar
 
 from pydantic import BaseModel
 
@@ -81,6 +81,36 @@ class ChatStreamChunk(BaseModel):
     content: str = ""
     citations: list[SearchCitation] = []
     finish_reason: str | None = None
+
+
+class SSEEvent(BaseModel):
+    """Server-Sent Event wrapper for type-safe SSE formatting.
+
+    Follows the W3C Server-Sent Events specification:
+    https://html.spec.whatwg.org/multipage/server-sent-events.html
+    """
+
+    data: str
+    event: Literal["citation", "done", "error"] | None = None
+    id: str | None = None
+    retry: int | None = None
+
+    def format(self) -> str:
+        """Format as SSE protocol string.
+
+        Returns:
+            str: Properly formatted SSE event with trailing newlines
+        """
+        lines = []
+        if self.event:
+            lines.append(f"event: {self.event}")
+        if self.id:
+            lines.append(f"id: {self.id}")
+        if self.retry is not None:
+            lines.append(f"retry: {self.retry}")
+        lines.append(f"data: {self.data}")
+        lines.append("")  # Empty line as event delimiter
+        return "\n".join(lines) + "\n"
 
 
 class AudioAnalysisRequest(BaseModel):
