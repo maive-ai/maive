@@ -13,6 +13,7 @@ from pypdf import PdfReader
 from src.ai.base import ChatStreamChunk
 from src.ai.openai.config import get_openai_settings
 from src.ai.providers.factory import AIProviderType, create_ai_provider
+from src.ai.rag.vector_store_service import VectorStoreService
 from src.utils.logger import logger
 
 
@@ -27,6 +28,21 @@ class RoofingChatService:
         self.system_prompt_file = Path(__file__).parent / "system_prompt.md"
         self.document_context = self._load_documents()
         self.system_prompt = self._build_system_prompt()
+
+        # Initialize vector store for RAG
+        self._vector_store_id: str | None = None
+        self._vector_store_service = VectorStoreService()
+
+    async def _get_vector_store_id(self) -> str:
+        """Get the vector store ID for RAG (lazy initialization).
+
+        Returns:
+            str: Vector store ID
+        """
+        if self._vector_store_id is None:
+            self._vector_store_id = await self._vector_store_service.get_or_create_vector_store()
+            logger.info(f"Initialized vector store for RAG: {self._vector_store_id}")
+        return self._vector_store_id
 
     def _load_documents(self) -> str:
         """
@@ -138,7 +154,7 @@ class RoofingChatService:
         messages: list[dict[str, Any]],
     ) -> AsyncGenerator[ChatStreamChunk, None]:
         """
-        Stream chat responses using AI provider with web search capabilities.
+        Stream chat responses using AI provider with web search and RAG capabilities.
 
         Args:
             messages: List of chat messages
@@ -153,12 +169,19 @@ class RoofingChatService:
                 *messages,
             ]
 
-            logger.info(f"Streaming chat with {len(messages)} messages")
+            # Get vector store ID for RAG
+            vector_store_id = await self._get_vector_store_id()
 
-            # Stream response from provider with web search enabled
+            logger.info(
+                f"Streaming chat with {len(messages)} messages, "
+                f"RAG enabled with vector store: {vector_store_id}"
+            )
+
+            # Stream response from provider with web search and file search
             async for chunk in self.provider.stream_chat(
                 messages=full_messages,
                 enable_web_search=True,
+                vector_store_ids=[vector_store_id],
                 model=self.settings.model_name,
                 temperature=0.7,  # Slightly creative but focused
                 max_tokens=2000,
