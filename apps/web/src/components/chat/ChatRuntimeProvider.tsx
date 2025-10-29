@@ -49,7 +49,9 @@ const chatAdapter: ChatModelAdapter = {
             if (data === '[DONE]') {
               return;
             }
-            accumulatedText += data;
+            // Unescape newlines that were escaped for SSE format
+            const unescapedData = data.replace(/\\n/g, '\n');
+            accumulatedText += unescapedData;
             yield {
               content: [{ type: 'text', text: accumulatedText }],
             };
