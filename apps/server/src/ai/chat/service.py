@@ -31,9 +31,9 @@ class RoofingChatService:
 
     def _load_documents(self) -> str:
         """
-        Load all documents from the documents directory.
+        Load all documents from the documents directory recursively.
 
-        Supports .txt, .md, and .pdf files.
+        Supports .txt, .md, and .pdf files from any subdirectory.
 
         Returns:
             str: Combined document content
@@ -45,58 +45,59 @@ class RoofingChatService:
             logger.warning(f"Documents directory not found: {self.documents_dir}")
             return ""
 
-        # Load documents from each subdirectory
-        for subdir in ["local_codes", "warranties", "system_booklets"]:
-            subdir_path = self.documents_dir / subdir
-            if not subdir_path.exists():
-                logger.warning(f"Subdirectory not found: {subdir_path}")
-                continue
+        # Recursively load all .txt files
+        for file_path in self.documents_dir.glob("**/*.txt"):
+            try:
+                content = file_path.read_text(encoding="utf-8")
+                # Get relative path for better context
+                relative_path = file_path.relative_to(self.documents_dir)
+                documents.append(f"## {file_path.stem} ({relative_path.parent})\n\n{content}\n\n")
+                logger.info(f"Loaded text document: {relative_path}")
+            except Exception as e:
+                logger.error(f"Failed to load document {file_path}: {e}")
 
-            # Load all .txt files
-            for file_path in subdir_path.glob("**/*.txt"):
-                try:
-                    content = file_path.read_text(encoding="utf-8")
-                    documents.append(f"## {file_path.stem}\n\n{content}\n\n")
-                    logger.info(f"Loaded text document: {file_path.name}")
-                except Exception as e:
-                    logger.error(f"Failed to load document {file_path}: {e}")
+        # Recursively load all .md files
+        for file_path in self.documents_dir.glob("**/*.md"):
+            try:
+                content = file_path.read_text(encoding="utf-8")
+                relative_path = file_path.relative_to(self.documents_dir)
+                documents.append(f"## {file_path.stem} ({relative_path.parent})\n\n{content}\n\n")
+                logger.info(f"Loaded markdown document: {relative_path}")
+            except Exception as e:
+                logger.error(f"Failed to load document {file_path}: {e}")
 
-            # Load all .md files
-            for file_path in subdir_path.glob("**/*.md"):
-                try:
-                    content = file_path.read_text(encoding="utf-8")
-                    documents.append(f"## {file_path.stem}\n\n{content}\n\n")
-                    logger.info(f"Loaded markdown document: {file_path.name}")
-                except Exception as e:
-                    logger.error(f"Failed to load document {file_path}: {e}")
+        # Recursively load all .pdf files
+        for file_path in self.documents_dir.glob("**/*.pdf"):
+            try:
+                reader = PdfReader(str(file_path))
+                text_content = []
+                for page in reader.pages:
+                    page_text = page.extract_text()
+                    if page_text.strip():
+                        text_content.append(page_text)
 
-            # Load all .pdf files
-            for file_path in subdir_path.glob("**/*.pdf"):
-                try:
-                    reader = PdfReader(str(file_path))
-                    text_content = []
-                    for page in reader.pages:
-                        page_text = page.extract_text()
-                        if page_text.strip():
-                            text_content.append(page_text)
-
-                    if text_content:
-                        combined_text = "\n\n".join(text_content)
-                        documents.append(f"## {file_path.stem}\n\n{combined_text}\n\n")
-                        logger.info(
-                            f"Loaded PDF document: {file_path.name} ({len(reader.pages)} pages)"
-                        )
-                    else:
-                        logger.warning(f"PDF document {file_path.name} appears to be empty")
-                except Exception as e:
-                    logger.error(f"Failed to load PDF document {file_path}: {e}")
+                if text_content:
+                    combined_text = "\n\n".join(text_content)
+                    relative_path = file_path.relative_to(self.documents_dir)
+                    documents.append(
+                        f"## {file_path.stem} ({relative_path.parent})\n\n{combined_text}\n\n"
+                    )
+                    logger.info(
+                        f"Loaded PDF document: {relative_path} ({len(reader.pages)} pages)"
+                    )
+                else:
+                    logger.warning(f"PDF document {file_path.name} appears to be empty")
+            except Exception as e:
+                logger.error(f"Failed to load PDF document {file_path}: {e}")
 
         if not documents:
-            logger.warning("No documents loaded")
+            logger.warning("No documents loaded from any subdirectory")
             return ""
 
         combined = "\n".join(documents)
-        logger.info(f"Loaded {len(documents)} documents, total length: {len(combined)}")
+        logger.info(
+            f"Loaded {len(documents)} documents recursively, total length: {len(combined)}"
+        )
         return combined
 
     def _build_system_prompt(self) -> str:
