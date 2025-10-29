@@ -6,6 +6,7 @@ from typing import Any, AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.ai.chat.router import router as chat_router
 from src.ai.voice_ai.router import router as voice_ai_router
 from src.auth.router import router as auth_router
 from src.config import get_client_base_url
@@ -51,6 +52,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router, prefix="/api")
+app.include_router(chat_router, prefix="/api")
 app.include_router(crm_router, prefix="/api")
 app.include_router(voice_ai_router, prefix="/api")
 app.include_router(call_list_router, prefix="/api")

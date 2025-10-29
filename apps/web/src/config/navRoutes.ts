@@ -1,7 +1,15 @@
 import type { AnyRoute } from '@tanstack/react-router';
 import type { LucideIcon } from 'lucide-react';
-import { FilePlus, FolderKanban, Phone, SquarePlus, Workflow } from 'lucide-react';
+import {
+  FilePlus,
+  FolderKanban,
+  MessageSquare,
+  Phone,
+  SquarePlus,
+  Workflow,
+} from 'lucide-react';
 import { env } from '../env';
+import { Route as ChatRoute } from '../routes/_authed/chat.tsx';
 import { Route as CreateProjectRoute } from '../routes/_authed/create-project.tsx';
 import { Route as ProjectsRoute } from '../routes/_authed/projects.tsx';
 import { Route as SimplePhoneInputRoute } from '../routes/_authed/simple-phone-input.tsx';
@@ -25,6 +33,11 @@ const allNavItems: NavItem[] = [
     label: 'Workflows',
     route: WorkflowsRoute,
     icon: Workflow,
+  },
+  {
+    label: 'Chat',
+    route: ChatRoute,
+    icon: MessageSquare,
   },
   {
     label: 'Projects',
