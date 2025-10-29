@@ -4,7 +4,6 @@ FastAPI router for roofing chat endpoints.
 Provides streaming chat interface using Server-Sent Events (SSE).
 """
 
-import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -14,8 +13,7 @@ from pydantic import BaseModel
 from src.ai.chat.service import RoofingChatService
 from src.auth.dependencies import get_current_user
 from src.auth.schemas import User
-
-logger = logging.getLogger(__name__)
+from src.utils.logger import logger
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
@@ -68,7 +66,9 @@ async def stream_roofing_chat(
     Returns:
         StreamingResponse: SSE stream of chat responses
     """
-    logger.info(f"Chat request from user {current_user.id} with {len(request.messages)} messages")
+    logger.info(
+        f"Chat request from user {current_user.id} with {len(request.messages)} messages"
+    )
 
     # Convert messages to OpenAI format
     messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]

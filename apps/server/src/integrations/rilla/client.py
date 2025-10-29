@@ -1,7 +1,5 @@
 """Simplified Rilla API client implementation."""
 
-import logging
-
 import httpx
 from pydantic import ValidationError
 
@@ -22,8 +20,7 @@ from src.integrations.rilla.schemas import (
     UsersExportRequest,
     UsersExportResponse,
 )
-
-logger = logging.getLogger(__name__)
+from src.utils.logger import logger
 
 
 class RillaClient:
@@ -60,7 +57,9 @@ class RillaClient:
             await self._client.aclose()
             self._client = None
 
-    async def _make_request(self, method: str, endpoint: str, data: dict | None = None) -> dict:
+    async def _make_request(
+        self, method: str, endpoint: str, data: dict | None = None
+    ) -> dict:
         """Make an HTTP request to the Rilla API.
 
         Args:
@@ -78,7 +77,7 @@ class RillaClient:
 
         try:
             response = await self._client.request(method, endpoint, json=data)
-            
+
             # Handle error responses
             if response.status_code == 401:
                 raise RillaAuthenticationError("Invalid API key")
@@ -88,7 +87,7 @@ class RillaClient:
                 raise RillaRateLimitError("Rate limit exceeded")
             elif response.status_code >= 500:
                 raise RillaServerError(f"Server error: {response.status_code}")
-            
+
             response.raise_for_status()
             return response.json()
 
@@ -113,12 +112,16 @@ class RillaClient:
         Raises:
             RillaAPIError: For API errors
         """
-        logger.info(f"Exporting conversations from {request.from_date} to {request.to_date}")
+        logger.info(
+            f"Exporting conversations from {request.from_date} to {request.to_date}"
+        )
 
         # Use Pydantic's serialization with aliases
         api_request = request.model_dump(by_alias=True, exclude_none=True, mode="json")
-        
-        response_data = await self._make_request("POST", RillaEndpoint.CONVERSATIONS_EXPORT.value, api_request)
+
+        response_data = await self._make_request(
+            "POST", RillaEndpoint.CONVERSATIONS_EXPORT.value, api_request
+        )
 
         try:
             return ConversationsExportResponse(**response_data)
@@ -142,8 +145,10 @@ class RillaClient:
 
         # Use Pydantic's serialization with aliases
         api_request = request.model_dump(by_alias=True, exclude_none=True, mode="json")
-        
-        response_data = await self._make_request("POST", RillaEndpoint.TEAMS_EXPORT.value, api_request)
+
+        response_data = await self._make_request(
+            "POST", RillaEndpoint.TEAMS_EXPORT.value, api_request
+        )
 
         try:
             return TeamsExportResponse(**response_data)
@@ -167,8 +172,10 @@ class RillaClient:
 
         # Use Pydantic's serialization with aliases
         api_request = request.model_dump(by_alias=True, exclude_none=True, mode="json")
-        
-        response_data = await self._make_request("POST", RillaEndpoint.USERS_EXPORT.value, api_request)
+
+        response_data = await self._make_request(
+            "POST", RillaEndpoint.USERS_EXPORT.value, api_request
+        )
 
         try:
             return UsersExportResponse(**response_data)

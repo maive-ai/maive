@@ -2,7 +2,6 @@
 
 import base64
 import json
-import logging
 from pathlib import Path
 from typing import TypeVar
 
@@ -24,8 +23,7 @@ from src.ai.openai.exceptions import (
     OpenAIError,
     OpenAIFileUploadError,
 )
-
-logger = logging.getLogger(__name__)
+from src.utils.logger import logger
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -127,7 +125,9 @@ class OpenAIProvider(AIProvider):
             path = Path(audio_path)
 
             if not path.exists():
-                raise OpenAIContentGenerationError(f"Audio file not found: {audio_path}")
+                raise OpenAIContentGenerationError(
+                    f"Audio file not found: {audio_path}"
+                )
 
             logger.info(f"Transcribing audio: {path}")
 
@@ -339,7 +339,9 @@ class OpenAIProvider(AIProvider):
 
             # If context data is provided, include it in the prompt
             if request.context_data:
-                context_text = f"\n\nContext Data:\n{json.dumps(request.context_data, indent=2)}"
+                context_text = (
+                    f"\n\nContext Data:\n{json.dumps(request.context_data, indent=2)}"
+                )
                 messages[0]["content"].append({"type": "text", "text": context_text})
 
             model = self.settings.audio_model_name
@@ -425,7 +427,9 @@ class OpenAIProvider(AIProvider):
             ]
 
             if request.context_data:
-                context_text = f"\n\nContext Data:\n{json.dumps(request.context_data, indent=2)}"
+                context_text = (
+                    f"\n\nContext Data:\n{json.dumps(request.context_data, indent=2)}"
+                )
                 messages[0]["content"].append({"type": "text", "text": context_text})
 
             model = self.settings.audio_model_name
@@ -502,13 +506,15 @@ class OpenAIProvider(AIProvider):
 
                 audio_format = path.suffix.lstrip(".")
 
-                content_parts.append({
-                    "type": "input_audio",
-                    "input_audio": {
-                        "data": audio_data,
-                        "format": audio_format,
-                    },
-                })
+                content_parts.append(
+                    {
+                        "type": "input_audio",
+                        "input_audio": {
+                            "data": audio_data,
+                            "format": audio_format,
+                        },
+                    }
+                )
 
             # Build the prompt text
             prompt_text = request.prompt
@@ -519,7 +525,9 @@ class OpenAIProvider(AIProvider):
 
             # Add context data if provided
             if request.context_data:
-                context_text = f"\n\nContext Data:\n{json.dumps(request.context_data, indent=2)}"
+                context_text = (
+                    f"\n\nContext Data:\n{json.dumps(request.context_data, indent=2)}"
+                )
                 prompt_text += context_text
 
             # Add text part
