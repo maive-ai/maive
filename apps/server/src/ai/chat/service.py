@@ -10,7 +10,7 @@ from typing import Any, AsyncGenerator
 
 from pypdf import PdfReader
 
-from src.ai.base import ChatStreamChunk
+from src.ai.base import ChatMessage, ChatStreamChunk
 from src.ai.openai.config import get_openai_settings
 from src.ai.providers.factory import AIProviderType, create_ai_provider
 from src.utils.logger import logger
@@ -147,17 +147,18 @@ class RoofingChatService:
             ChatStreamChunk: Response chunks with content and optional citations
         """
         try:
-            # Prepend system prompt
-            full_messages = [
-                {"role": "system", "content": self.system_prompt},
-                *messages,
+            # Convert dict messages to ChatMessage objects
+            chat_messages = [
+                ChatMessage(role=msg["role"], content=msg["content"])
+                for msg in messages
             ]
 
-            logger.info(f"Streaming chat with {len(messages)} messages")
+            logger.info(f"Streaming chat with {len(chat_messages)} messages")
 
             # Stream response from provider with web search enabled
             async for chunk in self.provider.stream_chat(
-                messages=full_messages,
+                messages=chat_messages,
+                instructions=self.system_prompt,
                 enable_web_search=True,
                 model=self.settings.model_name,
                 temperature=0.7,  # Slightly creative but focused
