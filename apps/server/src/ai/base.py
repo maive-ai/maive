@@ -75,10 +75,13 @@ class ChatStreamChunk(BaseModel):
     """Chunk from streaming chat response with optional citations.
 
     This model represents a piece of a streaming response that may include
-    both content text and citations from web search results.
+    both content text, reasoning summary, and citations from web search results.
+    For reasoning models, reasoning_summary contains the summary of the model's
+    internal reasoning process.
     """
 
     content: str = ""
+    reasoning_summary: str = ""
     citations: list[SearchCitation] = []
     finish_reason: str | None = None
 

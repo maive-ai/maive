@@ -11,10 +11,16 @@ class OpenAISettings(BaseSettings):
 
     Attributes:
         api_key: OpenAI API key for authentication
-        model_name: Default model to use (e.g., 'gpt-4o', 'gpt-4o-audio-preview', 'o1')
+        model_name: Default model to use (e.g., 'gpt-4o', 'gpt-5', 'o1')
         audio_model_name: Model to use for audio processing
-        temperature: Default temperature for generation (0.0-2.0)
-        max_tokens: Default max tokens for generation
+        temperature: Default temperature for non-reasoning models (0.0-2.0)
+        max_tokens: Default max output tokens for generation
+        reasoning_effort: Default reasoning effort for reasoning models
+        text_verbosity: Default text verbosity for reasoning models
+
+    Note:
+        For reasoning models (gpt-5, o1, o3), temperature/top_p/logprobs are not
+        supported. Use reasoning_effort and text_verbosity instead.
     """
 
     model_config = SettingsConfigDict(
@@ -29,8 +35,8 @@ class OpenAISettings(BaseSettings):
         description="OpenAI API key",
     )
     model_name: str = Field(
-        default="gpt-4o",
-        description="Default OpenAI model to use",
+        default="gpt-5",
+        description="Default OpenAI model to use (supports gpt-4o, gpt-5, o1, etc.)",
     )
     audio_model_name: str = Field(
         default="gpt-4o-audio-preview",
@@ -40,12 +46,20 @@ class OpenAISettings(BaseSettings):
         default=0.7,
         ge=0.0,
         le=2.0,
-        description="Default temperature for generation",
+        description="Default temperature for non-reasoning models (not used with reasoning models)",
     )
     max_tokens: int = Field(
         default=4096,
         gt=0,
-        description="Default max tokens for generation",
+        description="Default max output tokens for generation",
+    )
+    reasoning_effort: str = Field(
+        default="minimal",
+        description="Default reasoning effort for reasoning models (minimal, low, medium, high)",
+    )
+    text_verbosity: str = Field(
+        default="low",
+        description="Default text verbosity for reasoning models (low, medium, high)",
     )
 
 

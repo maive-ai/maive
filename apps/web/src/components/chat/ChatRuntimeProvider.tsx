@@ -36,6 +36,7 @@ const chatAdapter: ChatModelAdapter = {
       const decoder = new TextDecoder();
       let buffer = '';
       let accumulatedText = '';
+      let currentReasoning = ''; // Ephemeral reasoning summary
       const citations: Citation[] = [];
       let currentEventType = 'message';
 
@@ -85,6 +86,19 @@ const chatAdapter: ChatModelAdapter = {
                 content: [{ type: 'text', text: finalText }],
               };
               return;
+            } else if (currentEventType === 'reasoning_summary') {
+              // Handle reasoning summary - ephemeral, replaced on each update
+              const unescapedData = data.replace(/\\n/g, '\n');
+              currentReasoning = unescapedData;
+
+              // Yield with reasoning prepended (it will be replaced next update)
+              const displayText = currentReasoning
+                ? `*Thinking: ${currentReasoning}*\n\n${accumulatedText}`
+                : accumulatedText;
+
+              yield {
+                content: [{ type: 'text', text: displayText }],
+              };
             } else if (currentEventType === 'citation') {
               // Parse and store citation
               try {
@@ -96,9 +110,15 @@ const chatAdapter: ChatModelAdapter = {
             } else if (currentEventType === 'error') {
               throw new Error(data);
             } else {
-              // Regular message content
+              // Regular message content - clear reasoning when real content arrives
               const unescapedData = data.replace(/\\n/g, '\n');
               accumulatedText += unescapedData;
+
+              // Clear reasoning summary once we start getting real content
+              if (accumulatedText && currentReasoning) {
+                currentReasoning = '';
+              }
+
               yield {
                 content: [{ type: 'text', text: accumulatedText }],
               };
