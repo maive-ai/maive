@@ -79,7 +79,9 @@ class ApifyClient:
         logger.info(f"Found dataset: {dataset_id}")
 
         # Fetch dataset items
-        dataset_url = f"{self.base_url}/datasets/{dataset_id}/items?token={self.api_token}"
+        dataset_url = (
+            f"{self.base_url}/datasets/{dataset_id}/items?token={self.api_token}"
+        )
         response = await self.client.get(dataset_url)
         response.raise_for_status()
 
@@ -178,9 +180,7 @@ async def fetch_and_ingest_run(run_id: str, api_token: str):
         await apify_client.close()
 
 
-async def run_actor_and_ingest(
-    actor_id: str, input_file: str | None, api_token: str
-):
+async def run_actor_and_ingest(actor_id: str, input_file: str | None, api_token: str):
     """Run an Apify actor and ingest the results.
 
     Args:
@@ -313,7 +313,7 @@ async def upload_single_document(
     filename = ingestion_service._generate_filename(metadata)
 
     # Upload
-    file_id = await vector_store_service.upload_document_with_metadata_prefix(
+    file_id = await vector_store_service.upload_document(
         content=cleaned_content,
         filename=filename,
         metadata=metadata,
@@ -335,6 +335,25 @@ async def show_status():
 
     print("\n" + "=" * 60)
     print("VECTOR STORE STATUS")
+    print("=" * 60)
+    print(f"Vector Store ID: {status.vector_store_id}")
+    print(f"File Count: {status.file_count}")
+    print(f"Total Size: {status.total_size_bytes / 1024 / 1024:.2f} MB")
+    print(f"Ready: {status.is_ready}")
+    if status.last_synced:
+        print(f"Last Synced: {status.last_synced}")
+    print("=" * 60)
+
+
+async def clear_vector_store():
+    """Clear all files from the vector store."""
+    vector_store_service = VectorStoreService()
+    deleted = await vector_store_service.clear_all_files()
+    status = await vector_store_service.get_status()
+    print("\n" + "=" * 60)
+    print("VECTOR STORE CLEARED")
+    print("=" * 60)
+    print(f"Deleted files: {deleted}")
     print("=" * 60)
     print(f"Vector Store ID: {status.vector_store_id}")
     print(f"File Count: {status.file_count}")
@@ -409,6 +428,9 @@ def main():
     # Show status
     subparsers.add_parser("status", help="Show vector store status")
 
+    # Clear
+    subparsers.add_parser("clear", help="Delete all files from vector store")
+
     args = parser.parse_args()
 
     # Check for API token if needed
@@ -441,6 +463,8 @@ def main():
         )
     elif args.command == "status":
         asyncio.run(show_status())
+    elif args.command == "clear":
+        asyncio.run(clear_vector_store())
     else:
         parser.print_help()
 
