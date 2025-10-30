@@ -4,6 +4,8 @@ import re
 from datetime import datetime
 from typing import Any
 
+from tqdm import tqdm
+
 from src.ai.rag.metadata import CodeDocumentMetadata, CodeType, JurisdictionLevel
 from src.ai.rag.vector_store_service import VectorStoreService
 from src.utils.logger import logger
@@ -47,7 +49,8 @@ class IngestionService:
 
         logger.info(f"Starting ingestion of {len(apify_results)} documents from Apify")
 
-        for idx, result in enumerate(apify_results):
+        # Process documents sequentially with progress bar
+        for idx, result in tqdm(enumerate(apify_results), total=len(apify_results), desc="Ingesting documents"):
             try:
                 # Extract basic info
                 url = result.get("url", "")
@@ -74,7 +77,7 @@ class IngestionService:
                 filename = self._generate_filename(metadata)
 
                 # Upload to vector store with metadata prefix
-                file_id = await self.vector_store.upload_document_with_metadata_prefix(
+                file_id = await self.vector_store.upload_document(
                     content=cleaned_content,
                     filename=filename,
                     metadata=metadata,
@@ -222,7 +225,9 @@ class IngestionService:
 
         # If no city from URL, try title
         if not city:
-            city_match = re.search(r"(?:city of |^)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)", title)
+            city_match = re.search(
+                r"(?:city of |^)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)", title
+            )
             if city_match:
                 city = city_match.group(1)
 
@@ -298,7 +303,9 @@ class IngestionService:
             return year_match.group(1)
 
         # Look for version patterns (v1.0, version 2.3, etc.)
-        version_match = re.search(r"(?:version|v\.?)\s*(\d+(?:\.\d+)?)", text, re.IGNORECASE)
+        version_match = re.search(
+            r"(?:version|v\.?)\s*(\d+(?:\.\d+)?)", text, re.IGNORECASE
+        )
         if version_match:
             return f"v{version_match.group(1)}"
 

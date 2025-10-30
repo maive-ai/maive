@@ -76,6 +76,10 @@ class VectorStoreService:
         try:
             vector_store_id = await self.get_or_create_vector_store()
 
+            # Prepare metadata attributes
+            attributes = metadata.to_openai_metadata()
+            attributes["filename"] = filename
+
             # If content is a string, write to temp file
             if isinstance(content, str):
                 temp_file = tempfile.NamedTemporaryFile(
@@ -95,9 +99,6 @@ class VectorStoreService:
                 should_cleanup = False
 
             try:
-                # Upload file to OpenAI with metadata
-                C = metadata.to_openai_metadata()
-
                 if file_path:
                     with open(file_path, "rb") as f:
                         uploaded_file = await self.client.files.create(
@@ -115,15 +116,12 @@ class VectorStoreService:
                     f"for {metadata.jurisdiction_name}"
                 )
 
-                # Attach file to vector store
+                # Attach file to vector store with attributes
                 await self.client.vector_stores.files.create(
                     vector_store_id=vector_store_id,
                     file_id=uploaded_file.id,
+                    attributes=attributes,
                 )
-
-                # Note: OpenAI doesn't support custom metadata on vector store files yet
-                # The metadata will need to be embedded in the document content itself
-                # or managed separately
 
                 logger.info(
                     f"Attached file {uploaded_file.id} to vector store {vector_store_id}"
@@ -143,58 +141,47 @@ class VectorStoreService:
             logger.error(f"Failed to upload document {filename}: {e}")
             raise
 
-    async def upload_document_with_metadata_prefix(
-        self,
-        content: str,
-        filename: str,
-        metadata: CodeDocumentMetadata,
-    ) -> str:
-        """Upload a document with metadata embedded as a prefix.
+    async def _find_file_id_by_filename(
+        self, vector_store_id: str, filename: str
+    ) -> str | None:
+        """Search the vector store for a file with the given filename.
 
-        Since OpenAI doesn't support custom metadata on vector store files,
-        we embed the metadata as a structured prefix in the document content.
-
-        Args:
-            content: Document text content
-            filename: Name for the file
-            metadata: Document metadata
+        Strategy:
+        1) Prefer matching on attributes.filename if present.
+        2) Fallback to retrieving the OpenAI file object to compare its filename.
 
         Returns:
-            str: File ID
+            str | None: The file ID if found, otherwise None.
         """
-        # Create metadata header
-        metadata_lines = [
-            "# Document Metadata",
-            f"Jurisdiction: {metadata.jurisdiction_name}",
-            f"Level: {metadata.jurisdiction_level.value}",
-            f"Code Type: {metadata.code_type.value}",
-        ]
+        cursor: str | None = None
 
-        if metadata.city:
-            metadata_lines.append(f"City: {metadata.city}")
-        if metadata.county:
-            metadata_lines.append(f"County: {metadata.county}")
-        if metadata.state:
-            metadata_lines.append(f"State: {metadata.state}")
-        if metadata.document_title:
-            metadata_lines.append(f"Title: {metadata.document_title}")
-        if metadata.version:
-            metadata_lines.append(f"Version: {metadata.version}")
-        if metadata.code_section:
-            metadata_lines.append(f"Section: {metadata.code_section}")
-        if metadata.adopts_code:
-            metadata_lines.append(f"Adopts: {metadata.adopts_code}")
-        if metadata.source_url:
-            metadata_lines.append(f"Source: {metadata.source_url}")
+        while True:
+            response = await self.client.vector_stores.files.list(
+                vector_store_id=vector_store_id,
+                limit=100,
+                after=cursor,
+            )
 
-        metadata_lines.append("")  # Empty line
-        metadata_lines.append("---")
-        metadata_lines.append("")
+            for f in response.data or []:
+                # Try attribute match if the SDK surfaces attributes on the item
+                attrs = getattr(f, "attributes", None) or {}
+                if isinstance(attrs, dict) and attrs.get("filename") == filename:
+                    return f.id
 
-        # Combine metadata header with content
-        prefixed_content = "\n".join(metadata_lines) + "\n" + content
+                # Fallback: check the underlying file's filename
+                try:
+                    file_obj = await self.client.files.retrieve(f.id)
+                    if getattr(file_obj, "filename", None) == filename:
+                        return f.id
+                except Exception:
+                    # Ignore retrieval failures and continue scanning
+                    pass
 
-        return await self.upload_document(prefixed_content, filename, metadata)
+            if not getattr(response, "has_more", False):
+                break
+            cursor = getattr(response, "last_id", None)
+
+        return None
 
     async def get_status(self) -> VectorStoreStatus:
         """Get status of the vector store.
@@ -206,9 +193,7 @@ class VectorStoreService:
             vector_store_id = await self.get_or_create_vector_store()
 
             # Get vector store details
-            vector_store = await self.client.vector_stores.retrieve(
-                vector_store_id
-            )
+            vector_store = await self.client.vector_stores.retrieve(vector_store_id)
 
             # Get list of files
             files_response = await self.client.vector_stores.files.list(
@@ -308,3 +293,46 @@ class VectorStoreService:
         except Exception as e:
             logger.error(f"Failed to list files: {e}")
             raise
+
+    async def clear_all_files(self) -> int:
+        """Delete all files from the current vector store and OpenAI Files.
+
+        Returns:
+            int: Number of files deleted
+        """
+        vector_store_id = await self.get_or_create_vector_store()
+
+        # Page through files until none remain
+        deleted_count = 0
+        has_more = True
+        cursor: str | None = None
+
+        while has_more:
+            response = await self.client.vector_stores.files.list(
+                vector_store_id=vector_store_id,
+                limit=100,
+                after=cursor,
+            )
+
+            files = response.data or []
+            if not files:
+                break
+
+            for f in files:
+                try:
+                    await self.client.vector_stores.files.delete(
+                        vector_store_id=vector_store_id,
+                        file_id=f.id,
+                    )
+                    await self.client.files.delete(f.id)
+                    deleted_count += 1
+                except Exception as e:
+                    logger.warning(f"Failed deleting file {getattr(f, 'id', '?')}: {e}")
+
+            has_more = bool(getattr(response, "has_more", False))
+            cursor = getattr(response, "last_id", None)
+
+        logger.info(
+            f"Cleared {deleted_count} files from vector store {vector_store_id}"
+        )
+        return deleted_count
