@@ -623,9 +623,7 @@ class OpenAIProvider(AIProvider):
             if vector_store_ids:
                 tools.append({
                     "type": "file_search",
-                    "file_search": {
-                        "vector_store_ids": vector_store_ids
-                    }
+                    "vector_store_ids": vector_store_ids
                 })
 
             # Extract system prompt (instructions) from messages

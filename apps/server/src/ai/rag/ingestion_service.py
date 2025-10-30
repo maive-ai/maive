@@ -52,11 +52,12 @@ class IngestionService:
                 # Extract basic info
                 url = result.get("url", "")
                 title = result.get("title", "")
-                content = result.get("content", "")
+                # Try multiple common field names for content
+                content = result.get("content") or result.get("text") or result.get("html") or result.get("pageContent") or ""
                 apify_metadata = result.get("metadata", {})
 
                 if not content:
-                    logger.warning(f"Skipping document {idx}: no content")
+                    logger.warning(f"Skipping document {idx}: no content (tried: content, text, html, pageContent)")
                     summary["failed"] += 1
                     summary["errors"].append(
                         {"index": idx, "url": url, "error": "No content"}

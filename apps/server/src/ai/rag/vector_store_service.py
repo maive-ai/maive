@@ -35,7 +35,7 @@ class VectorStoreService:
 
         # Try to find existing vector store
         try:
-            vector_stores = await self.client.beta.vector_stores.list()
+            vector_stores = await self.client.vector_stores.list()
             for vs in vector_stores.data:
                 if vs.name == self.VECTOR_STORE_NAME:
                     self._vector_store_id = vs.id
@@ -47,9 +47,8 @@ class VectorStoreService:
         # Create new vector store
         try:
             logger.info(f"Creating new vector store: {self.VECTOR_STORE_NAME}")
-            vector_store = await self.client.beta.vector_stores.create(
+            vector_store = await self.client.vector_stores.create(
                 name=self.VECTOR_STORE_NAME,
-                expires_after=None,  # Don't expire
             )
             self._vector_store_id = vector_store.id
             logger.info(f"Created vector store: {vector_store.id}")
@@ -116,8 +115,8 @@ class VectorStoreService:
                     f"for {metadata.jurisdiction_name}"
                 )
 
-                # Attach file to vector store with metadata
-                await self.client.beta.vector_stores.files.create(
+                # Attach file to vector store
+                await self.client.vector_stores.files.create(
                     vector_store_id=vector_store_id,
                     file_id=uploaded_file.id,
                 )
@@ -207,12 +206,12 @@ class VectorStoreService:
             vector_store_id = await self.get_or_create_vector_store()
 
             # Get vector store details
-            vector_store = await self.client.beta.vector_stores.retrieve(
+            vector_store = await self.client.vector_stores.retrieve(
                 vector_store_id
             )
 
             # Get list of files
-            files_response = await self.client.beta.vector_stores.files.list(
+            files_response = await self.client.vector_stores.files.list(
                 vector_store_id=vector_store_id, limit=100
             )
 
@@ -262,7 +261,7 @@ class VectorStoreService:
             vector_store_id = await self.get_or_create_vector_store()
 
             # Remove from vector store
-            await self.client.beta.vector_stores.files.delete(
+            await self.client.vector_stores.files.delete(
                 vector_store_id=vector_store_id,
                 file_id=file_id,
             )
@@ -289,7 +288,7 @@ class VectorStoreService:
         try:
             vector_store_id = await self.get_or_create_vector_store()
 
-            files_response = await self.client.beta.vector_stores.files.list(
+            files_response = await self.client.vector_stores.files.list(
                 vector_store_id=vector_store_id,
                 limit=limit,
             )
