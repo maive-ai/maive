@@ -42,6 +42,10 @@ from src.utils.logger import logger
 T = TypeVar("T", bound=BaseModel)
 
 
+# Limit how much of a retrieved file we log to avoid huge logs
+FILE_CONTENT_LOG_PREVIEW_CHARS = 2000
+
+
 class OpenAIProvider(AIProvider):
     """OpenAI provider implementation.
 
@@ -672,6 +676,8 @@ class OpenAIProvider(AIProvider):
 
             # Track citations from web search
             accumulated_citations: list[SearchCitation] = []
+            # Track file citations and optionally log their content previews
+            seen_file_ids: set[str] = set()
 
             async for event in stream:
                 # Handle different event types from Responses API using official types
@@ -692,13 +698,42 @@ class OpenAIProvider(AIProvider):
                         try:
                             # If it's a dict, parse it; if it's already an object, use as-is
                             if isinstance(annotation, dict):
-                                if annotation.get("type") == "url_citation":
+                                ann_type = annotation.get("type")
+                                if ann_type == "url_citation":
                                     url_citation = AnnotationURLCitation(**annotation)
+                                elif ann_type == "file_citation":
+                                    # Log RAG file hits (metadata and short content preview)
+                                    file_id = annotation.get("file_citation", {}).get(
+                                        "file_id"
+                                    ) or annotation.get("file_id")
+                                    quoted_text = (
+                                        annotation.get("text")
+                                        or annotation.get("quote")
+                                        or ""
+                                    )
+                                    if file_id and file_id not in seen_file_ids:
+                                        seen_file_ids.add(file_id)
+                                        logger.info(
+                                            f"RAG file cited: id={file_id}, quoted={quoted_text!r}"
+                                        )
+                                        # Try to fetch file metadata
+                                        try:
+                                            meta = await client.files.retrieve(file_id)
+                                            logger.info(
+                                                f"RAG file metadata: id={file_id}, name={getattr(meta, 'filename', None)}, bytes={getattr(meta, 'bytes', None)}"
+                                            )
+                                        except Exception as e:
+                                            logger.debug(
+                                                f"Failed to retrieve file metadata for {file_id}: {e}"
+                                            )
+
+                                    # Skip adding to web citations list for file citations
+                                    continue
                                 else:
                                     logger.debug(
-                                        f"Skipped non-URL citation type: {annotation.get('type')}"
+                                        f"Skipped unknown annotation type: {ann_type}"
                                     )
-                                    continue  # Skip non-URL citation types
+                                    continue  # Unknown annotation type
                             elif isinstance(annotation, AnnotationURLCitation):
                                 url_citation = annotation
                             else:
