@@ -42,10 +42,6 @@ from src.utils.logger import logger
 T = TypeVar("T", bound=BaseModel)
 
 
-# Limit how much of a retrieved file we log to avoid huge logs
-FILE_CONTENT_LOG_PREVIEW_CHARS = 2000
-
-
 class OpenAIProvider(AIProvider):
     """OpenAI provider implementation.
 
