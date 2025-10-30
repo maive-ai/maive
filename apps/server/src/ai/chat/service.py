@@ -2,13 +2,11 @@
 Roofing Chat Service for AI-powered roofing expertise.
 
 This service provides streaming chat capabilities with roofing domain knowledge,
-loading context from document files and using AI providers with web search.
+loading context from file search and using AI providers with web search.
 """
 
 from pathlib import Path
 from typing import Any, AsyncGenerator
-
-from pypdf import PdfReader
 
 from src.ai.base import ChatMessage, ChatStreamChunk
 from src.ai.openai.config import get_openai_settings
@@ -24,7 +22,6 @@ class RoofingChatService:
         """Initialize the roofing chat service."""
         self.settings = get_openai_settings()
         self.provider = create_ai_provider(AIProviderType.OPENAI)
-        self.documents_dir = Path(__file__).parent / "documents"
         self.system_prompt_file = Path(__file__).parent / "system_prompt.md"
         self.system_prompt = self._build_system_prompt()
 
@@ -47,7 +44,7 @@ class RoofingChatService:
 
     def _build_system_prompt(self) -> str:
         """
-        Build the system prompt from file and append document context.
+        Build the system prompt from file.
 
         Returns:
             str: System prompt for the AI
@@ -61,19 +58,7 @@ class RoofingChatService:
             # Fallback to a minimal prompt
             base_prompt = "You are RoofGPT, an expert roofing consultant."
 
-        # Append document context if available
-        if self.document_context:
-            return f"""{base_prompt}
-
----
-
-# Available Reference Documents
-
-{self.document_context}
-"""
-        else:
-            logger.warning("No reference documents loaded")
-            return base_prompt
+        return base_prompt
 
     async def stream_chat_response(
         self,
