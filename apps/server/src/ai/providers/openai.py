@@ -8,6 +8,7 @@ from typing import AsyncGenerator, TypeVar
 from openai import AsyncOpenAI
 from openai.types.responses import (
     EasyInputMessageParam,
+    FileSearchToolParam,
     ResponseCompletedEvent,
     ResponseFailedEvent,
     ResponseOutputTextAnnotationAddedEvent,
@@ -596,16 +597,18 @@ class OpenAIProvider(AIProvider):
         messages: list[ChatMessage],
         instructions: str | None = None,
         enable_web_search: bool = False,
+        vector_store_ids: list[str] | None = None,
         **kwargs,
     ) -> AsyncGenerator[ChatStreamChunk, None]:
-        """Stream chat responses with optional web search and citations.
+        """Stream chat responses with optional web search, file search, and citations.
 
-        Uses OpenAI's Responses API which supports web search tools.
+        Uses OpenAI's Responses API which supports web search and file search tools.
 
         Args:
             messages: List of chat messages (user and assistant only, no system messages)
             instructions: Optional system prompt/instructions
             enable_web_search: Whether to enable web search capability
+            vector_store_ids: Optional list of vector store IDs for file search
             **kwargs: Provider-specific options (temperature, max_tokens, model, etc.)
 
         Yields:
@@ -618,12 +621,25 @@ class OpenAIProvider(AIProvider):
             temperature = kwargs.get("temperature", self.settings.temperature)
             max_tokens = kwargs.get("max_tokens", self.settings.max_tokens)
 
-            logger.info(f"Streaming chat with web_search={enable_web_search}, model={model}")
-
-            # Configure tools for web search if enabled (using OpenAI's official type)
-            tools: list[WebSearchToolParam] = (
-                [WebSearchToolParam(type="web_search")] if enable_web_search else []
+            logger.info(
+                f"Streaming chat with web_search={enable_web_search}, "
+                f"file_search={bool(vector_store_ids)}, model={model}"
             )
+
+            # Configure tools (Responses API format)
+            tools = []
+
+            # Add web search if enabled
+            if enable_web_search:
+                tools.append(WebSearchToolParam(type="web_search"))
+
+            # Add file search if vector store IDs provided
+            if vector_store_ids:
+                tools.append(
+                    FileSearchToolParam(
+                        type="file_search", vector_store_ids=vector_store_ids
+                    )
+                )
 
             # Convert messages to Responses API format (using OpenAI's official type)
             input_items: list[EasyInputMessageParam] = [
@@ -649,11 +665,15 @@ class OpenAIProvider(AIProvider):
                 f"Stream params: model={model}, input_items={len(input_items)}, "
                 f"has_instructions={bool(instructions)}, tools={bool(tools)}"
             )
-            
-            stream = await client.responses.create(**stream_params.model_dump(exclude_none=True))
+
+            stream = await client.responses.create(
+                **stream_params.model_dump(exclude_none=True)
+            )
 
             # Track citations from web search
             accumulated_citations: list[SearchCitation] = []
+            # Track file citations and optionally log their content previews
+            seen_file_ids: set[str] = set()
 
             async for event in stream:
                 # Handle different event types from Responses API using official types
@@ -669,22 +689,55 @@ class OpenAIProvider(AIProvider):
                     # Handle annotation events (citations from web search)
                     elif isinstance(event, ResponseOutputTextAnnotationAddedEvent):
                         annotation = event.annotation
-                        
+
                         # Parse annotation as AnnotationURLCitation (handles both dict and object)
                         try:
                             # If it's a dict, parse it; if it's already an object, use as-is
                             if isinstance(annotation, dict):
-                                if annotation.get("type") == "url_citation":
+                                ann_type = annotation.get("type")
+                                if ann_type == "url_citation":
                                     url_citation = AnnotationURLCitation(**annotation)
+                                elif ann_type == "file_citation":
+                                    # Log RAG file hits (metadata and short content preview)
+                                    file_id = annotation.get("file_citation", {}).get(
+                                        "file_id"
+                                    ) or annotation.get("file_id")
+                                    quoted_text = (
+                                        annotation.get("text")
+                                        or annotation.get("quote")
+                                        or ""
+                                    )
+                                    if file_id and file_id not in seen_file_ids:
+                                        seen_file_ids.add(file_id)
+                                        logger.info(
+                                            f"RAG file cited: id={file_id}, quoted={quoted_text!r}"
+                                        )
+                                        # Try to fetch file metadata
+                                        try:
+                                            meta = await client.files.retrieve(file_id)
+                                            logger.info(
+                                                f"RAG file metadata: id={file_id}, name={getattr(meta, 'filename', None)}, bytes={getattr(meta, 'bytes', None)}"
+                                            )
+                                        except Exception as e:
+                                            logger.debug(
+                                                f"Failed to retrieve file metadata for {file_id}: {e}"
+                                            )
+
+                                    # Skip adding to web citations list for file citations
+                                    continue
                                 else:
-                                    logger.debug(f"Skipped non-URL citation type: {annotation.get('type')}")
-                                    continue  # Skip non-URL citation types
+                                    logger.debug(
+                                        f"Skipped unknown annotation type: {ann_type}"
+                                    )
+                                    continue  # Unknown annotation type
                             elif isinstance(annotation, AnnotationURLCitation):
                                 url_citation = annotation
                             else:
-                                logger.debug(f"Skipped unknown annotation format: {type(annotation).__name__}")
+                                logger.debug(
+                                    f"Skipped unknown annotation format: {type(annotation).__name__}"
+                                )
                                 continue  # Skip unknown annotation formats
-                            
+
                             # Create citation from parsed annotation
                             citation = SearchCitation(
                                 url=url_citation.url,
@@ -693,18 +746,18 @@ class OpenAIProvider(AIProvider):
                                 accessed_at=None,
                             )
                             citations.append(citation)
-                            
+
                             # Track unique citations
                             if citation not in accumulated_citations:
                                 accumulated_citations.append(citation)
-                                
+
                         except Exception as e:
                             logger.error(f"Failed to parse annotation: {e}")
 
                     # Handle completion events
                     elif isinstance(event, ResponseCompletedEvent):
                         finish_reason = "completed"
-                    
+
                     elif isinstance(event, ResponseFailedEvent):
                         finish_reason = "failed"
 
@@ -715,9 +768,11 @@ class OpenAIProvider(AIProvider):
                             citations=citations,
                             finish_reason=finish_reason,
                         )
-                        
+
                 except Exception as e:
-                    logger.error(f"Error parsing event: {e}, event_type={type(event).__name__}")
+                    logger.error(
+                        f"Error parsing event: {e}, event_type={type(event).__name__}"
+                    )
                     continue
 
             logger.info(
