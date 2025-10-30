@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from src.ai.base import SSEEvent
 from src.ai.chat.service import RoofingChatService
 from src.auth.dependencies import get_current_user
 from src.auth.schemas import User
@@ -81,26 +82,27 @@ async def stream_roofing_chat(
                 # Send content if present
                 if chunk.content:
                     # Escape newlines in content for SSE format
-                    # SSE spec requires each line to start with "data: "
                     escaped_content = chunk.content.replace("\n", "\\n")
-                    yield f"data: {escaped_content}\n\n"
+                    yield SSEEvent(data=escaped_content).format()
 
                 # Send citations as separate events
                 for citation in chunk.citations:
-                    citation_json = citation.model_dump_json()
-                    yield f"event: citation\ndata: {citation_json}\n\n"
+                    yield SSEEvent(
+                        event="citation",
+                        data=citation.model_dump_json(),
+                    ).format()
 
                 # Send finish signal if stream is complete
                 if chunk.finish_reason:
-                    yield f"event: done\ndata: {chunk.finish_reason}\n\n"
+                    yield SSEEvent(event="done", data=chunk.finish_reason).format()
                     break
 
             # Send done signal if not already sent
-            yield "event: done\ndata: complete\n\n"
+            yield SSEEvent(event="done", data="complete").format()
 
         except Exception as e:
             logger.error(f"Error in chat stream: {e}")
-            yield f"event: error\ndata: {str(e)}\n\n"
+            yield SSEEvent(event="error", data=str(e)).format()
 
     return StreamingResponse(
         event_generator(),

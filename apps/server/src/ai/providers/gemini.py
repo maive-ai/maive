@@ -9,10 +9,12 @@ from pydantic import BaseModel
 from src.ai.base import (
     AIProvider,
     AudioAnalysisRequest,
+    ChatMessage,
     ChatStreamChunk,
     ContentAnalysisRequest,
     ContentGenerationResult,
     FileMetadata,
+    SearchCitation,
     TranscriptionResult,
 )
 from src.ai.gemini import get_gemini_client
@@ -349,7 +351,8 @@ class GeminiProvider(AIProvider):
 
     async def stream_chat(
         self,
-        messages: list[dict[str, Any]],
+        messages: list[ChatMessage],
+        instructions: str | None = None,
         enable_web_search: bool = False,
         vector_store_ids: list[str] | None = None,
         **kwargs,
@@ -360,7 +363,8 @@ class GeminiProvider(AIProvider):
         in the same way as OpenAI. This is a placeholder implementation.
 
         Args:
-            messages: List of chat messages
+            messages: List of chat messages (user and assistant only, no system messages)
+            instructions: Optional system prompt/instructions
             enable_web_search: Whether to enable web search capability (not supported)
             vector_store_ids: Vector store IDs for file search (not supported)
             **kwargs: Provider-specific options
