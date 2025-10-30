@@ -12,9 +12,17 @@ from openai.types.responses import (
     ResponseCompletedEvent,
     ResponseFailedEvent,
     ResponseOutputTextAnnotationAddedEvent,
+    ResponseReasoningSummaryTextDeltaEvent,
+    ResponseReasoningTextDeltaEvent,
     ResponseTextDeltaEvent,
     WebSearchToolParam,
 )
+from openai.types.responses.response_create_params import (
+    Reasoning as ReasoningParam,
+    ResponseCreateParamsStreaming,
+    ResponseTextConfigParam,
+)
+from openai.types.shared import ReasoningEffort
 from openai.types.responses.response_output_text import AnnotationURLCitation
 from pydantic import BaseModel
 
@@ -26,7 +34,6 @@ from src.ai.base import (
     ContentAnalysisRequest,
     ContentGenerationResult,
     FileMetadata,
-    ResponseStreamParams,
     SearchCitation,
     TranscriptionResult,
 )
@@ -604,30 +611,49 @@ class OpenAIProvider(AIProvider):
 
         Uses OpenAI's Responses API which supports web search and file search tools.
 
+        For reasoning models (GPT-5, o1, etc.), use reasoning-specific parameters:
+        - reasoning_effort: ReasoningEffort ("minimal", "low", "medium", "high")
+        - text_verbosity: Literal["low", "medium", "high"]
+        - max_output_tokens: int (instead of max_tokens)
+
+        For non-reasoning models, use standard parameters:
+        - temperature: float
+        - max_tokens: int
+
         Args:
             messages: List of chat messages (user and assistant only, no system messages)
             instructions: Optional system prompt/instructions
             enable_web_search: Whether to enable web search capability
             vector_store_ids: Optional list of vector store IDs for file search
-            **kwargs: Provider-specific options (temperature, max_tokens, model, etc.)
+            **kwargs: Provider-specific options:
+                - model: Model name (default from settings)
+                - reasoning_effort: ReasoningEffort for reasoning models
+                - text_verbosity: Text verbosity for reasoning models
+                - max_output_tokens: Max tokens for reasoning models
+                - temperature: Temperature for non-reasoning models (not compatible with reasoning models)
+                - max_tokens: Max tokens for non-reasoning models
 
         Yields:
-            ChatStreamChunk: Stream chunks with content and optional citations
+            ChatStreamChunk: Stream chunks with content, reasoning, and optional citations
         """
         try:
             client = self._get_client()
 
             model = kwargs.get("model", self.settings.model_name)
-            temperature = kwargs.get("temperature", self.settings.temperature)
-            max_tokens = kwargs.get("max_tokens", self.settings.max_tokens)
+
+            # Detect if this is a reasoning model
+            is_reasoning_model = any(
+                model.startswith(prefix) for prefix in ["gpt-5", "o1", "o3"]
+            )
 
             logger.info(
                 f"Streaming chat with web_search={enable_web_search}, "
-                f"file_search={bool(vector_store_ids)}, model={model}"
+                f"file_search={bool(vector_store_ids)}, model={model}, "
+                f"is_reasoning={is_reasoning_model}"
             )
 
             # Configure tools (Responses API format)
-            tools = []
+            tools: list[WebSearchToolParam | FileSearchToolParam] = []
 
             # Add web search if enabled
             if enable_web_search:
@@ -650,40 +676,115 @@ class OpenAIProvider(AIProvider):
                 for msg in messages
             ]
 
-            # Create streaming response using Responses API with validated params
-            stream_params = ResponseStreamParams(
-                model=model,
-                input=input_items,  # type: ignore[arg-type]
-                temperature=temperature,
-                max_output_tokens=max_tokens,
-                stream=True,
-                instructions=instructions,
-                tools=tools if tools else None,  # type: ignore[arg-type]
-            )
+            # Build streaming params using OpenAI's TypedDict
+            stream_params: ResponseCreateParamsStreaming = {
+                "model": model,  # type: ignore[typeddict-item]
+                "input": input_items,  # type: ignore[typeddict-item]
+                "stream": True,
+            }
+
+            # Add optional parameters
+            if instructions:
+                stream_params["instructions"] = instructions
+
+            if tools:
+                stream_params["tools"] = tools  # type: ignore[typeddict-item]
+
+            # Add model-specific parameters
+            if is_reasoning_model:
+                # Reasoning models use different parameters
+                logger.info(f"Using reasoning model: {model}")
+
+                # Add reasoning configuration if specified
+                reasoning_effort: ReasoningEffort | None = kwargs.get("reasoning_effort")
+                if reasoning_effort:
+                    stream_params["reasoning"] = ReasoningParam(effort=reasoning_effort)
+
+                # Add text verbosity if specified
+                text_verbosity = kwargs.get("text_verbosity")
+                if text_verbosity:
+                    stream_params["text"] = ResponseTextConfigParam(
+                        verbosity=text_verbosity
+                    )
+
+                # Use max_output_tokens for reasoning models
+                max_output_tokens = kwargs.get(
+                    "max_output_tokens", self.settings.max_tokens
+                )
+                if max_output_tokens:
+                    stream_params["max_output_tokens"] = max_output_tokens
+
+                # Log if incompatible parameters are provided
+                if "temperature" in kwargs:
+                    logger.warning(
+                        f"temperature parameter ignored for reasoning model {model}"
+                    )
+                if "top_p" in kwargs:
+                    logger.warning(
+                        f"top_p parameter ignored for reasoning model {model}"
+                    )
+                if "logprobs" in kwargs:
+                    logger.warning(
+                        f"logprobs parameter ignored for reasoning model {model}"
+                    )
+            else:
+                # Non-reasoning models use standard parameters
+                logger.info(f"Using standard model: {model}")
+                temperature = kwargs.get("temperature", self.settings.temperature)
+                max_tokens = kwargs.get("max_tokens", self.settings.max_tokens)
+
+                if temperature is not None:
+                    stream_params["temperature"] = temperature
+                if max_tokens:
+                    stream_params["max_output_tokens"] = max_tokens
 
             logger.debug(
                 f"Stream params: model={model}, input_items={len(input_items)}, "
                 f"has_instructions={bool(instructions)}, tools={bool(tools)}"
             )
 
-            stream = await client.responses.create(
-                **stream_params.model_dump(exclude_none=True)
-            )
+            # Create streaming response using Responses API
+            logger.info("Creating stream with OpenAI Responses API...")
+            stream = await client.responses.create(**stream_params)
+            logger.info("Stream created successfully, starting to read events...")
 
             # Track citations from web search
             accumulated_citations: list[SearchCitation] = []
             # Track file citations and optionally log their content previews
             seen_file_ids: set[str] = set()
 
+            event_count = 0
             async for event in stream:
+                event_count += 1
+                logger.debug(
+                    f"Received event #{event_count}: {type(event).__name__}"
+                )
                 # Handle different event types from Responses API using official types
                 content = ""
+                reasoning_summary = ""
                 citations: list[SearchCitation] = []
                 finish_reason = None
 
                 try:
-                    # Handle text delta events (streaming content)
-                    if isinstance(event, ResponseTextDeltaEvent):
+                    # Handle reasoning text delta events (reasoning models)
+                    # Note: We don't stream the raw reasoning content, only log it
+                    if isinstance(event, ResponseReasoningTextDeltaEvent):
+                        logger.debug(
+                            f"Reasoning delta: {event.delta[:50]}... "
+                            f"(item_id={event.item_id}, content_index={event.content_index})"
+                        )
+                        # Skip yielding raw reasoning content
+                        continue
+
+                    # Handle reasoning summary delta events
+                    elif isinstance(event, ResponseReasoningSummaryTextDeltaEvent):
+                        reasoning_summary = event.delta
+                        logger.debug(
+                            f"Reasoning summary delta: {reasoning_summary[:50]}..."
+                        )
+
+                    # Handle text delta events (streaming output content)
+                    elif isinstance(event, ResponseTextDeltaEvent):
                         content = event.delta
 
                     # Handle annotation events (citations from web search)
@@ -761,10 +862,11 @@ class OpenAIProvider(AIProvider):
                     elif isinstance(event, ResponseFailedEvent):
                         finish_reason = "failed"
 
-                    # Yield chunk if there's content, citations, or finish reason
-                    if content or citations or finish_reason:
+                    # Yield chunk if there's content, reasoning summary, citations, or finish reason
+                    if content or reasoning_summary or citations or finish_reason:
                         yield ChatStreamChunk(
                             content=content,
+                            reasoning_summary=reasoning_summary,
                             citations=citations,
                             finish_reason=finish_reason,
                         )

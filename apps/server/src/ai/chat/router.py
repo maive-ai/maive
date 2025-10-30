@@ -76,9 +76,18 @@ async def stream_roofing_chat(
 
     # Create async generator for SSE
     async def event_generator():
-        """Generate SSE events from chat stream with citations."""
+        """Generate SSE events from chat stream with citations and reasoning."""
         try:
             async for chunk in chat_service.stream_chat_response(messages):
+                # Send reasoning summary if present (ephemeral, replaced on next chunk)
+                if chunk.reasoning_summary:
+                    # Escape newlines in reasoning summary for SSE format
+                    escaped_reasoning = chunk.reasoning_summary.replace("\n", "\\n")
+                    yield SSEEvent(
+                        event="reasoning_summary",
+                        data=escaped_reasoning,
+                    ).format()
+
                 # Send content if present
                 if chunk.content:
                     # Escape newlines in content for SSE format
