@@ -13,7 +13,7 @@ from pypdf import PdfReader
 from src.ai.base import ChatMessage, ChatStreamChunk
 from src.ai.openai.config import get_openai_settings
 from src.ai.providers.factory import AIProviderType, create_ai_provider
-from src.ai.rag.vector_store_service import VectorStoreService
+from src.ai.rag.service import VectorStoreService
 from src.utils.logger import logger
 
 
@@ -26,7 +26,6 @@ class RoofingChatService:
         self.provider = create_ai_provider(AIProviderType.OPENAI)
         self.documents_dir = Path(__file__).parent / "documents"
         self.system_prompt_file = Path(__file__).parent / "system_prompt.md"
-        self.document_context = self._load_documents()
         self.system_prompt = self._build_system_prompt()
 
         # Initialize vector store for RAG
@@ -45,81 +44,6 @@ class RoofingChatService:
             )
             logger.info(f"Initialized vector store for RAG: {self._vector_store_id}")
         return self._vector_store_id
-
-    def _load_documents(self) -> str:
-        """
-        Load all documents from the documents directory recursively.
-
-        Supports .txt, .md, and .pdf files from any subdirectory.
-
-        Returns:
-            str: Combined document content
-        """
-        documents = []
-
-        # Check if documents directory exists
-        if not self.documents_dir.exists():
-            logger.warning(f"Documents directory not found: {self.documents_dir}")
-            return ""
-
-        # Recursively load all .txt files
-        for file_path in self.documents_dir.glob("**/*.txt"):
-            try:
-                content = file_path.read_text(encoding="utf-8")
-                # Get relative path for better context
-                relative_path = file_path.relative_to(self.documents_dir)
-                documents.append(
-                    f"## {file_path.stem} ({relative_path.parent})\n\n{content}\n\n"
-                )
-                logger.info(f"Loaded text document: {relative_path}")
-            except Exception as e:
-                logger.error(f"Failed to load document {file_path}: {e}")
-
-        # Recursively load all .md files
-        for file_path in self.documents_dir.glob("**/*.md"):
-            try:
-                content = file_path.read_text(encoding="utf-8")
-                relative_path = file_path.relative_to(self.documents_dir)
-                documents.append(
-                    f"## {file_path.stem} ({relative_path.parent})\n\n{content}\n\n"
-                )
-                logger.info(f"Loaded markdown document: {relative_path}")
-            except Exception as e:
-                logger.error(f"Failed to load document {file_path}: {e}")
-
-        # Recursively load all .pdf files
-        for file_path in self.documents_dir.glob("**/*.pdf"):
-            try:
-                reader = PdfReader(str(file_path))
-                text_content = []
-                for page in reader.pages:
-                    page_text = page.extract_text()
-                    if page_text.strip():
-                        text_content.append(page_text)
-
-                if text_content:
-                    combined_text = "\n\n".join(text_content)
-                    relative_path = file_path.relative_to(self.documents_dir)
-                    documents.append(
-                        f"## {file_path.stem} ({relative_path.parent})\n\n{combined_text}\n\n"
-                    )
-                    logger.info(
-                        f"Loaded PDF document: {relative_path} ({len(reader.pages)} pages)"
-                    )
-                else:
-                    logger.warning(f"PDF document {file_path.name} appears to be empty")
-            except Exception as e:
-                logger.error(f"Failed to load PDF document {file_path}: {e}")
-
-        if not documents:
-            logger.warning("No documents loaded from any subdirectory")
-            return ""
-
-        combined = "\n".join(documents)
-        logger.info(
-            f"Loaded {len(documents)} documents recursively, total length: {len(combined)}"
-        )
-        return combined
 
     def _build_system_prompt(self) -> str:
         """

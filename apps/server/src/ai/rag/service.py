@@ -8,7 +8,7 @@ from typing import BinaryIO
 from openai import AsyncOpenAI
 
 from src.ai.openai.config import get_openai_settings
-from src.ai.rag.metadata import CodeDocumentMetadata, VectorStoreStatus
+from src.ai.rag.schemas import CodeDocumentMetadata, VectorStoreStatus
 from src.utils.logger import logger
 
 
