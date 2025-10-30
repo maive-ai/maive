@@ -279,14 +279,16 @@ class AIProvider(ABC):
         messages: list[ChatMessage],
         instructions: str | None = None,
         enable_web_search: bool = False,
+        vector_store_ids: list[str] | None = None,
         **kwargs,
     ) -> AsyncGenerator[ChatStreamChunk, None]:
-        """Stream chat responses with optional web search and citations.
+        """Stream chat responses with optional web search, file search, and citations.
 
         Args:
             messages: List of chat messages (user and assistant only, no system messages)
             instructions: Optional system prompt/instructions
             enable_web_search: Whether to enable web search capability
+            vector_store_ids: Optional list of vector store IDs for file search (RAG)
             **kwargs: Provider-specific options (temperature, max_tokens, etc.)
 
         Yields:
