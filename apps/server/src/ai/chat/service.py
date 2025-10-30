@@ -10,7 +10,7 @@ from typing import Any, AsyncGenerator
 
 from pypdf import PdfReader
 
-from src.ai.base import ChatStreamChunk
+from src.ai.base import ChatMessage, ChatStreamChunk
 from src.ai.openai.config import get_openai_settings
 from src.ai.providers.factory import AIProviderType, create_ai_provider
 from src.ai.rag.vector_store_service import VectorStoreService
@@ -40,7 +40,9 @@ class RoofingChatService:
             str: Vector store ID
         """
         if self._vector_store_id is None:
-            self._vector_store_id = await self._vector_store_service.get_or_create_vector_store()
+            self._vector_store_id = (
+                await self._vector_store_service.get_or_create_vector_store()
+            )
             logger.info(f"Initialized vector store for RAG: {self._vector_store_id}")
         return self._vector_store_id
 
@@ -163,10 +165,10 @@ class RoofingChatService:
             ChatStreamChunk: Response chunks with content and optional citations
         """
         try:
-            # Prepend system prompt
-            full_messages = [
-                {"role": "system", "content": self.system_prompt},
-                *messages,
+            # Convert dict messages to ChatMessage objects
+            chat_messages = [
+                ChatMessage(role=msg["role"], content=msg["content"])
+                for msg in messages
             ]
 
             # Get vector store ID for RAG
@@ -179,7 +181,8 @@ class RoofingChatService:
 
             # Stream response from provider with web search and file search
             async for chunk in self.provider.stream_chat(
-                messages=full_messages,
+                messages=chat_messages,
+                instructions=self.system_prompt,
                 enable_web_search=True,
                 vector_store_ids=[vector_store_id],
                 model=self.settings.model_name,
