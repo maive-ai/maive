@@ -10,11 +10,19 @@ from openai.types.responses import (
     EasyInputMessageParam,
     FileSearchToolParam,
     ResponseCompletedEvent,
+    ResponseContentPartAddedEvent,
+    ResponseCreatedEvent,
     ResponseFailedEvent,
+    ResponseInProgressEvent,
+    ResponseOutputItemAddedEvent,
+    ResponseOutputItemDoneEvent,
     ResponseOutputTextAnnotationAddedEvent,
     ResponseReasoningSummaryTextDeltaEvent,
     ResponseReasoningTextDeltaEvent,
     ResponseTextDeltaEvent,
+    ResponseWebSearchCallCompletedEvent,
+    ResponseWebSearchCallInProgressEvent,
+    ResponseWebSearchCallSearchingEvent,
     WebSearchToolParam,
 )
 from openai.types.responses.response_create_params import (
@@ -766,11 +774,25 @@ class OpenAIProvider(AIProvider):
                 finish_reason = None
 
                 try:
+                    # Handle lifecycle events (informational only, don't yield)
+                    if isinstance(event, (
+                        ResponseCreatedEvent,
+                        ResponseInProgressEvent,
+                        ResponseOutputItemAddedEvent,
+                        ResponseOutputItemDoneEvent,
+                        ResponseContentPartAddedEvent,
+                        ResponseWebSearchCallInProgressEvent,
+                        ResponseWebSearchCallSearchingEvent,
+                        ResponseWebSearchCallCompletedEvent,
+                    )):
+                        # These are status/lifecycle events, just continue
+                        continue
+
                     # Handle reasoning text delta events (reasoning models)
                     # Note: We don't stream the raw reasoning content, only log it
-                    if isinstance(event, ResponseReasoningTextDeltaEvent):
-                        logger.debug(
-                            f"Reasoning delta: {event.delta[:50]}... "
+                    elif isinstance(event, ResponseReasoningTextDeltaEvent):
+                        logger.info(
+                            f"[REASONING] Got reasoning delta: {event.delta[:100]}... "
                             f"(item_id={event.item_id}, content_index={event.content_index})"
                         )
                         # Skip yielding raw reasoning content
@@ -779,13 +801,16 @@ class OpenAIProvider(AIProvider):
                     # Handle reasoning summary delta events
                     elif isinstance(event, ResponseReasoningSummaryTextDeltaEvent):
                         reasoning_summary = event.delta
-                        logger.debug(
-                            f"Reasoning summary delta: {reasoning_summary[:50]}..."
+                        logger.info(
+                            f"[REASONING_SUMMARY] Got summary delta: {reasoning_summary[:100]}..."
                         )
 
                     # Handle text delta events (streaming output content)
                     elif isinstance(event, ResponseTextDeltaEvent):
                         content = event.delta
+                        logger.info(
+                            f"[TEXT] Got text delta: {content[:100] if content else '(empty)'}..."
+                        )
 
                     # Handle annotation events (citations from web search)
                     elif isinstance(event, ResponseOutputTextAnnotationAddedEvent):
@@ -858,18 +883,32 @@ class OpenAIProvider(AIProvider):
                     # Handle completion events
                     elif isinstance(event, ResponseCompletedEvent):
                         finish_reason = "completed"
+                        logger.info("[COMPLETED] Stream completed successfully")
 
                     elif isinstance(event, ResponseFailedEvent):
                         finish_reason = "failed"
+                        logger.error(f"[FAILED] Stream failed: {event}")
+
+                    else:
+                        # Log unhandled event types
+                        logger.warning(
+                            f"[UNHANDLED] Unhandled event type: {type(event).__name__}"
+                        )
 
                     # Yield chunk if there's content, reasoning summary, citations, or finish reason
                     if content or reasoning_summary or citations or finish_reason:
-                        yield ChatStreamChunk(
+                        chunk = ChatStreamChunk(
                             content=content,
                             reasoning_summary=reasoning_summary,
                             citations=citations,
                             finish_reason=finish_reason,
                         )
+                        logger.debug(
+                            f"[YIELD] Yielding chunk: content_len={len(content)}, "
+                            f"reasoning_len={len(reasoning_summary)}, "
+                            f"citations={len(citations)}, finish={finish_reason}"
+                        )
+                        yield chunk
 
                 except Exception as e:
                     logger.error(
