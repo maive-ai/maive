@@ -1,5 +1,5 @@
 import { makeAssistantToolUI } from '@assistant-ui/react';
-import { ShimmerText } from '@/components/ui/shimmer-text';
+import ShinyText from '@/components/ShinyText';
 
 export const FileSearchToolUI = makeAssistantToolUI({
   toolName: 'file_search',
@@ -8,9 +8,7 @@ export const FileSearchToolUI = makeAssistantToolUI({
     if (!result) {
       return (
         <div className="mb-2">
-          <ShimmerText className="text-sm text-muted-foreground">
-            Finding the latest data...
-          </ShimmerText>
+          <ShinyText text="Finding the latest data..." className="text-sm text-muted-foreground" />
         </div>
       );
     }
