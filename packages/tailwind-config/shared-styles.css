@@ -10,7 +10,7 @@
   --color-primary-300: #dee2e6;
   --color-primary-400: #ced4da;
   --color-primary-500: #adb5bd;
-  --Rprimary-600: #424346; /* Iron Fog */
+  --color-primary-600: #424346; /* Iron Fog */
   --color-primary-700: #343a40;
   --color-primary-800: #212529;
   --color-primary-900: #0E1317; /* Midnight Onix - primary text color */
@@ -202,15 +202,6 @@
   }
 }
 
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
 @keyframes shine {
   0% {
     background-position: 100%;
@@ -275,10 +266,6 @@
 
 @utility duration-500 {
   animation-duration: 500ms;
-}
-
-@utility animate-shimmer {
-  animation: shimmer 2s infinite linear;
 }
 
 @utility animate-shine {
