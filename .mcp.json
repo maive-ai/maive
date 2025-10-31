@@ -96,6 +96,13 @@
         "@assistant-ui/mcp-docs-server"
       ],
       "env": {}
+    },
+    "shadcn": {
+      "command": "npx",
+      "args": [
+        "shadcn@latest",
+        "mcp"
+      ]
     }
   }
 }
