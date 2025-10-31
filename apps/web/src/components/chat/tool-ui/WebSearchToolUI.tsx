@@ -8,7 +8,7 @@ export const WebSearchToolUI = makeAssistantToolUI({
     if (!result) {
       return (
         <div className="mb-2">
-          <ShinyText text="Searching the web..." className="text-sm text-muted-foreground" />
+          <ShinyText text="Searching the web..." className="text-base leading-7 text-muted-foreground" />
         </div>
       );
     }
