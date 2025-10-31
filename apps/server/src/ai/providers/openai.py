@@ -816,17 +816,9 @@ class OpenAIProvider(AIProvider):
                         )
 
                     elif isinstance(event, ResponseWebSearchCallSearchingEvent):
-                        item_id = event.item_id
-                        logger.info(f"[WEB_SEARCH] Searching... (item_id={item_id})")
-                        # Continue yielding tool call in running state (no result yet)
-                        tool_calls_to_yield.append(
-                            ToolCall(
-                                tool_call_id=item_id,
-                                tool_name=ToolName.WEB_SEARCH,
-                                args={},
-                                result=None,
-                            )
-                        )
+                        # Just log, don't yield - prevents flickering
+                        logger.info(f"[WEB_SEARCH] Searching... (item_id={event.item_id})")
+                        continue
 
                     elif isinstance(event, ResponseWebSearchCallCompletedEvent):
                         item_id = event.item_id
@@ -860,19 +852,11 @@ class OpenAIProvider(AIProvider):
                         )
 
                     elif isinstance(event, ResponseFileSearchCallSearchingEvent):
-                        item_id = event.item_id
+                        # Just log, don't yield - prevents flickering
                         logger.info(
-                            f"[FILE_SEARCH] Searching files... (item_id={item_id})"
+                            f"[FILE_SEARCH] Searching files... (item_id={event.item_id})"
                         )
-                        # Continue yielding tool call in running state (no result yet)
-                        tool_calls_to_yield.append(
-                            ToolCall(
-                                tool_call_id=item_id,
-                                tool_name=ToolName.FILE_SEARCH,
-                                args={},
-                                result=None,
-                            )
-                        )
+                        continue
 
                     elif isinstance(event, ResponseFileSearchCallCompletedEvent):
                         item_id = event.item_id

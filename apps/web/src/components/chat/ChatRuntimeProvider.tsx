@@ -42,6 +42,7 @@ const chatAdapter: ChatModelAdapter = {
       const citations: Citation[] = [];
       const toolCalls: Map<string, any> = new Map();
       let currentEventType = 'message';
+      let currentActiveToolCallId: string | null = null; // Track the currently active tool
 
       while (true) {
         if (abortSignal?.aborted) {
@@ -109,25 +110,38 @@ const chatAdapter: ChatModelAdapter = {
               // Parse tool call event
               try {
                 const toolCall = JSON.parse(data);
-                toolCalls.set(toolCall.tool_call_id, toolCall);
+                const existingToolCall = toolCalls.get(toolCall.tool_call_id);
 
-                // Yield current state with accumulated text and tool calls
-                const content: any[] = [];
+                // If this is a new tool call starting (InProgress event)
+                if (!existingToolCall && !toolCall.result) {
+                  // This is a new tool starting - update the active tool
+                  currentActiveToolCallId = toolCall.tool_call_id;
 
-                if (accumulatedText) {
-                  content.push({ type: 'text', text: accumulatedText });
+                  // Mark all previous tools as complete
+                  toolCalls.forEach((tc) => {
+                    tc.result = { status: 'complete' };
+                  });
                 }
 
-                // Add all tool calls to content
-                toolCalls.forEach((tc) => {
-                  content.push({
-                    type: 'tool-call',
-                    toolCallId: tc.tool_call_id,
-                    toolName: tc.tool_name,
-                    args: tc.args,
-                    result: tc.result,
-                  });
-                });
+                // Store the tool call
+                toolCalls.set(toolCall.tool_call_id, toolCall);
+
+                // Build content - only show the currently active tool
+                const content: any[] = [];
+
+                if (currentActiveToolCallId) {
+                  const activeTool = toolCalls.get(currentActiveToolCallId);
+                  if (activeTool) {
+                    // Always show active tool without result (keeps shimmer visible)
+                    content.push({
+                      type: 'tool-call',
+                      toolCallId: activeTool.tool_call_id,
+                      toolName: activeTool.tool_name,
+                      args: activeTool.args,
+                      result: null, // Always null to keep shimmer showing
+                    });
+                  }
+                }
 
                 if (content.length > 0) {
                   yield { content };
@@ -146,6 +160,14 @@ const chatAdapter: ChatModelAdapter = {
             } else if (currentEventType === 'error') {
               throw new Error(data);
             } else if (currentEventType === 'reasoning_summary') {
+              // Clear active tool - reasoning summary replaces tool display
+              currentActiveToolCallId = null;
+
+              // Mark all tool calls as complete
+              toolCalls.forEach((tc) => {
+                tc.result = { status: 'complete' };
+              });
+
               // Skip reasoning summary for now
               // TODO: Display reasoning summary ephemerally
               continue;
@@ -154,6 +176,16 @@ const chatAdapter: ChatModelAdapter = {
               const unescapedData = data.replace(/\\n/g, '\n');
               accumulatedText += unescapedData;
 
+              // Clear active tool when text arrives
+              currentActiveToolCallId = null;
+
+              // Mark all tool calls as complete when text arrives
+              toolCalls.forEach((tc) => {
+                if (!tc.result) {
+                  tc.result = { status: 'complete' };
+                }
+              });
+
               // Build content array with text and tool calls
               const content: any[] = [];
 
@@ -161,7 +193,7 @@ const chatAdapter: ChatModelAdapter = {
                 content.push({ type: 'text', text: accumulatedText });
               }
 
-              // Add tool calls to content
+              // Add all completed tool calls to content
               toolCalls.forEach((toolCall) => {
                 content.push({
                   type: 'tool-call',
