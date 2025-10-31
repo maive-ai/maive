@@ -7,7 +7,6 @@ import { Thread } from './Thread';
 import { streamRoofingChat } from '@/clients/ai/chat';
 import { WebSearchToolUI } from './tool-ui/WebSearchToolUI';
 import { FileSearchToolUI } from './tool-ui/FileSearchToolUI';
-import { ShimmerText } from '@/components/ui/shimmer-text';
 
 interface Citation {
   url: string;

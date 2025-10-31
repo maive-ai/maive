@@ -211,6 +211,15 @@
   }
 }
 
+@keyframes shine {
+  0% {
+    background-position: 100%;
+  }
+  100% {
+    background-position: -100%;
+  }
+}
+
 /* Animation utilities */
 @utility animate-in {
   animation-fill-mode: both;
@@ -270,4 +279,8 @@
 
 @utility animate-shimmer {
   animation: shimmer 2s infinite linear;
+}
+
+@utility animate-shine {
+  animation: shine 5s linear infinite;
 }

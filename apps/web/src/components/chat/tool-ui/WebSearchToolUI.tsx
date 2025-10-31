@@ -1,5 +1,5 @@
 import { makeAssistantToolUI } from '@assistant-ui/react';
-import { ShimmerText } from '@/components/ui/shimmer-text';
+import ShinyText from '@/components/ShinyText';
 
 export const WebSearchToolUI = makeAssistantToolUI({
   toolName: 'web_search',
@@ -8,9 +8,7 @@ export const WebSearchToolUI = makeAssistantToolUI({
     if (!result) {
       return (
         <div className="mb-2">
-          <ShimmerText className="text-sm text-muted-foreground">
-            Searching the web...
-          </ShimmerText>
+          <ShinyText text="Searching the web..." className="text-sm text-muted-foreground" />
         </div>
       );
     }
