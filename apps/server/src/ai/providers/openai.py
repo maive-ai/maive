@@ -10,12 +10,33 @@ from openai.types.responses import (
     EasyInputMessageParam,
     FileSearchToolParam,
     ResponseCompletedEvent,
+    ResponseContentPartAddedEvent,
+    ResponseCreatedEvent,
     ResponseFailedEvent,
+    ResponseFileSearchCallCompletedEvent,
+    ResponseFileSearchCallInProgressEvent,
+    ResponseFileSearchCallSearchingEvent,
+    ResponseInProgressEvent,
+    ResponseOutputItemAddedEvent,
+    ResponseOutputItemDoneEvent,
     ResponseOutputTextAnnotationAddedEvent,
+    ResponseReasoningSummaryTextDeltaEvent,
+    ResponseReasoningTextDeltaEvent,
     ResponseTextDeltaEvent,
+    ResponseWebSearchCallCompletedEvent,
+    ResponseWebSearchCallInProgressEvent,
+    ResponseWebSearchCallSearchingEvent,
     WebSearchToolParam,
 )
+from openai.types.responses.response_create_params import (
+    Reasoning as ReasoningParam,
+)
+from openai.types.responses.response_create_params import (
+    ResponseCreateParamsStreaming,
+    ResponseTextConfigParam,
+)
 from openai.types.responses.response_output_text import AnnotationURLCitation
+from openai.types.shared import ReasoningEffort
 from pydantic import BaseModel
 
 from src.ai.base import (
@@ -26,8 +47,10 @@ from src.ai.base import (
     ContentAnalysisRequest,
     ContentGenerationResult,
     FileMetadata,
-    ResponseStreamParams,
     SearchCitation,
+    ToolCall,
+    ToolName,
+    ToolStatus,
     TranscriptionResult,
 )
 from src.ai.openai.config import get_openai_settings
@@ -604,42 +627,61 @@ class OpenAIProvider(AIProvider):
 
         Uses OpenAI's Responses API which supports web search and file search tools.
 
+        For reasoning models (GPT-5, o1, etc.), use reasoning-specific parameters:
+        - reasoning_effort: ReasoningEffort ("minimal", "low", "medium", "high")
+        - text_verbosity: Literal["low", "medium", "high"]
+        - max_output_tokens: int (instead of max_tokens)
+
+        For non-reasoning models, use standard parameters:
+        - temperature: float
+        - max_tokens: int
+
         Args:
             messages: List of chat messages (user and assistant only, no system messages)
             instructions: Optional system prompt/instructions
             enable_web_search: Whether to enable web search capability
             vector_store_ids: Optional list of vector store IDs for file search
-            **kwargs: Provider-specific options (temperature, max_tokens, model, etc.)
+            **kwargs: Provider-specific options:
+                - model: Model name (default from settings)
+                - reasoning_effort: ReasoningEffort for reasoning models
+                - text_verbosity: Text verbosity for reasoning models
+                - max_output_tokens: Max tokens for reasoning models
+                - temperature: Temperature for non-reasoning models (not compatible with reasoning models)
+                - max_tokens: Max tokens for non-reasoning models
 
         Yields:
-            ChatStreamChunk: Stream chunks with content and optional citations
+            ChatStreamChunk: Stream chunks with content, reasoning, and optional citations
         """
         try:
             client = self._get_client()
 
             model = kwargs.get("model", self.settings.model_name)
-            temperature = kwargs.get("temperature", self.settings.temperature)
-            max_tokens = kwargs.get("max_tokens", self.settings.max_tokens)
+
+            # Detect if this is a reasoning model
+            is_reasoning_model = any(
+                model.startswith(prefix) for prefix in ["gpt-5", "o1", "o3"]
+            )
 
             logger.info(
                 f"Streaming chat with web_search={enable_web_search}, "
-                f"file_search={bool(vector_store_ids)}, model={model}"
+                f"file_search={bool(vector_store_ids)}, model={model}, "
+                f"is_reasoning={is_reasoning_model}"
             )
 
             # Configure tools (Responses API format)
-            tools = []
+            tools: list[WebSearchToolParam | FileSearchToolParam] = []
 
             # Add web search if enabled
             if enable_web_search:
                 tools.append(WebSearchToolParam(type="web_search"))
 
             # Add file search if vector store IDs provided
-            if vector_store_ids:
-                tools.append(
-                    FileSearchToolParam(
-                        type="file_search", vector_store_ids=vector_store_ids
-                    )
-                )
+            # if vector_store_ids:
+            #     tools.append(
+            #         FileSearchToolParam(
+            #             type="file_search", vector_store_ids=vector_store_ids
+            #         )
+            #     )
 
             # Convert messages to Responses API format (using OpenAI's official type)
             input_items: list[EasyInputMessageParam] = [
@@ -650,41 +692,210 @@ class OpenAIProvider(AIProvider):
                 for msg in messages
             ]
 
-            # Create streaming response using Responses API with validated params
-            stream_params = ResponseStreamParams(
-                model=model,
-                input=input_items,  # type: ignore[arg-type]
-                temperature=temperature,
-                max_output_tokens=max_tokens,
-                stream=True,
-                instructions=instructions,
-                tools=tools if tools else None,  # type: ignore[arg-type]
-            )
+            # Build streaming params using OpenAI's TypedDict
+            stream_params: ResponseCreateParamsStreaming = {
+                "model": model,  # type: ignore[typeddict-item]
+                "input": input_items,  # type: ignore[typeddict-item]
+                "stream": True,
+            }
+
+            # Add optional parameters
+            if instructions:
+                stream_params["instructions"] = instructions
+
+            if tools:
+                stream_params["tools"] = tools  # type: ignore[typeddict-item]
+
+            # Add model-specific parameters
+            if is_reasoning_model:
+                # Reasoning models use different parameters
+                logger.info(f"Using reasoning model: {model}")
+
+                # Add reasoning configuration (use default from config if not specified)
+                reasoning_effort: ReasoningEffort | None = kwargs.get(
+                    "reasoning_effort", self.settings.reasoning_effort
+                )
+                if reasoning_effort:
+                    stream_params["reasoning"] = ReasoningParam(effort=reasoning_effort)
+
+                # Add text verbosity (use default from config if not specified)
+                text_verbosity = kwargs.get(
+                    "text_verbosity", self.settings.text_verbosity
+                )
+                if text_verbosity:
+                    stream_params["text"] = ResponseTextConfigParam(
+                        verbosity=text_verbosity
+                    )
+
+                # Use max_output_tokens for reasoning models
+                max_output_tokens = kwargs.get(
+                    "max_output_tokens", self.settings.max_tokens
+                )
+                if max_output_tokens:
+                    stream_params["max_output_tokens"] = max_output_tokens
+
+                # Log if incompatible parameters are provided
+                if "temperature" in kwargs:
+                    logger.warning(
+                        f"temperature parameter ignored for reasoning model {model}"
+                    )
+                if "top_p" in kwargs:
+                    logger.warning(
+                        f"top_p parameter ignored for reasoning model {model}"
+                    )
+                if "logprobs" in kwargs:
+                    logger.warning(
+                        f"logprobs parameter ignored for reasoning model {model}"
+                    )
+            else:
+                # Non-reasoning models use standard parameters
+                logger.info(f"Using standard model: {model}")
+                temperature = kwargs.get("temperature", self.settings.temperature)
+                max_tokens = kwargs.get("max_tokens", self.settings.max_tokens)
+
+                if temperature is not None:
+                    stream_params["temperature"] = temperature
+                if max_tokens:
+                    stream_params["max_output_tokens"] = max_tokens
 
             logger.debug(
-                f"Stream params: model={model}, input_items={len(input_items)}, "
+                f"Stream params: model={model}, reasoning_effort={reasoning_effort}, input_items={len(input_items)}, "
                 f"has_instructions={bool(instructions)}, tools={bool(tools)}"
             )
 
-            stream = await client.responses.create(
-                **stream_params.model_dump(exclude_none=True)
-            )
+            # Create streaming response using Responses API
+            logger.info("Creating stream with OpenAI Responses API...")
+            stream = await client.responses.create(**stream_params)
+            logger.info("Stream created successfully, starting to read events...")
 
             # Track citations from web search
             accumulated_citations: list[SearchCitation] = []
             # Track file citations and optionally log their content previews
             seen_file_ids: set[str] = set()
 
+            event_count = 0
             async for event in stream:
+                event_count += 1
+                logger.debug(f"Received event #{event_count}: {type(event).__name__}")
                 # Handle different event types from Responses API using official types
                 content = ""
+                reasoning_summary = ""
                 citations: list[SearchCitation] = []
                 finish_reason = None
+                tool_calls_to_yield: list[ToolCall] = []
 
                 try:
-                    # Handle text delta events (streaming content)
-                    if isinstance(event, ResponseTextDeltaEvent):
+                    # Handle lifecycle events (informational only, don't yield)
+                    if isinstance(
+                        event,
+                        (
+                            ResponseCreatedEvent,
+                            ResponseInProgressEvent,
+                            ResponseOutputItemAddedEvent,
+                            ResponseOutputItemDoneEvent,
+                            ResponseContentPartAddedEvent,
+                        ),
+                    ):
+                        # These are status/lifecycle events, just continue
+                        continue
+
+                    # Handle web search tool events
+                    elif isinstance(event, ResponseWebSearchCallInProgressEvent):
+                        item_id = event.item_id
+                        logger.info(
+                            f"[WEB_SEARCH] Web search started (item_id={item_id})"
+                        )
+                        # Yield tool call in running state (no result yet)
+                        tool_calls_to_yield.append(
+                            ToolCall(
+                                tool_call_id=item_id,
+                                tool_name=ToolName.WEB_SEARCH,
+                                args={},
+                                result=None,
+                            )
+                        )
+
+                    elif isinstance(event, ResponseWebSearchCallSearchingEvent):
+                        # Just log, don't yield - prevents flickering
+                        logger.info(f"[WEB_SEARCH] Searching... (item_id={event.item_id})")
+                        continue
+
+                    elif isinstance(event, ResponseWebSearchCallCompletedEvent):
+                        item_id = event.item_id
+                        logger.info(
+                            f"[WEB_SEARCH] Web search completed (item_id={item_id})"
+                        )
+                        # Yield tool call with completed result
+                        tool_calls_to_yield.append(
+                            ToolCall(
+                                tool_call_id=item_id,
+                                tool_name=ToolName.WEB_SEARCH,
+                                args={},
+                                result={"status": ToolStatus.COMPLETE.value},
+                            )
+                        )
+
+                    # Handle file search tool events
+                    elif isinstance(event, ResponseFileSearchCallInProgressEvent):
+                        item_id = event.item_id
+                        logger.info(
+                            f"[FILE_SEARCH] File search started (item_id={item_id})"
+                        )
+                        # Yield tool call in running state (no result yet)
+                        tool_calls_to_yield.append(
+                            ToolCall(
+                                tool_call_id=item_id,
+                                tool_name=ToolName.FILE_SEARCH,
+                                args={},
+                                result=None,
+                            )
+                        )
+
+                    elif isinstance(event, ResponseFileSearchCallSearchingEvent):
+                        # Just log, don't yield - prevents flickering
+                        logger.info(
+                            f"[FILE_SEARCH] Searching files... (item_id={event.item_id})"
+                        )
+                        continue
+
+                    elif isinstance(event, ResponseFileSearchCallCompletedEvent):
+                        item_id = event.item_id
+                        logger.info(
+                            f"[FILE_SEARCH] File search completed (item_id={item_id})"
+                        )
+                        # Yield tool call with completed result
+                        tool_calls_to_yield.append(
+                            ToolCall(
+                                tool_call_id=item_id,
+                                tool_name=ToolName.FILE_SEARCH,
+                                args={},
+                                result={"status": ToolStatus.COMPLETE.value},
+                            )
+                        )
+
+                    # Handle reasoning text delta events (reasoning models)
+                    # Note: We don't stream the raw reasoning content, only log it
+                    elif isinstance(event, ResponseReasoningTextDeltaEvent):
+                        logger.info(
+                            f"[REASONING] Got reasoning delta: {event.delta[:100]}... "
+                            f"(item_id={event.item_id}, content_index={event.content_index})"
+                        )
+                        # Skip yielding raw reasoning content
+                        continue
+
+                    # Handle reasoning summary delta events
+                    elif isinstance(event, ResponseReasoningSummaryTextDeltaEvent):
+                        reasoning_summary = event.delta
+                        logger.info(
+                            f"[REASONING_SUMMARY] Got summary delta: {reasoning_summary[:100]}..."
+                        )
+
+                    # Handle text delta events (streaming output content)
+                    elif isinstance(event, ResponseTextDeltaEvent):
                         content = event.delta
+                        logger.info(
+                            f"[TEXT] Got text delta: {content[:100] if content else '(empty)'}..."
+                        )
 
                     # Handle annotation events (citations from web search)
                     elif isinstance(event, ResponseOutputTextAnnotationAddedEvent):
@@ -757,17 +968,40 @@ class OpenAIProvider(AIProvider):
                     # Handle completion events
                     elif isinstance(event, ResponseCompletedEvent):
                         finish_reason = "completed"
+                        logger.info("[COMPLETED] Stream completed successfully")
 
                     elif isinstance(event, ResponseFailedEvent):
                         finish_reason = "failed"
+                        logger.error(f"[FAILED] Stream failed: {event}")
 
-                    # Yield chunk if there's content, citations, or finish reason
-                    if content or citations or finish_reason:
-                        yield ChatStreamChunk(
+                    else:
+                        # Log unhandled event types
+                        logger.warning(
+                            f"[UNHANDLED] Unhandled event type: {type(event).__name__}"
+                        )
+
+                    # Yield chunk if there's content, reasoning summary, tool calls, citations, or finish reason
+                    if (
+                        content
+                        or reasoning_summary
+                        or tool_calls_to_yield
+                        or citations
+                        or finish_reason
+                    ):
+                        chunk = ChatStreamChunk(
                             content=content,
+                            reasoning_summary=reasoning_summary,
+                            tool_calls=tool_calls_to_yield,
                             citations=citations,
                             finish_reason=finish_reason,
                         )
+                        logger.debug(
+                            f"[YIELD] Yielding chunk: content_len={len(content)}, "
+                            f"reasoning_len={len(reasoning_summary)}, "
+                            f"tool_calls={len(tool_calls_to_yield)}, "
+                            f"citations={len(citations)}, finish={finish_reason}"
+                        )
+                        yield chunk
 
                 except Exception as e:
                     logger.error(

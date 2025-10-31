@@ -1,11 +1,27 @@
 """Base classes for AI provider abstraction."""
 
 from abc import ABC, abstractmethod
+from enum import Enum
 from typing import Any, AsyncGenerator, Literal, TypeVar
 
 from pydantic import BaseModel
 
 T = TypeVar("T", bound=BaseModel)
+
+
+class ToolName(str, Enum):
+    """Enum for tool names used in the system."""
+
+    WEB_SEARCH = "web_search"
+    FILE_SEARCH = "file_search"
+
+
+class ToolStatus(str, Enum):
+    """Enum for tool execution status."""
+
+    RUNNING = "running"
+    SEARCHING = "searching"
+    COMPLETE = "complete"
 
 
 class FileMetadata(BaseModel):
@@ -71,14 +87,31 @@ class ResponseStreamParams(BaseModel):
     model_config = {"extra": "forbid"}
 
 
+class ToolCall(BaseModel):
+    """Tool call information for assistant-ui integration.
+
+    Represents a function call made by the AI with its arguments and optional result.
+    """
+
+    tool_call_id: str
+    tool_name: ToolName
+    args: dict[str, Any]
+    result: dict[str, Any] | None = None
+
+
 class ChatStreamChunk(BaseModel):
     """Chunk from streaming chat response with optional citations.
 
     This model represents a piece of a streaming response that may include
-    both content text and citations from web search results.
+    both content text, reasoning summary, and citations from web search results.
+    For reasoning models, reasoning_summary contains the summary of the model's
+    internal reasoning process.
+    Tool calls represent function calls made by the AI.
     """
 
     content: str = ""
+    reasoning_summary: str = ""
+    tool_calls: list[ToolCall] = []
     citations: list[SearchCitation] = []
     finish_reason: str | None = None
 
@@ -91,7 +124,9 @@ class SSEEvent(BaseModel):
     """
 
     data: str
-    event: Literal["citation", "done", "error"] | None = None
+    event: Literal[
+        "citation", "done", "error", "tool_call", "reasoning_summary"
+    ] | None = None
     id: str | None = None
     retry: int | None = None
 
