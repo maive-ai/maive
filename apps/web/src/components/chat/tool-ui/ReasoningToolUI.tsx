@@ -1,5 +1,5 @@
-import { makeAssistantToolUI } from '@assistant-ui/react';
 import ShinyText from '@/components/ShinyText';
+import { makeAssistantToolUI } from '@assistant-ui/react';
 
 // Extract title from reasoning summary
 // Format: "**Title**\n\nDetailed reasoning..."
@@ -34,8 +34,9 @@ export const ReasoningToolUI = makeAssistantToolUI({
   render: ({ args, result }) => {
     // Show shimmer with reasoning summary while thinking (no result yet)
     if (!result) {
+      const providedTitle = typeof args?.title === 'string' ? args.title : '';
       const fullSummary = typeof args?.summary === 'string' ? args.summary : '';
-      const title = extractReasoningTitle(fullSummary);
+      const title = extractReasoningTitle(providedTitle || fullSummary);
 
       return (
         <div className="mb-2">
