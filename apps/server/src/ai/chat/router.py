@@ -79,20 +79,11 @@ async def stream_roofing_chat(
         """Generate SSE events from chat stream with tool calls, citations and reasoning."""
         try:
             async for chunk in chat_service.stream_chat_response(messages):
-                # Send tool calls if present
+                # Send tool calls if present (includes reasoning summaries)
                 for tool_call in chunk.tool_calls:
                     yield SSEEvent(
                         event="tool_call",
                         data=tool_call.model_dump_json(),
-                    ).format()
-
-                # Send reasoning summary if present (ephemeral, replaced on next chunk)
-                if chunk.reasoning_summary:
-                    # Escape newlines in reasoning summary for SSE format
-                    escaped_reasoning = chunk.reasoning_summary.replace("\n", "\\n")
-                    yield SSEEvent(
-                        event="reasoning_summary",
-                        data=escaped_reasoning,
                     ).format()
 
                 # Send content if present

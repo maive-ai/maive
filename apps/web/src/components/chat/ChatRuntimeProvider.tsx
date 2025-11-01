@@ -7,6 +7,7 @@ import { Thread } from './Thread';
 import { streamRoofingChat } from '@/clients/ai/chat';
 import { WebSearchToolUI } from './tool-ui/WebSearchToolUI';
 import { FileSearchToolUI } from './tool-ui/FileSearchToolUI';
+import { ReasoningToolUI } from './tool-ui/ReasoningToolUI';
 
 interface Citation {
   url: string;
@@ -111,15 +112,31 @@ const chatAdapter: ChatModelAdapter = {
                 const toolCall = JSON.parse(data);
                 const existingToolCall = toolCalls.get(toolCall.tool_call_id);
 
-                // If this is a new tool call starting (InProgress event)
-                if (!existingToolCall && !toolCall.result) {
-                  // This is a new tool starting - update the active tool
-                  currentActiveToolCallId = toolCall.tool_call_id;
+                // Handle tool call lifecycle:
+                // 1. New tool starting (no existing call, no result) - becomes active
+                // 2. Tool update (exists, no result) - update and keep active
+                // 3. Tool complete (has result) - mark complete
 
-                  // Mark all previous tools as complete
-                  toolCalls.forEach((tc) => {
-                    tc.result = { status: 'complete' };
-                  });
+                if (!toolCall.result) {
+                  // Tool is starting or being updated (no result yet)
+
+                  // Special handling for reasoning: new reasoning replaces old reasoning
+                  if (toolCall.tool_name === 'reasoning') {
+                    // Mark all previous reasoning calls as complete
+                    toolCalls.forEach((tc) => {
+                      if (tc.tool_name === 'reasoning' && tc.tool_call_id !== toolCall.tool_call_id) {
+                        tc.result = { status: 'complete' };
+                      }
+                    });
+                  } else if (!existingToolCall) {
+                    // For non-reasoning tools, mark all previous tools as complete only if this is new
+                    toolCalls.forEach((tc) => {
+                      tc.result = { status: 'complete' };
+                    });
+                  }
+
+                  // This tool is now active
+                  currentActiveToolCallId = toolCall.tool_call_id;
                 }
 
                 // Store the tool call
@@ -130,7 +147,7 @@ const chatAdapter: ChatModelAdapter = {
 
                 if (currentActiveToolCallId) {
                   const activeTool = toolCalls.get(currentActiveToolCallId);
-                  if (activeTool) {
+                  if (activeTool && !activeTool.result) {
                     // Always show active tool without result (keeps shimmer visible)
                     content.push({
                       type: 'tool-call',
@@ -158,18 +175,6 @@ const chatAdapter: ChatModelAdapter = {
               }
             } else if (currentEventType === 'error') {
               throw new Error(data);
-            } else if (currentEventType === 'reasoning_summary') {
-              // Clear active tool - reasoning summary replaces tool display
-              currentActiveToolCallId = null;
-
-              // Mark all tool calls as complete
-              toolCalls.forEach((tc) => {
-                tc.result = { status: 'complete' };
-              });
-
-              // Skip reasoning summary for now
-              // TODO: Display reasoning summary ephemerally
-              continue;
             } else {
               // Regular message content
               const unescapedData = data.replace(/\\n/g, '\n');
@@ -229,6 +234,7 @@ export function ChatRuntimeProvider() {
     <AssistantRuntimeProvider runtime={runtime}>
       <WebSearchToolUI />
       <FileSearchToolUI />
+      <ReasoningToolUI />
       <div className="h-full">
         <Thread />
       </div>

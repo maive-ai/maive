@@ -14,6 +14,7 @@ class ToolName(str, Enum):
 
     WEB_SEARCH = "web_search"
     FILE_SEARCH = "file_search"
+    REASONING = "reasoning"
 
 
 class ToolStatus(str, Enum):
