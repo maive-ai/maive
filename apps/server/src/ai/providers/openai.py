@@ -2,6 +2,7 @@
 
 import base64
 import json
+import re
 from pathlib import Path
 from typing import AsyncGenerator, TypeVar
 
@@ -47,6 +48,7 @@ from src.ai.base import (
     ContentAnalysisRequest,
     ContentGenerationResult,
     FileMetadata,
+    ReasoningSummary,
     SearchCitation,
     ToolCall,
     ToolName,
@@ -89,6 +91,31 @@ class OpenAIProvider(AIProvider):
                     f"Failed to authenticate with OpenAI: {e}", e
                 )
         return self._client
+
+    @staticmethod
+    def _extract_reasoning_title(summary: str) -> str:
+        """Extract the bolded title from a reasoning summary."""
+        if not summary:
+            return "Thinking..."
+
+        match = re.search(r"\*\*(.+?)\*\*", summary, re.DOTALL)
+        if match:
+            return match.group(1).strip()
+
+        for line in summary.splitlines():
+            stripped_line = line.strip()
+            if not stripped_line:
+                continue
+
+            if stripped_line.startswith("**"):
+                stripped_line = stripped_line.lstrip("*").strip()
+            if stripped_line.endswith("**"):
+                stripped_line = stripped_line.rstrip("*").strip()
+
+            if stripped_line:
+                return stripped_line
+
+        return "Thinking..."
 
     async def upload_file(self, file_path: str, **kwargs) -> FileMetadata:
         """Upload a file to OpenAI.
@@ -775,8 +802,9 @@ class OpenAIProvider(AIProvider):
             accumulated_citations: list[SearchCitation] = []
             # Track file citations and optionally log their content previews
             seen_file_ids: set[str] = set()
-            # Track accumulated reasoning summary text and ID
-            accumulated_reasoning_summary = ""
+            # Track reasoning summary state
+            current_reasoning_summary = ""
+            current_reasoning_id: str | None = None
             reasoning_summary_count = 0  # Counter for unique reasoning IDs
 
             event_count = 0
@@ -785,10 +813,10 @@ class OpenAIProvider(AIProvider):
                 logger.debug(f"Received event #{event_count}: {type(event).__name__}")
                 # Handle different event types from Responses API using official types
                 content = ""
-                reasoning_summary = ""
                 citations: list[SearchCitation] = []
                 finish_reason = None
                 tool_calls_to_yield: list[ToolCall] = []
+                reasoning_summaries_to_yield: list[ReasoningSummary] = []
 
                 try:
                     # Handle lifecycle events (informational only, don't yield)
@@ -893,43 +921,42 @@ class OpenAIProvider(AIProvider):
 
                     # Handle reasoning summary delta events
                     elif isinstance(event, ResponseReasoningSummaryTextDeltaEvent):
-                        reasoning_summary = event.delta
+                        summary_delta = event.delta or ""
                         logger.info(
-                            f"[REASONING_SUMMARY] Got summary delta: {reasoning_summary[:100] if reasoning_summary else '(empty)'}..."
+                            f"[REASONING_SUMMARY] Got summary delta: {summary_delta[:100] if summary_delta else '(empty)'}..."
                         )
 
-                        # Check if this is a new reasoning summary (starts with **)
-                        # If accumulated text already has ** AND we get a new delta starting with **, it's a new summary
-                        is_new_summary = (
-                            accumulated_reasoning_summary
-                            and "**" in accumulated_reasoning_summary
-                            and reasoning_summary.strip().startswith("**")
-                        )
-
-                        if is_new_summary:
-                            # New reasoning summary starting - reset and increment counter
+                        if current_reasoning_id is None:
                             reasoning_summary_count += 1
-                            accumulated_reasoning_summary = reasoning_summary
+                            current_reasoning_id = (
+                                f"reasoning_{reasoning_summary_count}"
+                            )
+                            current_reasoning_summary = summary_delta
+                        elif (
+                            summary_delta.strip().startswith("**")
+                            and current_reasoning_summary
+                        ):
+                            reasoning_summary_count += 1
+                            current_reasoning_id = (
+                                f"reasoning_{reasoning_summary_count}"
+                            )
+                            current_reasoning_summary = summary_delta
                             logger.info(
                                 f"[REASONING_SUMMARY] New summary detected (#{reasoning_summary_count})"
                             )
                         else:
-                            # Continue accumulating current summary
-                            accumulated_reasoning_summary += reasoning_summary
+                            current_reasoning_summary += summary_delta
 
-                        # Generate unique ID for this reasoning summary
-                        reasoning_tool_call_id = f"reasoning_{reasoning_summary_count}"
-
-                        # Send full summary to frontend - it will extract the title
-                        # Format: "**Title**\n\nDetailed reasoning..."
-                        tool_calls_to_yield.append(
-                            ToolCall(
-                                tool_call_id=reasoning_tool_call_id,
-                                tool_name=ToolName.REASONING,
-                                args={"summary": accumulated_reasoning_summary},
-                                result=None,  # No result yet, keeps shimmer visible
+                        if current_reasoning_id:
+                            reasoning_summaries_to_yield.append(
+                                ReasoningSummary(
+                                    id=current_reasoning_id,
+                                    title=self._extract_reasoning_title(
+                                        current_reasoning_summary
+                                    ),
+                                    summary=current_reasoning_summary,
+                                )
                             )
-                        )
 
                     # Handle text delta events (streaming output content)
                     elif isinstance(event, ResponseTextDeltaEvent):
@@ -1022,12 +1049,17 @@ class OpenAIProvider(AIProvider):
                         )
 
                     # Yield chunk if there's content, tool calls, citations, or finish reason
-                    # Note: reasoning_summary is now sent as a tool call, not a separate field
-                    if content or tool_calls_to_yield or citations or finish_reason:
+                    if (
+                        content
+                        or tool_calls_to_yield
+                        or reasoning_summaries_to_yield
+                        or citations
+                        or finish_reason
+                    ):
                         chunk = ChatStreamChunk(
                             content=content,
-                            reasoning_summary="",  # No longer used, sent as tool call
                             tool_calls=tool_calls_to_yield,
+                            reasoning_summaries=reasoning_summaries_to_yield,
                             citations=citations,
                             finish_reason=finish_reason,
                         )
