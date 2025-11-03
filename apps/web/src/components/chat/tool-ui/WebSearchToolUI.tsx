@@ -1,5 +1,5 @@
-import { makeAssistantToolUI } from '@assistant-ui/react';
 import ShinyText from '@/components/ShinyText';
+import { makeAssistantToolUI } from '@assistant-ui/react';
 
 export const WebSearchToolUI = makeAssistantToolUI({
   toolName: 'web_search',
@@ -8,7 +8,7 @@ export const WebSearchToolUI = makeAssistantToolUI({
     if (!result) {
       return (
         <div className="mb-2">
-          <ShinyText text="Searching the web..." className="text-base leading-7 text-muted-foreground" />
+          <ShinyText text="Searching the web..." className="text-sm leading-7 text-muted-foreground" />
         </div>
       );
     }
