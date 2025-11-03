@@ -23,3 +23,5 @@ packages/api/client/.openapi-generator/
 apps/server/scripts/output/**/*
 
 demo_data/
+scripts/scraping/output
+

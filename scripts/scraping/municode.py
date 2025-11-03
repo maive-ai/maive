@@ -525,6 +525,7 @@ async def main() -> None:
     parser.add_argument("name", help="Name for the output file")
     parser.add_argument(
         "--output-dir",
+        "-o",
         help="Output directory path (default: output)",
         default="output",
     )
