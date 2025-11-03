@@ -57,14 +57,18 @@ const chatAdapter: ChatModelAdapter = {
       let reasoningSummary: ReasoningSummaryEvent | null = null;
       let currentEventType = 'message';
 
-      const buildContent = (text: string) => {
+      const buildContent = (text: string, hideReasoning: boolean = false) => {
         const content: any[] = [];
 
         if (text) {
           content.push({ type: 'text', text });
         }
 
-        if (reasoningSummary) {
+        // Only show reasoning summary if:
+        // 1. We have a reasoning summary
+        // 2. There's no text content yet (reasoning happens before text)
+        // 3. We haven't explicitly hidden it (hideReasoning flag)
+        if (reasoningSummary && !text && !hideReasoning) {
           content.push({
             type: 'tool-call',
             toolCallId: reasoningSummary.id,
@@ -77,6 +81,7 @@ const chatAdapter: ChatModelAdapter = {
           });
         }
 
+        // Always show tool calls when present
         toolCalls.forEach((toolCall) => {
           content.push({
             type: 'tool-call',
@@ -152,7 +157,8 @@ const chatAdapter: ChatModelAdapter = {
                   result: toolCall.result ?? null,
                 });
 
-                const content = buildContent(accumulatedText);
+                // Hide reasoning summary when tool calls appear
+                const content = buildContent(accumulatedText, true);
                 if (content.length > 0) {
                   yield { content };
                 }
