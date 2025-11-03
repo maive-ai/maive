@@ -54,7 +54,7 @@ class OpenAISettings(BaseSettings):
         description="Default max output tokens for generation",
     )
     reasoning_effort: str = Field(
-        default="high",
+        default="low",
         description="Default reasoning effort for reasoning models (minimal, low, medium, high)",
     )
     text_verbosity: str = Field(

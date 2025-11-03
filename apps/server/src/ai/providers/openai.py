@@ -699,16 +699,16 @@ class OpenAIProvider(AIProvider):
             tools: list[WebSearchToolParam | FileSearchToolParam] = []
 
             # Add web search if enabled
-            # if enable_web_search:
-            #     tools.append(WebSearchToolParam(type="web_search"))
+            if enable_web_search:
+                tools.append(WebSearchToolParam(type="web_search"))
 
             # Add file search if vector store IDs provided
-            # if vector_store_ids:
-            #     tools.append(
-            #         FileSearchToolParam(
-            #             type="file_search", vector_store_ids=vector_store_ids
-            #         )
-            #     )
+            if vector_store_ids:
+                tools.append(
+                    FileSearchToolParam(
+                        type="file_search", vector_store_ids=vector_store_ids
+                    )
+                )
 
             # Convert messages to Responses API format (using OpenAI's official type)
             input_items: list[EasyInputMessageParam] = [
@@ -1063,12 +1063,7 @@ class OpenAIProvider(AIProvider):
                             citations=citations,
                             finish_reason=finish_reason,
                         )
-                        # logger.debug(
-                        #     f"[YIELD] Yielding chunk: content_len={len(content)}, "
-                        #     f"reasoning_len={len(reasoning_summary)}, "
-                        #     f"tool_calls={len(tool_calls_to_yield)}, "
-                        #     f"citations={len(citations)}, finish={finish_reason}"
-                        # )
+
                         yield chunk
 
                 except Exception as e:
