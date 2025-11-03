@@ -47,6 +47,7 @@ from src.ai.base import (
     ContentAnalysisRequest,
     ContentGenerationResult,
     FileMetadata,
+    ReasoningSummary,
     SearchCitation,
     ToolCall,
     ToolName,
@@ -676,12 +677,12 @@ class OpenAIProvider(AIProvider):
                 tools.append(WebSearchToolParam(type="web_search"))
 
             # Add file search if vector store IDs provided
-            # if vector_store_ids:
-            #     tools.append(
-            #         FileSearchToolParam(
-            #             type="file_search", vector_store_ids=vector_store_ids
-            #         )
-            #     )
+            if vector_store_ids:
+                tools.append(
+                    FileSearchToolParam(
+                        type="file_search", vector_store_ids=vector_store_ids
+                    )
+                )
 
             # Convert messages to Responses API format (using OpenAI's official type)
             input_items: list[EasyInputMessageParam] = [
@@ -716,7 +717,10 @@ class OpenAIProvider(AIProvider):
                     "reasoning_effort", self.settings.reasoning_effort
                 )
                 if reasoning_effort:
-                    stream_params["reasoning"] = ReasoningParam(effort=reasoning_effort)
+                    stream_params["reasoning"] = ReasoningParam(
+                        effort=reasoning_effort,
+                        summary="auto",  # Request reasoning summaries
+                    )
 
                 # Add text verbosity (use default from config if not specified)
                 text_verbosity = kwargs.get(
@@ -759,7 +763,7 @@ class OpenAIProvider(AIProvider):
                     stream_params["max_output_tokens"] = max_tokens
 
             logger.debug(
-                f"Stream params: model={model}, reasoning_effort={reasoning_effort}, input_items={len(input_items)}, "
+                f"Stream params: model={model}, input_items={len(input_items)}, "
                 f"has_instructions={bool(instructions)}, tools={bool(tools)}"
             )
 
@@ -772,6 +776,10 @@ class OpenAIProvider(AIProvider):
             accumulated_citations: list[SearchCitation] = []
             # Track file citations and optionally log their content previews
             seen_file_ids: set[str] = set()
+            # Track reasoning summary state
+            current_reasoning_summary = ""
+            current_reasoning_id: str | None = None
+            reasoning_summary_count = 0  # Counter for unique reasoning IDs
 
             event_count = 0
             async for event in stream:
@@ -779,10 +787,10 @@ class OpenAIProvider(AIProvider):
                 logger.debug(f"Received event #{event_count}: {type(event).__name__}")
                 # Handle different event types from Responses API using official types
                 content = ""
-                reasoning_summary = ""
                 citations: list[SearchCitation] = []
                 finish_reason = None
                 tool_calls_to_yield: list[ToolCall] = []
+                reasoning_summaries_to_yield: list[ReasoningSummary] = []
 
                 try:
                     # Handle lifecycle events (informational only, don't yield)
@@ -802,7 +810,7 @@ class OpenAIProvider(AIProvider):
                     # Handle web search tool events
                     elif isinstance(event, ResponseWebSearchCallInProgressEvent):
                         item_id = event.item_id
-                        logger.info(
+                        logger.debug(
                             f"[WEB_SEARCH] Web search started (item_id={item_id})"
                         )
                         # Yield tool call in running state (no result yet)
@@ -817,12 +825,14 @@ class OpenAIProvider(AIProvider):
 
                     elif isinstance(event, ResponseWebSearchCallSearchingEvent):
                         # Just log, don't yield - prevents flickering
-                        logger.info(f"[WEB_SEARCH] Searching... (item_id={event.item_id})")
+                        logger.debug(
+                            f"[WEB_SEARCH] Searching... (item_id={event.item_id})"
+                        )
                         continue
 
                     elif isinstance(event, ResponseWebSearchCallCompletedEvent):
                         item_id = event.item_id
-                        logger.info(
+                        logger.debug(
                             f"[WEB_SEARCH] Web search completed (item_id={item_id})"
                         )
                         # Yield tool call with completed result
@@ -838,7 +848,7 @@ class OpenAIProvider(AIProvider):
                     # Handle file search tool events
                     elif isinstance(event, ResponseFileSearchCallInProgressEvent):
                         item_id = event.item_id
-                        logger.info(
+                        logger.debug(
                             f"[FILE_SEARCH] File search started (item_id={item_id})"
                         )
                         # Yield tool call in running state (no result yet)
@@ -853,14 +863,14 @@ class OpenAIProvider(AIProvider):
 
                     elif isinstance(event, ResponseFileSearchCallSearchingEvent):
                         # Just log, don't yield - prevents flickering
-                        logger.info(
+                        logger.debug(
                             f"[FILE_SEARCH] Searching files... (item_id={event.item_id})"
                         )
                         continue
 
                     elif isinstance(event, ResponseFileSearchCallCompletedEvent):
                         item_id = event.item_id
-                        logger.info(
+                        logger.debug(
                             f"[FILE_SEARCH] File search completed (item_id={item_id})"
                         )
                         # Yield tool call with completed result
@@ -876,7 +886,7 @@ class OpenAIProvider(AIProvider):
                     # Handle reasoning text delta events (reasoning models)
                     # Note: We don't stream the raw reasoning content, only log it
                     elif isinstance(event, ResponseReasoningTextDeltaEvent):
-                        logger.info(
+                        logger.debug(
                             f"[REASONING] Got reasoning delta: {event.delta[:100]}... "
                             f"(item_id={event.item_id}, content_index={event.content_index})"
                         )
@@ -885,17 +895,46 @@ class OpenAIProvider(AIProvider):
 
                     # Handle reasoning summary delta events
                     elif isinstance(event, ResponseReasoningSummaryTextDeltaEvent):
-                        reasoning_summary = event.delta
+                        summary_delta = event.delta or ""
                         logger.info(
-                            f"[REASONING_SUMMARY] Got summary delta: {reasoning_summary[:100]}..."
+                            f"[REASONING_SUMMARY] Got summary delta: {summary_delta[:100] if summary_delta else '(empty)'}..."
                         )
+
+                        if current_reasoning_id is None:
+                            reasoning_summary_count += 1
+                            current_reasoning_id = (
+                                f"reasoning_{reasoning_summary_count}"
+                            )
+                            current_reasoning_summary = summary_delta
+                        elif (
+                            summary_delta.strip().startswith("**")
+                            and current_reasoning_summary
+                        ):
+                            reasoning_summary_count += 1
+                            current_reasoning_id = (
+                                f"reasoning_{reasoning_summary_count}"
+                            )
+                            current_reasoning_summary = summary_delta
+                            logger.info(
+                                f"[REASONING_SUMMARY] New summary detected (#{reasoning_summary_count})"
+                            )
+                        else:
+                            current_reasoning_summary += summary_delta
+
+                        if current_reasoning_id:
+                            reasoning_summaries_to_yield.append(
+                                ReasoningSummary(
+                                    id=current_reasoning_id,
+                                    summary=current_reasoning_summary,
+                                )
+                            )
 
                     # Handle text delta events (streaming output content)
                     elif isinstance(event, ResponseTextDeltaEvent):
                         content = event.delta
-                        logger.info(
-                            f"[TEXT] Got text delta: {content[:100] if content else '(empty)'}..."
-                        )
+                        # logger.info(
+                        #     f"[TEXT] Got text delta: {content[:100] if content else '(empty)'}..."
+                        # )
 
                     # Handle annotation events (citations from web search)
                     elif isinstance(event, ResponseOutputTextAnnotationAddedEvent):
@@ -980,27 +1019,22 @@ class OpenAIProvider(AIProvider):
                             f"[UNHANDLED] Unhandled event type: {type(event).__name__}"
                         )
 
-                    # Yield chunk if there's content, reasoning summary, tool calls, citations, or finish reason
+                    # Yield chunk if there's content, tool calls, citations, or finish reason
                     if (
                         content
-                        or reasoning_summary
                         or tool_calls_to_yield
+                        or reasoning_summaries_to_yield
                         or citations
                         or finish_reason
                     ):
                         chunk = ChatStreamChunk(
                             content=content,
-                            reasoning_summary=reasoning_summary,
                             tool_calls=tool_calls_to_yield,
+                            reasoning_summaries=reasoning_summaries_to_yield,
                             citations=citations,
                             finish_reason=finish_reason,
                         )
-                        logger.debug(
-                            f"[YIELD] Yielding chunk: content_len={len(content)}, "
-                            f"reasoning_len={len(reasoning_summary)}, "
-                            f"tool_calls={len(tool_calls_to_yield)}, "
-                            f"citations={len(citations)}, finish={finish_reason}"
-                        )
+
                         yield chunk
 
                 except Exception as e:
