@@ -14,8 +14,5 @@ export const ReasoningToolUI = makeAssistantToolUI({
         </div>
       );
     }
-
-    // Don't render anything when complete - actual response will be in the message
-    return null;
   },
 });
