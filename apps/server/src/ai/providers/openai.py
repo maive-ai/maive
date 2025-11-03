@@ -2,7 +2,6 @@
 
 import base64
 import json
-import re
 from pathlib import Path
 from typing import AsyncGenerator, TypeVar
 
@@ -91,31 +90,6 @@ class OpenAIProvider(AIProvider):
                     f"Failed to authenticate with OpenAI: {e}", e
                 )
         return self._client
-
-    @staticmethod
-    def _extract_reasoning_title(summary: str) -> str:
-        """Extract the bolded title from a reasoning summary."""
-        if not summary:
-            return "Thinking..."
-
-        match = re.search(r"\*\*(.+?)\*\*", summary, re.DOTALL)
-        if match:
-            return match.group(1).strip()
-
-        for line in summary.splitlines():
-            stripped_line = line.strip()
-            if not stripped_line:
-                continue
-
-            if stripped_line.startswith("**"):
-                stripped_line = stripped_line.lstrip("*").strip()
-            if stripped_line.endswith("**"):
-                stripped_line = stripped_line.rstrip("*").strip()
-
-            if stripped_line:
-                return stripped_line
-
-        return "Thinking..."
 
     async def upload_file(self, file_path: str, **kwargs) -> FileMetadata:
         """Upload a file to OpenAI.
@@ -951,9 +925,6 @@ class OpenAIProvider(AIProvider):
                             reasoning_summaries_to_yield.append(
                                 ReasoningSummary(
                                     id=current_reasoning_id,
-                                    title=self._extract_reasoning_title(
-                                        current_reasoning_summary
-                                    ),
                                     summary=current_reasoning_summary,
                                 )
                             )

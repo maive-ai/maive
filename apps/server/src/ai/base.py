@@ -104,7 +104,7 @@ class ReasoningSummary(BaseModel):
     """Summarized reasoning snippet provided by reasoning models."""
 
     id: str
-    title: str
+
     summary: str
 
 

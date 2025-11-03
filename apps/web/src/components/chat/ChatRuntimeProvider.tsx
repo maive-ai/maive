@@ -25,7 +25,6 @@ interface ToolCallEvent {
 
 interface ReasoningSummaryEvent {
   id: string;
-  title: string;
   summary: string;
 }
 
@@ -74,7 +73,6 @@ const chatAdapter: ChatModelAdapter = {
             toolCallId: reasoningSummary.id,
             toolName: 'reasoning',
             args: {
-              title: reasoningSummary.title,
               summary: reasoningSummary.summary,
             },
             result: null,
