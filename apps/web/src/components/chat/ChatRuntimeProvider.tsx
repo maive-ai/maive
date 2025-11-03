@@ -140,6 +140,9 @@ const chatAdapter: ChatModelAdapter = {
                 }
               });
 
+              // Clear reasoning summary when stream is done
+              reasoningSummary = null;
+
               const content = buildContent(finalText);
               if (content.length > 0) {
                 yield { content };
@@ -187,6 +190,9 @@ const chatAdapter: ChatModelAdapter = {
             } else {
               const unescapedData = data.replace(/\\n/g, '\n');
               accumulatedText += unescapedData;
+
+              // Clear reasoning summary when text starts streaming
+              reasoningSummary = null;
 
               toolCalls.forEach((toolCall, key) => {
                 if (!toolCall.result) {
