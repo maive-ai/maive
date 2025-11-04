@@ -4,12 +4,16 @@ Script to export Rilla links from Service Titan projects to CSV.
 
 This script:
 1. Iterates through all projects
-2. Finds sold estimates for each project
+2. Finds sold estimates for each project (filtered by sold date if specified)
 3. Extracts Rilla links from job summaries
-4. Outputs CSV with: date_created, project_id, job_id, estimate_id, rilla_link
+4. Outputs CSV with: estimate_sold_date, project_id, job_id, estimate_id, rilla_link
 
 Usage:
-    esc run maive/maive-infra/will-dev -- uv run python scripts/export_rilla_links_csv_v2.py --start-date 2025-07-01 --end-date 2025-07-31
+    # Export all Rilla links
+    esc run maive/maive-infra/will-dev -- uv run python scripts/export_rilla_links_csv.py
+
+    # Export Rilla links for estimates sold in July 2025
+    esc run maive/maive-infra/will-dev -- uv run python scripts/export_rilla_links_csv.py --start-date 2025-07-09 --end-date 2025-07-10
 """
 
 import argparse
@@ -69,13 +73,13 @@ async def main():
         "--start-date",
         type=str,
         required=False,
-        help="Start date for project filtering (YYYY-MM-DD) - Note: not currently implemented",
+        help="Start date for filtering estimates by sold date (YYYY-MM-DD)",
     )
     parser.add_argument(
         "--end-date",
         type=str,
         required=False,
-        help="End date for project filtering (YYYY-MM-DD) - Note: not currently implemented",
+        help="End date for filtering estimates by sold date (YYYY-MM-DD)",
     )
     args = parser.parse_args()
 
@@ -84,9 +88,10 @@ async def main():
     logger.info("=" * 80)
     logger.info("🔒 READ-ONLY MODE")
     if args.start_date and args.end_date:
-        logger.info(f"Date Range: {args.start_date} to {args.end_date} (filtering not implemented)")
+        logger.info(f"Filtering estimates sold between: {args.start_date} to {args.end_date}")
+        logger.info(f"Using wider project date range for initial filtering (reduces API calls)")
     else:
-        logger.info("Searching all projects")
+        logger.info("Searching all estimates (no date filter)")
     logger.info("")
 
     provider = get_crm_provider()
@@ -99,7 +104,7 @@ async def main():
     csv_file = output_dir / f"rilla_links_{timestamp}.csv"
 
     # CSV columns
-    fieldnames = ["date_created", "project_id", "job_id", "estimate_id", "rilla_link"]
+    fieldnames = ["estimate_sold_date", "project_id", "job_id", "estimate_id", "rilla_link"]
 
     total_projects = 0
     projects_with_rilla = 0
@@ -118,12 +123,39 @@ async def main():
             page_size = 50
             has_more = True
 
-            # Date filters for Service Titan
+            # Parse date filters for estimate filtering
+            from datetime import datetime as dt, timezone, timedelta
+            start_date_obj = None
+            end_date_obj = None
+
+            # Project date filters (use wider range to capture relevant projects)
             filters = {}
+
             if args.start_date:
-                filters["createdOnOrAfter"] = args.start_date
+                start_date_obj = dt.fromisoformat(args.start_date)
+                # Make timezone-aware if it's naive
+                if start_date_obj.tzinfo is None:
+                    start_date_obj = start_date_obj.replace(tzinfo=timezone.utc)
+
+                # Use a wider range for project filtering (60 days before)
+                # This ensures we catch projects created before the estimate was sold
+                project_start = (start_date_obj - timedelta(days=60)).strftime("%Y-%m-%d")
+                filters["createdOnOrAfter"] = project_start
+                logger.info(f"Fetching projects created on or after: {project_start}")
+
             if args.end_date:
-                filters["createdBefore"] = args.end_date
+                end_date_obj = dt.fromisoformat(args.end_date)
+                # Make timezone-aware if it's naive
+                if end_date_obj.tzinfo is None:
+                    # Set to end of day
+                    end_date_obj = end_date_obj.replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+
+                # Use a wider range for project filtering (30 days after)
+                project_end = (end_date_obj + timedelta(days=30)).strftime("%Y-%m-%d")
+                filters["createdBefore"] = project_end
+                logger.info(f"Fetching projects created before: {project_end}")
+
+            logger.info("")
 
             while has_more:
                 logger.info(f"Fetching projects page {page}...")
@@ -145,7 +177,6 @@ async def main():
                     """Process a single project and return result if Rilla link found."""
                     async with semaphore:  # Limit concurrent requests
                         project_id = project.id
-                        created_on = project.created_at if project.created_at else ""
 
                         try:
                             # Find sold estimates for this project
@@ -161,6 +192,26 @@ async def main():
                             sold_estimates = [
                                 e for e in estimates_response.estimates if e.sold_on is not None
                             ]
+
+                            if not sold_estimates:
+                                return None
+
+                            # Filter by date range if provided
+                            if start_date_obj or end_date_obj:
+                                filtered_estimates = []
+                                for e in sold_estimates:
+                                    # e.sold_on is already a datetime object
+                                    sold_date = e.sold_on
+
+                                    # Check if within date range
+                                    if start_date_obj and sold_date < start_date_obj:
+                                        continue
+                                    if end_date_obj and sold_date > end_date_obj:
+                                        continue
+
+                                    filtered_estimates.append(e)
+
+                                sold_estimates = filtered_estimates
 
                             if not sold_estimates:
                                 return None
@@ -184,9 +235,9 @@ async def main():
                             rilla_url = extract_rilla_url(job_summary)
 
                             if rilla_url:
-                                logger.info(f"  ✓ Project {project_id}: Found Rilla link")
+                                logger.info(f"  ✓ Project {project_id}: Found Rilla link (sold: {estimate.sold_on})")
                                 return {
-                                    "date_created": created_on,
+                                    "estimate_sold_date": estimate.sold_on.isoformat() if estimate.sold_on else "",
                                     "project_id": project_id,
                                     "job_id": job_id,
                                     "estimate_id": estimate.id,
