@@ -20,6 +20,7 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0.44",
     "pypdf>=5.1.0",
     "httpx>=0.28.1",
+    "openpyxl>=3.1.5",
 ]
 
 [dependency-groups]
@@ -30,6 +31,7 @@ auth = [
     "requests>=2.32.4",
 ]
 dev = [
+    "pandas>=2.3.3",
     "pre-commit>=4.2.0",
     "pytest>=8.4.1",
     "pytest-asyncio>=1.0.0",
