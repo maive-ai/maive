@@ -20,10 +20,6 @@ packages/api/client/.openapi-generator/
 **/_catalog/
 **/_dereferenced/
 
-apps/server/scripts/output/**/*
-
 demo_data/
 
-apps/server/evals/output/
-apps/server/evals/estimate_deviation/rilla/output/**/*
 
