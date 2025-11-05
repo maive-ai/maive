@@ -5,6 +5,7 @@ Creates organized folders and names files with UUIDs.
 """
 
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -12,6 +13,7 @@ import time
 import uuid
 from pathlib import Path
 
+import boto3
 import pandas as pd
 
 
@@ -73,6 +75,42 @@ def convert_to_mp3(input_path, mp3_path, bitrate="64k"):
         return False
 
 
+def upload_to_s3(local_file_path, s3_bucket, s3_key):
+    """Upload a file to S3."""
+    try:
+        s3_client = boto3.client("s3")
+        s3_client.upload_file(str(local_file_path), s3_bucket, s3_key)
+        print(f"Uploaded to s3://{s3_bucket}/{s3_key}")
+        return True
+    except Exception as e:
+        print(f"Error uploading to S3: {e}")
+        return False
+
+
+def process_transcript_json(downloaded_file_path, output_json_path):
+    """Process downloaded transcript file and save as properly formatted JSON."""
+    try:
+        # Try to read as JSON first (in case it's already JSON)
+        with open(downloaded_file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        try:
+            # If it's already valid JSON, just copy it
+            transcript_data = json.loads(content)
+        except json.JSONDecodeError:
+            # If it's plain text, wrap it in JSON
+            transcript_data = {"transcript": content}
+
+        # Save as formatted JSON
+        with open(output_json_path, "w", encoding="utf-8") as f:
+            json.dump(transcript_data, f, indent=2)
+
+        return True
+    except Exception as e:
+        print(f"Error processing transcript JSON: {e}")
+        return False
+
+
 def process_single_row(input_file, row_number, base_output_dir):
     """Process a single row from an Excel or CSV file and download audio/transcript files."""
     # Determine file type and read accordingly
@@ -112,9 +150,10 @@ def process_single_row(input_file, row_number, base_output_dir):
 
     print(f"Processing row {row_number} (data row index {data_row_index})")
 
-    # Find columns containing audio and transcript URLs
+    # Find columns containing audio, transcript URLs, and conversation ID
     audio_col = None
     transcript_col = None
+    conversation_id_col = None
 
     for col in df.columns:
         col_lower = str(col).lower()
@@ -122,27 +161,39 @@ def process_single_row(input_file, row_number, base_output_dir):
             audio_col = col
         elif "transcript" in col_lower and "url" in col_lower:
             transcript_col = col
+        elif "conversation" in col_lower and "id" in col_lower:
+            conversation_id_col = col
 
     if audio_col is None or transcript_col is None:
         print(f"Available columns: {df.columns.tolist()}")
         print("Error: Could not find audio and transcript URL columns")
         return
 
-    print(f"Using columns: audio='{audio_col}', transcript='{transcript_col}'")
+    if conversation_id_col is None:
+        print(f"Available columns: {df.columns.tolist()}")
+        print("Error: Could not find conversation ID column")
+        return
+
+    print(
+        f"Using columns: audio='{audio_col}', transcript='{transcript_col}', conversation_id='{conversation_id_col}'"
+    )
 
     # Get the specific row
     row = df.iloc[data_row_index]
     audio_url = row[audio_col]
     transcript_url = row[transcript_col]
+    conversation_id = row[conversation_id_col]
 
-    # Check if URLs are missing
-    if pd.isna(audio_url) or pd.isna(transcript_url):
-        print(f"Error: Row {row_number} has missing URL(s)")
+    # Check if URLs or conversation ID are missing
+    if pd.isna(audio_url) or pd.isna(transcript_url) or pd.isna(conversation_id):
+        print(f"Error: Row {row_number} has missing data")
         print(f"  Audio URL: {audio_url}")
         print(f"  Transcript URL: {transcript_url}")
+        print(f"  Conversation ID: {conversation_id}")
         return
 
-    print(f"\nAudio URL: {audio_url}")
+    print(f"\nConversation ID: {conversation_id}")
+    print(f"Audio URL: {audio_url}")
     print(f"Transcript URL: {transcript_url}")
 
     # Generate UUID for this pair
@@ -151,7 +202,8 @@ def process_single_row(input_file, row_number, base_output_dir):
 
     # Download to temporary file first to detect actual type
     temp_audio = output_dir / f"{file_uuid}.tmp"
-    transcript_output = output_dir / f"{file_uuid}.txt"
+    temp_transcript = output_dir / f"{file_uuid}_transcript.tmp"
+    transcript_output = output_dir / f"{file_uuid}.json"
 
     audio_success = False
     transcript_success = False
@@ -182,16 +234,45 @@ def process_single_row(input_file, row_number, base_output_dir):
 
     # Download transcript file
     print("\nDownloading transcript file...")
-    if download_file(transcript_url, str(transcript_output)):
-        transcript_success = True
-        print(f"Transcript saved: {transcript_output.absolute()}")
+    if download_file(transcript_url, str(temp_transcript)):
+        print("Transcript downloaded to temporary file")
+        # Process and save as JSON
+        if process_transcript_json(temp_transcript, transcript_output):
+            transcript_success = True
+            # Remove temporary transcript file
+            temp_transcript.unlink()
+            print(f"Transcript saved as JSON: {transcript_output.absolute()}")
+        else:
+            print("Failed to process transcript as JSON")
     else:
         print("Failed to download transcript file")
+
+    # Upload to S3
+    s3_bucket = "vertex-rilla-data"
+    s3_upload_audio_success = False
+    s3_upload_transcript_success = False
+
+    if audio_success and final_audio_path:
+        print("\nUploading audio to S3...")
+        # Get the file extension from the downloaded audio
+        audio_extension = final_audio_path.suffix
+        s3_audio_key = f"val/{conversation_id}/recording{audio_extension}"
+        s3_upload_audio_success = upload_to_s3(
+            final_audio_path, s3_bucket, s3_audio_key
+        )
+
+    if transcript_success:
+        print("\nUploading transcript JSON to S3...")
+        s3_transcript_key = f"val/{conversation_id}/transcript.json"
+        s3_upload_transcript_success = upload_to_s3(
+            transcript_output, s3_bucket, s3_transcript_key
+        )
 
     # Print summary
     print(f"\n{'=' * 80}")
     print("Summary:")
     print(f"  Row number: {row_number}")
+    print(f"  Conversation ID: {conversation_id}")
     print(f"  UUID: {file_uuid}")
     print(f"  Audio download: {'SUCCESS' if audio_success else 'FAILED'}")
     if audio_success and final_audio_path:
@@ -199,6 +280,14 @@ def process_single_row(input_file, row_number, base_output_dir):
     print(f"  Transcript download: {'SUCCESS' if transcript_success else 'FAILED'}")
     if transcript_success:
         print(f"  Transcript file: {transcript_output.name}")
+    print(f"  S3 audio upload: {'SUCCESS' if s3_upload_audio_success else 'FAILED'}")
+    if s3_upload_audio_success:
+        print(f"  S3 audio location: s3://{s3_bucket}/val/{conversation_id}/recording{audio_extension}")
+    print(
+        f"  S3 transcript upload: {'SUCCESS' if s3_upload_transcript_success else 'FAILED'}"
+    )
+    if s3_upload_transcript_success:
+        print(f"  S3 transcript location: s3://{s3_bucket}/val/{conversation_id}/transcript.json")
     print(f"{'=' * 80}")
 
 
