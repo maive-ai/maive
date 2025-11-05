@@ -186,14 +186,14 @@ class LocalCodeIngestionService:
                         vector_store_id=vector_store_id,
                         filename=filename,
                     )
-                    
+
                     if existing_file_id:
                         logger.info(
                             f"Found existing file {existing_file_id} for {filename}, deleting..."
                         )
                         await self.vector_store.delete_file(existing_file_id)
                         logger.info(f"Deleted old file {existing_file_id}")
-                    
+
                     # Upload to vector store
                     file_id = await self.vector_store.upload_document(
                         content=content,
@@ -207,6 +207,10 @@ class LocalCodeIngestionService:
                     logger.info(
                         f"Ingested: {metadata.jurisdiction_name} ({file_id})"
                     )
+                    
+                    # Add delay between uploads to avoid rate limiting
+                    if idx < len(json_files):  # Don't delay after last file
+                        await asyncio.sleep(1)
 
             except Exception as e:
                 logger.error(f"Failed to ingest {json_file.name}: {e}")

@@ -1,11 +1,12 @@
 """Service for managing OpenAI vector stores for building codes."""
 
+import asyncio
 import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import BinaryIO
 
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, APIError
 
 from src.ai.openai.config import get_openai_settings
 from src.ai.rag.schemas import CodeDocumentMetadata, VectorStoreStatus
@@ -102,7 +103,7 @@ class VectorStoreService:
                 if file_path:
                     with open(file_path, "rb") as f:
                         uploaded_file = await self.client.files.create(
-                            file=f,
+                            file=(filename, f),
                             purpose="assistants",
                         )
                 else:
@@ -116,12 +117,40 @@ class VectorStoreService:
                     f"for {metadata.jurisdiction_name}"
                 )
 
-                # Attach file to vector store with attributes
-                await self.client.vector_stores.files.create(
-                    vector_store_id=vector_store_id,
-                    file_id=uploaded_file.id,
-                    attributes=attributes,
-                )
+                # Attach file to vector store with attributes (with retry logic)
+                max_retries = 3
+                retry_delay = 2  # seconds
+
+                try:
+                    for attempt in range(max_retries):
+                        try:
+                            await self.client.vector_stores.files.create(
+                                vector_store_id=vector_store_id,
+                                file_id=uploaded_file.id,
+                                attributes=attributes,
+                            )
+                            break  # Success, exit retry loop
+                        except APIError as e:
+                            if e.status_code == 500 and attempt < max_retries - 1:
+                                wait_time = retry_delay * (2 ** attempt)  # Exponential backoff
+                                logger.warning(
+                                    f"OpenAI 500 error attaching file {uploaded_file.id}, "
+                                    f"retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})..."
+                                )
+                                await asyncio.sleep(wait_time)
+                            else:
+                                raise  # Re-raise if not 500 or out of retries
+                except Exception as attach_error:
+                    # If attachment failed, delete the uploaded file to avoid orphaning it
+                    logger.warning(
+                        f"Failed to attach file {uploaded_file.id} to vector store, cleaning up..."
+                    )
+                    try:
+                        await self.client.files.delete(uploaded_file.id)
+                        logger.info(f"Cleaned up orphaned file {uploaded_file.id}")
+                    except Exception as delete_error:
+                        logger.error(f"Failed to cleanup file {uploaded_file.id}: {delete_error}")
+                    raise attach_error
 
                 logger.info(
                     f"Attached file {uploaded_file.id} to vector store {vector_store_id}"
