@@ -697,6 +697,29 @@ class OpenAIProvider(AIProvider):
             logger.error(f"Failed to parse annotation: {e}")
             return None
 
+    def _clean_file_citation_markers(self, text: str) -> str:
+        """Remove file citation markers from text.
+
+        OpenAI includes inline citation markers for file_search results that look like:
+        fileciteturn0file17turn0file18
+
+        This removes ONLY file citation markers, preserving any web search citation
+        markers that may exist.
+
+        Args:
+            text: Text potentially containing file citation markers
+
+        Returns:
+            Text with file citation markers removed
+        """
+        import re
+        
+        # Remove ONLY file citation markers (start with "filecite" or "file")
+        # This pattern matches: filecite, fileciteturn0file17, turn0file18, etc.
+        text = re.sub(r'filecite(?:turn\d+)?file\d+(?:turn\d+file\d+)*', '', text)
+        
+        return text
+
     def _build_stream_params(
         self,
         messages: list[ChatMessage],
@@ -1026,7 +1049,8 @@ class OpenAIProvider(AIProvider):
 
                     # Handle text delta events (streaming output content)
                     elif isinstance(event, ResponseTextDeltaEvent):
-                        content = event.delta
+                        # Clean file citation markers from the text
+                        content = self._clean_file_citation_markers(event.delta)
 
                     # Handle annotation events (citations from web search and file search)
                     elif isinstance(event, ResponseOutputTextAnnotationAddedEvent):
