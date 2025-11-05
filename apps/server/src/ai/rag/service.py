@@ -141,7 +141,7 @@ class VectorStoreService:
             logger.error(f"Failed to upload document {filename}: {e}")
             raise
 
-    async def _find_file_id_by_filename(
+    async def find_file_id_by_filename(
         self, vector_store_id: str, filename: str
     ) -> str | None:
         """Search the vector store for a file with the given filename.

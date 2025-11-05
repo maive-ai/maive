@@ -11,6 +11,7 @@ from openai.types.responses import (
     FileSearchToolParam,
     ResponseCompletedEvent,
     ResponseContentPartAddedEvent,
+    ResponseContentPartDoneEvent,
     ResponseCreatedEvent,
     ResponseFailedEvent,
     ResponseFileSearchCallCompletedEvent,
@@ -23,6 +24,7 @@ from openai.types.responses import (
     ResponseReasoningSummaryTextDeltaEvent,
     ResponseReasoningTextDeltaEvent,
     ResponseTextDeltaEvent,
+    ResponseTextDoneEvent,
     ResponseWebSearchCallCompletedEvent,
     ResponseWebSearchCallInProgressEvent,
     ResponseWebSearchCallSearchingEvent,
@@ -615,6 +617,284 @@ class OpenAIProvider(AIProvider):
                 f"Failed to analyze content with structured output: {e}", e
             )
 
+    async def _parse_annotation_to_citation(
+        self,
+        annotation: dict | AnnotationURLCitation,
+        client: AsyncOpenAI,
+    ) -> SearchCitation | None:
+        """Parse an annotation event into a SearchCitation.
+
+        Args:
+            annotation: The annotation from OpenAI (dict or object)
+            client: OpenAI client for fetching file metadata
+
+        Returns:
+            SearchCitation if it's a web citation, None if it's a file citation or unknown
+        """
+        try:
+            # Handle dict format annotations
+            if isinstance(annotation, dict):
+                ann_type = annotation.get("type")
+                
+                if ann_type == "url_citation":
+                    url_citation = AnnotationURLCitation(**annotation)
+                    
+                    # Create citation from URL annotation
+                    return SearchCitation(
+                        url=url_citation.url,
+                        title=url_citation.title,
+                        snippet=None,
+                        accessed_at=None,
+                    )
+                    
+                elif ann_type == "file_citation":
+                    # Log RAG file hits for debugging (don't expose to user)
+                    file_id = annotation.get("file_citation", {}).get(
+                        "file_id"
+                    ) or annotation.get("file_id")
+                    quoted_text = (
+                        annotation.get("text")
+                        or annotation.get("quote")
+                        or ""
+                    )
+                    
+                    if file_id:
+                        # Try to fetch file metadata for logging
+                        filename = None
+                        try:
+                            meta = await client.files.retrieve(file_id)
+                            filename = getattr(meta, 'filename', None)
+                            logger.debug(
+                                f"RAG file cited: id={file_id}, filename={filename}, quoted={quoted_text[:100]!r}"
+                            )
+                        except Exception as e:
+                            logger.debug(
+                                f"Failed to retrieve file metadata for {file_id}: {e}"
+                            )
+                    
+                    # Don't expose file citations to users - they're internal RAG files
+                    return None
+                else:
+                    logger.debug(f"Skipped unknown annotation type: {ann_type}")
+                    return None
+                    
+            # Handle object format annotations
+            elif isinstance(annotation, AnnotationURLCitation):
+                # Create citation from URL annotation
+                return SearchCitation(
+                    url=annotation.url,
+                    title=annotation.title,
+                    snippet=None,
+                    accessed_at=None,
+                )
+            else:
+                logger.debug(
+                    f"Skipped unknown annotation format: {type(annotation).__name__}"
+                )
+                return None
+
+        except Exception as e:
+            logger.error(f"Failed to parse annotation: {e}")
+            return None
+
+    def _build_stream_params(
+        self,
+        messages: list[ChatMessage],
+        instructions: str | None,
+        enable_web_search: bool,
+        vector_store_ids: list[str] | None,
+        **kwargs,
+    ) -> tuple[ResponseCreateParamsStreaming, str, bool]:
+        """Build streaming parameters for OpenAI Responses API.
+
+        Args:
+            messages: List of chat messages
+            instructions: Optional system instructions
+            enable_web_search: Whether to enable web search
+            vector_store_ids: Optional vector store IDs for file search
+            **kwargs: Additional model-specific parameters
+
+        Returns:
+            Tuple of (stream_params, model_name, is_reasoning_model)
+        """
+        model = kwargs.get("model", self.settings.model_name)
+
+        # Detect if this is a reasoning model
+        is_reasoning_model = any(
+            model.startswith(prefix) for prefix in ["gpt-5", "o1", "o3"]
+        )
+
+        logger.info(
+            f"Streaming chat with web_search={enable_web_search}, "
+            f"file_search={bool(vector_store_ids)}, model={model}, "
+            f"is_reasoning={is_reasoning_model}"
+        )
+
+        # Configure tools (Responses API format)
+        tools: list[WebSearchToolParam | FileSearchToolParam] = []
+
+        # Add web search if enabled
+        if enable_web_search:
+            tools.append(WebSearchToolParam(type="web_search"))
+
+        # Add file search if vector store IDs provided
+        if vector_store_ids:
+            tools.append(
+                FileSearchToolParam(
+                    type="file_search", vector_store_ids=vector_store_ids
+                )
+            )
+
+        # Convert messages to Responses API format
+        input_items: list[EasyInputMessageParam] = [
+            EasyInputMessageParam(
+                role=msg.role,  # type: ignore[typeddict-item]
+                content=msg.content,
+            )
+            for msg in messages
+        ]
+
+        # Build streaming params
+        stream_params: ResponseCreateParamsStreaming = {
+            "model": model,  # type: ignore[typeddict-item]
+            "input": input_items,  # type: ignore[typeddict-item]
+            "stream": True,
+        }
+
+        # Add optional parameters
+        if instructions:
+            stream_params["instructions"] = instructions
+
+        if tools:
+            stream_params["tools"] = tools  # type: ignore[typeddict-item]
+
+        # Add model-specific parameters
+        if is_reasoning_model:
+            logger.info(f"Using reasoning model: {model}")
+
+            # Add reasoning configuration
+            reasoning_effort: ReasoningEffort | None = kwargs.get(
+                "reasoning_effort", self.settings.reasoning_effort
+            )
+            if reasoning_effort:
+                stream_params["reasoning"] = ReasoningParam(effort=reasoning_effort)
+
+            # Add text verbosity
+            text_verbosity = kwargs.get(
+                "text_verbosity", self.settings.text_verbosity
+            )
+            if text_verbosity:
+                stream_params["text"] = ResponseTextConfigParam(
+                    verbosity=text_verbosity
+                )
+
+            # Use max_output_tokens for reasoning models
+            max_output_tokens = kwargs.get(
+                "max_output_tokens", self.settings.max_tokens
+            )
+            if max_output_tokens:
+                stream_params["max_output_tokens"] = max_output_tokens
+
+            # Log if incompatible parameters are provided
+            if "temperature" in kwargs:
+                logger.warning(
+                    f"temperature parameter ignored for reasoning model {model}"
+                )
+            if "top_p" in kwargs:
+                logger.warning(
+                    f"top_p parameter ignored for reasoning model {model}"
+                )
+            if "logprobs" in kwargs:
+                logger.warning(
+                    f"logprobs parameter ignored for reasoning model {model}"
+                )
+        else:
+            logger.info(f"Using standard model: {model}")
+            temperature = kwargs.get("temperature", self.settings.temperature)
+            max_tokens = kwargs.get("max_tokens", self.settings.max_tokens)
+
+            if temperature is not None:
+                stream_params["temperature"] = temperature
+            if max_tokens:
+                stream_params["max_output_tokens"] = max_tokens
+
+        logger.debug(
+            f"Stream params: model={model}, reasoning_effort={reasoning_effort if is_reasoning_model else 'N/A'}, "
+            f"input_items={len(input_items)}, has_instructions={bool(instructions)}, tools={bool(tools)}"
+        )
+
+        return stream_params, model, is_reasoning_model
+
+    def _handle_web_search_event(
+        self,
+        event: ResponseWebSearchCallInProgressEvent
+        | ResponseWebSearchCallSearchingEvent
+        | ResponseWebSearchCallCompletedEvent,
+    ) -> ToolCall | None:
+        """Handle web search tool events.
+
+        Args:
+            event: Web search event from OpenAI
+
+        Returns:
+            ToolCall if the event should be yielded, None otherwise
+        """
+        if isinstance(event, ResponseWebSearchCallInProgressEvent):
+            logger.info(f"[WEB_SEARCH] Web search started (item_id={event.item_id})")
+            return ToolCall(
+                tool_call_id=event.item_id,
+                tool_name=ToolName.WEB_SEARCH,
+                args={},
+                result=None,
+            )
+        elif isinstance(event, ResponseWebSearchCallSearchingEvent):
+            # Just skip - don't yield to prevent flickering
+            return None
+        elif isinstance(event, ResponseWebSearchCallCompletedEvent):
+            logger.info(f"[WEB_SEARCH] Web search completed (item_id={event.item_id})")
+            return ToolCall(
+                tool_call_id=event.item_id,
+                tool_name=ToolName.WEB_SEARCH,
+                args={},
+                result={"status": ToolStatus.COMPLETE.value},
+            )
+        return None
+
+    def _handle_file_search_event(
+        self,
+        event: ResponseFileSearchCallInProgressEvent
+        | ResponseFileSearchCallSearchingEvent
+        | ResponseFileSearchCallCompletedEvent,
+    ) -> ToolCall | None:
+        """Handle file search tool events.
+
+        Args:
+            event: File search event from OpenAI
+
+        Returns:
+            ToolCall if the event should be yielded, None otherwise
+        """
+        if isinstance(event, ResponseFileSearchCallInProgressEvent):
+            logger.info(f"[FILE_SEARCH] File search started (item_id={event.item_id})")
+            return ToolCall(
+                tool_call_id=event.item_id,
+                tool_name=ToolName.FILE_SEARCH,
+                args={},
+                result=None,
+            )
+        elif isinstance(event, ResponseFileSearchCallSearchingEvent):
+            # Just skip - don't yield to prevent flickering
+            return None
+        elif isinstance(event, ResponseFileSearchCallCompletedEvent):
+            logger.info(f"[FILE_SEARCH] File search completed (item_id={event.item_id})")
+            return ToolCall(
+                tool_call_id=event.item_id,
+                tool_name=ToolName.FILE_SEARCH,
+                args={},
+                result={"status": ToolStatus.COMPLETE.value},
+            )
+        return None
+
     async def stream_chat(
         self,
         messages: list[ChatMessage],
@@ -655,112 +935,13 @@ class OpenAIProvider(AIProvider):
         try:
             client = self._get_client()
 
-            model = kwargs.get("model", self.settings.model_name)
-
-            # Detect if this is a reasoning model
-            is_reasoning_model = any(
-                model.startswith(prefix) for prefix in ["gpt-5", "o1", "o3"]
-            )
-
-            logger.info(
-                f"Streaming chat with web_search={enable_web_search}, "
-                f"file_search={bool(vector_store_ids)}, model={model}, "
-                f"is_reasoning={is_reasoning_model}"
-            )
-
-            # Configure tools (Responses API format)
-            tools: list[WebSearchToolParam | FileSearchToolParam] = []
-
-            # Add web search if enabled
-            if enable_web_search:
-                tools.append(WebSearchToolParam(type="web_search"))
-
-            # Add file search if vector store IDs provided
-            # if vector_store_ids:
-            #     tools.append(
-            #         FileSearchToolParam(
-            #             type="file_search", vector_store_ids=vector_store_ids
-            #         )
-            #     )
-
-            # Convert messages to Responses API format (using OpenAI's official type)
-            input_items: list[EasyInputMessageParam] = [
-                EasyInputMessageParam(
-                    role=msg.role,  # type: ignore[typeddict-item]
-                    content=msg.content,
-                )
-                for msg in messages
-            ]
-
-            # Build streaming params using OpenAI's TypedDict
-            stream_params: ResponseCreateParamsStreaming = {
-                "model": model,  # type: ignore[typeddict-item]
-                "input": input_items,  # type: ignore[typeddict-item]
-                "stream": True,
-            }
-
-            # Add optional parameters
-            if instructions:
-                stream_params["instructions"] = instructions
-
-            if tools:
-                stream_params["tools"] = tools  # type: ignore[typeddict-item]
-
-            # Add model-specific parameters
-            if is_reasoning_model:
-                # Reasoning models use different parameters
-                logger.info(f"Using reasoning model: {model}")
-
-                # Add reasoning configuration (use default from config if not specified)
-                reasoning_effort: ReasoningEffort | None = kwargs.get(
-                    "reasoning_effort", self.settings.reasoning_effort
-                )
-                if reasoning_effort:
-                    stream_params["reasoning"] = ReasoningParam(effort=reasoning_effort)
-
-                # Add text verbosity (use default from config if not specified)
-                text_verbosity = kwargs.get(
-                    "text_verbosity", self.settings.text_verbosity
-                )
-                if text_verbosity:
-                    stream_params["text"] = ResponseTextConfigParam(
-                        verbosity=text_verbosity
-                    )
-
-                # Use max_output_tokens for reasoning models
-                max_output_tokens = kwargs.get(
-                    "max_output_tokens", self.settings.max_tokens
-                )
-                if max_output_tokens:
-                    stream_params["max_output_tokens"] = max_output_tokens
-
-                # Log if incompatible parameters are provided
-                if "temperature" in kwargs:
-                    logger.warning(
-                        f"temperature parameter ignored for reasoning model {model}"
-                    )
-                if "top_p" in kwargs:
-                    logger.warning(
-                        f"top_p parameter ignored for reasoning model {model}"
-                    )
-                if "logprobs" in kwargs:
-                    logger.warning(
-                        f"logprobs parameter ignored for reasoning model {model}"
-                    )
-            else:
-                # Non-reasoning models use standard parameters
-                logger.info(f"Using standard model: {model}")
-                temperature = kwargs.get("temperature", self.settings.temperature)
-                max_tokens = kwargs.get("max_tokens", self.settings.max_tokens)
-
-                if temperature is not None:
-                    stream_params["temperature"] = temperature
-                if max_tokens:
-                    stream_params["max_output_tokens"] = max_tokens
-
-            logger.debug(
-                f"Stream params: model={model}, reasoning_effort={reasoning_effort}, input_items={len(input_items)}, "
-                f"has_instructions={bool(instructions)}, tools={bool(tools)}"
+            # Build stream parameters
+            stream_params, model, is_reasoning_model = self._build_stream_params(
+                messages=messages,
+                instructions=instructions,
+                enable_web_search=enable_web_search,
+                vector_store_ids=vector_store_ids,
+                **kwargs,
             )
 
             # Create streaming response using Responses API
@@ -770,13 +951,10 @@ class OpenAIProvider(AIProvider):
 
             # Track citations from web search
             accumulated_citations: list[SearchCitation] = []
-            # Track file citations and optionally log their content previews
-            seen_file_ids: set[str] = set()
 
             event_count = 0
             async for event in stream:
                 event_count += 1
-                logger.debug(f"Received event #{event_count}: {type(event).__name__}")
                 # Handle different event types from Responses API using official types
                 content = ""
                 reasoning_summary = ""
@@ -800,78 +978,34 @@ class OpenAIProvider(AIProvider):
                         continue
 
                     # Handle web search tool events
-                    elif isinstance(event, ResponseWebSearchCallInProgressEvent):
-                        item_id = event.item_id
-                        logger.info(
-                            f"[WEB_SEARCH] Web search started (item_id={item_id})"
-                        )
-                        # Yield tool call in running state (no result yet)
-                        tool_calls_to_yield.append(
-                            ToolCall(
-                                tool_call_id=item_id,
-                                tool_name=ToolName.WEB_SEARCH,
-                                args={},
-                                result=None,
-                            )
-                        )
-
-                    elif isinstance(event, ResponseWebSearchCallSearchingEvent):
-                        # Just log, don't yield - prevents flickering
-                        logger.info(f"[WEB_SEARCH] Searching... (item_id={event.item_id})")
-                        continue
-
-                    elif isinstance(event, ResponseWebSearchCallCompletedEvent):
-                        item_id = event.item_id
-                        logger.info(
-                            f"[WEB_SEARCH] Web search completed (item_id={item_id})"
-                        )
-                        # Yield tool call with completed result
-                        tool_calls_to_yield.append(
-                            ToolCall(
-                                tool_call_id=item_id,
-                                tool_name=ToolName.WEB_SEARCH,
-                                args={},
-                                result={"status": ToolStatus.COMPLETE.value},
-                            )
-                        )
+                    elif isinstance(
+                        event,
+                        (
+                            ResponseWebSearchCallInProgressEvent,
+                            ResponseWebSearchCallSearchingEvent,
+                            ResponseWebSearchCallCompletedEvent,
+                        ),
+                    ):
+                        tool_call = self._handle_web_search_event(event)
+                        if tool_call:
+                            tool_calls_to_yield.append(tool_call)
+                        else:
+                            continue
 
                     # Handle file search tool events
-                    elif isinstance(event, ResponseFileSearchCallInProgressEvent):
-                        item_id = event.item_id
-                        logger.info(
-                            f"[FILE_SEARCH] File search started (item_id={item_id})"
-                        )
-                        # Yield tool call in running state (no result yet)
-                        tool_calls_to_yield.append(
-                            ToolCall(
-                                tool_call_id=item_id,
-                                tool_name=ToolName.FILE_SEARCH,
-                                args={},
-                                result=None,
-                            )
-                        )
-
-                    elif isinstance(event, ResponseFileSearchCallSearchingEvent):
-                        # Just log, don't yield - prevents flickering
-                        logger.info(
-                            f"[FILE_SEARCH] Searching files... (item_id={event.item_id})"
-                        )
-                        continue
-
-                    elif isinstance(event, ResponseFileSearchCallCompletedEvent):
-                        item_id = event.item_id
-                        logger.info(
-                            f"[FILE_SEARCH] File search completed (item_id={item_id})"
-                        )
-                        # Yield tool call with completed result
-                        tool_calls_to_yield.append(
-                            ToolCall(
-                                tool_call_id=item_id,
-                                tool_name=ToolName.FILE_SEARCH,
-                                args={},
-                                result={"status": ToolStatus.COMPLETE.value},
-                            )
-                        )
+                    elif isinstance(
+                        event,
+                        (
+                            ResponseFileSearchCallInProgressEvent,
+                            ResponseFileSearchCallSearchingEvent,
+                            ResponseFileSearchCallCompletedEvent,
+                        ),
+                    ):
+                        tool_call = self._handle_file_search_event(event)
+                        if tool_call:
+                            tool_calls_to_yield.append(tool_call)
+                        else:
+                            continue
 
                     # Handle reasoning text delta events (reasoning models)
                     # Note: We don't stream the raw reasoning content, only log it
@@ -893,77 +1027,31 @@ class OpenAIProvider(AIProvider):
                     # Handle text delta events (streaming output content)
                     elif isinstance(event, ResponseTextDeltaEvent):
                         content = event.delta
-                        logger.info(
-                            f"[TEXT] Got text delta: {content[:100] if content else '(empty)'}..."
-                        )
 
-                    # Handle annotation events (citations from web search)
+                    # Handle annotation events (citations from web search and file search)
                     elif isinstance(event, ResponseOutputTextAnnotationAddedEvent):
-                        annotation = event.annotation
-
-                        # Parse annotation as AnnotationURLCitation (handles both dict and object)
-                        try:
-                            # If it's a dict, parse it; if it's already an object, use as-is
-                            if isinstance(annotation, dict):
-                                ann_type = annotation.get("type")
-                                if ann_type == "url_citation":
-                                    url_citation = AnnotationURLCitation(**annotation)
-                                elif ann_type == "file_citation":
-                                    # Log RAG file hits (metadata and short content preview)
-                                    file_id = annotation.get("file_citation", {}).get(
-                                        "file_id"
-                                    ) or annotation.get("file_id")
-                                    quoted_text = (
-                                        annotation.get("text")
-                                        or annotation.get("quote")
-                                        or ""
-                                    )
-                                    if file_id and file_id not in seen_file_ids:
-                                        seen_file_ids.add(file_id)
-                                        logger.info(
-                                            f"RAG file cited: id={file_id}, quoted={quoted_text!r}"
-                                        )
-                                        # Try to fetch file metadata
-                                        try:
-                                            meta = await client.files.retrieve(file_id)
-                                            logger.info(
-                                                f"RAG file metadata: id={file_id}, name={getattr(meta, 'filename', None)}, bytes={getattr(meta, 'bytes', None)}"
-                                            )
-                                        except Exception as e:
-                                            logger.debug(
-                                                f"Failed to retrieve file metadata for {file_id}: {e}"
-                                            )
-
-                                    # Skip adding to web citations list for file citations
-                                    continue
-                                else:
-                                    logger.debug(
-                                        f"Skipped unknown annotation type: {ann_type}"
-                                    )
-                                    continue  # Unknown annotation type
-                            elif isinstance(annotation, AnnotationURLCitation):
-                                url_citation = annotation
-                            else:
-                                logger.debug(
-                                    f"Skipped unknown annotation format: {type(annotation).__name__}"
-                                )
-                                continue  # Skip unknown annotation formats
-
-                            # Create citation from parsed annotation
-                            citation = SearchCitation(
-                                url=url_citation.url,
-                                title=url_citation.title,
-                                snippet=None,
-                                accessed_at=None,
-                            )
+                        citation = await self._parse_annotation_to_citation(
+                            annotation=event.annotation,
+                            client=client,
+                        )
+                        
+                        # Add citation if it's a web citation (file citations return None)
+                        if citation:
                             citations.append(citation)
-
+                            
                             # Track unique citations
                             if citation not in accumulated_citations:
                                 accumulated_citations.append(citation)
 
-                        except Exception as e:
-                            logger.error(f"Failed to parse annotation: {e}")
+                    # Handle text done events (completion marker for text content)
+                    elif isinstance(event, ResponseTextDoneEvent):
+                        # Text content is done, no action needed
+                        continue
+                    
+                    # Handle content part done events (completion marker for content parts)
+                    elif isinstance(event, ResponseContentPartDoneEvent):
+                        # Content part is done, no action needed
+                        continue
 
                     # Handle completion events
                     elif isinstance(event, ResponseCompletedEvent):
@@ -994,12 +1082,6 @@ class OpenAIProvider(AIProvider):
                             tool_calls=tool_calls_to_yield,
                             citations=citations,
                             finish_reason=finish_reason,
-                        )
-                        logger.debug(
-                            f"[YIELD] Yielding chunk: content_len={len(content)}, "
-                            f"reasoning_len={len(reasoning_summary)}, "
-                            f"tool_calls={len(tool_calls_to_yield)}, "
-                            f"citations={len(citations)}, finish={finish_reason}"
                         )
                         yield chunk
 
