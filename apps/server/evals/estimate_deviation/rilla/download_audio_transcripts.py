@@ -10,7 +10,6 @@ import os
 import subprocess
 import sys
 import time
-import uuid
 from pathlib import Path
 
 import boto3
@@ -196,14 +195,10 @@ def process_single_row(input_file, row_number, base_output_dir):
     print(f"Audio URL: {audio_url}")
     print(f"Transcript URL: {transcript_url}")
 
-    # Generate UUID for this pair
-    file_uuid = str(uuid.uuid4())
-    print(f"Generated UUID: {file_uuid}")
-
-    # Download to temporary file first to detect actual type
-    temp_audio = output_dir / f"{file_uuid}.tmp"
-    temp_transcript = output_dir / f"{file_uuid}_transcript.tmp"
-    transcript_output = output_dir / f"{file_uuid}.json"
+    # Use conversation_id for local filenames
+    temp_audio = output_dir / f"{conversation_id}.tmp"
+    temp_transcript = output_dir / f"{conversation_id}_transcript.tmp"
+    transcript_output = output_dir / f"{conversation_id}.json"
 
     audio_success = False
     transcript_success = False
@@ -220,7 +215,7 @@ def process_single_row(input_file, row_number, base_output_dir):
 
         # Get proper extension based on actual file type
         proper_ext = get_proper_extension(mime_type) if mime_type else ".audio"
-        final_audio_path = output_dir / f"{file_uuid}{proper_ext}"
+        final_audio_path = output_dir / f"{conversation_id}{proper_ext}"
 
         # Rename temp file to proper extension
         temp_audio.rename(final_audio_path)
@@ -273,7 +268,6 @@ def process_single_row(input_file, row_number, base_output_dir):
     print("Summary:")
     print(f"  Row number: {row_number}")
     print(f"  Conversation ID: {conversation_id}")
-    print(f"  UUID: {file_uuid}")
     print(f"  Audio download: {'SUCCESS' if audio_success else 'FAILED'}")
     if audio_success and final_audio_path:
         print(f"  Audio file: {final_audio_path.name}")
