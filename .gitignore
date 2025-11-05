@@ -24,4 +24,5 @@ apps/server/scripts/output/**/*
 
 demo_data/
 
-evals/output/
+apps/server/evals/output/**/*
+
