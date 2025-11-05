@@ -36,6 +36,7 @@ dev = [
     "pytest-cov>=6.2.1",
     "pytest-mock>=3.14.1",
     "ruff>=0.12.1",
+    "tqdm>=4.67.1",
 ]
 
 [tool.uv]
