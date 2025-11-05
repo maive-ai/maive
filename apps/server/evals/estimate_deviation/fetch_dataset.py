@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script to export Rilla links from Service Titan projects to CSV and upload estimate data to S3.
+Script to export Rilla links from Service Titan projects to JSONL and upload estimate data to S3.
 
 This script:
 1. Iterates through all projects
@@ -10,19 +10,18 @@ This script:
 5. Fetches form submission data (Form ID 104: Appointment Result) as JSON
 6. Uploads estimate data to S3 at s3://vertex-rilla-data/val/<uuid>/estimate.json
 7. Uploads form data to S3 at s3://vertex-rilla-data/val/<uuid>/form.json
-8. Outputs CSV with: uuid, project_created_date, estimate_sold_date, project_id, job_id, estimate_id, estimate_s3_uri, form_s3_uri, rilla_links, rilla_recordings_s3_uri, rilla_transcripts_s3_uri
+8. Outputs JSONL with: uuid, project_created_date, estimate_sold_date, project_id, job_id, estimate_id, estimate_s3_uri, form_s3_uri, rilla_links, rilla_recordings_s3_uri, rilla_transcripts_s3_uri
 
 Usage:
     # Export all Rilla links
-    esc run maive/maive-infra/will-dev -- uv run python scripts/export_rilla_links_csv.py
+    esc run maive/maive-infra/will-dev -- uv run python scripts/fetch_dataset.py
 
     # Export Rilla links for estimates sold in July 2025
-    esc run maive/maive-infra/will-dev -- uv run python scripts/export_rilla_links_csv.py --start-date 2025-07-09 --end-date 2025-07-10
+    esc run maive/maive-infra/will-dev -- uv run python scripts/fetch_dataset.py --start-date 2025-07-09 --end-date 2025-07-10
 """
 
 import argparse
 import asyncio
-import csv
 import json
 import os
 import re
@@ -140,7 +139,7 @@ async def main():
     args = parser.parse_args()
 
     logger.info("=" * 80)
-    logger.info("Exporting Rilla Links to CSV and Uploading Estimate Data to S3")
+    logger.info("Exporting Rilla Links to JSONL and Uploading Estimate Data to S3")
     logger.info("=" * 80)
     logger.info("📤 S3 Upload Mode: s3://vertex-rilla-data/val/<uuid>/estimate.json")
     if args.start_date and args.end_date:
@@ -161,22 +160,7 @@ async def main():
     output_dir = Path(__file__).parent / "output"
     output_dir.mkdir(exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    csv_file = output_dir / f"rilla_links_{timestamp}.csv"
-
-    # CSV columns
-    fieldnames = [
-        "uuid",
-        "project_created_date",
-        "estimate_sold_date",
-        "project_id",
-        "job_id",
-        "estimate_id",
-        "estimate_s3_uri",
-        "form_s3_uri",
-        "rilla_links",
-        "rilla_recordings_s3_uri",
-        "rilla_transcripts_s3_uri",
-    ]
+    jsonl_file = output_dir / f"rilla_links_{timestamp}.jsonl"
 
     total_projects = 0
     projects_with_rilla = 0
@@ -188,10 +172,7 @@ async def main():
     semaphore = asyncio.Semaphore(10)  # Max 10 concurrent requests
 
     try:
-        with open(csv_file, "w", newline="") as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
-
+        with open(jsonl_file, "w") as jsonl_output:
             # Iterate through projects using CRM provider
             page = 1
             page_size = 50
@@ -290,7 +271,10 @@ async def main():
                                     # Make sold_date timezone-aware if it's not
                                     if sold_date.tzinfo is None:
                                         from datetime import timezone
-                                        sold_date = sold_date.replace(tzinfo=timezone.utc)
+
+                                        sold_date = sold_date.replace(
+                                            tzinfo=timezone.utc
+                                        )
 
                                     # Check if within date range
                                     if start_date_obj and sold_date < start_date_obj:
@@ -463,7 +447,9 @@ async def main():
 
                                 return {
                                     "uuid": uuid,
-                                    "project_created_date": project.created_at if project.created_at else "",
+                                    "project_created_date": project.created_at
+                                    if project.created_at
+                                    else "",
                                     "estimate_sold_date": estimate.sold_on.isoformat()
                                     if estimate.sold_on
                                     else "",
@@ -476,13 +462,11 @@ async def main():
                                     "form_s3_uri": form_s3_path
                                     if form_upload_success
                                     else "",
-                                    "rilla_links": json.dumps(
-                                        rilla_urls
-                                    ),  # Store as JSON string for CSV
+                                    "rilla_links": rilla_urls,  # Store as list in JSONL
                                     "rilla_recordings_s3_uri": "",  # Empty for now
                                     "rilla_transcripts_s3_uri": "",  # Empty for now
-                                    "estimate_upload_success": estimate_upload_success,
-                                    "form_upload_success": form_upload_success,
+                                    "labels": "",  # Empty for now
+                                    "notes": "",  # Empty for now
                                 }
 
                             return None
@@ -502,7 +486,7 @@ async def main():
                     leave=False,
                 )
 
-                # Write results to CSV
+                # Write results to JSONL
                 for result in results:
                     if result:
                         projects_with_rilla += 1
@@ -511,14 +495,14 @@ async def main():
                             successful_estimate_uploads += 1
                         if result.get("form_upload_success", False):
                             successful_form_uploads += 1
-                        # Remove upload success flags from CSV output
-                        csv_row = {
+                        # Remove upload success flags from JSONL output
+                        json_row = {
                             k: v
                             for k, v in result.items()
                             if k
                             not in ["estimate_upload_success", "form_upload_success"]
                         }
-                        writer.writerow(csv_row)
+                        jsonl_output.write(json.dumps(json_row, default=str) + "\n")
 
                 total_projects += len(projects)
                 page += 1
@@ -536,16 +520,16 @@ async def main():
         logger.info(
             f"Successful form uploads: {successful_form_uploads}/{total_rilla_links}"
         )
-        logger.info(f"\n✓ CSV file saved to: {csv_file}")
+        logger.info(f"\n✓ JSONL file saved to: {jsonl_file}")
 
         if total_rilla_links > 0:
             logger.info("\n📊 Sample data:")
             # Read and display first 5 rows
-            with open(csv_file, "r") as f:
-                reader = csv.DictReader(f)
-                for i, row in enumerate(reader):
+            with open(jsonl_file, "r") as f:
+                for i, line in enumerate(f):
                     if i >= 5:
                         break
+                    row = json.loads(line)
                     logger.info(f"  {row}")
 
     except Exception as e:
