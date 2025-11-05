@@ -187,31 +187,81 @@ def expand_all_nodes(page):
     return total_expanded
 
 
-def download_content():
-    """
-    Download HTML content and save TOC structure.
-    Only processes leaf nodes (items without children).
-    """
-    import sys
 
-    # Check command line arguments
-    if len(sys.argv) < 3:
-        print("Usage: python scrape_and_merge.py <URL> <NAME> [--output-dir DIR]")
-        print(
-            "Example: python scrape_and_merge.py https://library.municode.com/ut/parkcity/codes/code_of_ordinances parkcity"
-        )
+def scrape_from_csv(csv_path: str, output_dir_path: str = "output"):
+    """
+    Scrape multiple jurisdictions from a CSV file.
+
+    CSV format expected:
+        name,slug,base_url,code_url,status
+
+    Args:
+        csv_path: Path to CSV file containing jurisdiction list
+        output_dir_path: Directory to save outputs (default: "output")
+    """
+    import csv
+    from pathlib import Path
+
+    csv_file = Path(csv_path)
+    if not csv_file.exists():
+        print(f"Error: CSV file not found: {csv_path}")
         return
 
-    base_url = sys.argv[1]
-    output_name = sys.argv[2]
+    # Read all jurisdictions from CSV
+    jurisdictions = []
+    with open(csv_file, 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row.get('status') == 'ready' and row.get('code_url'):
+                jurisdictions.append(row)
 
-    # Parse optional output directory
-    output_dir_path = "output"
-    if len(sys.argv) > 3 and sys.argv[3] == "--output-dir":
-        if len(sys.argv) > 4:
-            output_dir_path = sys.argv[4]
+    if not jurisdictions:
+        print(f"Error: No ready jurisdictions found in {csv_path}")
+        return
 
-    print(f"Using URL: {base_url}")
+    print(f"\n{'='*60}")
+    print(f"BATCH SCRAPING MODE")
+    print(f"{'='*60}")
+    print(f"CSV file: {csv_path}")
+    print(f"Found {len(jurisdictions)} jurisdictions to scrape")
+    print(f"Output directory: {output_dir_path}")
+    print(f"{'='*60}\n")
+
+    # Scrape each jurisdiction
+    for i, juris in enumerate(jurisdictions, 1):
+        print(f"\n{'='*60}")
+        print(f"[{i}/{len(jurisdictions)}] Scraping: {juris['name']}")
+        print(f"{'='*60}")
+
+        try:
+            # Call the single scraping function directly
+            scrape_single_jurisdiction(
+                url=juris['code_url'],
+                output_name=juris['slug'],
+                output_dir_path=output_dir_path
+            )
+            print(f"✓ Completed: {juris['name']}")
+        except Exception as e:
+            print(f"✗ Failed: {juris['name']}")
+            print(f"  Error: {str(e)}")
+            # Continue with next jurisdiction
+
+    print(f"\n{'='*60}")
+    print(f"BATCH SCRAPING COMPLETE")
+    print(f"Processed {len(jurisdictions)} jurisdictions")
+    print(f"{'='*60}\n")
+
+
+def scrape_single_jurisdiction(url: str, output_name: str, output_dir_path: str = "output"):
+    """
+    Scrape HTML content from a single jurisdiction's code.
+
+    Args:
+        url: Full URL to the jurisdiction code
+        output_name: Name for the output file
+        output_dir_path: Directory to save output (default: "output")
+    """
+    print(f"Using URL: {url}")
     print(f"Output name: {output_name}")
     print(f"Output directory: {output_dir_path}")
 
@@ -224,8 +274,8 @@ def download_content():
         context = browser.new_context()
         page = context.new_page()
 
-        print(f"Navigating to {base_url} to extract TOC...")
-        page.goto(base_url, wait_until="networkidle", timeout=60000)
+        print(f"Navigating to {url} to extract TOC...")
+        page.goto(url, wait_until="networkidle", timeout=60000)
 
         # Wait for TOC to load (can take a while on some sites)
         print("Waiting for TOC to load (this may take up to 60 seconds)...")
@@ -285,13 +335,13 @@ def download_content():
                         () => {{
                             const sectionHeader = document.getElementById('{section_id}');
                             if (!sectionHeader) return null;
-                            
+
                             const container = document.createElement('div');
                             let currentElement = sectionHeader;
-                            
+
                             // Add the header itself
                             container.appendChild(currentElement.cloneNode(true));
-                            
+
                             // Collect siblings until we hit another h2 or h3 header
                             currentElement = currentElement.nextElementSibling;
                             while (currentElement) {{
@@ -302,7 +352,7 @@ def download_content():
                                 container.appendChild(currentElement.cloneNode(true));
                                 currentElement = currentElement.nextElementSibling;
                             }}
-                            
+
                             return container.outerHTML;
                         }}
                     """)
@@ -320,11 +370,11 @@ def download_content():
                             () => {{
                                 const sectionHeader = document.getElementById('{section_id}');
                                 if (!sectionHeader) return null;
-                                
+
                                 const container = document.createElement('div');
                                 let currentElement = sectionHeader;
                                 container.appendChild(currentElement.cloneNode(true));
-                                
+
                                 currentElement = currentElement.nextElementSibling;
                                 while (currentElement) {{
                                     const tagName = currentElement.tagName.toLowerCase();
@@ -332,7 +382,7 @@ def download_content():
                                     container.appendChild(currentElement.cloneNode(true));
                                     currentElement = currentElement.nextElementSibling;
                                 }}
-                                
+
                                 return container.outerHTML;
                             }}
                         """)
@@ -371,15 +421,27 @@ def download_content():
     output_dir = Path(output_dir_path)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Generate filename with date and name
-    date_str = datetime.now().strftime("%m-%d-%Y")
-    output_filename = f"{date_str}_{output_name}.json"
+    # Generate filename (no date prefix - overwrites existing)
+    output_filename = f"{output_name}.json"
     output_path = output_dir / output_filename
 
-    # Save only the flattened TOC with HTML content
+    # Wrap content with metadata
     if flat_toc:
+        scraped_at = datetime.now().isoformat()
+        output_data = {
+            "metadata": {
+                "scraped_at": scraped_at,
+                "city_slug": output_name,
+                "source_url": url,
+                "scraper": "general_code_publish.py",
+                "scraper_version": "2.0"
+            },
+            "sections": flat_toc
+        }
+
+        # Save with metadata wrapper
         with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(flat_toc, f, indent=2, ensure_ascii=False)
+            json.dump(output_data, f, indent=2, ensure_ascii=False)
         print(f"\nSaved flattened TOC with HTML to: {output_path}")
 
     # Report statistics
@@ -412,4 +474,45 @@ def download_content():
 
 
 if __name__ == "__main__":
-    download_content()
+    import sys
+
+    # Check for CSV mode
+    if len(sys.argv) >= 2 and sys.argv[1] == "--csv":
+        if len(sys.argv) < 3:
+            print("Usage: python general_code_publish.py --csv <CSV_FILE> [--output-dir DIR]")
+            print("Example: python general_code_publish.py --csv ut_ecode360.csv --output-dir output")
+            sys.exit(1)
+
+        csv_path = sys.argv[2]
+
+        # Parse optional output directory
+        output_dir_path = "output"
+        if len(sys.argv) > 3 and sys.argv[3] == "--output-dir":
+            if len(sys.argv) > 4:
+                output_dir_path = sys.argv[4]
+
+        scrape_from_csv(csv_path, output_dir_path)
+
+    # Single jurisdiction mode
+    elif len(sys.argv) >= 3:
+        url = sys.argv[1]
+        output_name = sys.argv[2]
+
+        # Parse optional output directory
+        output_dir_path = "output"
+        if len(sys.argv) > 3 and sys.argv[3] == "--output-dir":
+            if len(sys.argv) > 4:
+                output_dir_path = sys.argv[4]
+
+        scrape_single_jurisdiction(url, output_name, output_dir_path)
+
+    # Show usage
+    else:
+        print("Usage:")
+        print("  Single mode:  python general_code_publish.py <URL> <NAME> [--output-dir DIR]")
+        print("  Batch mode:   python general_code_publish.py --csv <CSV_FILE> [--output-dir DIR]")
+        print()
+        print("Examples:")
+        print("  python general_code_publish.py https://ecode360.com/HU4729 huntington")
+        print("  python general_code_publish.py --csv ut_ecode360.csv --output-dir output/codes/ut")
+        sys.exit(1)

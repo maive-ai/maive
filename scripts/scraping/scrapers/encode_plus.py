@@ -146,8 +146,10 @@ class MunicodeOrdinanceScraper:
                         const iconImg = li.querySelector(':scope > img.icon, :scope > a > img.icon');
                         const isLeaf = iconImg && iconImg.classList.contains('isLeaf');
 
-                        // Get href
+                        // Get href and convert to absolute URL
                         const href = contentLink?.getAttribute('href') || '';
+                        const baseUrl = window.location.origin;
+                        const fullUrl = href ? (href.startsWith('http') ? href : baseUrl + href) : '';
 
                         // Check if it has an expander
                         const expander = li.querySelector(':scope > a[onclick*="ZP.TOCView.Expand"] img.expander');
@@ -175,7 +177,7 @@ class MunicodeOrdinanceScraper:
                             secid,
                             title,
                             isLeaf,
-                            href,
+                            href: fullUrl,
                             hasExpander,
                             isExpanded,
                             hasChildrenInDOM,
@@ -543,14 +545,26 @@ async def main() -> None:
         output_dir = Path(args.output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        # Generate filename with date
-        date_str = datetime.now().strftime("%m-%d-%Y")
-        output_filename = f"{date_str}_{output_name}.json"
+        # Generate filename (no date prefix - overwrites existing)
+        output_filename = f"{output_name}.json"
         output_path = output_dir / output_filename
 
-        # Save flattened TOC with HTML content
+        # Wrap content with metadata
+        scraped_at = datetime.now().isoformat()
+        output_data = {
+            "metadata": {
+                "scraped_at": scraped_at,
+                "city_slug": output_name,
+                "source_url": args.url,
+                "scraper": "encode_plus.py",
+                "scraper_version": "2.0"
+            },
+            "sections": flat_toc
+        }
+
+        # Save with metadata wrapper
         with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(flat_toc, f, indent=2, ensure_ascii=False)
+            json.dump(output_data, f, indent=2, ensure_ascii=False)
         print(f"\nSaved to: {output_path}")
 
         # Report statistics

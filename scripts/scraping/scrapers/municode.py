@@ -266,30 +266,15 @@ def expand_all_nodes(page):
     print(f"Expansion complete: {expanded_count} nodes expanded")
 
 
-def scrape_and_merge_content():
+def scrape_single_municipality(url: str, output_name: str, output_dir_path: str = "output"):
     """
-    Scrape HTML content from each link in the Angular TOC and save all data.
-    Only processes leaf nodes (items with no children).
+    Scrape HTML content from a single municipality's code.
+
+    Args:
+        url: Full URL to the municipality code
+        output_name: Name for the output file
+        output_dir_path: Directory to save output (default: "output")
     """
-    import sys
-
-    # Check command line arguments
-    if len(sys.argv) < 3:
-        print("Usage: python scrape_and_merge.py <URL> <NAME> [--output-dir DIR]")
-        print(
-            "Example: python scrape_and_merge.py https://library.municode.com/ca/losangeles/codes/code_of_ordinances losangeles"
-        )
-        return
-
-    url = sys.argv[1]
-    output_name = sys.argv[2]
-
-    # Parse optional output directory
-    output_dir_path = "output"
-    if len(sys.argv) > 3 and sys.argv[3] == "--output-dir":
-        if len(sys.argv) > 4:
-            output_dir_path = sys.argv[4]
-
     print(f"Using URL: {url}")
     print(f"Output name: {output_name}")
     print(f"Output directory: {output_dir_path}")
@@ -424,15 +409,27 @@ def scrape_and_merge_content():
     output_dir = Path(output_dir_path)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Generate filename with date and name
-    date_str = datetime.now().strftime("%m-%d-%Y")
-    output_filename = f"{date_str}_{output_name}.json"
+    # Generate filename (no date prefix - overwrites existing)
+    output_filename = f"{output_name}.json"
     output_path = output_dir / output_filename
 
-    # Save only the flattened TOC with HTML content
+    # Wrap content with metadata
     if flat_toc:
+        scraped_at = datetime.now().isoformat()
+        output_data = {
+            "metadata": {
+                "scraped_at": scraped_at,
+                "city_slug": output_name,
+                "source_url": url,
+                "scraper": "municode.py",
+                "scraper_version": "2.0"
+            },
+            "sections": flat_toc
+        }
+
+        # Save with metadata wrapper
         with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(flat_toc, f, indent=2, ensure_ascii=False)
+            json.dump(output_data, f, indent=2, ensure_ascii=False)
         print(f"\nSaved flattened TOC with HTML to: {output_path}")
 
     # Report statistics
@@ -463,5 +460,109 @@ def scrape_and_merge_content():
             print(f"    ... and {len(missing_html) - 5} more")
 
 
+def scrape_from_csv(csv_path: str, output_dir_path: str = "output"):
+    """
+    Scrape multiple municipalities from a CSV file.
+
+    CSV format expected:
+        name,slug,base_url,code_url,status
+
+    Args:
+        csv_path: Path to CSV file containing municipality list
+        output_dir_path: Directory to save outputs (default: "output")
+    """
+    import csv
+    from pathlib import Path
+
+    csv_file = Path(csv_path)
+    if not csv_file.exists():
+        print(f"Error: CSV file not found: {csv_path}")
+        return
+
+    # Read all municipalities from CSV
+    municipalities = []
+    with open(csv_file, 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row.get('status') == 'ready' and row.get('code_url'):
+                municipalities.append(row)
+
+    if not municipalities:
+        print(f"Error: No ready municipalities found in {csv_path}")
+        return
+
+    print(f"\n{'='*60}")
+    print(f"BATCH SCRAPING MODE")
+    print(f"{'='*60}")
+    print(f"CSV file: {csv_path}")
+    print(f"Found {len(municipalities)} municipalities to scrape")
+    print(f"Output directory: {output_dir_path}")
+    print(f"{'='*60}\n")
+
+    # Scrape each municipality
+    for i, muni in enumerate(municipalities, 1):
+        print(f"\n{'='*60}")
+        print(f"[{i}/{len(municipalities)}] Scraping: {muni['name']}")
+        print(f"{'='*60}")
+
+        try:
+            scrape_single_municipality(
+                url=muni['code_url'],
+                output_name=muni['slug'],
+                output_dir_path=output_dir_path
+            )
+            print(f"✓ Completed: {muni['name']}")
+        except Exception as e:
+            print(f"✗ Failed: {muni['name']}")
+            print(f"  Error: {str(e)}")
+            # Continue with next municipality
+
+    print(f"\n{'='*60}")
+    print(f"BATCH SCRAPING COMPLETE")
+    print(f"Processed {len(municipalities)} municipalities")
+    print(f"{'='*60}\n")
+
+
 if __name__ == "__main__":
-    scrape_and_merge_content()
+    import sys
+
+    # Check for CSV mode
+    if len(sys.argv) >= 2 and sys.argv[1] == "--csv":
+        if len(sys.argv) < 3:
+            print("Usage: python municode.py --csv <CSV_FILE> [--output-dir DIR]")
+            print("Example: python municode.py --csv ut_final_library.csv --output-dir output")
+            sys.exit(1)
+
+        csv_path = sys.argv[2]
+
+        # Parse optional output directory
+        output_dir_path = "output"
+        if len(sys.argv) > 3 and sys.argv[3] == "--output-dir":
+            if len(sys.argv) > 4:
+                output_dir_path = sys.argv[4]
+
+        scrape_from_csv(csv_path, output_dir_path)
+
+    # Single municipality mode
+    elif len(sys.argv) >= 3:
+        url = sys.argv[1]
+        output_name = sys.argv[2]
+
+        # Parse optional output directory
+        output_dir_path = "output"
+        if len(sys.argv) > 3 and sys.argv[3] == "--output-dir":
+            if len(sys.argv) > 4:
+                output_dir_path = sys.argv[4]
+
+        scrape_single_municipality(url, output_name, output_dir_path)
+
+    # Show usage
+    else:
+        print("Usage:")
+        print("  Single mode:  python municode.py <URL> <NAME> [--output-dir DIR]")
+        print("  Batch mode:   python municode.py --csv <CSV_FILE> [--output-dir DIR]")
+        print()
+        print("Examples:")
+        print("  python municode.py https://library.municode.com/ut/coalville/codes/development_code coalville")
+        print("  python municode.py --csv ut_final_library.csv --output-dir output")
+        sys.exit(1)
