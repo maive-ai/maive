@@ -36,7 +36,6 @@ async def fetch_all_items(
     Returns:
         List of all items
     """
-    provider = get_crm_provider()
     tenant_id = provider.tenant_id
 
     all_items = []
@@ -84,7 +83,7 @@ async def main():
     logger.info("Starting Service Titan Pricebook Items Fetch")
     logger.info("=" * 80)
 
-    provider = ServiceTitanProvider()
+    provider = get_crm_provider()
 
     try:
         # Fetch all materials
