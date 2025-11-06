@@ -10,15 +10,21 @@ Usage:
 
 import asyncio
 import json
+import os
 from pathlib import Path
 
-from src.integrations.crm.config import get_crm_settings
 from src.integrations.crm.providers.service_titan import ServiceTitanProvider
 from src.integrations.crm.schemas import PricebookItemsRequest
 from src.utils.logger import logger
 
+os.environ["CRM_PROVIDER"] = "service_titan"
 
-async def fetch_all_items(provider: ServiceTitanProvider, item_type: str, max_pages: int | None = None) -> list[dict]:
+from src.integrations.crm.providers.factory import get_crm_provider
+
+
+async def fetch_all_items(
+    provider: ServiceTitanProvider, item_type: str, max_pages: int | None = None
+) -> list[dict]:
     """
     Fetch all items of a specific type from the pricebook.
 
@@ -30,8 +36,7 @@ async def fetch_all_items(provider: ServiceTitanProvider, item_type: str, max_pa
     Returns:
         List of all items
     """
-    config = get_crm_settings()
-    tenant_id = config.provider_config.tenant_id
+    tenant_id = provider.tenant_id
 
     all_items = []
     page = 1
@@ -39,10 +44,7 @@ async def fetch_all_items(provider: ServiceTitanProvider, item_type: str, max_pa
 
     while has_more and (max_pages is None or page <= max_pages):
         request = PricebookItemsRequest(
-            tenant=tenant_id,
-            page=page,
-            page_size=50,
-            active="True"
+            tenant=tenant_id, page=page, page_size=50, active="True"
         )
 
         if item_type == "materials":
@@ -81,7 +83,7 @@ async def main():
     logger.info("Starting Service Titan Pricebook Items Fetch")
     logger.info("=" * 80)
 
-    provider = ServiceTitanProvider()
+    provider = get_crm_provider()
 
     try:
         # Fetch all materials
@@ -95,8 +97,12 @@ async def main():
         if materials:
             logger.info("\nSample materials (first 3):")
             for material in materials[:3]:
-                logger.info(f"  - {material['displayName']} (ID: {material['id']}, Code: {material['code']})")
-                logger.info(f"    Price: ${material.get('price', 0)}, Cost: ${material.get('cost', 0)}")
+                logger.info(
+                    f"  - {material['displayName']} (ID: {material['id']}, Code: {material['code']})"
+                )
+                logger.info(
+                    f"    Price: ${material.get('price', 0)}, Cost: ${material.get('cost', 0)}"
+                )
 
         # Fetch all services
         logger.info("\n" + "=" * 80)
@@ -109,7 +115,9 @@ async def main():
         if services:
             logger.info("\nSample services (first 3):")
             for service in services[:3]:
-                logger.info(f"  - {service['displayName']} (ID: {service['id']}, Code: {service['code']})")
+                logger.info(
+                    f"  - {service['displayName']} (ID: {service['id']}, Code: {service['code']})"
+                )
                 logger.info(f"    Price: ${service.get('price', 0)}")
 
         # Fetch all equipment
@@ -123,8 +131,12 @@ async def main():
         if equipment:
             logger.info("\nSample equipment (first 3):")
             for item in equipment[:3]:
-                logger.info(f"  - {item['displayName']} (ID: {item['id']}, Code: {item['code']})")
-                logger.info(f"    Price: ${item.get('price', 0)}, Cost: ${item.get('cost', 0)}")
+                logger.info(
+                    f"  - {item['displayName']} (ID: {item['id']}, Code: {item['code']})"
+                )
+                logger.info(
+                    f"    Price: ${item.get('price', 0)}, Cost: ${item.get('cost', 0)}"
+                )
 
         # Summary
         logger.info("\n" + "=" * 80)
@@ -136,7 +148,7 @@ async def main():
         logger.info(f"Grand Total: {len(materials) + len(services) + len(equipment)}")
 
         # Save to file (optional)
-        output_dir = Path("scripts/output")
+        output_dir = Path(__file__).parent / "output"
         output_dir.mkdir(exist_ok=True)
         output_file = output_dir / "pricebook_items.json"
 

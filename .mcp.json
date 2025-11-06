@@ -18,7 +18,7 @@
         "-y",
         "@reapi/mcp-openapi@latest",
         "--dir",
-        "./.cursor/external_docs/service_titan/crm/tenant-crm-v2.json"
+        "./.cursor/external_docs/service_titan/crm"
       ],
       "env": {}
     },
@@ -29,7 +29,7 @@
         "-y",
         "@reapi/mcp-openapi@latest",
         "--dir",
-        "./.cursor/external_docs/service_titan/forms/tenant-forms-v2.json"
+        "./.cursor/external_docs/service_titan/forms"
       ],
       "env": {}
     },
@@ -40,7 +40,7 @@
         "-y",
         "@reapi/mcp-openapi@latest",
         "--dir",
-        "./.cursor/external_docs/service_titan/jpm/tenant-jpm-v2.json"
+        "./.cursor/external_docs/service_titan/jpm"
       ],
       "env": {}
     },
@@ -51,7 +51,7 @@
         "-y",
         "@reapi/mcp-openapi@latest",
         "--dir",
-        "./.cursor/external_docs/service_titan/payroll/tenant-payroll-v2.json"
+        "./.cursor/external_docs/service_titan/payroll"
       ],
       "env": {}
     },
@@ -62,7 +62,7 @@
         "-y",
         "@reapi/mcp-openapi@latest",
         "--dir",
-        "./.cursor/external_docs/service_titan/salestech/tenant-salestech-v2.json"
+        "./.cursor/external_docs/service_titan/salestech"
       ],
       "env": {}
     },

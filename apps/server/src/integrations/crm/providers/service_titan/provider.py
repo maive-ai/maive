@@ -173,7 +173,7 @@ class ServiceTitanProvider(CRMProvider):
         Get all projects with optional filtering and pagination.
 
         Args:
-            filters: Optional dictionary of filters (not yet implemented)
+            filters: Optional dictionary of filters (supports createdOnOrAfter, createdBefore)
             page: Page number (1-indexed)
             page_size: Number of items per page
 
@@ -182,64 +182,61 @@ class ServiceTitanProvider(CRMProvider):
         """
         logger.info(f"Getting all Service Titan projects (page={page}, size={page_size})")
 
-        # Call existing get_all_project_statuses method
-        project_list = await self.get_all_project_statuses()
+        # Build query parameters
+        params = {
+            "page": page,
+            "pageSize": page_size,
+        }
 
-        # Transform to universal ProjectList
-        projects = []
-        for project_status in project_list.projects:
-            # Extract project data from provider_data
-            if project_status.provider_data:
-                project = Project(
-                    id=project_status.project_id,
-                    name=project_status.provider_data.get("name"),
-                    number=project_status.provider_data.get("number"),
-                    status=project_status.status.value,
-                    status_id=project_status.provider_data.get("statusId"),
-                    sub_status=project_status.provider_data.get("subStatus"),
-                    sub_status_id=project_status.provider_data.get("subStatusId"),
-                    workflow_type="Project",
-                    description=None,
-                    customer_id=str(project_status.provider_data.get("customerId"))
-                    if project_status.provider_data.get("customerId")
-                    else None,
-                    customer_name=None,  # Not available in project list
-                    location_id=str(project_status.provider_data.get("locationId"))
-                    if project_status.provider_data.get("locationId")
-                    else None,
-                    address_line1=None,
-                    address_line2=None,
-                    city=None,
-                    state=None,
-                    postal_code=None,
-                    country=None,
-                    created_at=project_status.provider_data.get("createdOn"),
-                    updated_at=project_status.updated_at.isoformat()
-                    if project_status.updated_at
-                    else None,
-                    start_date=project_status.provider_data.get("startDate"),
-                    target_completion_date=project_status.provider_data.get("targetCompletionDate"),
-                    actual_completion_date=project_status.provider_data.get("actualCompletionDate"),
-                    sales_rep_id=None,
-                    sales_rep_name=None,
-                    provider=CRMProviderEnum.SERVICE_TITAN,
-                    provider_data=project_status.provider_data,
-                )
-                projects.append(project)
+        # Add date filters if provided
+        if filters:
+            if "createdOnOrAfter" in filters:
+                params["createdOnOrAfter"] = filters["createdOnOrAfter"]
+            if "createdBefore" in filters:
+                params["createdBefore"] = filters["createdBefore"]
 
-        # Apply pagination
-        start_idx = (page - 1) * page_size
-        end_idx = start_idx + page_size
-        paginated_projects = projects[start_idx:end_idx]
+        logger.debug(f"Fetching projects with params: {params}")
 
-        return ProjectList(
-            projects=paginated_projects,
-            total_count=project_list.total_count,
-            provider=CRMProviderEnum.SERVICE_TITAN,
-            page=page,
-            page_size=page_size,
-            has_more=end_idx < len(projects),
-        )
+        # Make direct API call to projects endpoint
+        try:
+            url = f"{self.base_api_url}{ServiceTitanEndpoints.PROJECTS.format(tenant_id=self.tenant_id)}"
+            response = await self._make_authenticated_request("GET", url, params=params)
+            response.raise_for_status()
+            data = response.json()
+
+            # Service Titan returns data in a "data" field with pagination info
+            project_data = data.get("data", [])
+            has_more = data.get("hasMore", False)
+
+            # Parse projects using ProjectResponse schema and transform
+            projects = []
+            for project_item in project_data:
+                try:
+                    # Parse using ProjectResponse schema
+                    project_response = ProjectResponse(**project_item)
+                    # Transform to universal Project schema
+                    project = self._transform_st_project_to_universal_project(project_response)
+                    projects.append(project)
+                except Exception as e:
+                    # Log but don't fail on individual project parsing errors
+                    logger.warning(f"Failed to parse project {project_item.get('id')}: {e}")
+                    continue
+
+            return ProjectList(
+                projects=projects,
+                total_count=data.get("totalCount") or len(projects),
+                provider=CRMProviderEnum.SERVICE_TITAN,
+                page=page,
+                page_size=page_size,
+                has_more=has_more,
+            )
+
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error getting projects: {e.response.status_code} - {e.response.text}")
+            raise CRMError(f"Failed to get projects: {e.response.status_code}") from e
+        except Exception as e:
+            logger.error(f"Error getting projects: {e}")
+            raise CRMError(f"Failed to get projects: {e}") from e
 
     async def get_job(self, job_id: str) -> Job:
         """
@@ -675,6 +672,7 @@ class ServiceTitanProvider(CRMProvider):
             sales_rep_name=None,
             provider=CRMProviderEnum.SERVICE_TITAN,
             provider_data={
+                "summary": st_job.summary,
                 "project_id": st_job.project_id,
                 "location_id": st_job.location_id,
                 "business_unit_id": st_job.business_unit_id,

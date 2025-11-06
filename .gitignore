@@ -20,6 +20,6 @@ packages/api/client/.openapi-generator/
 **/_catalog/
 **/_dereferenced/
 
-apps/server/scripts/output/**/*
-
 demo_data/
+
+

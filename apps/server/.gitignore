@@ -13,3 +13,8 @@ node_modules/
 .coverage
 .pytest_cache/
 .venv/
+
+evals/estimate_deviation/output/
+evals/output/
+evals/estimate_deviation/rilla/output/
+scripts/output/**/*
