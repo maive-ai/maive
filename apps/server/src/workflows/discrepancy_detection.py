@@ -571,7 +571,7 @@ async def main():
     # so we'll fetch recent submissions and filter by submitted_on
     form_request = FormSubmissionsRequest(
         tenant=int(tenant_id),
-        form_id=2933,  # Appointment Result V2
+        form_id=104,  # TODO: need to verify that this is the correct form ID for each tenant
         page=1,
         page_size=200,  # Fetch more to ensure we get all in the time range
         status="Any",

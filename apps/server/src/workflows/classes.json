@@ -1,0 +1,136 @@
+{
+  "classes": [
+    {
+      "label": "missing_material_specification",
+      "title": "Missing Material Specification",
+      "description": "A specific roofing material (shingle type, brand, color, style, or quality grade) was discussed in the conversation but is not documented in the estimate or form. Examples: 'We'll use GAF Timberline HDZ shingles' but estimate shows generic shingles; customer chose 'Charcoal' color but color not specified in documentation; 'architectural shingles' mentioned but not in estimate."
+    },
+    {
+      "label": "missing_additional_service_or_component",
+      "title": "Missing Additional Service or Component",
+      "description": "An additional service, component, or work item was explicitly discussed and agreed upon in the conversation but is completely absent from the estimate. Examples: replacing pipe boots, plywood, installing ridge vents, replacing valley flashing, gutters work, chimney flashing, skylight work, or any add-on service that was promised but not documented."
+    },
+    {
+      "label": "missing_damage_repair",
+      "title": "Missing Damage Repair",
+      "description": "The sales rep identified existing damage (wood rot, deck damage, fascia damage, soffit damage) during the conversation and discussed repairing it, but this repair work is not included in the estimate. This includes any structural repairs that need to happen before or during the roofing work."
+    },
+    {
+      "label": "warranty_discrepancy",
+      "title": "Warranty Terms Discrepancy",
+      "description": "The warranty terms, duration, coverage, or type discussed in the conversation differs from what is documented in the estimate or contract. Examples: promised 50-year warranty but estimate shows 25-year; workmanship warranty terms differ; manufacturer warranty vs labor warranty confusion."
+    },
+    {
+      "label": "pricing_discrepancy",
+      "title": "Pricing or Cost Discrepancy",
+      "description": "There is a difference between pricing, total cost, discounts, or payment amounts discussed verbally versus what appears in the written estimate. Examples: discount discussed in person not noted, different total price quoted verbally; discussed discount not applied; financing terms differ from conversation."
+    },
+    {
+      "label": "missing_discount",
+      "title": "Missing Discount",
+      "description": "The sales rep applied a discount or promotional offer during the conversation but it is not formally documented in the estimate or contract. Examples: promised percentage off not shown in estimate; early bird discount mentioned but not recorded; referral discount applied verbally but missing from documentation."
+    },
+    {
+      "label": "scope_area_discrepancy",
+      "title": "Work Scope or Area Discrepancy",
+      "description": "The physical scope or area of work discussed differs from documentation. Examples: discussed doing entire house but estimate only covers front; garage or shed roofing mentioned but not included; number of roof sections differs from discussion; square footage discrepancy."
+    },
+    {
+      "label": "missing_cleanup_disposal",
+      "title": "Missing Cleanup or Disposal Service",
+      "description": "Cleanup, debris removal, dumpster placement, or disposal services that were specifically discussed are not documented in the estimate or work order. Examples: discussed hauling away old materials but not in estimate; magnetic nail sweep mentioned but not documented; daily cleanup promises not recorded."
+    },
+    {
+      "label": "missing_special_request",
+      "title": "Missing Special Customer Request",
+      "description": "A specific customer request, preference, or special instruction discussed in the conversation is not captured in the notes to production or estimate. Examples: 'work only on weekdays'; 'avoid blocking driveway'; 'protect specific landscaping'; 'notify before arrival'; access restrictions; pet considerations."
+    },
+    {
+      "label": "timeline_scheduling_discrepancy",
+      "title": "Timeline or Scheduling Discrepancy",
+      "description": "The project start date, completion timeline, or scheduling commitments discussed verbally differ from what is documented. Examples: promised '2 weeks to start' but form shows different date; completion timeframe differs; seasonal timing discussed but not documented."
+    },
+    {
+      "label": "ventilation_discrepancy",
+      "title": "Ventilation System Discrepancy",
+      "description": "Roof ventilation components, upgrades, or modifications (ridge vents, soffit vents, attic fans, intake/exhaust balance) discussed in the conversation are not properly documented in the estimate. Examples: discussed adding ridge vent but not in estimate; upgrading ventilation system mentioned but not specified."
+    },
+    {
+      "label": "underlayment_discrepancy",
+      "title": "Underlayment or Ice Guard Discrepancy",
+      "description": "The type, quality, or extent of underlayment, ice and water shield, or protective barriers discussed differs from documentation. Examples: synthetic underlayment discussed but felt shown in estimate; ice guard coverage area differs; drip edge specifications not matching conversation."
+    },
+    {
+      "label": "permit_inspection_discrepancy",
+      "title": "Permit or Inspection Process Discrepancy",
+      "description": "Discussions about permits, inspections, HOA approvals, or regulatory compliance that differ from what is documented. Examples: who pulls permits; inspection scheduling; HOA color approval process; building code compliance discussions not documented."
+    }
+  ],
+  "output_schema": {
+    "description": "The expected output format when an LLM classifies deviations",
+    "type": "object",
+    "properties": {
+      "deviations": {
+        "type": "array",
+        "description": "List of all deviations found between the conversation and documented data",
+        "items": {
+          "type": "object",
+          "properties": {
+            "deviation_class": {
+              "type": "string",
+              "description": "The label of the deviation class from the classes list above",
+              "enum": [
+                "missing_material_specification",
+                "missing_additional_service_or_component",
+                "missing_damage_repair",
+                "warranty_discrepancy",
+                "pricing_discrepancy",
+                "missing_discount",
+                "scope_area_discrepancy",
+                "missing_cleanup_disposal",
+                "missing_special_request",
+                "timeline_scheduling_discrepancy",
+                "ventilation_discrepancy",
+                "underlayment_discrepancy",
+                "permit_inspection_discrepancy"
+              ]
+            },
+            "explanation": {
+              "type": "string",
+              "description": "A brief explanation of what specific deviation was found (e.g., 'Customer requested GAF Timberline HDZ shingles in Charcoal but estimate does not specify shingle brand or color')"
+            },
+            "occurrences": {
+              "type": "array",
+              "description": "List of specific timestamps where this deviation was mentioned in the conversation(s)",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "rilla_conversation_index": {
+                    "type": "integer",
+                    "description": "Zero-based index into the list of Rilla conversations (0 for first conversation, 1 for second, etc.)"
+                  },
+                  "timestamp": {
+                    "type": "string",
+                    "description": "Timestamp in HH:MM:SS format when this deviation was mentioned in the conversation",
+                    "pattern": "^([0-9]{2}):([0-5][0-9]):([0-5][0-9])$"
+                  },
+                  "context": {
+                    "type": "string",
+                    "description": "Optional: Brief quote or context from the conversation at this timestamp"
+                  }
+                },
+                "required": ["rilla_conversation_index", "timestamp"]
+              }
+            }
+          },
+          "required": ["deviation_class", "explanation", "occurrences"]
+        }
+      },
+      "summary": {
+        "type": "string",
+        "description": "Brief overall summary of findings (e.g., 'Found 3 deviations: material specifications, additional services, and special requests not documented')"
+      }
+    },
+    "required": ["deviations", "summary"]
+  }
+}
