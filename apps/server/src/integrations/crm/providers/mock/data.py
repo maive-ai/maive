@@ -17,52 +17,56 @@ DEFAULT_PHONE_NUMBER = "+1-703-268-1917"
 # Project statuses
 PROJECT_STATUSES = [status.value for status in Status]
 
+# Easy to modify name for demos
+DEMO_NAME = "Brandi Ivy"
+DEMO_EMAIL = DEMO_NAME.replace(" ", ".").lower() + "@gmail.com"
+
 
 # Mock customer/project data as dictionaries
 MOCK_PROJECTS_RAW = [
     {
-        "id": "st_001",
-        "customerName": "John Smith",
-        "address": "123 Main St, Austin, TX 78701",
-        "phone": DEFAULT_PHONE_NUMBER,
-        "email": "john.smith@gmail.com",
-        "claimNumber": "CLM-2024-001",
-        "dateOfLoss": "2024-08-15",
-        "insuranceAgency": "State Farm Insurance",
-        "insuranceAgencyContact": {
-            "name": "Sarah Johnson",
-            "phone": DEFAULT_PHONE_NUMBER,
-            "email": "sarah.johnson@statefarm.com",
-        },
-        "adjusterName": "Mike Williams",
-        "adjusterContact": {
-            "name": "Mike Williams",
-            "phone": DEFAULT_PHONE_NUMBER,
-            "email": "mike.williams@statefarm.com",
-        },
-        "notes": "Roof damage from hail storm. Customer prefers morning appointments.",
-    },
-    {
         "id": "jn_002",
         "customerName": "Emily Davis",
-        "address": "456 Oak Avenue, Dallas, TX 75201",
+        "address": "456 Oak Avenue, Overland Park, KS 66213",
         "phone": DEFAULT_PHONE_NUMBER,
         "email": "emily.davis@gmail.com",
         "claimNumber": "CLM-2024-002",
         "dateOfLoss": "2024-09-01",
         "insuranceAgency": "Allstate Insurance",
         "insuranceAgencyContact": {
-            "name": "Robert Chen",
+            "name": DEMO_NAME,
             "phone": DEFAULT_PHONE_NUMBER,
-            "email": "robert.chen@allstate.com",
+            "email": DEMO_EMAIL,
         },
-        "adjusterName": "Lisa Rodriguez",
+        "adjusterName": DEMO_NAME,
         "adjusterContact": {
-            "name": "Lisa Rodriguez",
+            "name": DEMO_NAME,
             "phone": DEFAULT_PHONE_NUMBER,
-            "email": "lisa.rodriguez@allstate.com",
+            "email": DEMO_EMAIL,
         },
-        "notes": "Wind damage to gutters and siding. Emergency tarp installed.",
+        "notes": "Wind damage on muliple faces. Emergency tarp installed.",
+    },
+    {
+        "id": "st_001",
+        "customerName": "John Smith",
+        "address": "123 Main St, Coalville, UT 84017",
+        "phone": DEFAULT_PHONE_NUMBER,
+        "email": "john.smith@gmail.com",
+        "claimNumber": "CLM-2024-001",
+        "dateOfLoss": "2024-08-15",
+        "insuranceAgency": "State Farm Insurance",
+        "insuranceAgencyContact": {
+            "name": "Rick Davis",
+            "phone": DEFAULT_PHONE_NUMBER,
+            "email": "Rick.Davis@statefarm.com",
+        },
+        "adjusterName": "Rick Davis",
+        "adjusterContact": {
+            "name": "Rick Davis",
+            "phone": DEFAULT_PHONE_NUMBER,
+            "email": "Rick.Davis@statefarm.com",
+        },
+        "notes": "Roof damage from hail storm. Customer requests neon yellow roof.",
     },
     {
         "id": "al_003",

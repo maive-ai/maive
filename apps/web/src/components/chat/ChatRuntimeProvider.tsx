@@ -1,4 +1,3 @@
-import { streamRoofingChat } from '@/clients/ai/chat';
 import {
   AssistantRuntimeProvider,
   useLocalRuntime,
@@ -6,21 +5,16 @@ import {
 } from '@assistant-ui/react';
 import { Thread } from './Thread';
 import { FileSearchToolUI } from './tool-ui/FileSearchToolUI';
+import { McpToolUI } from './tool-ui/McpToolUI';
 import { ReasoningToolUI } from './tool-ui/ReasoningToolUI';
 import { WebSearchToolUI } from './tool-ui/WebSearchToolUI';
+import { streamRoofingChat } from '@/clients/ai/chat';
 
 interface Citation {
   url: string;
   title?: string | null;
   snippet?: string | null;
   accessed_at?: string | null;
-}
-
-interface ToolCallEvent {
-  tool_call_id: string;
-  tool_name: string;
-  args: Record<string, unknown>;
-  result: Record<string, unknown> | null;
 }
 
 interface ReasoningSummaryEvent {
@@ -52,46 +46,10 @@ const chatAdapter: ChatModelAdapter = {
       let buffer = '';
       let accumulatedText = '';
       const citations: Citation[] = [];
-      const toolCalls: Map<string, ToolCallEvent> = new Map();
+      const toolCalls: Map<string, any> = new Map();
       let reasoningSummary: ReasoningSummaryEvent | null = null;
       let currentEventType = 'message';
-
-      const buildContent = (text: string, hideReasoning: boolean = false) => {
-        const content: any[] = [];
-
-        if (text) {
-          content.push({ type: 'text', text });
-        }
-
-        // Only show reasoning summary if:
-        // 1. We have a reasoning summary
-        // 2. There's no text content yet (reasoning happens before text)
-        // 3. We haven't explicitly hidden it (hideReasoning flag)
-        if (reasoningSummary && !text && !hideReasoning) {
-          content.push({
-            type: 'tool-call',
-            toolCallId: reasoningSummary.id,
-            toolName: 'reasoning',
-            args: {
-              summary: reasoningSummary.summary,
-            },
-            result: null,
-          });
-        }
-
-        // Always show tool calls when present
-        toolCalls.forEach((toolCall) => {
-          content.push({
-            type: 'tool-call',
-            toolCallId: toolCall.tool_call_id,
-            toolName: toolCall.tool_name,
-            args: toolCall.args,
-            result: toolCall.result ?? null,
-          });
-        });
-
-        return content;
-      };
+      let currentActiveToolCallId: string | null = null; // Track the currently active tool
 
       while (true) {
         if (abortSignal?.aborted) {
@@ -122,6 +80,7 @@ const chatAdapter: ChatModelAdapter = {
               // Stream complete - append citations as formatted text
               let finalText = accumulatedText;
 
+              // Add citations as formatted markdown/text at the end
               if (citations.length > 0) {
                 const citationsText = citations
                   .map((citation, index) => {
@@ -134,51 +93,83 @@ const chatAdapter: ChatModelAdapter = {
                 finalText += `\n\n---\n\n**Sources:**\n\n${citationsText}`;
               }
 
-              toolCalls.forEach((toolCall, key) => {
-                if (!toolCall.result) {
-                  toolCalls.set(key, { ...toolCall, result: { status: 'complete' } });
-                }
+              // Build content array with text and tool calls
+              const content: any[] = [];
+
+              if (finalText) {
+                content.push({ type: 'text', text: finalText });
+              }
+
+              // Add tool calls to content
+              toolCalls.forEach((toolCall) => {
+                content.push({
+                  type: 'tool-call',
+                  toolCallId: toolCall.tool_call_id,
+                  toolName: toolCall.tool_name,
+                  args: toolCall.args,
+                  result: toolCall.result,
+                });
               });
 
-              // Clear reasoning summary when stream is done
-              reasoningSummary = null;
-
-              const content = buildContent(finalText);
-              if (content.length > 0) {
-                yield { content };
-              }
+              yield { content };
               return;
-            }
-
-            if (currentEventType === 'tool_call') {
+            } else if (currentEventType === 'tool_call') {
+              // Parse tool call event
               try {
-                const toolCall: ToolCallEvent = JSON.parse(data);
-                toolCalls.set(toolCall.tool_call_id, {
-                  ...toolCall,
-                  result: toolCall.result ?? null,
-                });
+                const toolCall = JSON.parse(data);
+                const existingToolCall = toolCalls.get(toolCall.tool_call_id);
 
-                // Hide reasoning summary when tool calls appear
-                const content = buildContent(accumulatedText, true);
+                // If this is a new tool call starting (InProgress event)
+                if (!existingToolCall && !toolCall.result) {
+                  // This is a new tool starting - update the active tool
+                  currentActiveToolCallId = toolCall.tool_call_id;
+
+                  // Mark all previous tools as complete
+                  toolCalls.forEach((tc) => {
+                    tc.result = { status: 'complete' };
+                  });
+                }
+
+                // Store the tool call
+                toolCalls.set(toolCall.tool_call_id, toolCall);
+
+                // Build content - only show the currently active tool
+                // Hide reasoning summary when a tool call is active
+                const content: any[] = [];
+
+                if (currentActiveToolCallId) {
+                  const activeTool = toolCalls.get(currentActiveToolCallId);
+                  if (activeTool) {
+                    // Always show active tool without result (keeps shimmer visible)
+                    content.push({
+                      type: 'tool-call',
+                      toolCallId: activeTool.tool_call_id,
+                      toolName: activeTool.tool_name,
+                      args: activeTool.args,
+                      result: null, // Always null to keep shimmer showing
+                    });
+                  }
+                } else if (reasoningSummary && !accumulatedText) {
+                  // Show reasoning summary if no active tool and no text yet
+                  content.push({
+                    type: 'tool-call',
+                    toolCallId: reasoningSummary.id,
+                    toolName: 'reasoning',
+                    args: {
+                      summary: reasoningSummary.summary,
+                    },
+                    result: null,
+                  });
+                }
+
                 if (content.length > 0) {
                   yield { content };
                 }
               } catch (e) {
                 console.error('Failed to parse tool call:', e);
               }
-            } else if (currentEventType === 'reasoning_summary') {
-              try {
-                const summary: ReasoningSummaryEvent = JSON.parse(data);
-                reasoningSummary = summary;
-
-                const content = buildContent(accumulatedText);
-                if (content.length > 0) {
-                  yield { content };
-                }
-              } catch (e) {
-                console.error('Failed to parse reasoning summary:', e);
-              }
             } else if (currentEventType === 'citation') {
+              // Parse and store citation
               try {
                 const citation: Citation = JSON.parse(data);
                 citations.push(citation);
@@ -187,20 +178,74 @@ const chatAdapter: ChatModelAdapter = {
               }
             } else if (currentEventType === 'error') {
               throw new Error(data);
+            } else if (currentEventType === 'reasoning_summary') {
+              try {
+                const summary: ReasoningSummaryEvent = JSON.parse(data);
+                reasoningSummary = summary;
+
+                // Clear active tool - reasoning summary replaces tool display
+                currentActiveToolCallId = null;
+
+                // Mark all tool calls as complete
+                toolCalls.forEach((tc) => {
+                  tc.result = { status: 'complete' };
+                });
+
+                // Build content with just reasoning summary (no tools, no text)
+                const content: any[] = [];
+                
+                if (reasoningSummary && !accumulatedText) {
+                  content.push({
+                    type: 'tool-call',
+                    toolCallId: reasoningSummary.id,
+                    toolName: 'reasoning',
+                    args: {
+                      summary: reasoningSummary.summary,
+                    },
+                    result: null,
+                  });
+                }
+
+                if (content.length > 0) {
+                  yield { content };
+                }
+              } catch (e) {
+                console.error('Failed to parse reasoning summary:', e);
+              }
             } else {
+              // Regular message content
               const unescapedData = data.replace(/\\n/g, '\n');
               accumulatedText += unescapedData;
 
-              // Clear reasoning summary when text starts streaming
+              // Clear active tool and reasoning summary when text arrives
+              currentActiveToolCallId = null;
               reasoningSummary = null;
 
-              toolCalls.forEach((toolCall, key) => {
-                if (!toolCall.result) {
-                  toolCalls.set(key, { ...toolCall, result: { status: 'complete' } });
+              // Mark all tool calls as complete when text arrives
+              toolCalls.forEach((tc) => {
+                if (!tc.result) {
+                  tc.result = { status: 'complete' };
                 }
               });
 
-              const content = buildContent(accumulatedText);
+              // Build content array with text and tool calls
+              const content: any[] = [];
+
+              if (accumulatedText) {
+                content.push({ type: 'text', text: accumulatedText });
+              }
+
+              // Add all completed tool calls to content
+              toolCalls.forEach((toolCall) => {
+                content.push({
+                  type: 'tool-call',
+                  toolCallId: toolCall.tool_call_id,
+                  toolName: toolCall.tool_name,
+                  args: toolCall.args,
+                  result: toolCall.result,
+                });
+              });
+
               if (content.length > 0) {
                 yield { content };
               }
@@ -227,6 +272,7 @@ export function ChatRuntimeProvider() {
     <AssistantRuntimeProvider runtime={runtime}>
       <WebSearchToolUI />
       <FileSearchToolUI />
+      <McpToolUI />
       <ReasoningToolUI />
       <div className="h-full">
         <Thread />

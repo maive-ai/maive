@@ -3,7 +3,7 @@
 import base64
 import json
 from pathlib import Path
-from typing import AsyncGenerator, TypeVar
+from typing import Any, AsyncGenerator, TypeVar
 
 from openai import AsyncOpenAI
 from openai.types.responses import (
@@ -11,6 +11,7 @@ from openai.types.responses import (
     FileSearchToolParam,
     ResponseCompletedEvent,
     ResponseContentPartAddedEvent,
+    ResponseContentPartDoneEvent,
     ResponseCreatedEvent,
     ResponseFailedEvent,
     ResponseFileSearchCallCompletedEvent,
@@ -20,9 +21,13 @@ from openai.types.responses import (
     ResponseOutputItemAddedEvent,
     ResponseOutputItemDoneEvent,
     ResponseOutputTextAnnotationAddedEvent,
+    ResponseReasoningSummaryPartAddedEvent,
+    ResponseReasoningSummaryPartDoneEvent,
     ResponseReasoningSummaryTextDeltaEvent,
+    ResponseReasoningSummaryTextDoneEvent,
     ResponseReasoningTextDeltaEvent,
     ResponseTextDeltaEvent,
+    ResponseTextDoneEvent,
     ResponseWebSearchCallCompletedEvent,
     ResponseWebSearchCallInProgressEvent,
     ResponseWebSearchCallSearchingEvent,
@@ -61,6 +66,7 @@ from src.ai.openai.exceptions import (
     OpenAIError,
     OpenAIFileUploadError,
 )
+from src.config import get_app_settings
 from src.utils.logger import logger
 
 T = TypeVar("T", bound=BaseModel)
@@ -76,6 +82,7 @@ class OpenAIProvider(AIProvider):
     def __init__(self):
         """Initialize OpenAI provider."""
         self.settings = get_openai_settings()
+        self.app_settings = get_app_settings()
         self._client: AsyncOpenAI | None = None
 
     def _get_client(self) -> AsyncOpenAI:
@@ -616,17 +623,490 @@ class OpenAIProvider(AIProvider):
                 f"Failed to analyze content with structured output: {e}", e
             )
 
+    async def _parse_annotation_to_citation(
+        self,
+        annotation: dict | AnnotationURLCitation,
+        client: AsyncOpenAI,
+    ) -> SearchCitation | None:
+        """Parse an annotation event into a SearchCitation.
+
+        Args:
+            annotation: The annotation from OpenAI (dict or object)
+            client: OpenAI client for fetching file metadata
+
+        Returns:
+            SearchCitation if it's a web citation, None if it's a file citation or unknown
+        """
+        try:
+            # Handle dict format annotations
+            if isinstance(annotation, dict):
+                ann_type = annotation.get("type")
+                
+                if ann_type == "url_citation":
+                    url_citation = AnnotationURLCitation(**annotation)
+                    
+                    # Create citation from URL annotation
+                    return SearchCitation(
+                        url=url_citation.url,
+                        title=url_citation.title,
+                        snippet=None,
+                        accessed_at=None,
+                    )
+                    
+                elif ann_type == "file_citation":
+                    # Log RAG file hits for debugging (don't expose to user)
+                    file_id = annotation.get("file_citation", {}).get(
+                        "file_id"
+                    ) or annotation.get("file_id")
+                    quoted_text = (
+                        annotation.get("text")
+                        or annotation.get("quote")
+                        or ""
+                    )
+                    
+                    if file_id:
+                        # Try to fetch file metadata for logging
+                        filename = None
+                        try:
+                            meta = await client.files.retrieve(file_id)
+                            filename = getattr(meta, 'filename', None)
+                            logger.debug(
+                                f"RAG file cited: id={file_id}, filename={filename}, quoted={quoted_text[:100]!r}"
+                            )
+                        except Exception as e:
+                            logger.debug(
+                                f"Failed to retrieve file metadata for {file_id}: {e}"
+                            )
+                    
+                    # Don't expose file citations to users - they're internal RAG files
+                    return None
+                else:
+                    logger.debug(f"Skipped unknown annotation type: {ann_type}")
+                    return None
+                    
+            # Handle object format annotations
+            elif isinstance(annotation, AnnotationURLCitation):
+                # Create citation from URL annotation
+                return SearchCitation(
+                    url=annotation.url,
+                    title=annotation.title,
+                    snippet=None,
+                    accessed_at=None,
+                )
+            else:
+                logger.debug(
+                    f"Skipped unknown annotation format: {type(annotation).__name__}"
+                )
+                return None
+
+        except Exception as e:
+            logger.error(f"Failed to parse annotation: {e}")
+            return None
+
+    def _build_stream_params(
+        self,
+        messages: list[ChatMessage],
+        instructions: str | None,
+        enable_web_search: bool,
+        enable_crm_search: bool,
+        vector_store_ids: list[str] | None,
+        **kwargs,
+    ) -> tuple[ResponseCreateParamsStreaming, str, bool]:
+        """Build streaming parameters for OpenAI Responses API.
+
+        Args:
+            messages: List of chat messages
+            instructions: Optional system instructions
+            enable_web_search: Whether to enable web search
+            enable_crm_search: Whether to enable CRM search via MCP
+            vector_store_ids: Optional vector store IDs for file search
+            **kwargs: Additional model-specific parameters
+
+        Returns:
+            Tuple of (stream_params, model_name, is_reasoning_model)
+        """
+        model = kwargs.get("model", self.settings.model_name)
+
+        # Detect if this is a reasoning model
+        is_reasoning_model = any(
+            model.startswith(prefix) for prefix in ["gpt-5", "o1", "o3"]
+        )
+
+        logger.info(
+            f"Streaming chat with web_search={enable_web_search}, "
+            f"crm_search={enable_crm_search}, "
+            f"file_search={bool(vector_store_ids)}, model={model}, "
+            f"is_reasoning={is_reasoning_model}"
+        )
+
+        # Configure tools (Responses API format)
+        tools: list[WebSearchToolParam | FileSearchToolParam | dict[str, Any]] = []
+
+        # Add web search if enabled
+        if enable_web_search:
+            tools.append(WebSearchToolParam(type="web_search"))
+
+        # Add CRM search via MCP if enabled
+        if enable_crm_search:
+            mcp_config: dict[str, Any] = {
+                "type": "mcp",
+                "server_label": "crm_server",
+                "server_url": f"{self.app_settings.server_base_url}/crm/mcp",
+                "require_approval": "never",
+            }
+            # Add auth token if configured
+            if self.app_settings.mcp_auth_token:
+                mcp_config["headers"] = {
+                    "Authorization": f"Bearer {self.app_settings.mcp_auth_token}"
+                }
+            
+            tools.append(mcp_config)
+
+        # Add file search if vector store IDs provided
+        if vector_store_ids:
+            tools.append(
+                FileSearchToolParam(
+                    type="file_search", vector_store_ids=vector_store_ids
+                )
+            )
+
+        # Convert messages to Responses API format
+        input_items: list[EasyInputMessageParam] = [
+            EasyInputMessageParam(
+                role=msg.role,  # type: ignore[typeddict-item]
+                content=msg.content,
+            )
+            for msg in messages
+        ]
+
+        # Build streaming params
+        stream_params: ResponseCreateParamsStreaming = {
+            "model": model,  # type: ignore[typeddict-item]
+            "input": input_items,  # type: ignore[typeddict-item]
+            "stream": True,
+        }
+
+        # Add optional parameters
+        if instructions:
+            stream_params["instructions"] = instructions
+
+        if tools:
+            stream_params["tools"] = tools  # type: ignore[typeddict-item]
+
+        # Add model-specific parameters
+        if is_reasoning_model:
+            logger.info(f"Using reasoning model: {model}")
+
+            # Add reasoning configuration (use default from config if not specified)
+            reasoning_effort: ReasoningEffort | None = kwargs.get(
+                "reasoning_effort", self.settings.reasoning_effort
+            )
+            if reasoning_effort:
+                stream_params["reasoning"] = ReasoningParam(
+                    effort=reasoning_effort,
+                    summary="auto",  # Request reasoning summaries
+                )
+
+            # Add text verbosity
+            text_verbosity = kwargs.get(
+                "text_verbosity", self.settings.text_verbosity
+            )
+            if text_verbosity:
+                stream_params["text"] = ResponseTextConfigParam(
+                    verbosity=text_verbosity
+                )
+
+            # Use max_output_tokens for reasoning models
+            max_output_tokens = kwargs.get(
+                "max_output_tokens", self.settings.max_tokens
+            )
+            if max_output_tokens:
+                stream_params["max_output_tokens"] = max_output_tokens
+
+            # Log if incompatible parameters are provided
+            if "temperature" in kwargs:
+                logger.warning(
+                    f"temperature parameter ignored for reasoning model {model}"
+                )
+            if "top_p" in kwargs:
+                logger.warning(
+                    f"top_p parameter ignored for reasoning model {model}"
+                )
+            if "logprobs" in kwargs:
+                logger.warning(
+                    f"logprobs parameter ignored for reasoning model {model}"
+                )
+        else:
+            logger.info(f"Using standard model: {model}")
+            temperature = kwargs.get("temperature", self.settings.temperature)
+            max_tokens = kwargs.get("max_tokens", self.settings.max_tokens)
+
+            if temperature is not None:
+                stream_params["temperature"] = temperature
+            if max_tokens:
+                stream_params["max_output_tokens"] = max_tokens
+
+        logger.debug(
+            f"Stream params: model={model}, reasoning_effort={reasoning_effort if is_reasoning_model else 'N/A'}, "
+            f"input_items={len(input_items)}, has_instructions={bool(instructions)}, tools={bool(tools)}"
+        )
+
+        return stream_params, model, is_reasoning_model
+
+    def _handle_web_search_event(
+        self,
+        event: ResponseWebSearchCallInProgressEvent
+        | ResponseWebSearchCallSearchingEvent
+        | ResponseWebSearchCallCompletedEvent,
+    ) -> ToolCall | None:
+        """Handle web search tool events.
+
+        Args:
+            event: Web search event from OpenAI
+
+        Returns:
+            ToolCall if the event should be yielded, None otherwise
+        """
+        if isinstance(event, ResponseWebSearchCallInProgressEvent):
+            logger.info(f"[WEB_SEARCH] Web search started (item_id={event.item_id})")
+            return ToolCall(
+                tool_call_id=event.item_id,
+                tool_name=ToolName.WEB_SEARCH,
+                args={},
+                result=None,
+            )
+        elif isinstance(event, ResponseWebSearchCallSearchingEvent):
+            # Just skip - don't yield to prevent flickering
+            return None
+        elif isinstance(event, ResponseWebSearchCallCompletedEvent):
+            logger.info(f"[WEB_SEARCH] Web search completed (item_id={event.item_id})")
+            return ToolCall(
+                tool_call_id=event.item_id,
+                tool_name=ToolName.WEB_SEARCH,
+                args={},
+                result={"status": ToolStatus.COMPLETE.value},
+            )
+        return None
+
+    def _handle_file_search_event(
+        self,
+        event: ResponseFileSearchCallInProgressEvent
+        | ResponseFileSearchCallSearchingEvent
+        | ResponseFileSearchCallCompletedEvent,
+    ) -> ToolCall | None:
+        """Handle file search tool events.
+
+        Args:
+            event: File search event from OpenAI
+
+        Returns:
+            ToolCall if the event should be yielded, None otherwise
+        """
+        if isinstance(event, ResponseFileSearchCallInProgressEvent):
+            logger.info(f"[FILE_SEARCH] File search started (item_id={event.item_id})")
+            return ToolCall(
+                tool_call_id=event.item_id,
+                tool_name=ToolName.FILE_SEARCH,
+                args={},
+                result=None,
+            )
+        elif isinstance(event, ResponseFileSearchCallSearchingEvent):
+            # Just skip - don't yield to prevent flickering
+            return None
+        elif isinstance(event, ResponseFileSearchCallCompletedEvent):
+            logger.info(f"[FILE_SEARCH] File search completed (item_id={event.item_id})")
+            return ToolCall(
+                tool_call_id=event.item_id,
+                tool_name=ToolName.FILE_SEARCH,
+                args={},
+                result={"status": ToolStatus.COMPLETE.value},
+            )
+        return None
+
+    def _clean_citation_markers(self, text: str) -> str:
+        """Remove citation markers from text.
+        
+        Removes file citation markers and barcode symbols that OpenAI includes
+        for internal RAG document references.
+        Also strips MCP/tool marker tokens and Private Use Area (PUA) control
+        characters that the Responses API may embed (renders as boxes/barcodes).
+        
+        Args:
+            text: Text potentially containing citation markers
+            
+        Returns:
+            Text with citation markers removed
+        """
+        import re
+        
+        cleaned = text
+        # Remove well-known literal markers
+        cleaned = cleaned.replace("filecite", "")
+        # Remove 'turnXfileY', 'turnXcrmY', and any generic 'turnX<word>Y' tokens
+        cleaned = re.sub(r"turn\d+[a-z_]+\d+", "", cleaned, flags=re.IGNORECASE)
+        # Remove duplicated concatenations like 'turn0file1turn0file2'
+        cleaned = re.sub(r"(turn\d+[a-z_]+\d+)+", "", cleaned, flags=re.IGNORECASE)
+        # Remove Private Use Area Unicode chars (often render as barcode blocks)
+        # BMP PUA range: U+E000-U+F8FF
+        cleaned = re.sub(r"[\uE000-\uF8FF]", "", cleaned)
+        # Remove any stray box-drawing/equals-like artifacts sometimes used as separators
+        cleaned = cleaned.replace("≡", "").replace("░", "").replace("█", "")
+        
+        return cleaned
+
+    def _buffer_and_clean_text(
+        self, buffer: str, delta: str
+    ) -> tuple[str | None, str]:
+        """Buffer text deltas and clean citation markers at word boundaries.
+        
+        Buffers incoming text until a space is encountered, then cleans citation
+        markers from complete words before streaming to the frontend. This prevents
+        users from seeing citation markers flash during streaming.
+        
+        Args:
+            buffer: Current text buffer
+            delta: New text delta from stream
+            
+        Returns:
+            Tuple of (cleaned_content, new_buffer):
+            - cleaned_content: Cleaned text to send (None if still buffering)
+            - new_buffer: Updated buffer for next iteration
+        """
+        buffer += delta
+        
+        # Wait for a space (word boundary) before cleaning and sending
+        if " " not in buffer:
+            return None, buffer
+        
+        # Split on last space to keep incomplete word in buffer
+        parts = buffer.rsplit(" ", 1)
+        words_to_send = parts[0] + " "  # Include the space
+        new_buffer = parts[1] if len(parts) > 1 else ""
+        
+        # Clean citation markers from complete words
+        cleaned = self._clean_citation_markers(words_to_send)
+        
+        return cleaned, new_buffer
+
+    def _handle_mcp_event(self, event: Any) -> ToolCall | None:
+        """Handle MCP tool call events.
+
+        Args:
+            event: MCP event from OpenAI
+
+        Returns:
+            ToolCall if the event should be yielded, None otherwise
+        """
+        event_type = type(event).__name__
+        
+        # MCP tool listing events (not individual tool calls)
+        if event_type in ("ResponseMcpListToolsInProgressEvent", "ResponseMcpListToolsCompletedEvent"):
+            logger.debug(f"[MCP] {event_type}")
+            return None
+        
+        # MCP tool call started
+        # Note: The in_progress event doesn't include the tool name - only item_id, output_index, sequence_number, type
+        elif event_type == "ResponseMcpCallInProgressEvent":
+            item_id = getattr(event, "item_id", "unknown")
+            logger.info(f"[MCP] Tool call started (item_id={item_id})")
+            
+            # Return a hard coded "CRM search" message since we don't have the specific tool name yet
+            return ToolCall(
+                tool_call_id=item_id,
+                tool_name=ToolName.MCP_TOOL,
+                args={"description": "Searching CRM..."},  # Generic message for UI
+                result=None,
+            )
+        
+        # MCP tool arguments being streamed
+        elif event_type == "ResponseMcpCallArgumentsDeltaEvent":
+            # Don't yield - just accumulate args
+            logger.debug("[MCP] Arguments delta")
+            return None
+        
+        # MCP tool arguments complete
+        elif event_type == "ResponseMcpCallArgumentsDoneEvent":
+            # Don't yield - wait for completion
+            return None
+        
+        # MCP tool call completed
+        elif event_type == "ResponseMcpCallCompletedEvent":
+            item_id = getattr(event, "item_id", "unknown")
+            logger.info(f"[MCP] Tool call completed (item_id={item_id})")
+            return ToolCall(
+                tool_call_id=item_id,
+                tool_name=ToolName.MCP_TOOL,
+                args={},
+                result={"status": ToolStatus.COMPLETE.value},
+            )
+        
+        # MCP tool listing failed
+        elif event_type == "ResponseMcpListToolsFailedEvent":
+            logger.error("[MCP] Tool listing failed")
+            return None
+        
+        return None
+
+    def _handle_reasoning_summary_delta(
+        self,
+        event: ResponseReasoningSummaryTextDeltaEvent,
+        current_reasoning_id: str | None,
+        reasoning_summary_count: int,
+        current_reasoning_summary: str,
+    ) -> tuple[str | None, int, str, ReasoningSummary | None]:
+        """Handle reasoning summary delta events.
+        
+        Args:
+            event: Reasoning summary text delta event from OpenAI
+            current_reasoning_id: Current reasoning summary ID (None if starting new summary)
+            reasoning_summary_count: Counter for unique reasoning IDs
+            current_reasoning_summary: Accumulated summary text
+            
+        Returns:
+            Tuple of (updated_reasoning_id, updated_count, updated_summary, reasoning_summary_to_append)
+        """
+        summary_delta = event.delta or ""
+
+        if current_reasoning_id is None:
+            reasoning_summary_count += 1
+            current_reasoning_id = f"reasoning_{reasoning_summary_count}"
+            current_reasoning_summary = summary_delta
+        elif (
+            summary_delta.strip().startswith("**")
+            and current_reasoning_summary
+        ):
+            reasoning_summary_count += 1
+            current_reasoning_id = f"reasoning_{reasoning_summary_count}"
+            current_reasoning_summary = summary_delta
+        else:
+            current_reasoning_summary += summary_delta
+
+        reasoning_summary_to_append = None
+        if current_reasoning_id:
+            reasoning_summary_to_append = ReasoningSummary(
+                id=current_reasoning_id,
+                summary=current_reasoning_summary,
+            )
+
+        return (
+            current_reasoning_id,
+            reasoning_summary_count,
+            current_reasoning_summary,
+            reasoning_summary_to_append,
+        )
+
     async def stream_chat(
         self,
         messages: list[ChatMessage],
         instructions: str | None = None,
         enable_web_search: bool = False,
+        enable_crm_search: bool = False,
         vector_store_ids: list[str] | None = None,
         **kwargs,
     ) -> AsyncGenerator[ChatStreamChunk, None]:
-        """Stream chat responses with optional web search, file search, and citations.
+        """Stream chat responses with optional web search, file search, CRM search, and citations.
 
-        Uses OpenAI's Responses API which supports web search and file search tools.
+        Uses OpenAI's Responses API for all tool types including MCP (CRM search).
 
         For reasoning models (GPT-5, o1, etc.), use reasoning-specific parameters:
         - reasoning_effort: ReasoningEffort ("minimal", "low", "medium", "high")
@@ -641,6 +1121,7 @@ class OpenAIProvider(AIProvider):
             messages: List of chat messages (user and assistant only, no system messages)
             instructions: Optional system prompt/instructions
             enable_web_search: Whether to enable web search capability
+            enable_crm_search: Whether to enable CRM search tools via MCP
             vector_store_ids: Optional list of vector store IDs for file search
             **kwargs: Provider-specific options:
                 - model: Model name (default from settings)
@@ -656,115 +1137,14 @@ class OpenAIProvider(AIProvider):
         try:
             client = self._get_client()
 
-            model = kwargs.get("model", self.settings.model_name)
-
-            # Detect if this is a reasoning model
-            is_reasoning_model = any(
-                model.startswith(prefix) for prefix in ["gpt-5", "o1", "o3"]
-            )
-
-            logger.info(
-                f"Streaming chat with web_search={enable_web_search}, "
-                f"file_search={bool(vector_store_ids)}, model={model}, "
-                f"is_reasoning={is_reasoning_model}"
-            )
-
-            # Configure tools (Responses API format)
-            tools: list[WebSearchToolParam | FileSearchToolParam] = []
-
-            # Add web search if enabled
-            if enable_web_search:
-                tools.append(WebSearchToolParam(type="web_search"))
-
-            # Add file search if vector store IDs provided
-            if vector_store_ids:
-                tools.append(
-                    FileSearchToolParam(
-                        type="file_search", vector_store_ids=vector_store_ids
-                    )
-                )
-
-            # Convert messages to Responses API format (using OpenAI's official type)
-            input_items: list[EasyInputMessageParam] = [
-                EasyInputMessageParam(
-                    role=msg.role,  # type: ignore[typeddict-item]
-                    content=msg.content,
-                )
-                for msg in messages
-            ]
-
-            # Build streaming params using OpenAI's TypedDict
-            stream_params: ResponseCreateParamsStreaming = {
-                "model": model,  # type: ignore[typeddict-item]
-                "input": input_items,  # type: ignore[typeddict-item]
-                "stream": True,
-            }
-
-            # Add optional parameters
-            if instructions:
-                stream_params["instructions"] = instructions
-
-            if tools:
-                stream_params["tools"] = tools  # type: ignore[typeddict-item]
-
-            # Add model-specific parameters
-            if is_reasoning_model:
-                # Reasoning models use different parameters
-                logger.info(f"Using reasoning model: {model}")
-
-                # Add reasoning configuration (use default from config if not specified)
-                reasoning_effort: ReasoningEffort | None = kwargs.get(
-                    "reasoning_effort", self.settings.reasoning_effort
-                )
-                if reasoning_effort:
-                    stream_params["reasoning"] = ReasoningParam(
-                        effort=reasoning_effort,
-                        summary="auto",  # Request reasoning summaries
-                    )
-
-                # Add text verbosity (use default from config if not specified)
-                text_verbosity = kwargs.get(
-                    "text_verbosity", self.settings.text_verbosity
-                )
-                if text_verbosity:
-                    stream_params["text"] = ResponseTextConfigParam(
-                        verbosity=text_verbosity
-                    )
-
-                # Use max_output_tokens for reasoning models
-                max_output_tokens = kwargs.get(
-                    "max_output_tokens", self.settings.max_tokens
-                )
-                if max_output_tokens:
-                    stream_params["max_output_tokens"] = max_output_tokens
-
-                # Log if incompatible parameters are provided
-                if "temperature" in kwargs:
-                    logger.warning(
-                        f"temperature parameter ignored for reasoning model {model}"
-                    )
-                if "top_p" in kwargs:
-                    logger.warning(
-                        f"top_p parameter ignored for reasoning model {model}"
-                    )
-                if "logprobs" in kwargs:
-                    logger.warning(
-                        f"logprobs parameter ignored for reasoning model {model}"
-                    )
-            else:
-                # Non-reasoning models use standard parameters
-                logger.info(f"Using standard model: {model}")
-                temperature = kwargs.get("temperature", self.settings.temperature)
-                max_tokens = kwargs.get("max_tokens", self.settings.max_tokens)
-
-                if temperature is not None:
-                    stream_params["temperature"] = temperature
-                if max_tokens:
-                    stream_params["max_output_tokens"] = max_tokens
-
-            logger.debug(
-                f"Stream params: model={model}, input_items={len(input_items)}, "
-                f"has_instructions={bool(instructions)}, tools={bool(tools)}"
+            # Build stream parameters
+            stream_params, model, is_reasoning_model = self._build_stream_params(
+                messages=messages,
+                instructions=instructions,
+                enable_web_search=enable_web_search,
+                enable_crm_search=enable_crm_search,
+                vector_store_ids=vector_store_ids,
+                **kwargs,
             )
 
             # Create streaming response using Responses API
@@ -774,17 +1154,15 @@ class OpenAIProvider(AIProvider):
 
             # Track citations from web search
             accumulated_citations: list[SearchCitation] = []
-            # Track file citations and optionally log their content previews
-            seen_file_ids: set[str] = set()
+            
+            # Buffer for word-by-word streaming with citation cleaning
+            text_buffer = ""
             # Track reasoning summary state
             current_reasoning_summary = ""
             current_reasoning_id: str | None = None
             reasoning_summary_count = 0  # Counter for unique reasoning IDs
 
-            event_count = 0
             async for event in stream:
-                event_count += 1
-                logger.debug(f"Received event #{event_count}: {type(event).__name__}")
                 # Handle different event types from Responses API using official types
                 content = ""
                 citations: list[SearchCitation] = []
@@ -806,82 +1184,52 @@ class OpenAIProvider(AIProvider):
                     ):
                         # These are status/lifecycle events, just continue
                         continue
+                    
+                    # Handle MCP tool events
+                    elif type(event).__name__ in (
+                        "ResponseMcpListToolsInProgressEvent",
+                        "ResponseMcpListToolsCompletedEvent", 
+                        "ResponseMcpListToolsFailedEvent",
+                        "ResponseMcpCallInProgressEvent",
+                        "ResponseMcpCallArgumentsDeltaEvent",
+                        "ResponseMcpCallArgumentsDoneEvent",
+                        "ResponseMcpCallCompletedEvent",
+                    ):
+                        tool_call = self._handle_mcp_event(event)
+                        if tool_call:
+                            tool_calls_to_yield.append(tool_call)
+                        else:
+                            continue
 
                     # Handle web search tool events
-                    elif isinstance(event, ResponseWebSearchCallInProgressEvent):
-                        item_id = event.item_id
-                        logger.debug(
-                            f"[WEB_SEARCH] Web search started (item_id={item_id})"
-                        )
-                        # Yield tool call in running state (no result yet)
-                        tool_calls_to_yield.append(
-                            ToolCall(
-                                tool_call_id=item_id,
-                                tool_name=ToolName.WEB_SEARCH,
-                                args={},
-                                result=None,
-                            )
-                        )
-
-                    elif isinstance(event, ResponseWebSearchCallSearchingEvent):
-                        # Just log, don't yield - prevents flickering
-                        logger.debug(
-                            f"[WEB_SEARCH] Searching... (item_id={event.item_id})"
-                        )
-                        continue
-
-                    elif isinstance(event, ResponseWebSearchCallCompletedEvent):
-                        item_id = event.item_id
-                        logger.debug(
-                            f"[WEB_SEARCH] Web search completed (item_id={item_id})"
-                        )
-                        # Yield tool call with completed result
-                        tool_calls_to_yield.append(
-                            ToolCall(
-                                tool_call_id=item_id,
-                                tool_name=ToolName.WEB_SEARCH,
-                                args={},
-                                result={"status": ToolStatus.COMPLETE.value},
-                            )
-                        )
+                    elif isinstance(
+                        event,
+                        (
+                            ResponseWebSearchCallInProgressEvent,
+                            ResponseWebSearchCallSearchingEvent,
+                            ResponseWebSearchCallCompletedEvent,
+                        ),
+                    ):
+                        tool_call = self._handle_web_search_event(event)
+                        if tool_call:
+                            tool_calls_to_yield.append(tool_call)
+                        else:
+                            continue
 
                     # Handle file search tool events
-                    elif isinstance(event, ResponseFileSearchCallInProgressEvent):
-                        item_id = event.item_id
-                        logger.debug(
-                            f"[FILE_SEARCH] File search started (item_id={item_id})"
-                        )
-                        # Yield tool call in running state (no result yet)
-                        tool_calls_to_yield.append(
-                            ToolCall(
-                                tool_call_id=item_id,
-                                tool_name=ToolName.FILE_SEARCH,
-                                args={},
-                                result=None,
-                            )
-                        )
-
-                    elif isinstance(event, ResponseFileSearchCallSearchingEvent):
-                        # Just log, don't yield - prevents flickering
-                        logger.debug(
-                            f"[FILE_SEARCH] Searching files... (item_id={event.item_id})"
-                        )
-                        continue
-
-                    elif isinstance(event, ResponseFileSearchCallCompletedEvent):
-                        item_id = event.item_id
-                        logger.debug(
-                            f"[FILE_SEARCH] File search completed (item_id={item_id})"
-                        )
-                        # Yield tool call with completed result
-                        tool_calls_to_yield.append(
-                            ToolCall(
-                                tool_call_id=item_id,
-                                tool_name=ToolName.FILE_SEARCH,
-                                args={},
-                                result={"status": ToolStatus.COMPLETE.value},
-                            )
-                        )
+                    elif isinstance(
+                        event,
+                        (
+                            ResponseFileSearchCallInProgressEvent,
+                            ResponseFileSearchCallSearchingEvent,
+                            ResponseFileSearchCallCompletedEvent,
+                        ),
+                    ):
+                        tool_call = self._handle_file_search_event(event)
+                        if tool_call:
+                            tool_calls_to_yield.append(tool_call)
+                        else:
+                            continue
 
                     # Handle reasoning text delta events (reasoning models)
                     # Note: We don't stream the raw reasoning content, only log it
@@ -895,123 +1243,88 @@ class OpenAIProvider(AIProvider):
 
                     # Handle reasoning summary delta events
                     elif isinstance(event, ResponseReasoningSummaryTextDeltaEvent):
-                        summary_delta = event.delta or ""
-                        logger.info(
-                            f"[REASONING_SUMMARY] Got summary delta: {summary_delta[:100] if summary_delta else '(empty)'}..."
+                        (   current_reasoning_id,
+                            reasoning_summary_count,
+                            current_reasoning_summary,
+                            reasoning_summary,
+                        ) = self._handle_reasoning_summary_delta(
+                            event=event,
+                            current_reasoning_id=current_reasoning_id,
+                            reasoning_summary_count=reasoning_summary_count,
+                            current_reasoning_summary=current_reasoning_summary,
                         )
+                        
+                        if reasoning_summary:
+                            reasoning_summaries_to_yield.append(reasoning_summary)
 
-                        if current_reasoning_id is None:
-                            reasoning_summary_count += 1
-                            current_reasoning_id = (
-                                f"reasoning_{reasoning_summary_count}"
-                            )
-                            current_reasoning_summary = summary_delta
-                        elif (
-                            summary_delta.strip().startswith("**")
-                            and current_reasoning_summary
-                        ):
-                            reasoning_summary_count += 1
-                            current_reasoning_id = (
-                                f"reasoning_{reasoning_summary_count}"
-                            )
-                            current_reasoning_summary = summary_delta
-                            logger.info(
-                                f"[REASONING_SUMMARY] New summary detected (#{reasoning_summary_count})"
-                            )
-                        else:
-                            current_reasoning_summary += summary_delta
-
-                        if current_reasoning_id:
-                            reasoning_summaries_to_yield.append(
-                                ReasoningSummary(
-                                    id=current_reasoning_id,
-                                    summary=current_reasoning_summary,
-                                )
-                            )
+                    # Handle reasoning summary lifecycle events (no action needed)
+                    elif isinstance(
+                        event,
+                        (
+                            ResponseReasoningSummaryPartAddedEvent,
+                            ResponseReasoningSummaryTextDoneEvent,
+                            ResponseReasoningSummaryPartDoneEvent,
+                        ),
+                    ):
+                        # These are lifecycle/completion events for reasoning summaries
+                        continue
 
                     # Handle text delta events (streaming output content)
                     elif isinstance(event, ResponseTextDeltaEvent):
-                        content = event.delta
-                        # logger.info(
-                        #     f"[TEXT] Got text delta: {content[:100] if content else '(empty)'}..."
-                        # )
+                        # Buffer and clean text at word boundaries
+                        cleaned_content, text_buffer = self._buffer_and_clean_text(
+                            text_buffer, event.delta
+                        )
+                        
+                        if cleaned_content:
+                            content = cleaned_content
+                        else:
+                            # Still buffering, wait for next delta
+                            continue
 
-                    # Handle annotation events (citations from web search)
+                    # Handle annotation events (citations from web search and file search)
                     elif isinstance(event, ResponseOutputTextAnnotationAddedEvent):
-                        annotation = event.annotation
-
-                        # Parse annotation as AnnotationURLCitation (handles both dict and object)
-                        try:
-                            # If it's a dict, parse it; if it's already an object, use as-is
-                            if isinstance(annotation, dict):
-                                ann_type = annotation.get("type")
-                                if ann_type == "url_citation":
-                                    url_citation = AnnotationURLCitation(**annotation)
-                                elif ann_type == "file_citation":
-                                    # Log RAG file hits (metadata and short content preview)
-                                    file_id = annotation.get("file_citation", {}).get(
-                                        "file_id"
-                                    ) or annotation.get("file_id")
-                                    quoted_text = (
-                                        annotation.get("text")
-                                        or annotation.get("quote")
-                                        or ""
-                                    )
-                                    if file_id and file_id not in seen_file_ids:
-                                        seen_file_ids.add(file_id)
-                                        logger.info(
-                                            f"RAG file cited: id={file_id}, quoted={quoted_text!r}"
-                                        )
-                                        # Try to fetch file metadata
-                                        try:
-                                            meta = await client.files.retrieve(file_id)
-                                            logger.info(
-                                                f"RAG file metadata: id={file_id}, name={getattr(meta, 'filename', None)}, bytes={getattr(meta, 'bytes', None)}"
-                                            )
-                                        except Exception as e:
-                                            logger.debug(
-                                                f"Failed to retrieve file metadata for {file_id}: {e}"
-                                            )
-
-                                    # Skip adding to web citations list for file citations
-                                    continue
-                                else:
-                                    logger.debug(
-                                        f"Skipped unknown annotation type: {ann_type}"
-                                    )
-                                    continue  # Unknown annotation type
-                            elif isinstance(annotation, AnnotationURLCitation):
-                                url_citation = annotation
-                            else:
-                                logger.debug(
-                                    f"Skipped unknown annotation format: {type(annotation).__name__}"
-                                )
-                                continue  # Skip unknown annotation formats
-
-                            # Create citation from parsed annotation
-                            citation = SearchCitation(
-                                url=url_citation.url,
-                                title=url_citation.title,
-                                snippet=None,
-                                accessed_at=None,
-                            )
+                        citation = await self._parse_annotation_to_citation(
+                            annotation=event.annotation,
+                            client=client,
+                        )
+                        
+                        # Add citation if it's a web citation (file citations return None)
+                        if citation:
                             citations.append(citation)
-
+                            
                             # Track unique citations
                             if citation not in accumulated_citations:
                                 accumulated_citations.append(citation)
 
-                        except Exception as e:
-                            logger.error(f"Failed to parse annotation: {e}")
+                    # Handle text done events (completion marker for text content)
+                    elif isinstance(event, ResponseTextDoneEvent):
+                        # Text content is done, no action needed
+                        continue
+                    
+                    # Handle content part done events (completion marker for content parts)
+                    elif isinstance(event, ResponseContentPartDoneEvent):
+                        # Content part is done, no action needed
+                        continue
 
                     # Handle completion events
                     elif isinstance(event, ResponseCompletedEvent):
                         finish_reason = "completed"
                         logger.info("[COMPLETED] Stream completed successfully")
+                        
+                        # Flush any remaining text in buffer
+                        if text_buffer:
+                            content = self._clean_citation_markers(text_buffer)
+                            text_buffer = ""
 
                     elif isinstance(event, ResponseFailedEvent):
                         finish_reason = "failed"
                         logger.error(f"[FAILED] Stream failed: {event}")
+                        
+                        # Flush any remaining text in buffer
+                        if text_buffer:
+                            content = self._clean_citation_markers(text_buffer)
+                            text_buffer = ""
 
                     else:
                         # Log unhandled event types

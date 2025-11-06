@@ -20,6 +20,5 @@ packages/api/client/.openapi-generator/
 **/_catalog/
 **/_dereferenced/
 
+scripts/scraping/output
 demo_data/
-
-

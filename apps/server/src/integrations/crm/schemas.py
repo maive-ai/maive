@@ -722,13 +722,10 @@ class ServiceTitanProviderData(BaseModel):
     )
     arrival_window_end: datetime | None = Field(None, description="Arrival window end")
 
-    class Config:
-        """Pydantic configuration."""
-
-        # Allow extra fields for future extensibility
-        extra = "allow"
-        # Use enum values for serialization
-        use_enum_values = True
+    model_config = ConfigDict(
+        extra="allow",  # Allow extra fields for future extensibility
+        use_enum_values=True,  # Use enum values for serialization
+    )
 
 
 class FormSubmissionOwner(BaseModel):
@@ -761,10 +758,7 @@ class FormSubmissionResponse(BaseModel):
     owners: list[FormSubmissionOwner] | None = Field(None, description="Form owners")
     units: list[dict[str, Any]] | None = Field(None, description="Form units/fields")
 
-    class Config:
-        """Pydantic configuration."""
-
-        validate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class FormSubmissionListResponse(BaseModel):
@@ -784,10 +778,7 @@ class FormSubmissionListResponse(BaseModel):
         ..., description="The collection of form submissions"
     )
 
-    class Config:
-        """Pydantic configuration."""
-
-        validate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class CRMProviderDataFactory:

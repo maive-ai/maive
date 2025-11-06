@@ -14,6 +14,7 @@ class ToolName(str, Enum):
 
     WEB_SEARCH = "web_search"
     FILE_SEARCH = "file_search"
+    MCP_TOOL = "mcp_tool"  # Generic MCP tool call
     REASONING = "reasoning"
 
 
@@ -321,6 +322,7 @@ class AIProvider(ABC):
         messages: list[ChatMessage],
         instructions: str | None = None,
         enable_web_search: bool = False,
+        enable_crm_search: bool = False,
         vector_store_ids: list[str] | None = None,
         **kwargs,
     ) -> AsyncGenerator[ChatStreamChunk, None]:

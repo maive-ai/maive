@@ -82,17 +82,57 @@ class MockProvider(CRMProvider):
         Get all jobs with optional filtering and pagination.
 
         Args:
-            filters: Optional dictionary of filters (not implemented for mock)
+            filters: Optional dictionary of filters:
+                - customer_name: str - Partial match on customer name (case-insensitive)
+                - job_id: str - Exact match on job ID
+                - address: str - Partial match on address
+                - claim_number: str - Exact match on claim number
+                - status: str - Exact match on status
             page: Page number (1-indexed)
             page_size: Number of items per page
 
         Returns:
             JobList: Paginated list of jobs
         """
-        logger.info(f"Getting all mock jobs ({len(self._projects)} total)")
+        logger.info(f"Getting all mock jobs ({len(self._projects)} total, filters={filters})")
 
         # Convert all projects to Job schema
         jobs = [self._transform_project_to_job(project) for project in self._projects]
+
+        # Apply client-side filtering if provided
+        if filters:
+            filtered_jobs = []
+            for job in jobs:
+                # Customer name filter (partial, case-insensitive)
+                if "customer_name" in filters:
+                    if filters["customer_name"].lower() not in (job.customer_name or "").lower():
+                        continue
+                
+                # Job ID filter (exact match)
+                if "job_id" in filters:
+                    if job.id != filters["job_id"]:
+                        continue
+                
+                # Address filter (partial, case-insensitive)
+                if "address" in filters:
+                    full_address = f"{job.address_line1 or ''} {job.city or ''} {job.state or ''} {job.postal_code or ''}"
+                    if filters["address"].lower() not in full_address.lower():
+                        continue
+                
+                # Claim number filter (exact match from provider_data)
+                if "claim_number" in filters:
+                    job_claim = job.provider_data.get("claimNumber") if job.provider_data else None
+                    if job_claim != filters["claim_number"]:
+                        continue
+                
+                # Status filter (exact match)
+                if "status" in filters:
+                    if job.status != filters["status"]:
+                        continue
+                
+                filtered_jobs.append(job)
+            
+            jobs = filtered_jobs
 
         # Apply pagination
         start_idx = (page - 1) * page_size

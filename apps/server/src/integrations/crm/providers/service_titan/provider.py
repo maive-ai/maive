@@ -33,7 +33,6 @@ from src.integrations.crm.schemas import (
     JobHoldReasonsListResponse,
     JobList,
     JobNoteResponse,
-    JobResponse,
     MaterialsListResponse,
     Note,
     PricebookItemsRequest,
@@ -173,7 +172,7 @@ class ServiceTitanProvider(CRMProvider):
         Get all projects with optional filtering and pagination.
 
         Args:
-            filters: Optional dictionary of filters (supports createdOnOrAfter, createdBefore)
+            filters: Optional dictionary of filters (not yet implemented)
             page: Page number (1-indexed)
             page_size: Number of items per page
 
