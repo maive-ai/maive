@@ -3,7 +3,7 @@
 import base64
 import json
 from pathlib import Path
-from typing import AsyncGenerator, TypeVar
+from typing import Any, AsyncGenerator, TypeVar
 
 from openai import AsyncOpenAI
 from openai.types.responses import (
@@ -62,6 +62,7 @@ from src.ai.openai.exceptions import (
     OpenAIError,
     OpenAIFileUploadError,
 )
+from src.config import get_app_settings
 from src.utils.logger import logger
 
 T = TypeVar("T", bound=BaseModel)
@@ -77,6 +78,7 @@ class OpenAIProvider(AIProvider):
     def __init__(self):
         """Initialize OpenAI provider."""
         self.settings = get_openai_settings()
+        self.app_settings = get_app_settings()
         self._client: AsyncOpenAI | None = None
 
     def _get_client(self) -> AsyncOpenAI:
@@ -697,34 +699,12 @@ class OpenAIProvider(AIProvider):
             logger.error(f"Failed to parse annotation: {e}")
             return None
 
-    def _clean_file_citation_markers(self, text: str) -> str:
-        """Remove file citation markers from text.
-
-        OpenAI includes inline citation markers for file_search results that look like:
-        fileciteturn0file17turn0file18
-
-        This removes ONLY file citation markers, preserving any web search citation
-        markers that may exist.
-
-        Args:
-            text: Text potentially containing file citation markers
-
-        Returns:
-            Text with file citation markers removed
-        """
-        import re
-        
-        # Remove ONLY file citation markers (start with "filecite" or "file")
-        # This pattern matches: filecite, fileciteturn0file17, turn0file18, etc.
-        text = re.sub(r'filecite(?:turn\d+)?file\d+(?:turn\d+file\d+)*', '', text)
-        
-        return text
-
     def _build_stream_params(
         self,
         messages: list[ChatMessage],
         instructions: str | None,
         enable_web_search: bool,
+        enable_crm_search: bool,
         vector_store_ids: list[str] | None,
         **kwargs,
     ) -> tuple[ResponseCreateParamsStreaming, str, bool]:
@@ -734,6 +714,7 @@ class OpenAIProvider(AIProvider):
             messages: List of chat messages
             instructions: Optional system instructions
             enable_web_search: Whether to enable web search
+            enable_crm_search: Whether to enable CRM search via MCP
             vector_store_ids: Optional vector store IDs for file search
             **kwargs: Additional model-specific parameters
 
@@ -749,16 +730,33 @@ class OpenAIProvider(AIProvider):
 
         logger.info(
             f"Streaming chat with web_search={enable_web_search}, "
+            f"crm_search={enable_crm_search}, "
             f"file_search={bool(vector_store_ids)}, model={model}, "
             f"is_reasoning={is_reasoning_model}"
         )
 
         # Configure tools (Responses API format)
-        tools: list[WebSearchToolParam | FileSearchToolParam] = []
+        tools: list[WebSearchToolParam | FileSearchToolParam | dict[str, Any]] = []
 
         # Add web search if enabled
         if enable_web_search:
             tools.append(WebSearchToolParam(type="web_search"))
+
+        # Add CRM search via MCP if enabled
+        if enable_crm_search:
+            mcp_config: dict[str, Any] = {
+                "type": "mcp",
+                "server_label": "crm_server",
+                "server_url": f"{self.app_settings.server_base_url}/crm/mcp",
+                "require_approval": "never",
+            }
+            # Add auth token if configured
+            if self.app_settings.mcp_auth_token:
+                mcp_config["headers"] = {
+                    "Authorization": f"Bearer {self.app_settings.mcp_auth_token}"
+                }
+            
+            tools.append(mcp_config)
 
         # Add file search if vector store IDs provided
         if vector_store_ids:
@@ -918,17 +916,134 @@ class OpenAIProvider(AIProvider):
             )
         return None
 
+    def _clean_citation_markers(self, text: str) -> str:
+        """Remove citation markers from text.
+        
+        Removes file citation markers and barcode symbols that OpenAI includes
+        for internal RAG document references.
+        
+        Args:
+            text: Text potentially containing citation markers
+            
+        Returns:
+            Text with citation markers removed
+        """
+        import re
+        
+        cleaned = text
+        cleaned = cleaned.replace("filecite", "")
+        # Remove patterns like turn0file1, turn0file2turn0file3
+        cleaned = re.sub(r'turn\d+file\d+', '', cleaned)
+        # Remove barcode symbols
+        cleaned = cleaned.replace("≡", "")
+        
+        return cleaned
+
+    def _buffer_and_clean_text(
+        self, buffer: str, delta: str
+    ) -> tuple[str | None, str]:
+        """Buffer text deltas and clean citation markers at word boundaries.
+        
+        Buffers incoming text until a space is encountered, then cleans citation
+        markers from complete words before streaming to the frontend. This prevents
+        users from seeing citation markers flash during streaming.
+        
+        Args:
+            buffer: Current text buffer
+            delta: New text delta from stream
+            
+        Returns:
+            Tuple of (cleaned_content, new_buffer):
+            - cleaned_content: Cleaned text to send (None if still buffering)
+            - new_buffer: Updated buffer for next iteration
+        """
+        buffer += delta
+        
+        # Wait for a space (word boundary) before cleaning and sending
+        if " " not in buffer:
+            return None, buffer
+        
+        # Split on last space to keep incomplete word in buffer
+        parts = buffer.rsplit(" ", 1)
+        words_to_send = parts[0] + " "  # Include the space
+        new_buffer = parts[1] if len(parts) > 1 else ""
+        
+        # Clean citation markers from complete words
+        cleaned = self._clean_citation_markers(words_to_send)
+        
+        return cleaned, new_buffer
+
+    def _handle_mcp_event(self, event: Any) -> ToolCall | None:
+        """Handle MCP tool call events.
+
+        Args:
+            event: MCP event from OpenAI
+
+        Returns:
+            ToolCall if the event should be yielded, None otherwise
+        """
+        event_type = type(event).__name__
+        
+        # MCP tool listing events (not individual tool calls)
+        if event_type in ("ResponseMcpListToolsInProgressEvent", "ResponseMcpListToolsCompletedEvent"):
+            logger.debug(f"[MCP] {event_type}")
+            return None
+        
+        # MCP tool call started
+        # Note: The in_progress event doesn't include the tool name - only item_id, output_index, sequence_number, type
+        elif event_type == "ResponseMcpCallInProgressEvent":
+            item_id = getattr(event, "item_id", "unknown")
+            logger.info(f"[MCP] Tool call started (item_id={item_id})")
+            
+            # Return a hard coded "CRM search" message since we don't have the specific tool name yet
+            return ToolCall(
+                tool_call_id=item_id,
+                tool_name=ToolName.MCP_TOOL,
+                args={"description": "Searching CRM"},  # Generic message for UI
+                result=None,
+            )
+        
+        # MCP tool arguments being streamed
+        elif event_type == "ResponseMcpCallArgumentsDeltaEvent":
+            # Don't yield - just accumulate args
+            logger.debug("[MCP] Arguments delta")
+            return None
+        
+        # MCP tool arguments complete
+        elif event_type == "ResponseMcpCallArgumentsDoneEvent":
+            # Don't yield - wait for completion
+            return None
+        
+        # MCP tool call completed
+        elif event_type == "ResponseMcpCallCompletedEvent":
+            item_id = getattr(event, "item_id", "unknown")
+            logger.info(f"[MCP] Tool call completed (item_id={item_id})")
+            return ToolCall(
+                tool_call_id=item_id,
+                tool_name=ToolName.MCP_TOOL,
+                args={},
+                result={"status": ToolStatus.COMPLETE.value},
+            )
+        
+        # MCP tool listing failed
+        elif event_type == "ResponseMcpListToolsFailedEvent":
+            logger.error("[MCP] Tool listing failed")
+            return None
+        
+        return None
+
     async def stream_chat(
         self,
         messages: list[ChatMessage],
         instructions: str | None = None,
         enable_web_search: bool = False,
+        enable_crm_search: bool = False,
         vector_store_ids: list[str] | None = None,
         **kwargs,
     ) -> AsyncGenerator[ChatStreamChunk, None]:
-        """Stream chat responses with optional web search, file search, and citations.
+        """Stream chat responses with optional web search, file search, CRM search, and citations.
 
-        Uses OpenAI's Responses API which supports web search and file search tools.
+        Uses OpenAI's Responses API for all tool types including MCP (CRM search).
 
         For reasoning models (GPT-5, o1, etc.), use reasoning-specific parameters:
         - reasoning_effort: ReasoningEffort ("minimal", "low", "medium", "high")
@@ -943,6 +1058,7 @@ class OpenAIProvider(AIProvider):
             messages: List of chat messages (user and assistant only, no system messages)
             instructions: Optional system prompt/instructions
             enable_web_search: Whether to enable web search capability
+            enable_crm_search: Whether to enable CRM search tools via MCP
             vector_store_ids: Optional list of vector store IDs for file search
             **kwargs: Provider-specific options:
                 - model: Model name (default from settings)
@@ -963,6 +1079,7 @@ class OpenAIProvider(AIProvider):
                 messages=messages,
                 instructions=instructions,
                 enable_web_search=enable_web_search,
+                enable_crm_search=enable_crm_search,
                 vector_store_ids=vector_store_ids,
                 **kwargs,
             )
@@ -974,6 +1091,9 @@ class OpenAIProvider(AIProvider):
 
             # Track citations from web search
             accumulated_citations: list[SearchCitation] = []
+            
+            # Buffer for word-by-word streaming with citation cleaning
+            text_buffer = ""
 
             event_count = 0
             async for event in stream:
@@ -999,6 +1119,22 @@ class OpenAIProvider(AIProvider):
                     ):
                         # These are status/lifecycle events, just continue
                         continue
+                    
+                    # Handle MCP tool events
+                    elif type(event).__name__ in (
+                        "ResponseMcpListToolsInProgressEvent",
+                        "ResponseMcpListToolsCompletedEvent", 
+                        "ResponseMcpListToolsFailedEvent",
+                        "ResponseMcpCallInProgressEvent",
+                        "ResponseMcpCallArgumentsDeltaEvent",
+                        "ResponseMcpCallArgumentsDoneEvent",
+                        "ResponseMcpCallCompletedEvent",
+                    ):
+                        tool_call = self._handle_mcp_event(event)
+                        if tool_call:
+                            tool_calls_to_yield.append(tool_call)
+                        else:
+                            continue
 
                     # Handle web search tool events
                     elif isinstance(
@@ -1049,8 +1185,16 @@ class OpenAIProvider(AIProvider):
 
                     # Handle text delta events (streaming output content)
                     elif isinstance(event, ResponseTextDeltaEvent):
-                        # Clean file citation markers from the text
-                        content = self._clean_file_citation_markers(event.delta)
+                        # Buffer and clean text at word boundaries
+                        cleaned_content, text_buffer = self._buffer_and_clean_text(
+                            text_buffer, event.delta
+                        )
+                        
+                        if cleaned_content:
+                            content = cleaned_content
+                        else:
+                            # Still buffering, wait for next delta
+                            continue
 
                     # Handle annotation events (citations from web search and file search)
                     elif isinstance(event, ResponseOutputTextAnnotationAddedEvent):
@@ -1081,10 +1225,20 @@ class OpenAIProvider(AIProvider):
                     elif isinstance(event, ResponseCompletedEvent):
                         finish_reason = "completed"
                         logger.info("[COMPLETED] Stream completed successfully")
+                        
+                        # Flush any remaining text in buffer
+                        if text_buffer:
+                            content = self._clean_citation_markers(text_buffer)
+                            text_buffer = ""
 
                     elif isinstance(event, ResponseFailedEvent):
                         finish_reason = "failed"
                         logger.error(f"[FAILED] Stream failed: {event}")
+                        
+                        # Flush any remaining text in buffer
+                        if text_buffer:
+                            content = self._clean_citation_markers(text_buffer)
+                            text_buffer = ""
 
                     else:
                         # Log unhandled event types

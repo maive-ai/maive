@@ -4,9 +4,10 @@ import {
   type ChatModelAdapter,
 } from '@assistant-ui/react';
 import { Thread } from './Thread';
-import { streamRoofingChat } from '@/clients/ai/chat';
-import { WebSearchToolUI } from './tool-ui/WebSearchToolUI';
 import { FileSearchToolUI } from './tool-ui/FileSearchToolUI';
+import { McpToolUI } from './tool-ui/McpToolUI';
+import { WebSearchToolUI } from './tool-ui/WebSearchToolUI';
+import { streamRoofingChat } from '@/clients/ai/chat';
 
 interface Citation {
   url: string;
@@ -229,6 +230,7 @@ export function ChatRuntimeProvider() {
     <AssistantRuntimeProvider runtime={runtime}>
       <WebSearchToolUI />
       <FileSearchToolUI />
+      <McpToolUI />
       <div className="h-full">
         <Thread />
       </div>

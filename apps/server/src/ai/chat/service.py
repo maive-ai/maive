@@ -93,6 +93,7 @@ class RoofingChatService:
                 messages=chat_messages,
                 instructions=self.system_prompt,
                 enable_web_search=True,
+                enable_crm_search=True,
                 vector_store_ids=[vector_store_id],
                 model=self.settings.model_name,
                 temperature=0.7,  # Slightly creative but focused

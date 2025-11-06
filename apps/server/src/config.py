@@ -22,6 +22,9 @@ class AppSettings(BaseSettings):
     client_base_url: str = Field(
         default="http://localhost:3000", description="Frontend base URL"
     )
+    server_base_url: str = Field(
+        default="http://localhost:8080", description="Server base URL for MCP and internal APIs"
+    )
 
     # AWS Configuration
     aws_region: str = Field(
@@ -31,6 +34,12 @@ class AppSettings(BaseSettings):
     dynamodb_table_name: str = Field(
         default="maive-active-calls-dev",
         description="DynamoDB table name for active call state",
+    )
+
+    # MCP Authentication
+    mcp_auth_token: str | None = Field(
+        default=None,
+        description="Bearer token for MCP server authentication (optional)",
     )
 
 

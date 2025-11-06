@@ -136,7 +136,12 @@ class JobNimbusProvider(CRMProvider):
         Get all jobs with optional filtering and pagination.
 
         Args:
-            filters: Optional dictionary of filters (not yet implemented)
+            filters: Optional dictionary of filters:
+                - customer_name: str - Partial match on customer name (case-insensitive)
+                - job_id: str - Exact match on job ID
+                - address: str - Partial match on address
+                - claim_number: str - Exact match on claim number
+                - status: str - Exact match on status
             page: Page number (1-indexed)
             page_size: Number of items per page
 
@@ -144,7 +149,7 @@ class JobNimbusProvider(CRMProvider):
             JobList: Paginated list of jobs
         """
         try:
-            logger.debug(f"Fetching all jobs (page={page}, size={page_size})")
+            logger.debug(f"Fetching all jobs (page={page}, size={page_size}, filters={filters})")
 
             endpoint = JobNimbusEndpoints.JOBS
             response = await self._make_request("GET", endpoint)
@@ -158,6 +163,41 @@ class JobNimbusProvider(CRMProvider):
                 self._transform_jn_job_to_universal(jn_job)
                 for jn_job in jn_jobs_list.results
             ]
+
+            # Apply client-side filtering if provided
+            if filters:
+                filtered_jobs = []
+                for job in jobs:
+                    # Customer name filter (partial, case-insensitive)
+                    if "customer_name" in filters:
+                        if filters["customer_name"].lower() not in (job.customer_name or "").lower():
+                            continue
+                    
+                    # Job ID filter (exact match)
+                    if "job_id" in filters:
+                        if job.id != filters["job_id"]:
+                            continue
+                    
+                    # Address filter (partial, case-insensitive)
+                    if "address" in filters:
+                        full_address = f"{job.address_line1 or ''} {job.city or ''} {job.state or ''} {job.postal_code or ''}"
+                        if filters["address"].lower() not in full_address.lower():
+                            continue
+                    
+                    # Claim number filter (exact match from provider_data)
+                    if "claim_number" in filters:
+                        job_claim = job.provider_data.get("claim_number") if job.provider_data else None
+                        if job_claim != filters["claim_number"]:
+                            continue
+                    
+                    # Status filter (exact match)
+                    if "status" in filters:
+                        if job.status != filters["status"]:
+                            continue
+                    
+                    filtered_jobs.append(job)
+                
+                jobs = filtered_jobs
 
             # Apply pagination
             start_idx = (page - 1) * page_size
