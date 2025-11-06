@@ -999,7 +999,7 @@ class OpenAIProvider(AIProvider):
             return ToolCall(
                 tool_call_id=item_id,
                 tool_name=ToolName.MCP_TOOL,
-                args={"description": "Searching CRM"},  # Generic message for UI
+                args={"description": "Searching CRM..."},  # Generic message for UI
                 result=None,
             )
         
