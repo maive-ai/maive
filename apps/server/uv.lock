@@ -1337,7 +1337,6 @@ dependencies = [
     { name = "google-genai" },
     { name = "httpx" },
     { name = "openai" },
-    { name = "openpyxl" },
     { name = "phonenumbers" },
     { name = "psycopg2-binary" },
     { name = "pydantic-settings" },
@@ -1355,6 +1354,7 @@ auth = [
     { name = "requests" },
 ]
 dev = [
+    { name = "openpyxl" },
     { name = "pandas" },
     { name = "pre-commit" },
     { name = "pytest" },
@@ -1375,7 +1375,6 @@ requires-dist = [
     { name = "google-genai", specifier = ">=1.39.1" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "openai", specifier = ">=1.59.7" },
-    { name = "openpyxl", specifier = ">=3.1.5" },
     { name = "phonenumbers", specifier = ">=9.0.15" },
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
     { name = "pydantic-settings", specifier = ">=2.10.1" },
@@ -1393,6 +1392,7 @@ auth = [
     { name = "requests", specifier = ">=2.32.4" },
 ]
 dev = [
+    { name = "openpyxl", specifier = ">=3.1.5" },
     { name = "pandas", specifier = ">=2.3.3" },
     { name = "pre-commit", specifier = ">=4.2.0" },
     { name = "pytest", specifier = ">=8.4.1" },
