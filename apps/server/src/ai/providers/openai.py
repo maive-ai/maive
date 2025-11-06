@@ -928,6 +928,8 @@ class OpenAIProvider(AIProvider):
         
         Removes file citation markers and barcode symbols that OpenAI includes
         for internal RAG document references.
+        Also strips MCP/tool marker tokens and Private Use Area (PUA) control
+        characters that the Responses API may embed (renders as boxes/barcodes).
         
         Args:
             text: Text potentially containing citation markers
@@ -938,11 +940,17 @@ class OpenAIProvider(AIProvider):
         import re
         
         cleaned = text
+        # Remove well-known literal markers
         cleaned = cleaned.replace("filecite", "")
-        # Remove patterns like turn0file1, turn0file2turn0file3
-        cleaned = re.sub(r'turn\d+file\d+', '', cleaned)
-        # Remove barcode symbols
-        cleaned = cleaned.replace("≡", "")
+        # Remove 'turnXfileY', 'turnXcrmY', and any generic 'turnX<word>Y' tokens
+        cleaned = re.sub(r"turn\d+[a-z_]+\d+", "", cleaned, flags=re.IGNORECASE)
+        # Remove duplicated concatenations like 'turn0file1turn0file2'
+        cleaned = re.sub(r"(turn\d+[a-z_]+\d+)+", "", cleaned, flags=re.IGNORECASE)
+        # Remove Private Use Area Unicode chars (often render as barcode blocks)
+        # BMP PUA range: U+E000-U+F8FF
+        cleaned = re.sub(r"[\uE000-\uF8FF]", "", cleaned)
+        # Remove any stray box-drawing/equals-like artifacts sometimes used as separators
+        cleaned = cleaned.replace("≡", "").replace("░", "").replace("█", "")
         
         return cleaned
 
