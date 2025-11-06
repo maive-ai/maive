@@ -10,7 +10,7 @@ export const ReasoningToolUI = makeAssistantToolUI({
 
       return (
         <div className="mb-2">
-          <ShinyText text={"Planning next steps..."} className="text-sm leading-6 text-muted-foreground" />
+          <ShinyText text={"Planning next steps..."} className="text-base leading-7 text-muted-foreground" />
         </div>
       );
     }

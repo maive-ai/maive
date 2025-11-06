@@ -21,7 +21,10 @@ from openai.types.responses import (
     ResponseOutputItemAddedEvent,
     ResponseOutputItemDoneEvent,
     ResponseOutputTextAnnotationAddedEvent,
+    ResponseReasoningSummaryPartAddedEvent,
+    ResponseReasoningSummaryPartDoneEvent,
     ResponseReasoningSummaryTextDeltaEvent,
+    ResponseReasoningSummaryTextDoneEvent,
     ResponseReasoningTextDeltaEvent,
     ResponseTextDeltaEvent,
     ResponseTextDoneEvent,
@@ -1055,9 +1058,6 @@ class OpenAIProvider(AIProvider):
             Tuple of (updated_reasoning_id, updated_count, updated_summary, reasoning_summary_to_append)
         """
         summary_delta = event.delta or ""
-        logger.info(
-            f"[REASONING_SUMMARY] Got summary delta: {summary_delta[:100] if summary_delta else '(empty)'}..."
-        )
 
         if current_reasoning_id is None:
             reasoning_summary_count += 1
@@ -1070,9 +1070,6 @@ class OpenAIProvider(AIProvider):
             reasoning_summary_count += 1
             current_reasoning_id = f"reasoning_{reasoning_summary_count}"
             current_reasoning_summary = summary_delta
-            logger.info(
-                f"[REASONING_SUMMARY] New summary detected (#{reasoning_summary_count})"
-            )
         else:
             current_reasoning_summary += summary_delta
 
@@ -1157,10 +1154,7 @@ class OpenAIProvider(AIProvider):
             current_reasoning_id: str | None = None
             reasoning_summary_count = 0  # Counter for unique reasoning IDs
 
-            event_count = 0
             async for event in stream:
-                event_count += 1
-                logger.debug(f"Received event #{event_count}: {type(event).__name__}")
                 # Handle different event types from Responses API using official types
                 content = ""
                 citations: list[SearchCitation] = []
@@ -1254,6 +1248,18 @@ class OpenAIProvider(AIProvider):
                         
                         if reasoning_summary:
                             reasoning_summaries_to_yield.append(reasoning_summary)
+
+                    # Handle reasoning summary lifecycle events (no action needed)
+                    elif isinstance(
+                        event,
+                        (
+                            ResponseReasoningSummaryPartAddedEvent,
+                            ResponseReasoningSummaryTextDoneEvent,
+                            ResponseReasoningSummaryPartDoneEvent,
+                        ),
+                    ):
+                        # These are lifecycle/completion events for reasoning summaries
+                        continue
 
                     # Handle text delta events (streaming output content)
                     elif isinstance(event, ResponseTextDeltaEvent):
