@@ -6,7 +6,7 @@ export const McpToolUI = makeAssistantToolUI({
   render: ({ args, result }) => {
     // Show shimmer while searching (no result yet)
     if (!result) {
-      const description = (args as { description?: string })?.description || 'Searching CRM';
+      const description = (args as { description?: string })?.description || 'Searching CRM...';
       return (
         <div className="mb-2">
           <ShinyText text={description} className="text-base leading-7 text-muted-foreground" />
