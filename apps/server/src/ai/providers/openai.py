@@ -49,6 +49,7 @@ from src.ai.base import (
     ContentAnalysisRequest,
     ContentGenerationResult,
     FileMetadata,
+    ReasoningSummary,
     SearchCitation,
     ToolCall,
     ToolName,
@@ -793,12 +794,15 @@ class OpenAIProvider(AIProvider):
         if is_reasoning_model:
             logger.info(f"Using reasoning model: {model}")
 
-            # Add reasoning configuration
+            # Add reasoning configuration (use default from config if not specified)
             reasoning_effort: ReasoningEffort | None = kwargs.get(
                 "reasoning_effort", self.settings.reasoning_effort
             )
             if reasoning_effort:
-                stream_params["reasoning"] = ReasoningParam(effort=reasoning_effort)
+                stream_params["reasoning"] = ReasoningParam(
+                    effort=reasoning_effort,
+                    summary="auto",  # Request reasoning summaries
+                )
 
             # Add text verbosity
             text_verbosity = kwargs.get(
@@ -1032,6 +1036,60 @@ class OpenAIProvider(AIProvider):
         
         return None
 
+    def _handle_reasoning_summary_delta(
+        self,
+        event: ResponseReasoningSummaryTextDeltaEvent,
+        current_reasoning_id: str | None,
+        reasoning_summary_count: int,
+        current_reasoning_summary: str,
+    ) -> tuple[str | None, int, str, ReasoningSummary | None]:
+        """Handle reasoning summary delta events.
+        
+        Args:
+            event: Reasoning summary text delta event from OpenAI
+            current_reasoning_id: Current reasoning summary ID (None if starting new summary)
+            reasoning_summary_count: Counter for unique reasoning IDs
+            current_reasoning_summary: Accumulated summary text
+            
+        Returns:
+            Tuple of (updated_reasoning_id, updated_count, updated_summary, reasoning_summary_to_append)
+        """
+        summary_delta = event.delta or ""
+        logger.info(
+            f"[REASONING_SUMMARY] Got summary delta: {summary_delta[:100] if summary_delta else '(empty)'}..."
+        )
+
+        if current_reasoning_id is None:
+            reasoning_summary_count += 1
+            current_reasoning_id = f"reasoning_{reasoning_summary_count}"
+            current_reasoning_summary = summary_delta
+        elif (
+            summary_delta.strip().startswith("**")
+            and current_reasoning_summary
+        ):
+            reasoning_summary_count += 1
+            current_reasoning_id = f"reasoning_{reasoning_summary_count}"
+            current_reasoning_summary = summary_delta
+            logger.info(
+                f"[REASONING_SUMMARY] New summary detected (#{reasoning_summary_count})"
+            )
+        else:
+            current_reasoning_summary += summary_delta
+
+        reasoning_summary_to_append = None
+        if current_reasoning_id:
+            reasoning_summary_to_append = ReasoningSummary(
+                id=current_reasoning_id,
+                summary=current_reasoning_summary,
+            )
+
+        return (
+            current_reasoning_id,
+            reasoning_summary_count,
+            current_reasoning_summary,
+            reasoning_summary_to_append,
+        )
+
     async def stream_chat(
         self,
         messages: list[ChatMessage],
@@ -1094,16 +1152,21 @@ class OpenAIProvider(AIProvider):
             
             # Buffer for word-by-word streaming with citation cleaning
             text_buffer = ""
+            # Track reasoning summary state
+            current_reasoning_summary = ""
+            current_reasoning_id: str | None = None
+            reasoning_summary_count = 0  # Counter for unique reasoning IDs
 
             event_count = 0
             async for event in stream:
                 event_count += 1
+                logger.debug(f"Received event #{event_count}: {type(event).__name__}")
                 # Handle different event types from Responses API using official types
                 content = ""
-                reasoning_summary = ""
                 citations: list[SearchCitation] = []
                 finish_reason = None
                 tool_calls_to_yield: list[ToolCall] = []
+                reasoning_summaries_to_yield: list[ReasoningSummary] = []
 
                 try:
                     # Handle lifecycle events (informational only, don't yield)
@@ -1169,7 +1232,7 @@ class OpenAIProvider(AIProvider):
                     # Handle reasoning text delta events (reasoning models)
                     # Note: We don't stream the raw reasoning content, only log it
                     elif isinstance(event, ResponseReasoningTextDeltaEvent):
-                        logger.info(
+                        logger.debug(
                             f"[REASONING] Got reasoning delta: {event.delta[:100]}... "
                             f"(item_id={event.item_id}, content_index={event.content_index})"
                         )
@@ -1178,10 +1241,19 @@ class OpenAIProvider(AIProvider):
 
                     # Handle reasoning summary delta events
                     elif isinstance(event, ResponseReasoningSummaryTextDeltaEvent):
-                        reasoning_summary = event.delta
-                        logger.info(
-                            f"[REASONING_SUMMARY] Got summary delta: {reasoning_summary[:100]}..."
+                        (   current_reasoning_id,
+                            reasoning_summary_count,
+                            current_reasoning_summary,
+                            reasoning_summary,
+                        ) = self._handle_reasoning_summary_delta(
+                            event=event,
+                            current_reasoning_id=current_reasoning_id,
+                            reasoning_summary_count=reasoning_summary_count,
+                            current_reasoning_summary=current_reasoning_summary,
                         )
+                        
+                        if reasoning_summary:
+                            reasoning_summaries_to_yield.append(reasoning_summary)
 
                     # Handle text delta events (streaming output content)
                     elif isinstance(event, ResponseTextDeltaEvent):
@@ -1246,21 +1318,22 @@ class OpenAIProvider(AIProvider):
                             f"[UNHANDLED] Unhandled event type: {type(event).__name__}"
                         )
 
-                    # Yield chunk if there's content, reasoning summary, tool calls, citations, or finish reason
+                    # Yield chunk if there's content, tool calls, citations, or finish reason
                     if (
                         content
-                        or reasoning_summary
                         or tool_calls_to_yield
+                        or reasoning_summaries_to_yield
                         or citations
                         or finish_reason
                     ):
                         chunk = ChatStreamChunk(
                             content=content,
-                            reasoning_summary=reasoning_summary,
                             tool_calls=tool_calls_to_yield,
+                            reasoning_summaries=reasoning_summaries_to_yield,
                             citations=citations,
                             finish_reason=finish_reason,
                         )
+
                         yield chunk
 
                 except Exception as e:

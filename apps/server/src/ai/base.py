@@ -15,6 +15,7 @@ class ToolName(str, Enum):
     WEB_SEARCH = "web_search"
     FILE_SEARCH = "file_search"
     MCP_TOOL = "mcp_tool"  # Generic MCP tool call
+    REASONING = "reasoning"
 
 
 class ToolStatus(str, Enum):
@@ -100,19 +101,25 @@ class ToolCall(BaseModel):
     result: dict[str, Any] | None = None
 
 
+class ReasoningSummary(BaseModel):
+    """Summarized reasoning snippet provided by reasoning models."""
+
+    id: str
+
+    summary: str
+
+
 class ChatStreamChunk(BaseModel):
     """Chunk from streaming chat response with optional citations.
 
     This model represents a piece of a streaming response that may include
-    both content text, reasoning summary, and citations from web search results.
-    For reasoning models, reasoning_summary contains the summary of the model's
-    internal reasoning process.
+    content text, reasoning summaries, and citations from web searches.
     Tool calls represent function calls made by the AI.
     """
 
     content: str = ""
-    reasoning_summary: str = ""
     tool_calls: list[ToolCall] = []
+    reasoning_summaries: list[ReasoningSummary] = []
     citations: list[SearchCitation] = []
     finish_reason: str | None = None
 
