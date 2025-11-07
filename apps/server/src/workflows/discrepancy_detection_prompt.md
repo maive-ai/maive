@@ -13,23 +13,11 @@ For each deviation found:
 
 # Guidelines
 ## General
-- Do not guess. It is better to exclude a discrepancy than to incorrectly include it. The same goes for an occurence of a given discrepancy.
+- DO NOT GUESS. It is significantly better to exclude a discrepancy than to incorrectly include it. Do not guess on an occurence or timestamp of a given discrepancy either. Aire on the side of excluding rather than including.
 - Estimate line items are coarse, so what is discussed in the conversation may included in the estimate with a slightly inaccurate title or discription. For example, if a rep agrees to install a "bathroom fan", and the estimate includes a line item for an "attic fan", then it shouldn't be flagged as a deviation.
 
 ## Deviation Classes
 {deviation_classes}
-
-## Examples to include
-- Pipe boots that were stated would be replaced but aren't in neither the form nor the estimate.
-- Box vents
-- Additional vents (e.g. box vent)
-
-## Examples to exclude
-- Items contained in the estimate that were not discussed during the conversation or seem incompatible with what was discussed during the conversation.
-- Project timelines
-- Rep promises to follow up or communicate with the customer personally
-- Minute details of how they usually install a roof (e.g. "we'll put bigger flashing")
-- Durations of warranties
 
 # Transcript Format
 

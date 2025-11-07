@@ -3,16 +3,6 @@
 ## product_or_component_not_in_estimate
       "class": "product_or_component_not_in_estimate",
       "explanation": "The production notes specify that 351 units (presumably linear feet) of gutters are included in the scope of work, but there is no corresponding line item in the estimate.",
-      "occurrences": [
-        {
-          "conversation_index": 0,
-          "timestamp": "39:26"
-        },
-        {
-          "conversation_index": 0,
-          "timestamp": "39:29"
-        }
-      ],
       "predicted_line_item": {
         "description": "Install Gutters",
         "quantity": 351.0,
@@ -97,7 +87,7 @@
       }
     },
     "class": "product_or_component_undocumented",
-      "explanation": "The sales rep stated that they would \"put some more baffles in\" to improve attic ventilation. This item was not included in the production notes or the estimate.",
+      "explanation": "The sales rep stated that they would \"put some more baffels in\" to improve attic ventilation. This item was not included in the production notes or the estimate.",
       "occurrences": [
         {
           "conversation_index": 0,
@@ -171,20 +161,6 @@
     }
 },
 {
-    "class": "product_or_component_not_in_estimate",
-    "explanation": "The rep promises to install an additional box vent for the sunroom terrace and adds this to the Notes to Production, but this line item isn't included in the estimate. Only a ridge vent is included in the estimate.",
-    "occurrences": [
-        {
-            "conversation_index": 0,
-            "timestamp": "1:54:40"
-        },
-        {
-            "conversation_index": 0,
-            "timestamp": "02:00:13"
-        }
-    ],
-},
-{
       "class": "product_or_component_not_in_estimate",
       "explanation": "The production notes state that plywood is needed for the sunroom/terrace area, and the rep estimated 10 sheets would be required, but there is no line item for plywood on the estimate.",
       "occurrences": [
@@ -244,6 +220,12 @@
     }
     ],
     "predicted_line_item": null
+},
+{
+      "class": "untracked_or_incorrect_customer_preference",
+      "explanation": "The production notes specify 'White' for the flashing color, but the corresponding 'Install Berger Aluminum Drip Edge' line item in the estimate states 'Color Selection Needed'.",
+      "occurrences": [],
+      "predicted_line_item": null
 },
 {
     "class": "untracked_or_incorrect_customer_preference",
