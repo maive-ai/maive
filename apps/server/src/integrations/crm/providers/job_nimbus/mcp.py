@@ -148,7 +148,26 @@ async def get_job(job_id: str) -> dict[str, Any]:
         job_id: The JobNimbus job ID (JNID) to retrieve
         
     Returns:
-        Job details including customer name, address, status, and other information
+        Dictionary with job details and notes. Key fields include:
+        - id (str): Job identifier
+        - name (str): Job name/title
+        - number (str): Job number
+        - status (str): Current status (e.g., "Writing Estimate", "In Progress")
+        - workflow_type (str): Job type (e.g., "Retail", "Insurance")
+        - description (str): Job description/details
+        - customer_id (str): Customer contact ID
+        - customer_name (str): Customer name
+        - address_line1, address_line2, city, state, postal_code, country (str): Job location
+        - created_at, updated_at (str): Timestamps in ISO format
+        - sales_rep_id, sales_rep_name (str): Sales representative info
+        - notes (list[dict]): List of notes/activities, each containing:
+            - id (str): Note identifier
+            - text (str): Note content
+            - created_by_name (str): Author name
+            - created_at (str): Creation timestamp
+            - updated_at (str): Update timestamp
+        - provider_data (dict): Additional provider-specific fields like claim_number, 
+          insurance_company, related contacts, geo coordinates, etc.
         
     Raises:
         Exception: If the job is not found or an error occurs
@@ -194,12 +213,13 @@ async def search_jobs(
         page_size: Number of results per page (default: 10, max: 50)
         
     Returns:
-        A dictionary containing:
-        - jobs: List of matching jobs with full details
-        - total_count: Total number of matching jobs
-        - page: Current page number
-        - page_size: Number of results per page
-        - has_more: Whether there are more results available
+        Dictionary containing:
+        - jobs (list[dict]): List of matching jobs, each with same structure as get_job()
+          (includes id, name, number, status, customer info, address, dates, notes, etc.)
+        - total_count (int): Total number of matching jobs
+        - page (int): Current page number
+        - page_size (int): Number of results per page
+        - has_more (bool): Whether there are more results available
         
     Examples:
         - Search by customer name: search_jobs(customer_name="John Smith")
@@ -271,10 +291,18 @@ async def list_job_files(job_id: str) -> dict[str, Any]:
         job_id: The JobNimbus job ID (JNID)
         
     Returns:
-        Dictionary with:
-        - count: Number of files
-        - files: Array of file metadata objects with id, filename, content_type, 
-                 size, record_type_name, description, etc.
+        Dictionary containing:
+        - count (int): Number of files
+        - files (list[dict]): Array of file metadata objects, each with:
+            - id (str): File identifier (use this with analyze_job_files)
+            - filename (str): File name (e.g., "roof_estimate.pdf", "damage_photo.jpg")
+            - content_type (str): MIME type (e.g., "application/pdf", "image/jpeg")
+            - size (int): File size in bytes
+            - record_type_name (str): File type category
+            - description (str): File description if available
+            - date_created (int): Creation timestamp
+            - created_by_name (str): Uploader name
+            - is_private (bool): Privacy flag
     
     Example:
         list_job_files(job_id="mhdn17a1ssizgvz8fo0h66r")
