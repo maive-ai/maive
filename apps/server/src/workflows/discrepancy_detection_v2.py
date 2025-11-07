@@ -27,6 +27,131 @@ from src.ai.providers import get_ai_provider
 from src.utils.logger import logger
 
 
+def _format_timestamp_from_seconds(seconds: float, use_hours: bool) -> str:
+    """
+    Convert timestamp from seconds to MM:SS or HH:MM:SS format.
+
+    Args:
+        seconds: Timestamp in seconds
+        use_hours: If True, use HH:MM:SS format; if False, use MM:SS
+
+    Returns:
+        Formatted timestamp string
+    """
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+
+    if use_hours:
+        return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+    else:
+        return f"{minutes:02d}:{secs:02d}"
+
+
+def simplify_rilla_transcript(rilla_transcript: list[dict]) -> dict:
+    """
+    Convert Rilla word-level transcript to compact format for LLM efficiency.
+
+    Reduces token count by ~70% by:
+    - Combining words into space-separated strings
+    - Using parallel arrays for timestamps and confidence
+    - Grouping by speaker turns
+    - Using shorter timestamp format when possible
+
+    Args:
+        rilla_transcript: List of Rilla entries with format:
+            [{"speaker": str, "words": [{"word": str, "start_time": float, "confidence": float}]}]
+
+    Returns:
+        Compact format dict:
+            {
+                "conversations": [
+                    {
+                        "speaker": str,
+                        "words": str (space-separated),
+                        "timestamps": [str] (MM:SS or HH:MM:SS),
+                        "confidence": [float]
+                    }
+                ]
+            }
+
+    Raises:
+        ValueError: If transcript is empty or malformed
+    """
+    if not rilla_transcript:
+        raise ValueError("Transcript is empty")
+
+    # Determine if we need hours in timestamps (any timestamp >= 1 hour)
+    max_time = 0.0
+    for entry in rilla_transcript:
+        words = entry.get("words", [])
+        if words:
+            for word_obj in words:
+                start_time = word_obj.get("start_time", 0)
+                max_time = max(max_time, start_time)
+
+    use_hours = max_time >= 3600
+
+    # Group by speaker turns (consecutive entries with same speaker)
+    conversations = []
+    current_speaker = None
+    current_words = []
+    current_timestamps = []
+    current_confidence = []
+
+    for entry in rilla_transcript:
+        speaker = entry.get("speaker", "Unknown")
+        words = entry.get("words", [])
+
+        if not words:
+            continue
+
+        # If speaker changed, save previous turn and start new one
+        if speaker != current_speaker and current_words:
+            conversations.append(
+                {
+                    "speaker": current_speaker,
+                    "words": " ".join(current_words),
+                    "timestamps": current_timestamps,
+                    "confidence": current_confidence,
+                }
+            )
+            current_words = []
+            current_timestamps = []
+            current_confidence = []
+
+        current_speaker = speaker
+
+        # Extract word, timestamp, confidence from each word object
+        for word_obj in words:
+            word = word_obj.get("word", "")
+            start_time = word_obj.get("start_time", 0)
+            conf = word_obj.get("confidence", 0.0)
+
+            if word:  # Skip empty words
+                current_words.append(word)
+                current_timestamps.append(
+                    _format_timestamp_from_seconds(start_time, use_hours)
+                )
+                current_confidence.append(round(conf, 2))
+
+    # Don't forget the last turn
+    if current_words:
+        conversations.append(
+            {
+                "speaker": current_speaker,
+                "words": " ".join(current_words),
+                "timestamps": current_timestamps,
+                "confidence": current_confidence,
+            }
+        )
+
+    if not conversations:
+        raise ValueError("No valid conversation turns found in transcript")
+
+    return {"conversations": conversations}
+
+
 class DeviationOccurrence(BaseModel):
     """Timestamp and context for a deviation occurrence."""
 
@@ -427,7 +552,7 @@ class DiscrepancyDetectionV2Workflow:
         if not notes_to_production:
             notes_to_production = {"message": "No Notes to Production found"}
 
-        # Load and validate transcript (already in compact format from S3)
+        # Load and process transcript
         logger.info(f"   Loading transcript from: {transcript_path}")
         with open(transcript_path, "r") as f:
             transcript_data = json.load(f)
@@ -436,9 +561,33 @@ class DiscrepancyDetectionV2Workflow:
         if not transcript_data:
             raise ValueError("Transcript file is empty - no conversation data found.")
 
+        # Try to simplify transcript if it's in original Rilla format
+        original_size = len(json.dumps(transcript_data))
+        try:
+            # Check if it's a list (Rilla format) with expected structure
+            if isinstance(transcript_data, list) and len(transcript_data) > 0:
+                first_entry = transcript_data[0]
+                if "speaker" in first_entry and "words" in first_entry:
+                    logger.info("   Detected original Rilla format, attempting simplification...")
+                    simplified = simplify_rilla_transcript(transcript_data)
+                    simplified_size = len(json.dumps(simplified))
+                    savings_pct = 100 - (simplified_size / original_size * 100)
+                    logger.info(
+                        f"   ✅ Simplified: {original_size // 4} → {simplified_size // 4} tokens (~{savings_pct:.1f}% reduction)"
+                    )
+                    transcript_data = simplified
+                else:
+                    logger.info("   Transcript already in compact format or unknown format, using as-is")
+            else:
+                logger.info("   Transcript already in compact format or unknown format, using as-is")
+        except Exception as e:
+            logger.warning(f"   ⚠️ Failed to simplify transcript: {e}")
+            logger.info("   Using original transcript format")
+            # transcript_data remains unchanged
+
         # Convert to JSON string for passing to LLM
         transcript_json = json.dumps(transcript_data, indent=2)
-        logger.info(f"   ✅ Loaded transcript (~{len(transcript_json) // 4} tokens)")
+        logger.info(f"   ✅ Final transcript size: ~{len(transcript_json) // 4} tokens")
 
         # Load deviation classes from JSON file (always use classes.json)
         classes_path = (

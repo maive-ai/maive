@@ -15,6 +15,7 @@
       "explanation": "The production notes indicate that gutter guards are included in the project ('Gutter Guards: Yes'), but they are not listed as a line item on the estimate.",
       "occurrences": [],
       "predicted_line_item": {
+        
         "description": "Install Gutter Guards",
         "quantity": 351.0,
         "unit": "LF",

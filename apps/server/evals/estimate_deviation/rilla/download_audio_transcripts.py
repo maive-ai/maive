@@ -16,131 +16,6 @@ import boto3
 import pandas as pd
 
 
-def _format_timestamp_from_seconds(seconds: float, use_hours: bool) -> str:
-    """
-    Convert timestamp from seconds to MM:SS or HH:MM:SS format.
-
-    Args:
-        seconds: Timestamp in seconds
-        use_hours: If True, use HH:MM:SS format; if False, use MM:SS
-
-    Returns:
-        Formatted timestamp string
-    """
-    hours = int(seconds // 3600)
-    minutes = int((seconds % 3600) // 60)
-    secs = int(seconds % 60)
-
-    if use_hours:
-        return f"{hours:02d}:{minutes:02d}:{secs:02d}"
-    else:
-        return f"{minutes:02d}:{secs:02d}"
-
-
-def simplify_rilla_transcript(rilla_transcript: list[dict]) -> dict:
-    """
-    Convert Rilla word-level transcript to compact format for LLM efficiency.
-
-    Reduces token count by ~70% by:
-    - Combining words into space-separated strings
-    - Using parallel arrays for timestamps and confidence
-    - Grouping by speaker turns
-    - Using shorter timestamp format when possible
-
-    Args:
-        rilla_transcript: List of Rilla entries with format:
-            [{"speaker": str, "words": [{"word": str, "start_time": float, "confidence": float}]}]
-
-    Returns:
-        Compact format dict:
-            {
-                "conversations": [
-                    {
-                        "speaker": str,
-                        "words": str (space-separated),
-                        "timestamps": [str] (MM:SS or HH:MM:SS),
-                        "confidence": [float]
-                    }
-                ]
-            }
-
-    Raises:
-        ValueError: If transcript is empty or malformed
-    """
-    if not rilla_transcript:
-        raise ValueError("Transcript is empty")
-
-    # Determine if we need hours in timestamps (any timestamp >= 1 hour)
-    max_time = 0.0
-    for entry in rilla_transcript:
-        words = entry.get("words", [])
-        if words:
-            for word_obj in words:
-                start_time = word_obj.get("start_time", 0)
-                max_time = max(max_time, start_time)
-
-    use_hours = max_time >= 3600
-
-    # Group by speaker turns (consecutive entries with same speaker)
-    conversations = []
-    current_speaker = None
-    current_words = []
-    current_timestamps = []
-    current_confidence = []
-
-    for entry in rilla_transcript:
-        speaker = entry.get("speaker", "Unknown")
-        words = entry.get("words", [])
-
-        if not words:
-            continue
-
-        # If speaker changed, save previous turn and start new one
-        if speaker != current_speaker and current_words:
-            conversations.append(
-                {
-                    "speaker": current_speaker,
-                    "words": " ".join(current_words),
-                    "timestamps": current_timestamps,
-                    "confidence": current_confidence,
-                }
-            )
-            current_words = []
-            current_timestamps = []
-            current_confidence = []
-
-        current_speaker = speaker
-
-        # Extract word, timestamp, confidence from each word object
-        for word_obj in words:
-            word = word_obj.get("word", "")
-            start_time = word_obj.get("start_time", 0)
-            conf = word_obj.get("confidence", 0.0)
-
-            if word:  # Skip empty words
-                current_words.append(word)
-                current_timestamps.append(
-                    _format_timestamp_from_seconds(start_time, use_hours)
-                )
-                current_confidence.append(round(conf, 2))
-
-    # Don't forget the last turn
-    if current_words:
-        conversations.append(
-            {
-                "speaker": current_speaker,
-                "words": " ".join(current_words),
-                "timestamps": current_timestamps,
-                "confidence": current_confidence,
-            }
-        )
-
-    if not conversations:
-        raise ValueError("No valid conversation turns found in transcript")
-
-    return {"conversations": conversations}
-
-
 def download_file(url, output_path):
     """Download a file using wget."""
     try:
@@ -224,30 +99,6 @@ def process_transcript_json(downloaded_file_path, output_json_path):
         except json.JSONDecodeError:
             # If it's plain text, wrap it in JSON
             transcript_data = {"transcript": content}
-
-        # Attempt to simplify the transcript if it's in Rilla format
-        try:
-            # Check if it's a list (Rilla format) and has the expected structure
-            if isinstance(transcript_data, list) and len(transcript_data) > 0:
-                first_entry = transcript_data[0]
-                if "speaker" in first_entry and "words" in first_entry:
-                    print("  Simplifying transcript (Rilla format detected)...")
-                    simplified = simplify_rilla_transcript(transcript_data)
-
-                    # Calculate token savings
-                    original_size = len(json.dumps(transcript_data))
-                    simplified_size = len(json.dumps(simplified))
-                    savings_pct = 100 - (simplified_size / original_size * 100)
-
-                    print(f"  ✓ Simplified: {original_size // 4} → {simplified_size // 4} tokens (~{savings_pct:.1f}% reduction)")
-                    transcript_data = simplified
-                else:
-                    print("  Transcript not in Rilla format, saving as-is")
-            else:
-                print("  Transcript not in Rilla format, saving as-is")
-        except Exception as e:
-            print(f"  ⚠️ Failed to simplify transcript: {e}")
-            print("  Saving original format instead")
 
         # Save as formatted JSON
         with open(output_json_path, "w", encoding="utf-8") as f:
@@ -425,12 +276,16 @@ def process_single_row(input_file, row_number, base_output_dir):
         print(f"  Transcript file: {transcript_output.name}")
     print(f"  S3 audio upload: {'SUCCESS' if s3_upload_audio_success else 'FAILED'}")
     if s3_upload_audio_success:
-        print(f"  S3 audio location: s3://{s3_bucket}/val/{conversation_id}/recording{audio_extension}")
+        print(
+            f"  S3 audio location: s3://{s3_bucket}/val/{conversation_id}/recording{audio_extension}"
+        )
     print(
         f"  S3 transcript upload: {'SUCCESS' if s3_upload_transcript_success else 'FAILED'}"
     )
     if s3_upload_transcript_success:
-        print(f"  S3 transcript location: s3://{s3_bucket}/val/{conversation_id}/transcript.json")
+        print(
+            f"  S3 transcript location: s3://{s3_bucket}/val/{conversation_id}/transcript.json"
+        )
     print(f"{'=' * 80}")
 
 
