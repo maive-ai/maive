@@ -87,14 +87,14 @@ def upload_to_s3(local_file_path, s3_bucket, s3_key):
 
 
 def process_transcript_json(downloaded_file_path, output_json_path):
-    """Process downloaded transcript file and save as properly formatted JSON."""
+    """Process downloaded transcript file, simplify it, and save as properly formatted JSON."""
     try:
         # Try to read as JSON first (in case it's already JSON)
         with open(downloaded_file_path, "r", encoding="utf-8") as f:
             content = f.read()
 
         try:
-            # If it's already valid JSON, just copy it
+            # If it's already valid JSON, parse it
             transcript_data = json.loads(content)
         except json.JSONDecodeError:
             # If it's plain text, wrap it in JSON
@@ -276,12 +276,16 @@ def process_single_row(input_file, row_number, base_output_dir):
         print(f"  Transcript file: {transcript_output.name}")
     print(f"  S3 audio upload: {'SUCCESS' if s3_upload_audio_success else 'FAILED'}")
     if s3_upload_audio_success:
-        print(f"  S3 audio location: s3://{s3_bucket}/val/{conversation_id}/recording{audio_extension}")
+        print(
+            f"  S3 audio location: s3://{s3_bucket}/val/{conversation_id}/recording{audio_extension}"
+        )
     print(
         f"  S3 transcript upload: {'SUCCESS' if s3_upload_transcript_success else 'FAILED'}"
     )
     if s3_upload_transcript_success:
-        print(f"  S3 transcript location: s3://{s3_bucket}/val/{conversation_id}/transcript.json")
+        print(
+            f"  S3 transcript location: s3://{s3_bucket}/val/{conversation_id}/transcript.json"
+        )
     print(f"{'=' * 80}")
 
 

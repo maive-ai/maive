@@ -457,8 +457,6 @@ async def main():
                                 "rilla_links": rilla_urls,  # Store as list in JSONL
                                 "rilla_recordings_s3_uri": "",  # Empty for now
                                 "rilla_transcripts_s3_uri": "",  # Empty for now
-                                "labels": "",  # Empty for now
-                                "notes": "",  # Empty for now
                                 "estimate_upload_success": estimate_upload_success,
                                 "form_upload_success": form_upload_success,
                             }

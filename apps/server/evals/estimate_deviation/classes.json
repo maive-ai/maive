@@ -1,3 +1,60 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:59896d730a3eeb07253a7e805189cad077b6b31da6cff1d68d00d300d918720f
-size 8581
+{
+  "classes": [
+    {
+      "label": "product_or_component_undocumented",
+      "title": "Product or Component Undocumented",
+      "description": "An additional component or product was discussed and explicitly agreed upon in the conversation but is completely absent from both the estimate and any tracking forms. This represents items that were promised during the sales conversation but never made it into any documentation. Examples: new pipe boots, new ridge vents, new valley flashing, new gutters, new chimney flashing, new skylights, additional plywood pieces, replacement baffels, or any add-on product that was verbally committed but not captured anywhere in the estimate or form. Non-examples: discounts (e.g. military discount, manager discount, same-day savings discount) or financing terms.",
+      "business_impact": ["cost", "customer_experience"],
+      "output_includes_predicted_line_item": false,
+      "level": 1
+    },
+    {
+      "label": "product_or_component_not_in_estimate",
+      "title": "Product or Component Tracked in Form But Not in Estimate",
+      "description": "A product or component is documented in the cool down form but is missing from the estimate. This indicates a breakdown in the handoff from field documentation to estimate creation. Examples: form notes mention installing ridge vents but estimate has no ridge vent line item; cool down form specifies pipe boot replacement but estimate doesn't include it; form documents valley flashing work that doesn't appear in pricing. Non-examples: a product included in the estimate but at a different price than what was discussed in the conversation.",
+      "business_impact": ["cost"],
+      "output_includes_predicted_line_item": false,
+      "level": 1
+    },
+    {
+      "label": "discount_applied_not_tracked",
+      "title": "Discount Applied But Not Tracked",
+      "description": "The sales rep applied a discount or promotional offer during the conversation but it is not formally documented in the estimate or contract. Examples: promised percentage off not shown in estimate; early bird discount mentioned but not recorded; referral discount applied verbally but missing from documentation; military or senior discount discussed but not reflected in pricing; seasonal promotional offer mentioned during sale but absent from final estimate. Non-examples: basic financing terms (e.g. no money down, no interest), which are not a discount but a financing option.",
+      "business_impact": ["cost"],
+      "output_includes_predicted_line_item": false,
+      "level": 2
+    },
+    {
+      "label": "untracked_or_incorrect_customer_preference",
+      "title": "Untracked or Incorrect Customer Preference",
+      "description": "A specific customer preference, request, or special instruction discussed in the conversation is either not captured anywhere or is documented incorrectly in the estimate or form. This includes material preferences, scheduling requirements, and work specifications that affect customer satisfaction. Examples: customer chose 'Charcoal' shingle color but 'Weathered Wood' is documented or no color specified; preference for marine-grade plywood discussed but standard plywood shown in estimate; 'work only on weekdays' requested but not noted; 'avoid blocking driveway' instruction missing; specific brand preference (e.g., GAF Timberline HDZ) discussed but generic material listed; timing preferences like 'complete before holidays'; communication preferences like 'text only, no calls'; access restrictions mentioned but not captured.",
+      "business_impact": ["customer_experience"],
+      "output_includes_predicted_line_item": false,
+      "level": 2
+    },
+    {
+      "label": "labor_line_item_missing",
+      "title": "Labor Line Item Missing from Estimate",
+      "description": "A labor component or service was discussed and agreed upon in the conversation but the corresponding labor line item is missing from the estimate. This differs from missing products/materials as it specifically relates to labor charges for services. Examples: discussed removing two layers of shingles but only one layer tearoff labor in estimate; agreed to hand-nail specific areas but labor not included; promised custom flashing fabrication but fabrication labor missing; discussed hauling debris to specific location but labor charge not in estimate; special installation techniques mentioned but associated labor not priced.",
+      "business_impact": ["cost"],
+      "output_includes_predicted_line_item": false,
+      "level": 2
+    },
+    {
+      "label": "scope_discrepancy",
+      "title": "Scope Discrepancy",
+      "description": "The physical scope or area of work discussed in the conversation differs from what is documented in both the form and estimate. This represents a fundamental mismatch in what was promised versus what is being tracked and priced. Examples: conversation includes the roof on a shed or garage but neither the cool down form nor the estimate track it; discussed doing entire house but documentation only covers front section; detached structure (garage, carport, workshop) mentioned in conversation but not included in scope; number of roof sections or slopes differs between discussion and documentation; whole property discussed but only main house documented; additional structures like porches or awnings mentioned but not captured.",
+      "business_impact": ["customer_experience"],
+      "output_includes_predicted_line_item": false,
+      "level": 3
+    },
+    {
+      "label": "incorrect_quantity",
+      "title": "Incorrect Quantity",
+      "description": "The quantity for a line item in the estimate appears incongruent with the scope discussed during the conversation or stated in the cool down form. This represents a potential underestimation or overestimation of materials or labor. Examples: conversation mentions two layers of shingles to remove but estimate shows single layer tearoff; form notes 15 squares of roofing but estimate prices 12 squares; discussion includes chimney flashing on two chimneys but estimate shows quantity of one; plywood replacement discussed for 'most of the roof' but estimate shows minimal sheets; number of pipe boots, vents, or other penetrations doesn't match what was observed and discussed; linear feet of valley flashing discussed doesn't match estimate quantities.",
+      "business_impact": ["cost"],
+      "output_includes_predicted_line_item": false,
+      "level": 3
+    }
+  ]
+}
