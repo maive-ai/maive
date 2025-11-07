@@ -1,12 +1,12 @@
 import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
 import { createFileRoute } from '@tanstack/react-router';
-import { AlertCircle, Building2, CheckCircle2, Clock, FileText, Loader2, Mail, MapPin, Phone, PhoneCall, User } from 'lucide-react';
+import { AlertCircle, Building2, CheckCircle2, Clock, Download, FileText, Loader2, Mail, MapPin, Phone, PhoneCall, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { isValidPhoneNumber } from 'react-phone-number-input';
 import type { Value as E164Number } from 'react-phone-number-input';
 
 import { useEndCall } from '@/clients/ai/voice';
-import { useFetchProject } from '@/clients/crm';
+import { downloadFile, useFetchJobFiles, useFetchProject } from '@/clients/crm';
 import { useCallAndWriteToCrm } from '@/clients/workflows';
 import { CallAudioVisualizer } from '@/components/call/CallAudioVisualizer';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ export const Route = createFileRoute('/_authed/project-detail')({
 function ProjectDetail() {
   const { projectId } = Route.useSearch();
   const { data: project, isLoading, isError } = useFetchProject(projectId);
+  const { data: files, isLoading: filesLoading } = useFetchJobFiles(projectId);
 
   // Initialize hooks before any early returns
   const providerData = project?.provider_data as any;
@@ -36,6 +37,7 @@ function ProjectDetail() {
   const [callStatus, setCallStatus] = useState<string | null>(null);
   const [listenUrl, setListenUrl] = useState<string | null>(null);
   const [controlUrl, setControlUrl] = useState<string | null>(null);
+  const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null);
   const callAndWritetoCrmMutation = useCallAndWriteToCrm(projectId);
   const endCallMutation = useEndCall();
 
@@ -55,6 +57,17 @@ function ProjectDetail() {
   const canEndCall = controlUrl !== null;
 
   const isValid = phoneNumber ? isValidPhoneNumber(phoneNumber) : false;
+
+  const handleDownload = async (fileId: string, filename: string, contentType: string) => {
+    try {
+      setDownloadingFileId(fileId);
+      await downloadFile(fileId, filename, contentType);
+    } catch (error) {
+      console.error('Failed to download file:', error);
+    } finally {
+      setDownloadingFileId(null);
+    }
+  };
 
   // Update phone number when project data loads
   useEffect(() => {
@@ -261,14 +274,111 @@ function ProjectDetail() {
               )}
 
               {/* Notes */}
-              {providerData?.notes && (
+              {project.notes && project.notes.length > 0 && (
                 <div className="border-t pt-6">
                   <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
                     Notes
                   </p>
-                  <div className="space-y-3 pl-2">
-                    <p className="text-gray-600 whitespace-pre-wrap">{providerData.notes}</p>
+                  <div className="space-y-4">
+                    {[...project.notes]
+                      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                      .map((note) => (
+                        <div key={note.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <User className="size-4" />
+                              <span className="font-medium">
+                                {note.created_by_name || 'Unknown'}
+                              </span>
+                            </div>
+                            <time className="text-xs text-gray-500">
+                              {new Date(note.created_at).toLocaleString()}
+                            </time>
+                          </div>
+                          <p className="text-gray-700 whitespace-pre-wrap">{note.text}</p>
+                        </div>
+                      ))}
                   </div>
+                </div>
+              )}
+              
+              {project.notes && project.notes.length === 0 && (
+                <div className="border-t pt-6">
+                  <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
+                    Notes
+                  </p>
+                  <p className="text-gray-500 text-sm pl-2">No notes yet</p>
+                </div>
+              )}
+
+              {/* Files & Attachments */}
+              {filesLoading && (
+                <div className="border-t pt-6">
+                  <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
+                    Files & Attachments
+                  </p>
+                  <div className="flex items-center gap-2 text-gray-500 text-sm pl-2">
+                    <Loader2 className="size-4 animate-spin" />
+                    <span>Loading files...</span>
+                  </div>
+                </div>
+              )}
+
+              {!filesLoading && files && files.length > 0 && (
+                <div className="border-t pt-6">
+                  <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
+                    Files & Attachments
+                  </p>
+                  <div className="space-y-3">
+                    {files.map((file) => (
+                      <div 
+                        key={file.id} 
+                        className="flex items-center justify-between bg-gray-50 rounded-lg p-4 border border-gray-200 hover:bg-gray-100 transition-colors"
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <FileText className="size-5 text-gray-400 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {file.filename}
+                            </p>
+                            <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                              <span className="capitalize">{file.record_type_name}</span>
+                              <span>•</span>
+                              <span>{(file.size / 1024).toFixed(1)} KB</span>
+                              <span>•</span>
+                              <span>{new Date(file.date_created * 1000).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDownload(file.id, file.filename, file.content_type)}
+                          disabled={downloadingFileId === file.id}
+                          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-200 rounded-md transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {downloadingFileId === file.id ? (
+                            <>
+                              <Loader2 className="size-4 animate-spin" />
+                              <span>Downloading...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Download className="size-4" />
+                              <span>Download</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {!filesLoading && files && files.length === 0 && (
+                <div className="border-t pt-6">
+                  <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
+                    Files & Attachments
+                  </p>
+                  <p className="text-gray-500 text-sm pl-2">No files attached</p>
                 </div>
               )}
 

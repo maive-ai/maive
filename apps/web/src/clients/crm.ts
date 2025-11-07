@@ -3,10 +3,10 @@
 import {
   CRMApi,
   Configuration,
+  type Project,
   type ProjectList,
-  type SrcIntegrationsCrmSchemasProject2 as Project,
 } from '@maive/api/client';
-import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
 import { getIdToken } from '@/auth';
 import { env } from '@/env';
@@ -81,5 +81,66 @@ export function useFetchProject(projectId: string): UseQueryResult<Project, Erro
     refetchInterval: 30 * 1000, // Poll every 30 seconds
     refetchIntervalInBackground: true,
     enabled: !!projectId, // Only run if projectId is provided
+  });
+}
+
+/**
+ * File metadata interface
+ */
+export interface FileMetadata {
+  id: string;
+  filename: string;
+  content_type: string;
+  size: number;
+  record_type_name: string;
+  description?: string;
+  date_created: number;
+  created_by_name: string;
+  is_private: boolean;
+}
+
+/**
+ * Fetch all files for a specific job/project
+ */
+export async function fetchJobFiles(jobId: string): Promise<FileMetadata[]> {
+  const api = await createCRMApi();
+  const response = await api.getJobFilesApiCrmJobsJobIdFilesGet(jobId);
+  return response.data as FileMetadata[];
+}
+
+/**
+ * Download a specific file with authentication
+ */
+export async function downloadFile(fileId: string, filename?: string, contentType?: string): Promise<void> {
+  const api = await createCRMApi();
+  
+  const response = await api.downloadFileApiCrmFilesFileIdDownloadGet(
+    fileId,
+    filename || null,
+    contentType || null,
+    { responseType: 'blob' }
+  );
+  
+  // Trigger browser download
+  const blob = new Blob([response.data], { type: contentType || 'application/octet-stream' });
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = downloadUrl;
+  link.download = filename || `download_${fileId}`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(downloadUrl);
+}
+
+/**
+ * React Query hook for fetching job files
+ */
+export function useFetchJobFiles(jobId: string): UseQueryResult<FileMetadata[], Error> {
+  return useQuery({
+    queryKey: ['job-files', jobId],
+    queryFn: () => fetchJobFiles(jobId),
+    staleTime: 60 * 1000, // Data is fresh for 60 seconds
+    enabled: !!jobId, // Only run if jobId is provided
   });
 }

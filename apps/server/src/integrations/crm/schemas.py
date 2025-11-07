@@ -56,6 +56,9 @@ class Job(BaseModel):
         default_factory=dict, description="Provider-specific data"
     )
 
+    # Notes/activities
+    notes: list["Note"] | None = Field(None, description="List of notes/activities for this job")
+
 
 class JobList(BaseModel):
     """Universal job list response with pagination."""
@@ -176,6 +179,9 @@ class Project(BaseModel):
     provider_data: dict[str, Any] = Field(
         default_factory=dict, description="Provider-specific data"
     )
+    
+    # Notes/activities
+    notes: list["Note"] | None = Field(None, description="List of notes/activities for this project")
 
 
 class ProjectList(BaseModel):

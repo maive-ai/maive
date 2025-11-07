@@ -265,31 +265,29 @@ class MockProvider(CRMProvider):
                 message=f"{entity_type.title()} with ID {entity_id} not found",
             )
 
-        # Add note to project
-        enhanced_text = f"{now.strftime('%Y-%m-%d %H:%M')}: {text}"
-        if project.provider_data.get("notes"):
-            project.provider_data["notes"] = (
-                enhanced_text + "\n\n" + project.provider_data["notes"]
-            )
-        else:
-            project.provider_data["notes"] = enhanced_text
-
-        logger.info(f"[MockProvider] Added note to {entity_type}: {text}")
-
-        return Note(
+        # Create note object
+        note = Note(
             id=str(uuid.uuid4()),
             text=text,
             entity_id=entity_id,
             entity_type=entity_type,
+            created_by_id=None,
+            created_by_name=None,
             created_at=now.isoformat(),
             updated_at=now.isoformat(),
-            created_by=None,
+            is_pinned=kwargs.get("pin_to_top", False),
             provider=CRMProviderEnum.MOCK,
-            provider_data={
-                "pinned": kwargs.get("pin_to_top", False),
-                "enhanced_text": enhanced_text,
-            },
+            provider_data={},
         )
+
+        # Append note to project's notes list
+        if project.notes is None:
+            project.notes = []
+        project.notes.insert(0, note)  # Insert at beginning for newest-first order
+
+        logger.info(f"[MockProvider] Added note to {entity_type}: {text}")
+
+        return note
 
     async def update_job_status(
         self,
@@ -476,7 +474,7 @@ class MockProvider(CRMProvider):
             status=project.status,
             status_id=None,
             workflow_type="Project",
-            description=project.provider_data.get("notes"),
+            description=None,  # Using structured notes instead
             customer_id=project.provider_data.get(
                 "id"
             ),  # Use project ID as customer ID
@@ -499,6 +497,7 @@ class MockProvider(CRMProvider):
             sales_rep_name=None,
             provider=CRMProviderEnum.MOCK,
             provider_data=provider_data,
+            notes=project.notes,  # Include notes from project
         )
 
     def _transform_project_to_contact(self, project: Project) -> Contact:

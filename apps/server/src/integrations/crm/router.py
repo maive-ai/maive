@@ -5,10 +5,14 @@ This module contains all the API endpoints for CRM operations using
 the universal interface that works across all CRM providers.
 """
 
+from io import BytesIO
+
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 
 from src.auth.dependencies import get_current_user, get_current_user_optional
 from src.auth.schemas import User
+from src.integrations.crm.base import CRMError
 from src.integrations.crm.dependencies import get_crm_service
 from src.integrations.crm.schemas import (
     Contact,
@@ -175,6 +179,91 @@ async def update_job_status(
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result.error
             )
+
+
+@router.get("/jobs/{job_id}/files")
+async def get_job_files(
+    job_id: str,
+    file_filter: str = Query("all", description="Filter by type: 'all', 'images', or 'pdfs'"),
+    current_user: User = Depends(get_current_user),
+    crm_service: CRMService = Depends(get_crm_service),
+):
+    """
+    Get files attached to a specific job with optional type filtering.
+
+    This endpoint returns metadata for files/attachments associated with a job.
+    Supports filtering by file type (all, images, or pdfs).
+
+    Args:
+        job_id: The unique identifier for the job
+        file_filter: Filter by type - "all", "images", or "pdfs" (default: "all")
+        crm_service: The CRM service instance from dependency injection
+
+    Returns:
+        List of file metadata dictionaries containing:
+        - id: File identifier
+        - filename: Original filename
+        - content_type: MIME type
+        - size: File size in bytes
+        - record_type_name: Type of file (Photo, Document, etc.)
+        - description: Optional file description
+        - date_created: Unix timestamp of creation
+        - created_by_name: Name of uploader
+        - is_private: Whether file is private
+
+    Raises:
+        HTTPException: If an error occurs fetching files
+    """
+    try:
+        return await crm_service.crm_provider.get_job_files(job_id, file_filter)
+    except CRMError as e:
+        status_code = status.HTTP_501_NOT_IMPLEMENTED if e.error_code == "NOT_SUPPORTED" else status.HTTP_500_INTERNAL_SERVER_ERROR
+        raise HTTPException(status_code=status_code, detail=e.message)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.get("/files/{file_id}/download")
+async def download_file(
+    file_id: str,
+    filename: str | None = Query(None, description="Optional filename from metadata"),
+    content_type: str | None = Query(None, description="Optional content type from metadata"),
+    current_user: User = Depends(get_current_user),
+    crm_service: CRMService = Depends(get_crm_service),
+):
+    """
+    Download a specific file's content.
+
+    This endpoint streams the file content to the client with proper headers
+    for browser download.
+
+    Args:
+        file_id: The unique identifier for the file
+        filename: Optional filename (recommended to provide from file list)
+        content_type: Optional content type (recommended to provide from file list)
+        crm_service: The CRM service instance from dependency injection
+
+    Returns:
+        StreamingResponse with file content
+
+    Raises:
+        HTTPException: If the file is not found or an error occurs
+    """
+    try:
+        file_content, resolved_filename, resolved_content_type = await crm_service.crm_provider.download_file(
+            file_id, filename, content_type
+        )
+        
+        return StreamingResponse(
+            BytesIO(file_content),
+            media_type=resolved_content_type,
+            headers={"Content-Disposition": f'attachment; filename="{resolved_filename}"'}
+        )
+    except CRMError as e:
+        status_code = status.HTTP_501_NOT_IMPLEMENTED if e.error_code == "NOT_SUPPORTED" else status.HTTP_500_INTERNAL_SERVER_ERROR
+        raise HTTPException(status_code=status_code, detail=e.message)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 # ========================================================================

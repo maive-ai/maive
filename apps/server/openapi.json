@@ -412,6 +412,146 @@
         }
       }
     },
+    "/api/crm/jobs/{job_id}/files": {
+      "get": {
+        "tags": [
+          "CRM"
+        ],
+        "summary": "Get Job Files",
+        "description": "Get files attached to a specific job with optional type filtering.\n\nThis endpoint returns metadata for files/attachments associated with a job.\nSupports filtering by file type (all, images, or pdfs).\n\nArgs:\n    job_id: The unique identifier for the job\n    file_filter: Filter by type - \"all\", \"images\", or \"pdfs\" (default: \"all\")\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    List of file metadata dictionaries containing:\n    - id: File identifier\n    - filename: Original filename\n    - content_type: MIME type\n    - size: File size in bytes\n    - record_type_name: Type of file (Photo, Document, etc.)\n    - description: Optional file description\n    - date_created: Unix timestamp of creation\n    - created_by_name: Name of uploader\n    - is_private: Whether file is private\n\nRaises:\n    HTTPException: If an error occurs fetching files",
+        "operationId": "get_job_files_api_crm_jobs__job_id__files_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "file_filter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Filter by type: 'all', 'images', or 'pdfs'",
+              "default": "all",
+              "title": "File Filter"
+            },
+            "description": "Filter by type: 'all', 'images', or 'pdfs'"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/crm/files/{file_id}/download": {
+      "get": {
+        "tags": [
+          "CRM"
+        ],
+        "summary": "Download File",
+        "description": "Download a specific file's content.\n\nThis endpoint streams the file content to the client with proper headers\nfor browser download.\n\nArgs:\n    file_id: The unique identifier for the file\n    filename: Optional filename (recommended to provide from file list)\n    content_type: Optional content type (recommended to provide from file list)\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    StreamingResponse with file content\n\nRaises:\n    HTTPException: If the file is not found or an error occurs",
+        "operationId": "download_file_api_crm_files__file_id__download_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "filename",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional filename from metadata",
+              "title": "Filename"
+            },
+            "description": "Optional filename from metadata"
+          },
+          {
+            "name": "content_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional content type from metadata",
+              "title": "Content Type"
+            },
+            "description": "Optional content type from metadata"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/crm/projects/{project_id}": {
       "get": {
         "tags": [
@@ -2369,6 +2509,21 @@
             "type": "object",
             "title": "Provider Data",
             "description": "Provider-specific data"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Note"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "List of notes/activities for this job"
           }
         },
         "type": "object",
@@ -2986,6 +3141,21 @@
             "type": "object",
             "title": "Provider Data",
             "description": "Provider-specific data"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Note"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "List of notes/activities for this project"
           }
         },
         "type": "object",
