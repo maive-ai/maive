@@ -872,6 +872,12 @@ export interface Job {
      * @memberof Job
      */
     'provider_data'?: { [key: string]: any; };
+    /**
+     * 
+     * @type {Array<Note>}
+     * @memberof Job
+     */
+    'notes'?: Array<Note> | null;
 }
 
 
@@ -1250,6 +1256,12 @@ export interface Project {
      * @memberof Project
      */
     'provider_data'?: { [key: string]: any; };
+    /**
+     * 
+     * @type {Array<Note>}
+     * @memberof Project
+     */
+    'notes'?: Array<Note> | null;
 }
 
 

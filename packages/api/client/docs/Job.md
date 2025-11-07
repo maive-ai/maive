@@ -28,6 +28,7 @@ Name | Type | Description | Notes
 **sales_rep_name** | **string** |  | [optional] [default to undefined]
 **provider** | [**CRMProvider**](CRMProvider.md) | CRM provider name | [default to undefined]
 **provider_data** | **{ [key: string]: any; }** | Provider-specific data | [optional] [default to undefined]
+**notes** | [**Array&lt;Note&gt;**](Note.md) |  | [optional] [default to undefined]
 
 ## Example
 
@@ -57,6 +58,7 @@ const instance: Job = {
     sales_rep_name,
     provider,
     provider_data,
+    notes,
 };
 ```
 

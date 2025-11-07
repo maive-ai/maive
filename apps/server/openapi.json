@@ -2369,6 +2369,21 @@
             "type": "object",
             "title": "Provider Data",
             "description": "Provider-specific data"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Note"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "List of notes/activities for this job"
           }
         },
         "type": "object",
@@ -2986,6 +3001,21 @@
             "type": "object",
             "title": "Provider Data",
             "description": "Provider-specific data"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Note"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "List of notes/activities for this project"
           }
         },
         "type": "object",
