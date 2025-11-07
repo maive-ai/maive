@@ -18,11 +18,13 @@ from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
 from src.integrations.crm.schemas import FormSubmissionListResponse
 from src.integrations.crm.providers.job_nimbus.constants import JobNimbusEndpoints
 from src.integrations.crm.providers.job_nimbus.schemas import (
+    FileMetadata,
     JobNimbusActivitiesListResponse,
     JobNimbusActivityResponse,
     JobNimbusContactResponse,
     JobNimbusContactsListResponse,
     JobNimbusCreateActivityRequest,
+    JobNimbusFilesListResponse,
     JobNimbusJobResponse,
     JobNimbusJobsListResponse,
 )
@@ -558,10 +560,7 @@ class JobNimbusProvider(CRMProvider):
             response.raise_for_status()
             
             data = response.json()
-            
-            # Log raw activity data for inspection
-            logger.info(f"[JobNimbus] Raw activities data for job {job_id}: {json.dumps(data, indent=2)}")
-            
+                        
             # Parse activities list response
             activities_response = JobNimbusActivitiesListResponse(**data)
             
@@ -600,6 +599,113 @@ class JobNimbusProvider(CRMProvider):
         except Exception as e:
             logger.warning(f"Error fetching notes for job {job_id}: {e}")
             return []  # Return empty list on error - don't fail the job fetch
+
+    # ========================================================================
+    # File/Attachment Methods
+    # ========================================================================
+
+    async def get_job_files(self, job_id: str) -> list[FileMetadata]:
+        """
+        Get all files attached to a specific job.
+        
+        Uses the 'related' query parameter to filter files server-side.
+        
+        Args:
+            job_id: The job JNID to get files for
+            
+        Returns:
+            List of file metadata objects
+            
+        Raises:
+            CRMError: If the API request fails
+        """
+        try:
+            endpoint = JobNimbusEndpoints.FILES
+            params = {"related": job_id}
+            logger.info(f"[JobNimbus] Fetching files for job {job_id}")
+            
+            response = await self._make_request("GET", endpoint, params=params)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            files_response = JobNimbusFilesListResponse(**data)
+            
+            # Transform to FileMetadata objects
+            job_files: list[FileMetadata] = []
+            for file in files_response.results:
+                job_files.append(
+                    FileMetadata(
+                        id=file.jnid,
+                        filename=file.filename,
+                        content_type=file.content_type,
+                        size=file.size,
+                        record_type_name=file.record_type_name,
+                        description=file.description,
+                        date_created=file.date_created,
+                        created_by_name=file.created_by_name,
+                        is_private=file.is_private,
+                    )
+                )
+            
+            logger.info(f"[JobNimbus] Found {len(job_files)} files for job {job_id}")
+            return job_files
+            
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error fetching files for job {job_id}: {e}")
+            raise CRMError(
+                f"Failed to fetch files: {e.response.status_code}",
+                "API_ERROR"
+            )
+        except Exception as e:
+            logger.error(f"Error fetching files for job {job_id}: {e}")
+            raise CRMError(f"Failed to fetch files: {str(e)}", "UNKNOWN_ERROR")
+
+    async def download_file(
+        self, 
+        file_id: str, 
+        filename: str | None = None, 
+        content_type: str | None = None
+    ) -> tuple[bytes, str, str]:
+        """
+        Download a file's content from JobNimbus.
+        
+        Args:
+            file_id: The file JNID to download
+            filename: Filename from file metadata
+            content_type: Content type from file metadata
+            
+        Returns:
+            Tuple of (file_content_bytes, filename, content_type)
+            
+        Raises:
+            CRMError: If the download fails
+        """
+        try:
+            endpoint = JobNimbusEndpoints.FILE_BY_ID.format(jnid=file_id)
+            logger.info(f"[JobNimbus] Downloading file {file_id}")
+            
+            # JobNimbus returns a 302 redirect to the actual file on CloudFront/S3
+            response = await self._make_request("GET", endpoint, follow_redirects=True)
+            response.raise_for_status()
+            
+            # Use provided metadata or fallback to defaults
+            resolved_filename = filename or f"download_{file_id}"
+            resolved_content_type = content_type or "application/octet-stream"
+            
+            logger.info(f"[JobNimbus] Downloaded {resolved_filename} ({len(response.content)} bytes)")
+            return (response.content, resolved_filename, resolved_content_type)
+            
+        except httpx.HTTPStatusError as e:
+            logger.error(f"[JobNimbus] HTTP error downloading file {file_id}: {e}")
+            raise CRMError(f"Failed to download file: {e.response.status_code}", "API_ERROR")
+        except Exception as e:
+            logger.error(f"[JobNimbus] Error downloading file {file_id}: {e}")
+            raise CRMError(f"Failed to download file: {str(e)}", "UNKNOWN_ERROR")
+
+    # ========================================================================
+    # Transformation Methods
+    # ========================================================================
 
     def _transform_jn_job_to_universal(self, jn_job: JobNimbusJobResponse) -> Job:
         """Transform JobNimbus job to universal Job schema."""
@@ -664,23 +770,14 @@ class JobNimbusProvider(CRMProvider):
         # Get all fields from the JobNimbus job, including custom fields
         all_data = jn_job.model_dump(mode="json")
 
-        # Extract claim number from various possible custom field names
-        claim_number = self._extract_custom_field(
-            all_data, ["claimnumber", "claim", "claimno"]
-        )
-
-        # Extract and convert date of loss
-        date_of_loss_raw = self._extract_custom_field(
-            all_data, ["dateofloss", "losdate", "lossdate", "dol"]
-        )
+        # Extract typed custom fields directly from schema
+        claim_number = jn_job.claim_number
+        insurance_company = jn_job.insurance_company
+        
+        # Convert filed storm date to ISO format for date_of_loss
         date_of_loss = None
-        if date_of_loss_raw:
-            if isinstance(date_of_loss_raw, (int, float)):
-                date_of_loss = self._unix_timestamp_to_datetime(
-                    int(date_of_loss_raw)
-                ).isoformat()
-            elif isinstance(date_of_loss_raw, str):
-                date_of_loss = date_of_loss_raw
+        if jn_job.filed_storm_date:
+            date_of_loss = self._unix_timestamp_to_datetime(jn_job.filed_storm_date).isoformat()
 
         # Extract primary contact info
         customer_name = jn_job.primary.name if jn_job.primary else None
@@ -692,16 +789,12 @@ class JobNimbusProvider(CRMProvider):
             try:
                 contact = await self.get_contact(jn_job.primary.id)
                 customer_email = contact.email
-                # Use the primary phone field (already has fallback logic in transformation)
                 customer_phone = contact.phone or contact.mobile_phone or contact.work_phone
                 logger.info(f"[JobNimbus] Fetched contact {jn_job.primary.id} - phone: {customer_phone}, email: {customer_email}")
             except Exception as e:
                 logger.warning(f"[JobNimbus] Failed to fetch contact {jn_job.primary.id}: {e}")
 
-        # Extract insurance and adjuster information
-        insurance_company = self._extract_custom_field(
-            all_data, ["insurancecompany", "insurance", "carrier", "insurancecarrier"]
-        )
+        # Extract adjuster information (fallback to _extract_custom_field for fields not in typed schema)
         adjuster_name = self._extract_custom_field(
             all_data, ["adjustername", "adjuster"]
         )

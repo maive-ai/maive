@@ -216,6 +216,58 @@ class CRMProvider(ABC):
         """
         pass
 
+    # Optional provider-specific methods
+    # These are not abstract and have default implementations that raise CRMError
+
+    async def get_job_files(self, job_id: str) -> list[Any]:
+        """
+        Get all files attached to a specific job.
+
+        This is an optional method that not all providers support.
+        Providers that support file attachments should override this method.
+
+        Args:
+            job_id: The job ID to get files for
+
+        Returns:
+            List of file metadata objects
+
+        Raises:
+            CRMError: If the provider doesn't support file operations
+        """
+        raise CRMError(
+            "This CRM provider does not support file operations",
+            "NOT_SUPPORTED"
+        )
+
+    async def download_file(
+        self, 
+        file_id: str, 
+        filename: str | None = None, 
+        content_type: str | None = None
+    ) -> tuple[bytes, str, str]:
+        """
+        Download a file's content.
+
+        This is an optional method that not all providers support.
+        Providers that support file attachments should override this method.
+
+        Args:
+            file_id: The file ID to download
+            filename: Optional filename hint
+            content_type: Optional content type hint
+
+        Returns:
+            Tuple of (file_content, filename, content_type)
+
+        Raises:
+            CRMError: If the provider doesn't support file operations
+        """
+        raise CRMError(
+            "This CRM provider does not support file operations",
+            "NOT_SUPPORTED"
+        )
+
 
 class CRMError(Exception):
     """Base exception for CRM-related errors."""

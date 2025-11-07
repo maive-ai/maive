@@ -6,11 +6,13 @@ All URIs are relative to *http://localhost*
 |------------- | ------------- | -------------|
 |[**addContactNoteApiCrmContactsContactIdNotesPost**](#addcontactnoteapicrmcontactscontactidnotespost) | **POST** /api/crm/contacts/{contact_id}/notes | Add Contact Note|
 |[**addJobNoteApiCrmJobsJobIdNotesPost**](#addjobnoteapicrmjobsjobidnotespost) | **POST** /api/crm/jobs/{job_id}/notes | Add Job Note|
+|[**downloadFileApiCrmFilesFileIdDownloadGet**](#downloadfileapicrmfilesfileiddownloadget) | **GET** /api/crm/files/{file_id}/download | Download File|
 |[**getAllContactsApiCrmContactsGet**](#getallcontactsapicrmcontactsget) | **GET** /api/crm/contacts | Get All Contacts|
 |[**getAllJobsApiCrmJobsGet**](#getalljobsapicrmjobsget) | **GET** /api/crm/jobs | Get All Jobs|
 |[**getAllProjectsApiCrmProjectsGet**](#getallprojectsapicrmprojectsget) | **GET** /api/crm/projects | Get All Projects|
 |[**getContactApiCrmContactsContactIdGet**](#getcontactapicrmcontactscontactidget) | **GET** /api/crm/contacts/{contact_id} | Get Contact|
 |[**getJobApiCrmJobsJobIdGet**](#getjobapicrmjobsjobidget) | **GET** /api/crm/jobs/{job_id} | Get Job|
+|[**getJobFilesApiCrmJobsJobIdFilesGet**](#getjobfilesapicrmjobsjobidfilesget) | **GET** /api/crm/jobs/{job_id}/files | Get Job Files|
 |[**getProjectApiCrmProjectsProjectIdGet**](#getprojectapicrmprojectsprojectidget) | **GET** /api/crm/projects/{project_id} | Get Project|
 |[**updateJobStatusApiCrmJobsJobIdStatusPatch**](#updatejobstatusapicrmjobsjobidstatuspatch) | **PATCH** /api/crm/jobs/{job_id}/status | Update Job Status|
 |[**updateProjectStatusApiCrmProjectsProjectIdStatusPatch**](#updateprojectstatusapicrmprojectsprojectidstatuspatch) | **PATCH** /api/crm/projects/{project_id}/status | Update Project Status|
@@ -123,6 +125,64 @@ const { status, data } = await apiInstance.addJobNoteApiCrmJobsJobIdNotesPost(
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 |**201** | Successful Response |  -  |
+|**422** | Validation Error |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **downloadFileApiCrmFilesFileIdDownloadGet**
+> any downloadFileApiCrmFilesFileIdDownloadGet()
+
+Download a specific file\'s content.  This endpoint streams the file content to the client with proper headers for browser download.  Args:     file_id: The unique identifier for the file     filename: Optional filename (recommended to provide from file list)     content_type: Optional content type (recommended to provide from file list)     crm_service: The CRM service instance from dependency injection  Returns:     StreamingResponse with file content  Raises:     HTTPException: If the file is not found or an error occurs
+
+### Example
+
+```typescript
+import {
+    CRMApi,
+    Configuration
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new CRMApi(configuration);
+
+let fileId: string; // (default to undefined)
+let filename: string; //Optional filename from metadata (optional) (default to undefined)
+let contentType: string; //Optional content type from metadata (optional) (default to undefined)
+
+const { status, data } = await apiInstance.downloadFileApiCrmFilesFileIdDownloadGet(
+    fileId,
+    filename,
+    contentType
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **fileId** | [**string**] |  | defaults to undefined|
+| **filename** | [**string**] | Optional filename from metadata | (optional) defaults to undefined|
+| **contentType** | [**string**] | Optional content type from metadata | (optional) defaults to undefined|
+
+
+### Return type
+
+**any**
+
+### Authorization
+
+[HTTPBearer](../README.md#HTTPBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | Successful Response |  -  |
 |**422** | Validation Error |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
@@ -377,6 +437,58 @@ const { status, data } = await apiInstance.getJobApiCrmJobsJobIdGet(
 ### Return type
 
 **Job**
+
+### Authorization
+
+[HTTPBearer](../README.md#HTTPBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | Successful Response |  -  |
+|**422** | Validation Error |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getJobFilesApiCrmJobsJobIdFilesGet**
+> any getJobFilesApiCrmJobsJobIdFilesGet()
+
+Get all files attached to a specific job.  This endpoint returns metadata for all files/attachments associated with a job.  Args:     job_id: The unique identifier for the job     crm_service: The CRM service instance from dependency injection  Returns:     List of file metadata dictionaries containing:     - id: File identifier     - filename: Original filename     - content_type: MIME type     - size: File size in bytes     - record_type_name: Type of file (Photo, Document, etc.)     - description: Optional file description     - date_created: Unix timestamp of creation     - created_by_name: Name of uploader     - is_private: Whether file is private  Raises:     HTTPException: If an error occurs fetching files
+
+### Example
+
+```typescript
+import {
+    CRMApi,
+    Configuration
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new CRMApi(configuration);
+
+let jobId: string; // (default to undefined)
+
+const { status, data } = await apiInstance.getJobFilesApiCrmJobsJobIdFilesGet(
+    jobId
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **jobId** | [**string**] |  | defaults to undefined|
+
+
+### Return type
+
+**any**
 
 ### Authorization
 

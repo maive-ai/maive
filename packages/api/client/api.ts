@@ -1916,6 +1916,54 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
             };
         },
         /**
+         * Download a specific file\'s content.  This endpoint streams the file content to the client with proper headers for browser download.  Args:     file_id: The unique identifier for the file     filename: Optional filename (recommended to provide from file list)     content_type: Optional content type (recommended to provide from file list)     crm_service: The CRM service instance from dependency injection  Returns:     StreamingResponse with file content  Raises:     HTTPException: If the file is not found or an error occurs
+         * @summary Download File
+         * @param {string} fileId 
+         * @param {string | null} [filename] Optional filename from metadata
+         * @param {string | null} [contentType] Optional content type from metadata
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        downloadFileApiCrmFilesFileIdDownloadGet: async (fileId: string, filename?: string | null, contentType?: string | null, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'fileId' is not null or undefined
+            assertParamExists('downloadFileApiCrmFilesFileIdDownloadGet', 'fileId', fileId)
+            const localVarPath = `/api/crm/files/{file_id}/download`
+                .replace(`{${"file_id"}}`, encodeURIComponent(String(fileId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            if (filename !== undefined) {
+                localVarQueryParameter['filename'] = filename;
+            }
+
+            if (contentType !== undefined) {
+                localVarQueryParameter['content_type'] = contentType;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
          * Get all contacts with pagination.  This endpoint works across all CRM providers and returns a standardized ContactList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     ContactList: Paginated list of contacts in universal format  Raises:     HTTPException: If an error occurs while fetching contacts
          * @summary Get All Contacts
          * @param {number} [page] Page number (1-indexed)
@@ -2124,6 +2172,44 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
             };
         },
         /**
+         * Get all files attached to a specific job.  This endpoint returns metadata for all files/attachments associated with a job.  Args:     job_id: The unique identifier for the job     crm_service: The CRM service instance from dependency injection  Returns:     List of file metadata dictionaries containing:     - id: File identifier     - filename: Original filename     - content_type: MIME type     - size: File size in bytes     - record_type_name: Type of file (Photo, Document, etc.)     - description: Optional file description     - date_created: Unix timestamp of creation     - created_by_name: Name of uploader     - is_private: Whether file is private  Raises:     HTTPException: If an error occurs fetching files
+         * @summary Get Job Files
+         * @param {string} jobId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getJobFilesApiCrmJobsJobIdFilesGet: async (jobId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'jobId' is not null or undefined
+            assertParamExists('getJobFilesApiCrmJobsJobIdFilesGet', 'jobId', jobId)
+            const localVarPath = `/api/crm/jobs/{job_id}/files`
+                .replace(`{${"job_id"}}`, encodeURIComponent(String(jobId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
          * Get a specific project by ID.  This endpoint works across all CRM providers and returns a standardized Project schema.  Note: In flat CRMs like JobNimbus, projects and jobs are the same entity.  Args:     project_id: The unique identifier for the project (provider-specific format)     crm_service: The CRM service instance from dependency injection  Returns:     Project: The project information in universal format  Raises:     HTTPException: If the project is not found or an error occurs
          * @summary Get Project
          * @param {string} projectId 
@@ -2288,6 +2374,21 @@ export const CRMApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
+         * Download a specific file\'s content.  This endpoint streams the file content to the client with proper headers for browser download.  Args:     file_id: The unique identifier for the file     filename: Optional filename (recommended to provide from file list)     content_type: Optional content type (recommended to provide from file list)     crm_service: The CRM service instance from dependency injection  Returns:     StreamingResponse with file content  Raises:     HTTPException: If the file is not found or an error occurs
+         * @summary Download File
+         * @param {string} fileId 
+         * @param {string | null} [filename] Optional filename from metadata
+         * @param {string | null} [contentType] Optional content type from metadata
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async downloadFileApiCrmFilesFileIdDownloadGet(fileId: string, filename?: string | null, contentType?: string | null, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<any>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.downloadFileApiCrmFilesFileIdDownloadGet(fileId, filename, contentType, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.downloadFileApiCrmFilesFileIdDownloadGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
          * Get all contacts with pagination.  This endpoint works across all CRM providers and returns a standardized ContactList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     ContactList: Paginated list of contacts in universal format  Raises:     HTTPException: If an error occurs while fetching contacts
          * @summary Get All Contacts
          * @param {number} [page] Page number (1-indexed)
@@ -2353,6 +2454,19 @@ export const CRMApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await localVarAxiosParamCreator.getJobApiCrmJobsJobIdGet(jobId, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['CRMApi.getJobApiCrmJobsJobIdGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Get all files attached to a specific job.  This endpoint returns metadata for all files/attachments associated with a job.  Args:     job_id: The unique identifier for the job     crm_service: The CRM service instance from dependency injection  Returns:     List of file metadata dictionaries containing:     - id: File identifier     - filename: Original filename     - content_type: MIME type     - size: File size in bytes     - record_type_name: Type of file (Photo, Document, etc.)     - description: Optional file description     - date_created: Unix timestamp of creation     - created_by_name: Name of uploader     - is_private: Whether file is private  Raises:     HTTPException: If an error occurs fetching files
+         * @summary Get Job Files
+         * @param {string} jobId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getJobFilesApiCrmJobsJobIdFilesGet(jobId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<any>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getJobFilesApiCrmJobsJobIdFilesGet(jobId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.getJobFilesApiCrmJobsJobIdFilesGet']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
@@ -2429,6 +2543,18 @@ export const CRMApiFactory = function (configuration?: Configuration, basePath?:
             return localVarFp.addJobNoteApiCrmJobsJobIdNotesPost(jobId, bodyAddJobNoteApiCrmJobsJobIdNotesPost, options).then((request) => request(axios, basePath));
         },
         /**
+         * Download a specific file\'s content.  This endpoint streams the file content to the client with proper headers for browser download.  Args:     file_id: The unique identifier for the file     filename: Optional filename (recommended to provide from file list)     content_type: Optional content type (recommended to provide from file list)     crm_service: The CRM service instance from dependency injection  Returns:     StreamingResponse with file content  Raises:     HTTPException: If the file is not found or an error occurs
+         * @summary Download File
+         * @param {string} fileId 
+         * @param {string | null} [filename] Optional filename from metadata
+         * @param {string | null} [contentType] Optional content type from metadata
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        downloadFileApiCrmFilesFileIdDownloadGet(fileId: string, filename?: string | null, contentType?: string | null, options?: RawAxiosRequestConfig): AxiosPromise<any> {
+            return localVarFp.downloadFileApiCrmFilesFileIdDownloadGet(fileId, filename, contentType, options).then((request) => request(axios, basePath));
+        },
+        /**
          * Get all contacts with pagination.  This endpoint works across all CRM providers and returns a standardized ContactList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     ContactList: Paginated list of contacts in universal format  Raises:     HTTPException: If an error occurs while fetching contacts
          * @summary Get All Contacts
          * @param {number} [page] Page number (1-indexed)
@@ -2480,6 +2606,16 @@ export const CRMApiFactory = function (configuration?: Configuration, basePath?:
          */
         getJobApiCrmJobsJobIdGet(jobId: string, options?: RawAxiosRequestConfig): AxiosPromise<Job> {
             return localVarFp.getJobApiCrmJobsJobIdGet(jobId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Get all files attached to a specific job.  This endpoint returns metadata for all files/attachments associated with a job.  Args:     job_id: The unique identifier for the job     crm_service: The CRM service instance from dependency injection  Returns:     List of file metadata dictionaries containing:     - id: File identifier     - filename: Original filename     - content_type: MIME type     - size: File size in bytes     - record_type_name: Type of file (Photo, Document, etc.)     - description: Optional file description     - date_created: Unix timestamp of creation     - created_by_name: Name of uploader     - is_private: Whether file is private  Raises:     HTTPException: If an error occurs fetching files
+         * @summary Get Job Files
+         * @param {string} jobId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getJobFilesApiCrmJobsJobIdFilesGet(jobId: string, options?: RawAxiosRequestConfig): AxiosPromise<any> {
+            return localVarFp.getJobFilesApiCrmJobsJobIdFilesGet(jobId, options).then((request) => request(axios, basePath));
         },
         /**
          * Get a specific project by ID.  This endpoint works across all CRM providers and returns a standardized Project schema.  Note: In flat CRMs like JobNimbus, projects and jobs are the same entity.  Args:     project_id: The unique identifier for the project (provider-specific format)     crm_service: The CRM service instance from dependency injection  Returns:     Project: The project information in universal format  Raises:     HTTPException: If the project is not found or an error occurs
@@ -2550,6 +2686,20 @@ export class CRMApi extends BaseAPI {
     }
 
     /**
+     * Download a specific file\'s content.  This endpoint streams the file content to the client with proper headers for browser download.  Args:     file_id: The unique identifier for the file     filename: Optional filename (recommended to provide from file list)     content_type: Optional content type (recommended to provide from file list)     crm_service: The CRM service instance from dependency injection  Returns:     StreamingResponse with file content  Raises:     HTTPException: If the file is not found or an error occurs
+     * @summary Download File
+     * @param {string} fileId 
+     * @param {string | null} [filename] Optional filename from metadata
+     * @param {string | null} [contentType] Optional content type from metadata
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CRMApi
+     */
+    public downloadFileApiCrmFilesFileIdDownloadGet(fileId: string, filename?: string | null, contentType?: string | null, options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).downloadFileApiCrmFilesFileIdDownloadGet(fileId, filename, contentType, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
      * Get all contacts with pagination.  This endpoint works across all CRM providers and returns a standardized ContactList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     ContactList: Paginated list of contacts in universal format  Raises:     HTTPException: If an error occurs while fetching contacts
      * @summary Get All Contacts
      * @param {number} [page] Page number (1-indexed)
@@ -2610,6 +2760,18 @@ export class CRMApi extends BaseAPI {
      */
     public getJobApiCrmJobsJobIdGet(jobId: string, options?: RawAxiosRequestConfig) {
         return CRMApiFp(this.configuration).getJobApiCrmJobsJobIdGet(jobId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Get all files attached to a specific job.  This endpoint returns metadata for all files/attachments associated with a job.  Args:     job_id: The unique identifier for the job     crm_service: The CRM service instance from dependency injection  Returns:     List of file metadata dictionaries containing:     - id: File identifier     - filename: Original filename     - content_type: MIME type     - size: File size in bytes     - record_type_name: Type of file (Photo, Document, etc.)     - description: Optional file description     - date_created: Unix timestamp of creation     - created_by_name: Name of uploader     - is_private: Whether file is private  Raises:     HTTPException: If an error occurs fetching files
+     * @summary Get Job Files
+     * @param {string} jobId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CRMApi
+     */
+    public getJobFilesApiCrmJobsJobIdFilesGet(jobId: string, options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).getJobFilesApiCrmJobsJobIdFilesGet(jobId, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
