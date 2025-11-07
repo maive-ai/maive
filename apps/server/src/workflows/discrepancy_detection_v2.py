@@ -36,7 +36,7 @@ def _format_timestamp_from_seconds(seconds: float, use_hours: bool) -> str:
         use_hours: If True, use HH:MM:SS format; if False, use MM:SS
 
     Returns:
-        Formatted timestamp string
+        Formatted timestamp stringS
     """
     hours = int(seconds // 3600)
     minutes = int((seconds % 3600) // 60)

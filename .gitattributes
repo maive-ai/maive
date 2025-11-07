@@ -3,7 +3,7 @@
 *.mp3 filter=lfs diff=lfs merge=lfs -text
 apps/server/evals/**/*.csv filter=lfs diff=lfs merge=lfs -text
 apps/server/evals/**/*.txt filter=lfs diff=lfs merge=lfs -text
-apps/server/evals/**/*.json filter=lfs diff=lfs merge=lfs -text
+apps/server/evals/estimate_deviation/dataset.json filter=lfs diff=lfs merge=lfs -text
 apps/server/evals/**/*.mp3 filter=lfs diff=lfs merge=lfs -text
 apps/server/evals/**/*.wav filter=lfs diff=lfs merge=lfs -text
 # Exclude _catalog and _dereferenced from LFS
