@@ -62,9 +62,8 @@ async def _analyze_job_files_with_mini_agent(
         
         logger.info(f"[Mini-Agent] Found {len(files)} files to analyze")
         
-        # Upload each file to OpenAI
-        file_ids = []
-        filenames = []
+        # Upload each file to OpenAI with appropriate purpose
+        file_attachments = []  # List of (file_id, filename, is_image) tuples
         for file_meta in files:
             try:
                 # Download from JobNimbus
@@ -74,22 +73,27 @@ async def _analyze_job_files_with_mini_agent(
                     content_type=file_meta.content_type
                 )
                 
-                # Upload to OpenAI
+                # Determine if file is an image or document
+                is_image = content_type.startswith("image/")
+                purpose = "vision" if is_image else "user_data"
+                
+                # Upload to OpenAI with appropriate purpose
                 file_handle = BytesIO(file_content)
-                openai_file_id = await _openai_provider.upload_file_from_handle(file_handle, filename)
-                file_ids.append(openai_file_id)
-                filenames.append(filename)
-                logger.info(f"[Mini-Agent] Uploaded {filename} as {openai_file_id}")
+                openai_file_id = await _openai_provider.upload_file_from_handle(
+                    file_handle, filename, purpose=purpose
+                )
+                file_attachments.append((openai_file_id, filename, is_image))
+                logger.info(f"[Mini-Agent] Uploaded {filename} as {openai_file_id} (purpose={purpose})")
                 
             except Exception as e:
                 logger.warning(f"[Mini-Agent] Failed to upload file {file_meta.filename}: {e}")
                 continue
         
-        if not file_ids:
+        if not file_attachments:
             return "Failed to upload any files for analysis"
         
         # Build detailed mini-agent prompt
-        files_list = "\n".join([f"- {name}" for name in filenames])
+        files_list = "\n".join([f"- {name}" for _, name, _ in file_attachments])
         detailed_prompt = textwrap.dedent(f"""
             You are analyzing files from a roofing job. Describe each file in detail:
             
@@ -104,14 +108,15 @@ async def _analyze_job_files_with_mini_agent(
             Provide comprehensive detail about each file to help answer the question.
         """).strip()
         
-        logger.info(f"[Mini-Agent] Making analysis call with {len(file_ids)} files")
+        logger.info(f"[Mini-Agent] Making analysis call with {len(file_attachments)} files")
         
-        # Make mini-agent API call with minimal reasoning for speed
+        # Make mini-agent API call with reasoning for faster analysis
+        # Pass file attachments with type information (input_image vs input_file)
         result = await _openai_provider.generate_content(
             prompt=detailed_prompt,
-            file_ids=file_ids,
+            file_attachments=file_attachments,  # List of (file_id, filename, is_image)
             model=_openai_provider.settings.model_name,
-            reasoning_effort="minimal"  # Minimal thinking for faster analysis
+            reasoning_effort="minimal"  # Use minimal reasoning for speed
         )
         
         logger.info(f"[Mini-Agent] Analysis complete ({len(result.text)} chars)")

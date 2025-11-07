@@ -320,14 +320,16 @@ class OpenAIProvider(AIProvider):
         self,
         prompt: str,
         file_ids: list[str] | None = None,
+        file_attachments: list[tuple[str, str, bool]] | None = None,
         **kwargs,
     ) -> ContentGenerationResult:
         """Generate text content.
 
         Args:
             prompt: Text prompt
-            file_ids: Optional file IDs (not used for standard chat)
-            **kwargs: Additional options (temperature, max_tokens, model, etc.)
+            file_ids: Optional file IDs (unused, kept for base class compatibility)
+            file_attachments: Optional list of (file_id, filename, is_image) tuples
+            **kwargs: Additional options (temperature, max_tokens, model, reasoning_effort, etc.)
 
         Returns:
             ContentGenerationResult: Generated content
@@ -335,16 +337,22 @@ class OpenAIProvider(AIProvider):
         try:
             client = self._get_client()
             # Build input for Responses API
-            if file_ids:
+            if file_attachments:
                 # Build content as array with file references and text (Responses API format)
                 content_parts = []
                 
-                # Add each file
-                for file_id in file_ids:
-                    content_parts.append({
-                        "type": "input_file",
-                        "file_id": file_id
-                    })
+                # Add each file with appropriate type (input_image for images, input_file for docs)
+                for file_id, filename, is_image in file_attachments:
+                    if is_image:
+                        content_parts.append({
+                            "type": "input_image",
+                            "file_id": file_id
+                        })
+                    else:
+                        content_parts.append({
+                            "type": "input_file",
+                            "file_id": file_id
+                        })
                 
                 # Add text prompt
                 content_parts.append({
@@ -353,7 +361,7 @@ class OpenAIProvider(AIProvider):
                 })
                 
                 input_items = [{"role": "user", "content": content_parts}]
-                logger.info(f"Including {len(file_ids)} file(s) in message content")
+                logger.info(f"[OpenAI] Including {len(file_attachments)} file(s) in message content")
             else:
                 # No files, just text
                 input_items = [{"role": "user", "content": prompt}]

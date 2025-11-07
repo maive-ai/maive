@@ -217,7 +217,21 @@ function ProjectDetail() {
                   <MapPin className="size-5 text-gray-400 mt-0.5 shrink-0" />
                   <div>
                     <p className="font-medium text-gray-700">Address</p>
-                    <p className="text-gray-600">{project.address_line1 || providerData?.address || 'Not available'}</p>
+                    <div className="text-gray-600">
+                      {project.address_line1 ? (
+                        <>
+                          <p>{project.address_line1}</p>
+                          {project.address_line2 && <p>{project.address_line2}</p>}
+                          <p>
+                            {[project.city, project.state].filter(Boolean).join(', ')}
+                            {project.postal_code && ` ${project.postal_code}`}
+                          </p>
+                          {project.country && <p>{project.country}</p>}
+                        </>
+                      ) : (
+                        <p>{providerData?.address || 'Not available'}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
 
