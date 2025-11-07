@@ -7,3 +7,7 @@
 #### Deviation Definition
 - Something mentioned during the call that isn't tracked in either the recording OR estimate
 -- If it's in the form but not the estimate, should we track it? -- probably not
+
+
+### NOT a Deviation
+- Shingle color that's agreed upon but not specified in the estimate. It seems like they track that in Notes in Production. It seems like they're the same price so it's not a problem.
