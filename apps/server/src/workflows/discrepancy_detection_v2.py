@@ -37,10 +37,6 @@ class DeviationOccurrence(BaseModel):
         description="Timestamp in HH:MM:SS or MM:SS format when this deviation was mentioned in the conversation",
         pattern=r"^(([0-9]{2}):)?([0-5][0-9]):([0-5][0-9])$",
     )
-    context: str | None = Field(
-        default=None,
-        description="Optional: Brief quote or context from the conversation at this timestamp",
-    )
 
 
 class Deviation(BaseModel):
@@ -252,9 +248,8 @@ class DiscrepancyDetectionV2Workflow:
                     logger.info(f"      {deviation.explanation}")
                     logger.info(f"      Occurrences ({len(deviation.occurrences)}):")
                     for occ in deviation.occurrences:
-                        context_str = f" - {occ.context}" if occ.context else ""
                         logger.info(
-                            f"        • Conversation {occ.rilla_conversation_index} at {occ.timestamp}{context_str}"
+                            f"        • Conversation {occ.rilla_conversation_index} at {occ.timestamp}"
                         )
 
             # Compare with expected labels
@@ -288,7 +283,6 @@ class DiscrepancyDetectionV2Workflow:
                             {
                                 "conversation_index": occ.rilla_conversation_index,
                                 "timestamp": occ.timestamp,
-                                "context": occ.context,
                             }
                             for occ in dev.occurrences
                         ],
@@ -369,9 +363,7 @@ class DiscrepancyDetectionV2Workflow:
 
         # Validate transcript is not empty
         if not transcript_data:
-            raise ValueError(
-                "Transcript file is empty - no conversation data found."
-            )
+            raise ValueError("Transcript file is empty - no conversation data found.")
 
         # Convert to JSON string for passing to LLM
         transcript_json = json.dumps(transcript_data, indent=2)
