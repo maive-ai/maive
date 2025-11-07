@@ -3,12 +3,14 @@
 import base64
 import json
 from pathlib import Path
-from typing import Any, AsyncGenerator, TypeVar
+from typing import Any, AsyncGenerator, BinaryIO, TypeVar
 
 from openai import AsyncOpenAI
+from openai.types.chat import ChatCompletion
 from openai.types.responses import (
     EasyInputMessageParam,
     FileSearchToolParam,
+    Response,
     ResponseCompletedEvent,
     ResponseContentPartAddedEvent,
     ResponseContentPartDoneEvent,
@@ -35,8 +37,7 @@ from openai.types.responses import (
 )
 from openai.types.responses.response_create_params import (
     Reasoning as ReasoningParam,
-)
-from openai.types.responses.response_create_params import (
+    ResponseCreateParams,
     ResponseCreateParamsStreaming,
     ResponseTextConfigParam,
 )
@@ -137,6 +138,106 @@ class OpenAIProvider(AIProvider):
             logger.error(f"File upload failed: {e}")
             raise OpenAIFileUploadError(f"Failed to upload file: {e}", e)
 
+    async def upload_file_from_handle(
+        self,
+        file: BinaryIO,
+        filename: str,
+        purpose: str = "user_data"
+    ) -> str:
+        """Upload file from file handle to OpenAI with 24-hour auto-expiration.
+        
+        Files are automatically deleted 24 hours after upload to save storage costs.
+        Use purpose="user_data" for Responses API.
+        
+        Args:
+            file: File-like object (e.g., BytesIO, open file handle)
+            filename: Name for the file
+            purpose: OpenAI file purpose (default: "user_data" for Responses API)
+        
+        Returns:
+            OpenAI file_id
+            
+        Raises:
+            OpenAIFileUploadError: If upload fails
+        """
+        try:
+            client = self._get_client()
+            
+            logger.info(f"[OpenAI] Uploading file: {filename} with purpose: {purpose}")
+            
+            uploaded_file = await client.files.create(
+                file=(filename, file),
+                purpose=purpose,
+                expires_after={
+                    "anchor": "created_at",
+                    "seconds": 86400  # 24 hours
+                }
+            )
+            
+            logger.info(f"[OpenAI] File uploaded successfully with 24h expiration: {uploaded_file.id}")
+            return uploaded_file.id
+                    
+        except Exception as e:
+            logger.error(f"[OpenAI] File upload failed: {e}")
+            raise OpenAIFileUploadError(f"[OpenAI] Failed to upload file: {e}", e)
+
+    def _is_reasoning_model(self, model: str) -> bool:
+        """Check if a model is a reasoning model.
+        
+        Args:
+            model: Model name
+            
+        Returns:
+            True if reasoning model (gpt-5, o1, o3), False otherwise
+        """
+        return any(model.startswith(prefix) for prefix in ["gpt-5", "o1", "o3"])
+
+    def _build_model_params(
+        self, 
+        model: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        max_output_tokens: int | None = None,
+        reasoning_effort: str | None = None
+    ) -> dict[str, Any]:
+        """Build model-specific parameters for API calls.
+        
+        Args:
+            model: Model name (defaults to settings.model_name)
+            temperature: Temperature for standard models (ignored for reasoning models)
+            max_tokens: Max tokens for standard models (ignored for reasoning models)
+            max_output_tokens: Max output tokens (reasoning models) or overrides max_tokens
+            reasoning_effort: Reasoning effort for reasoning models ("minimal", "low", "medium", "high")
+            
+        Returns:
+            Dict with model name and model-appropriate parameters
+        """
+        _model = model or self.settings.model_name
+        is_reasoning = self._is_reasoning_model(_model)
+        
+        # Build params as dict (ResponseCreateParams is a TypedDict, not a class)
+        params: ResponseCreateParams = {"model": _model}
+        
+        if is_reasoning:
+            # Reasoning models use max_output_tokens and reasoning_effort
+            output_tokens = max_output_tokens or self.settings.max_tokens
+            params["max_output_tokens"] = output_tokens
+            
+            # Add reasoning effort if provided
+            if reasoning_effort:
+                params["reasoning"] = {
+                    "effort": reasoning_effort,
+                    "summary": "auto"
+                }
+        else:
+            # Standard models use temperature and max_output_tokens
+            temp = temperature if temperature is not None else self.settings.temperature
+            tokens = max_output_tokens or max_tokens or self.settings.max_tokens
+            params["temperature"] = temp
+            params["max_output_tokens"] = tokens
+        
+        return params
+
     async def delete_file(self, file_id: str) -> bool:
         """Delete a file from OpenAI.
 
@@ -233,37 +334,50 @@ class OpenAIProvider(AIProvider):
         """
         try:
             client = self._get_client()
+            # Build input for Responses API
+            if file_ids:
+                # Build content as array with file references and text (Responses API format)
+                content_parts = []
+                
+                # Add each file
+                for file_id in file_ids:
+                    content_parts.append({
+                        "type": "input_file",
+                        "file_id": file_id
+                    })
+                
+                # Add text prompt
+                content_parts.append({
+                    "type": "input_text",
+                    "text": prompt
+                })
+                
+                input_items = [{"role": "user", "content": content_parts}]
+                logger.info(f"Including {len(file_ids)} file(s) in message content")
+            else:
+                # No files, just text
+                input_items = [{"role": "user", "content": prompt}]
 
-            model = kwargs.get("model", self.settings.model_name)
-            temperature = kwargs.get("temperature", self.settings.temperature)
-            max_tokens = kwargs.get("max_tokens", self.settings.max_tokens)
-
-            logger.info(f"Generating content with model: {model}")
-
-            messages = [{"role": "user", "content": prompt}]
-
-            completion = await client.chat.completions.create(
-                model=model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
+            # Build params for Responses API (includes model + model-specific params)
+            response_params = self._build_model_params(
+                model=kwargs.get("model"),
+                temperature=kwargs.get("temperature"),
+                max_tokens=kwargs.get("max_tokens"),
+                max_output_tokens=kwargs.get("max_output_tokens"),
+                reasoning_effort=kwargs.get("reasoning_effort")
             )
+            response_params["input"] = input_items
+            
+            logger.info(f"[OpenAI] Generating content with model: {response_params['model']}")
 
-            message = completion.choices[0].message
-            usage = (
-                {
-                    "prompt_tokens": completion.usage.prompt_tokens,
-                    "completion_tokens": completion.usage.completion_tokens,
-                    "total_tokens": completion.usage.total_tokens,
-                }
-                if completion.usage
-                else None
-            )
+            # Use Responses API (not streaming)
+            response: Response = await client.responses.create(**response_params)
 
+            # Extract text and usage from response
             result = ContentGenerationResult(
-                text=message.content or "",
-                usage=usage,
-                finish_reason=completion.choices[0].finish_reason,
+                text=response.output_text or "",
+                usage=response.usage.model_dump() if response.usage else None,
+                finish_reason=response.status,
             )
 
             logger.info(f"Content generation complete: {result.finish_reason}")
@@ -394,7 +508,7 @@ class OpenAIProvider(AIProvider):
 
             logger.info(f"Using audio model: {model}")
 
-            completion = await client.chat.completions.create(
+            completion: ChatCompletion = await client.chat.completions.create(
                 model=model,
                 messages=messages,
                 temperature=temperature,
@@ -402,19 +516,10 @@ class OpenAIProvider(AIProvider):
             )
 
             message = completion.choices[0].message
-            usage = (
-                {
-                    "prompt_tokens": completion.usage.prompt_tokens,
-                    "completion_tokens": completion.usage.completion_tokens,
-                    "total_tokens": completion.usage.total_tokens,
-                }
-                if completion.usage
-                else None
-            )
 
             result = ContentGenerationResult(
                 text=message.content or "",
-                usage=usage,
+                usage=completion.usage.model_dump() if completion.usage else None,
                 finish_reason=completion.choices[0].finish_reason,
             )
 
@@ -1045,6 +1150,14 @@ class OpenAIProvider(AIProvider):
             logger.error("[MCP] Tool listing failed")
             return None
         
+        # MCP tool call failed
+        elif event_type == "ResponseMcpCallFailedEvent":
+            item_id = getattr(event, "item_id", "unknown")
+            error = getattr(event, "error", "unknown error")
+            logger.warning(f"[MCP] Tool call failed (item_id={item_id}): {error}")
+            # OpenAI typically retries automatically, so don't yield error to UI
+            return None
+        
         return None
 
     def _handle_reasoning_summary_delta(
@@ -1194,6 +1307,7 @@ class OpenAIProvider(AIProvider):
                         "ResponseMcpCallArgumentsDeltaEvent",
                         "ResponseMcpCallArgumentsDoneEvent",
                         "ResponseMcpCallCompletedEvent",
+                        "ResponseMcpCallFailedEvent",
                     ):
                         tool_call = self._handle_mcp_event(event)
                         if tool_call:

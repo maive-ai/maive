@@ -604,17 +604,46 @@ class JobNimbusProvider(CRMProvider):
     # File/Attachment Methods
     # ========================================================================
 
-    async def get_job_files(self, job_id: str) -> list[FileMetadata]:
+    async def get_specific_job_file(
+        self, 
+        job_id: str, 
+        file_id: str
+    ) -> FileMetadata | None:
         """
-        Get all files attached to a specific job.
+        Get a specific file by ID from a job.
         
-        Uses the 'related' query parameter to filter files server-side.
+        Helper method that retrieves all files for a job and returns the one
+        matching the specified file_id.
+        
+        Args:
+            job_id: The job JNID to get the file from
+            file_id: The specific file ID to retrieve
+            
+        Returns:
+            FileMetadata object if found, None if not found
+        """
+        # Get all files and find the specific one
+        all_files = await self.get_job_files(job_id, "all")
+        matching_files = [f for f in all_files if f.id == file_id]
+        if not matching_files:
+            logger.error(f"File {file_id} not found in job {job_id}")
+            return None
+        return matching_files[0]
+
+
+    async def get_job_files(self, job_id: str, file_filter: str = "all") -> list[FileMetadata]:
+        """
+        Get files attached to a specific job with optional type filtering.
+        
+        Uses the 'related' query parameter to filter files server-side by job.
+        Applies additional client-side filtering by file type if requested.
         
         Args:
             job_id: The job JNID to get files for
+            file_filter: Filter by type - "all", "images", or "pdfs" (default: "all")
             
         Returns:
-            List of file metadata objects
+            List of file metadata objects (filtered by type if specified)
             
         Raises:
             CRMError: If the API request fails
@@ -622,7 +651,7 @@ class JobNimbusProvider(CRMProvider):
         try:
             endpoint = JobNimbusEndpoints.FILES
             params = {"related": job_id}
-            logger.info(f"[JobNimbus] Fetching files for job {job_id}")
+            logger.info(f"[JobNimbus] Fetching files for job {job_id} with filter: {file_filter}")
             
             response = await self._make_request("GET", endpoint, params=params)
             response.raise_for_status()
@@ -632,9 +661,9 @@ class JobNimbusProvider(CRMProvider):
             files_response = JobNimbusFilesListResponse(**data)
             
             # Transform to FileMetadata objects
-            job_files: list[FileMetadata] = []
+            all_files: list[FileMetadata] = []
             for file in files_response.results:
-                job_files.append(
+                all_files.append(
                     FileMetadata(
                         id=file.jnid,
                         filename=file.filename,
@@ -648,8 +677,16 @@ class JobNimbusProvider(CRMProvider):
                     )
                 )
             
-            logger.info(f"[JobNimbus] Found {len(job_files)} files for job {job_id}")
-            return job_files
+            # Apply client-side filtering by type
+            if file_filter == "images":
+                filtered_files = [f for f in all_files if f.content_type.startswith("image/")]
+            elif file_filter == "pdfs":
+                filtered_files = [f for f in all_files if f.content_type == "application/pdf"]
+            else:  # "all"
+                filtered_files = all_files
+            
+            logger.info(f"[JobNimbus] Found {len(filtered_files)} {file_filter} file(s) for job {job_id}")
+            return filtered_files
             
         except httpx.HTTPStatusError as e:
             logger.error(f"HTTP error fetching files for job {job_id}: {e}")
@@ -790,7 +827,7 @@ class JobNimbusProvider(CRMProvider):
                 contact = await self.get_contact(jn_job.primary.id)
                 customer_email = contact.email
                 customer_phone = contact.phone or contact.mobile_phone or contact.work_phone
-                logger.info(f"[JobNimbus] Fetched contact {jn_job.primary.id} - phone: {customer_phone}, email: {customer_email}")
+                logger.debug(f"[JobNimbus] Fetched contact {jn_job.primary.id} - phone: {customer_phone}, email: {customer_email}")
             except Exception as e:
                 logger.warning(f"[JobNimbus] Failed to fetch contact {jn_job.primary.id}: {e}")
 

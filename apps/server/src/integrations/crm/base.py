@@ -219,18 +219,19 @@ class CRMProvider(ABC):
     # Optional provider-specific methods
     # These are not abstract and have default implementations that raise CRMError
 
-    async def get_job_files(self, job_id: str) -> list[Any]:
+    async def get_job_files(self, job_id: str, file_filter: str = "all") -> list[Any]:
         """
-        Get all files attached to a specific job.
+        Get files attached to a specific job with optional type filtering.
 
         This is an optional method that not all providers support.
         Providers that support file attachments should override this method.
 
         Args:
             job_id: The job ID to get files for
+            file_filter: Filter by type - "all", "images", or "pdfs" (default: "all")
 
         Returns:
-            List of file metadata objects
+            List of file metadata objects (filtered by type if specified)
 
         Raises:
             CRMError: If the provider doesn't support file operations

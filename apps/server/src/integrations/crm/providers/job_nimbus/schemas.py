@@ -88,7 +88,7 @@ class JobNimbusJobResponse(BaseModel):
     is_archived: bool | None = Field(None, description="Whether the job is archived", alias="isArchived")
     is_lead: bool | None = Field(None, description="Whether this is a lead", alias="isLead")
     is_closed: bool | None = Field(None, description="Whether the job is closed", alias="isClosed")
-    
+
     # Job-specific fields
     name: str = Field(..., description="Job name")
     number: str | None = Field(None, description="Job number")

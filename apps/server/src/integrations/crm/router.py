@@ -184,16 +184,19 @@ async def update_job_status(
 @router.get("/jobs/{job_id}/files")
 async def get_job_files(
     job_id: str,
+    file_filter: str = Query("all", description="Filter by type: 'all', 'images', or 'pdfs'"),
     current_user: User = Depends(get_current_user),
     crm_service: CRMService = Depends(get_crm_service),
 ):
     """
-    Get all files attached to a specific job.
+    Get files attached to a specific job with optional type filtering.
 
-    This endpoint returns metadata for all files/attachments associated with a job.
+    This endpoint returns metadata for files/attachments associated with a job.
+    Supports filtering by file type (all, images, or pdfs).
 
     Args:
         job_id: The unique identifier for the job
+        file_filter: Filter by type - "all", "images", or "pdfs" (default: "all")
         crm_service: The CRM service instance from dependency injection
 
     Returns:
@@ -212,7 +215,7 @@ async def get_job_files(
         HTTPException: If an error occurs fetching files
     """
     try:
-        return await crm_service.crm_provider.get_job_files(job_id)
+        return await crm_service.crm_provider.get_job_files(job_id, file_filter)
     except CRMError as e:
         status_code = status.HTTP_501_NOT_IMPLEMENTED if e.error_code == "NOT_SUPPORTED" else status.HTTP_500_INTERNAL_SERVER_ERROR
         raise HTTPException(status_code=status_code, detail=e.message)
