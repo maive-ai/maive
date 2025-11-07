@@ -8,7 +8,7 @@
     {
       "label": "missing_additional_service_or_component",
       "title": "Missing Additional Service or Component",
-      "description": "An additional service, component, or work item was explicitly discussed and agreed upon in the conversation but is completely absent from the estimate. Examples: replacing pipe boots, plywood, installing ridge vents, replacing valley flashing, gutters work, chimney flashing, skylight work, or any add-on service that was promised but not documented."
+      "description": "An additional service, component, or work item was discussed and explicitly agreed upon in the conversation but is absent from the estimate. Examples: replacing pipe boots, plywood, installing ridge vents, replacing valley flashing, gutters work, chimney flashing, skylight work, or any add-on service that was promised but not documented."
     },
     {
       "label": "missing_damage_repair",

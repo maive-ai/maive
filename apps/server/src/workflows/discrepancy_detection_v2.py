@@ -27,14 +27,44 @@ from src.ai.providers import get_ai_provider
 from src.utils.logger import logger
 
 
-class DiscrepancyReview(BaseModel):
-    """Structured output for discrepancy review."""
+class DeviationOccurrence(BaseModel):
+    """Timestamp and context for a deviation occurrence."""
 
-    needs_review: bool = Field(
-        description="True if discrepancies were found and the job needs review, False otherwise"
+    rilla_conversation_index: int = Field(
+        description="Zero-based index into the list of Rilla conversations (0 for first conversation, 1 for second, etc.)"
     )
-    hold_explanation: str = Field(
-        description="Concise explanation of discrepancies found with timestamps (HH:MM:SS format)"
+    timestamp: str = Field(
+        description="Timestamp in HH:MM:SS or MM:SS format when this deviation was mentioned in the conversation",
+        pattern=r"^(([0-9]{2}):)?([0-5][0-9]):([0-5][0-9])$",
+    )
+    context: str | None = Field(
+        default=None,
+        description="Optional: Brief quote or context from the conversation at this timestamp",
+    )
+
+
+class Deviation(BaseModel):
+    """A single deviation found between conversation and documentation."""
+
+    deviation_class: str = Field(
+        description="The label of the deviation class from the classes list"
+    )
+    explanation: str = Field(
+        description="A brief explanation of what specific deviation was found"
+    )
+    occurrences: list[DeviationOccurrence] = Field(
+        description="List of specific timestamps where this deviation was mentioned in the conversation(s)"
+    )
+
+
+class DiscrepancyReview(BaseModel):
+    """Structured output for discrepancy review with classified deviations."""
+
+    deviations: list[Deviation] = Field(
+        description="List of all deviations found between the conversation and documented data"
+    )
+    summary: str = Field(
+        description="Brief overall summary of findings (e.g., 'Found 3 deviations: material specifications, additional services, and special requests not documented')"
     )
 
 
@@ -149,7 +179,9 @@ class DiscrepancyDetectionV2Workflow:
             if not estimate_s3_uri:
                 raise ValueError("No estimate_s3_uri in dataset entry")
 
-            async with self._download_from_s3(estimate_s3_uri, ".json") as estimate_path:
+            async with self._download_from_s3(
+                estimate_s3_uri, ".json"
+            ) as estimate_path:
                 with open(estimate_path, "r") as f:
                     estimate_data = json.load(f)
                 logger.info("✅ Estimate data loaded")
@@ -161,80 +193,69 @@ class DiscrepancyDetectionV2Workflow:
                     logger.warning("⚠️ No form_s3_uri in dataset entry")
                     form_data = None
                 else:
-                    async with self._download_from_s3(form_s3_uri, ".json") as form_path:
+                    async with self._download_from_s3(
+                        form_s3_uri, ".json"
+                    ) as form_path:
                         with open(form_path, "r") as f:
                             form_data = json.load(f)
                         logger.info("✅ Form data loaded")
 
-                # Step 4: Download recording and transcript from S3 (if available)
+                # Step 4: Download recording and transcript from S3 (both required)
                 recording_uris = entry.get("rilla_recordings_s3_uri", [])
                 transcript_uris = entry.get("rilla_transcripts_s3_uri", [])
 
-                recording_path = None
-                transcript_path = None
-
-                if recording_uris and len(recording_uris) > 0:
-                    logger.info(
-                        f"\nStep 4a: Downloading recording from S3 ({len(recording_uris)} available)"
+                # Enforce both recording and transcript are present
+                if not recording_uris or len(recording_uris) == 0:
+                    raise ValueError(
+                        f"No recording available for UUID {uuid}. Both recording and transcript are required."
                     )
-                    # Use first recording if multiple
-                    async with self._download_from_s3(
-                        recording_uris[0], ".m4a"
-                    ) as rec_path:
-                        recording_path = rec_path
-                        logger.info("✅ Recording downloaded")
+                if not transcript_uris or len(transcript_uris) == 0:
+                    raise ValueError(
+                        f"No transcript available for UUID {uuid}. Both recording and transcript are required."
+                    )
 
-                        if transcript_uris and len(transcript_uris) > 0:
-                            logger.info(
-                                f"\nStep 4b: Downloading transcript from S3 ({len(transcript_uris)} available)"
-                            )
-                            async with self._download_from_s3(
-                                transcript_uris[0], ".json"
-                            ) as trans_path:
-                                transcript_path = trans_path
-                                logger.info("✅ Transcript downloaded")
+                logger.info("\nStep 4: Downloading recording and transcript from S3")
+                logger.info(f"   Recordings available: {len(recording_uris)}")
+                logger.info(f"   Transcripts available: {len(transcript_uris)}")
 
-                                # Step 5: Analyze with AI
-                                review_result = await self._analyze_content(
-                                    estimate_data=estimate_data,
-                                    form_data=form_data,
-                                    audio_path=recording_path,
-                                    transcript_path=transcript_path,
-                                )
-                        else:
-                            logger.warning(
-                                "⚠️ No transcript available, using audio only"
-                            )
-                            # Step 5: Analyze with AI (audio only)
-                            review_result = await self._analyze_content(
-                                estimate_data=estimate_data,
-                                form_data=form_data,
-                                audio_path=recording_path,
-                                transcript_path=None,
-                            )
-                elif transcript_uris and len(transcript_uris) > 0:
-                    logger.info("\nStep 4: Downloading transcript from S3 (no recording)")
+                # Download both recording and transcript (use first if multiple)
+                async with self._download_from_s3(
+                    recording_uris[0], ".m4a"
+                ) as recording_path:
+                    logger.info("   ✅ Recording downloaded")
+
                     async with self._download_from_s3(
                         transcript_uris[0], ".json"
-                    ) as trans_path:
-                        transcript_path = trans_path
-                        logger.info("✅ Transcript downloaded")
+                    ) as transcript_path:
+                        logger.info("   ✅ Transcript downloaded")
 
-                        # Step 5: Analyze with AI (transcript only)
+                        # Step 5: Analyze with AI using both audio and transcript
+                        logger.info(
+                            "\nStep 5: Analyzing with both audio and transcript"
+                        )
                         review_result = await self._analyze_content(
                             estimate_data=estimate_data,
                             form_data=form_data,
-                            audio_path=None,
+                            audio_path=recording_path,
                             transcript_path=transcript_path,
                         )
-                else:
-                    raise ValueError(
-                        "No recording or transcript available in dataset entry"
-                    )
 
             logger.info("\n✅ Analysis complete")
-            logger.info(f"   Needs Review: {review_result.needs_review}")
-            logger.info(f"   Explanation: {review_result.hold_explanation}")
+            logger.info(f"   Summary: {review_result.summary}")
+            logger.info(f"   Deviations Found: {len(review_result.deviations)}")
+
+            # Log each deviation
+            if review_result.deviations:
+                logger.info("\n📋 Detected Deviations:")
+                for i, deviation in enumerate(review_result.deviations, 1):
+                    logger.info(f"\n   {i}. [{deviation.deviation_class}]")
+                    logger.info(f"      {deviation.explanation}")
+                    logger.info(f"      Occurrences ({len(deviation.occurrences)}):")
+                    for occ in deviation.occurrences:
+                        context_str = f" - {occ.context}" if occ.context else ""
+                        logger.info(
+                            f"        • Conversation {occ.rilla_conversation_index} at {occ.timestamp}{context_str}"
+                        )
 
             # Compare with expected labels
             expected_labels = entry.get("labels", [])
@@ -242,6 +263,13 @@ class DiscrepancyDetectionV2Workflow:
             if expected_labels:
                 for label in expected_labels:
                     logger.info(f"   • {label}")
+
+            # Print Rilla links
+            rilla_links = entry.get("rilla_links", [])
+            if rilla_links:
+                logger.info("\n🔗 Rilla Conversation Links:")
+                for i, link in enumerate(rilla_links):
+                    logger.info(f"   {i}. {link}")
 
             logger.info("\n✅ DISCREPANCY DETECTION V2 WORKFLOW COMPLETE")
 
@@ -251,9 +279,24 @@ class DiscrepancyDetectionV2Workflow:
                 "project_id": entry["project_id"],
                 "job_id": entry["job_id"],
                 "estimate_id": entry["estimate_id"],
-                "needs_review": review_result.needs_review,
-                "explanation": review_result.hold_explanation,
+                "summary": review_result.summary,
+                "deviations": [
+                    {
+                        "class": dev.deviation_class,
+                        "explanation": dev.explanation,
+                        "occurrences": [
+                            {
+                                "conversation_index": occ.rilla_conversation_index,
+                                "timestamp": occ.timestamp,
+                                "context": occ.context,
+                            }
+                            for occ in dev.occurrences
+                        ],
+                    }
+                    for dev in review_result.deviations
+                ],
                 "expected_labels": expected_labels,
+                "rilla_links": rilla_links,
                 "timestamp": datetime.now(UTC).isoformat(),
             }
 
@@ -268,27 +311,25 @@ class DiscrepancyDetectionV2Workflow:
         self,
         estimate_data: dict,
         form_data: dict | None,
-        audio_path: str | None,
-        transcript_path: str | None,
+        audio_path: str,
+        transcript_path: str,
     ) -> DiscrepancyReview:
         """Analyze estimate, form, and audio/transcript for discrepancies.
 
         Args:
             estimate_data: Estimate data from S3 JSON file
             form_data: Form submission data from S3 JSON file
-            audio_path: Path to the audio file (optional)
-            transcript_path: Path to the transcript JSON file (optional)
+            audio_path: Path to the audio file (required)
+            transcript_path: Path to the transcript JSON file (required)
 
         Returns:
             DiscrepancyReview: Analysis result
 
         Raises:
-            ValueError: If neither audio_path nor transcript_path provided
+            ValueError: If audio_path or transcript_path not provided
         """
-        if not audio_path and not transcript_path:
-            raise ValueError("Either audio_path or transcript_path must be provided")
-
-        logger.info("\nStep 5: Analyzing content for discrepancies")
+        if not audio_path or not transcript_path:
+            raise ValueError("Both audio_path and transcript_path are required")
 
         # Extract estimate items for the prompt
         estimate_items = estimate_data.get("items", [])
@@ -321,31 +362,42 @@ class DiscrepancyDetectionV2Workflow:
         if not notes_to_production:
             notes_to_production = {"message": "No Notes to Production found"}
 
-        # Load transcript if provided
-        transcript_text = None
-        if transcript_path:
-            logger.info(f"   Loading transcript from: {transcript_path}")
-            with open(transcript_path, "r") as f:
-                transcript_data = json.load(f)
+        # Load and validate transcript (already in compact format from S3)
+        logger.info(f"   Loading transcript from: {transcript_path}")
+        with open(transcript_path, "r") as f:
+            transcript_data = json.load(f)
 
-            # Format transcript for readability
-            transcript_lines = []
-            for entry in transcript_data:
-                speaker = entry.get("speaker", "Unknown")
-                text = entry.get("transcript", "")
-                timestamp = entry.get("start_time", "00:00:00")
-                transcript_lines.append(f"[{timestamp}] {speaker}: {text}")
+        # Validate transcript is not empty
+        if not transcript_data:
+            raise ValueError(
+                "Transcript file is empty - no conversation data found."
+            )
 
-            transcript_text = "\n".join(transcript_lines)
-            logger.info(f"   Loaded transcript with {len(transcript_data)} entries")
+        # Convert to JSON string for passing to LLM
+        transcript_json = json.dumps(transcript_data, indent=2)
+        logger.info(f"   ✅ Loaded transcript (~{len(transcript_json) // 4} tokens)")
+
+        # Load deviation classes from JSON file
+        classes_path = Path(__file__).parent / "classes.json"
+        with open(classes_path, "r") as f:
+            classes_data = json.load(f)
+
+        # Format deviation classes for the prompt
+        deviation_classes_text = []
+        for cls in classes_data["classes"]:
+            deviation_classes_text.append(
+                f"**{cls['label']}** - {cls['title']}\n{cls['description']}"
+            )
+        deviation_classes_formatted = "\n\n".join(deviation_classes_text)
 
         # Load and build the prompt from template
         prompt_template_path = Path(__file__).parent / "discrepancy_detection_prompt.md"
         with open(prompt_template_path, "r") as f:
             prompt_template = f.read()
 
-        # Format the template with estimate and notes data
+        # Format the template with all data
         prompt = prompt_template.format(
+            deviation_classes=deviation_classes_formatted,
             estimate_data=json.dumps(formatted_estimate, indent=2),
             notes_to_production=json.dumps(notes_to_production, indent=2),
         )
@@ -355,7 +407,7 @@ class DiscrepancyDetectionV2Workflow:
 
         request = ContentAnalysisRequest(
             audio_path=audio_path,
-            transcript_text=transcript_text,
+            transcript_text=transcript_json,  # Pass compact JSON as text
             prompt=prompt,
             temperature=0.7,
         )

@@ -149,7 +149,7 @@ class GeminiClient:
             if request.response_schema:
                 generation_config["response_schema"] = request.response_schema
                 generation_config["response_mime_type"] = "application/json"
-                logger.debug(f"Response schema: {request.response_schema}")
+                logger.debug("Calling model API with response schema")
 
             logger.info(f"Generating content with model: {model_name}")
 
@@ -170,7 +170,7 @@ class GeminiClient:
                 finish_reason=getattr(response, "finish_reason", None),
             )
 
-        except Exception as e:
+        except Exception as e:  
             logger.error(f"Content generation failed: {e}")
             if isinstance(e, GeminiError):
                 raise
