@@ -39,6 +39,23 @@ class DeviationOccurrence(BaseModel):
     )
 
 
+class PredictedLineItem(BaseModel):
+    """Predicted estimate line item for a deviation."""
+
+    description: str = Field(
+        description="Description of the line item (e.g., 'Ridge Vent', 'Attic Fan')"
+    )
+    quantity: float | None = Field(
+        default=None, description="Predicted quantity for the line item"
+    )
+    unit: str | None = Field(
+        default=None, description="Unit of measurement (e.g., 'LF', 'EA', 'SQ', '%')"
+    )
+    notes: str | None = Field(
+        default=None, description="Additional notes or context for the line item prediction"
+    )
+
+
 class Deviation(BaseModel):
     """A single deviation found between conversation and documentation."""
 
@@ -67,10 +84,57 @@ class DiscrepancyReview(BaseModel):
 class DiscrepancyDetectionV2Workflow:
     """Simplified workflow for detecting discrepancies using S3 dataset files."""
 
-    def __init__(self):
-        """Initialize the workflow."""
+    def __init__(self, prelabel: bool = False):
+        """Initialize the workflow.
+
+        Args:
+            prelabel: If True, use all classes; if False, use only level 1 classes
+        """
         self.ai_provider = get_ai_provider()
         self.s3_client = boto3.client("s3")
+        self.prelabel = prelabel
+
+    def _create_dynamic_deviation_model(self, allowed_labels: list[str]):
+        """Create a dynamic Deviation model with enum constrained to allowed labels.
+
+        Args:
+            allowed_labels: List of allowed deviation class labels
+
+        Returns:
+            Pydantic model class for Deviation with constrained enum
+        """
+        from typing import Literal
+
+        # Create a Literal type with the allowed labels
+        DeviationClassLiteral = Literal[tuple(allowed_labels)]
+
+        class DynamicDeviation(BaseModel):
+            """A single deviation found between conversation and documentation."""
+
+            deviation_class: DeviationClassLiteral = Field(
+                description="The label of the deviation class from the classes list"
+            )
+            explanation: str = Field(
+                description="A brief explanation of what specific deviation was found"
+            )
+            occurrences: list[DeviationOccurrence] | None = Field(
+                default=None,
+                description="List of specific timestamps where this deviation was mentioned in the conversation(s). Not required for deviations where the item was not discussed.",
+            )
+            predicted_line_item: PredictedLineItem | None = Field(
+                default=None,
+                description="Optional predicted estimate line item for deviations that include line item prediction",
+            )
+
+        class DynamicDiscrepancyReview(BaseModel):
+            """Structured output for discrepancy review with classified deviations."""
+
+            deviations: list[DynamicDeviation] = Field(
+                description="List of all deviations found between the conversation and documented data"
+            )
+            summary: str = Field(description="Brief overall summary of findings")
+
+        return DynamicDiscrepancyReview
 
     def _load_dataset_entry(self, dataset_path: str, uuid: str) -> dict[str, Any]:
         """Load a specific dataset entry by UUID.
@@ -246,11 +310,20 @@ class DiscrepancyDetectionV2Workflow:
                 for i, deviation in enumerate(review_result.deviations, 1):
                     logger.info(f"\n   {i}. [{deviation.deviation_class}]")
                     logger.info(f"      {deviation.explanation}")
-                    logger.info(f"      Occurrences ({len(deviation.occurrences)}):")
-                    for occ in deviation.occurrences:
-                        logger.info(
-                            f"        • Conversation {occ.rilla_conversation_index} at {occ.timestamp}"
-                        )
+                    if deviation.occurrences:
+                        logger.info(f"      Occurrences ({len(deviation.occurrences)}):")
+                        for occ in deviation.occurrences:
+                            logger.info(
+                                f"        • Conversation {occ.rilla_conversation_index} at {occ.timestamp}"
+                            )
+                    else:
+                        logger.info("      Occurrences: None (not discussed in conversation)")
+                    if deviation.predicted_line_item:
+                        logger.info(f"      Predicted Line Item: {deviation.predicted_line_item.description}")
+                        if deviation.predicted_line_item.quantity:
+                            logger.info(f"        Quantity: {deviation.predicted_line_item.quantity} {deviation.predicted_line_item.unit or ''}")
+                        if deviation.predicted_line_item.notes:
+                            logger.info(f"        Notes: {deviation.predicted_line_item.notes}")
 
             # Print Rilla links
             rilla_links = entry.get("rilla_links", [])
@@ -278,7 +351,13 @@ class DiscrepancyDetectionV2Workflow:
                                 "timestamp": occ.timestamp,
                             }
                             for occ in dev.occurrences
-                        ],
+                        ] if dev.occurrences else [],
+                        "predicted_line_item": {
+                            "description": dev.predicted_line_item.description,
+                            "quantity": dev.predicted_line_item.quantity,
+                            "unit": dev.predicted_line_item.unit,
+                            "notes": dev.predicted_line_item.notes,
+                        } if dev.predicted_line_item else None,
                     }
                     for dev in review_result.deviations
                 ],
@@ -361,18 +440,45 @@ class DiscrepancyDetectionV2Workflow:
         transcript_json = json.dumps(transcript_data, indent=2)
         logger.info(f"   ✅ Loaded transcript (~{len(transcript_json) // 4} tokens)")
 
-        # Load deviation classes from JSON file
-        classes_path = Path(__file__).parent / "classes.json"
+        # Load deviation classes from JSON file (always use classes.json)
+        classes_path = (
+            Path(__file__).parent.parent.parent
+            / "evals"
+            / "estimate_deviation"
+            / "classes.json"
+        )
+
         with open(classes_path, "r") as f:
             classes_data = json.load(f)
 
-        # Format deviation classes for the prompt
+        # Filter classes based on mode
+        if self.prelabel:
+            # Use all classes in prelabel mode
+            filtered_classes = classes_data["classes"]
+            logger.info(f"   Using all {len(filtered_classes)} classes (prelabel mode)")
+        else:
+            # Use only level 1 classes in standard mode
+            filtered_classes = [
+                cls for cls in classes_data["classes"] if cls.get("level") == 1
+            ]
+            logger.info(
+                f"   Using {len(filtered_classes)} level 1 classes (standard mode)"
+            )
+
+        # Format deviation classes for the prompt (using filtered classes)
         deviation_classes_text = []
-        for cls in classes_data["classes"]:
+        filtered_class_labels = []
+        for cls in filtered_classes:
             deviation_classes_text.append(
                 f"**{cls['label']}** - {cls['title']}\n{cls['description']}"
             )
+            filtered_class_labels.append(cls["label"])
         deviation_classes_formatted = "\n\n".join(deviation_classes_text)
+
+        # Create dynamic response model based on filtered classes
+        DynamicDiscrepancyReview = self._create_dynamic_deviation_model(
+            filtered_class_labels
+        )
 
         # Load and build the prompt from template
         prompt_template_path = Path(__file__).parent / "discrepancy_detection_prompt.md"
@@ -398,7 +504,7 @@ class DiscrepancyDetectionV2Workflow:
 
         review_result = await self.ai_provider.analyze_content_with_structured_output(
             request=request,
-            response_model=DiscrepancyReview,
+            response_model=DynamicDiscrepancyReview,
         )
 
         return review_result
@@ -419,16 +525,22 @@ async def main():
         required=True,
         help="UUID of the dataset entry to analyze",
     )
+    parser.add_argument(
+        "--prelabel",
+        action="store_true",
+        help="Use classes.json instead of classes.json for deviation detection",
+    )
 
     args = parser.parse_args()
 
-    workflow = DiscrepancyDetectionV2Workflow()
+    workflow = DiscrepancyDetectionV2Workflow(prelabel=args.prelabel)
 
     logger.info("=" * 60)
     logger.info("DATASET-BASED DISCREPANCY DETECTION WORKFLOW")
     logger.info("=" * 60)
     logger.info(f"Dataset: {args.dataset_path}")
     logger.info(f"UUID: {args.uuid}")
+    logger.info(f"Mode: {'Prelabel' if args.prelabel else 'Standard'}")
     logger.info("")
 
     try:
