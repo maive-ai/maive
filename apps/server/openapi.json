@@ -418,7 +418,7 @@
           "CRM"
         ],
         "summary": "Get Job Files",
-        "description": "Get all files attached to a specific job.\n\nThis endpoint returns metadata for all files/attachments associated with a job.\n\nArgs:\n    job_id: The unique identifier for the job\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    List of file metadata dictionaries containing:\n    - id: File identifier\n    - filename: Original filename\n    - content_type: MIME type\n    - size: File size in bytes\n    - record_type_name: Type of file (Photo, Document, etc.)\n    - description: Optional file description\n    - date_created: Unix timestamp of creation\n    - created_by_name: Name of uploader\n    - is_private: Whether file is private\n\nRaises:\n    HTTPException: If an error occurs fetching files",
+        "description": "Get files attached to a specific job with optional type filtering.\n\nThis endpoint returns metadata for files/attachments associated with a job.\nSupports filtering by file type (all, images, or pdfs).\n\nArgs:\n    job_id: The unique identifier for the job\n    file_filter: Filter by type - \"all\", \"images\", or \"pdfs\" (default: \"all\")\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    List of file metadata dictionaries containing:\n    - id: File identifier\n    - filename: Original filename\n    - content_type: MIME type\n    - size: File size in bytes\n    - record_type_name: Type of file (Photo, Document, etc.)\n    - description: Optional file description\n    - date_created: Unix timestamp of creation\n    - created_by_name: Name of uploader\n    - is_private: Whether file is private\n\nRaises:\n    HTTPException: If an error occurs fetching files",
         "operationId": "get_job_files_api_crm_jobs__job_id__files_get",
         "security": [
           {
@@ -434,6 +434,18 @@
               "type": "string",
               "title": "Job Id"
             }
+          },
+          {
+            "name": "file_filter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Filter by type: 'all', 'images', or 'pdfs'",
+              "default": "all",
+              "title": "File Filter"
+            },
+            "description": "Filter by type: 'all', 'images', or 'pdfs'"
           }
         ],
         "responses": {

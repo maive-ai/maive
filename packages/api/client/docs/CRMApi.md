@@ -459,7 +459,7 @@ const { status, data } = await apiInstance.getJobApiCrmJobsJobIdGet(
 # **getJobFilesApiCrmJobsJobIdFilesGet**
 > any getJobFilesApiCrmJobsJobIdFilesGet()
 
-Get all files attached to a specific job.  This endpoint returns metadata for all files/attachments associated with a job.  Args:     job_id: The unique identifier for the job     crm_service: The CRM service instance from dependency injection  Returns:     List of file metadata dictionaries containing:     - id: File identifier     - filename: Original filename     - content_type: MIME type     - size: File size in bytes     - record_type_name: Type of file (Photo, Document, etc.)     - description: Optional file description     - date_created: Unix timestamp of creation     - created_by_name: Name of uploader     - is_private: Whether file is private  Raises:     HTTPException: If an error occurs fetching files
+Get files attached to a specific job with optional type filtering.  This endpoint returns metadata for files/attachments associated with a job. Supports filtering by file type (all, images, or pdfs).  Args:     job_id: The unique identifier for the job     file_filter: Filter by type - \"all\", \"images\", or \"pdfs\" (default: \"all\")     crm_service: The CRM service instance from dependency injection  Returns:     List of file metadata dictionaries containing:     - id: File identifier     - filename: Original filename     - content_type: MIME type     - size: File size in bytes     - record_type_name: Type of file (Photo, Document, etc.)     - description: Optional file description     - date_created: Unix timestamp of creation     - created_by_name: Name of uploader     - is_private: Whether file is private  Raises:     HTTPException: If an error occurs fetching files
 
 ### Example
 
@@ -473,9 +473,11 @@ const configuration = new Configuration();
 const apiInstance = new CRMApi(configuration);
 
 let jobId: string; // (default to undefined)
+let fileFilter: string; //Filter by type: \'all\', \'images\', or \'pdfs\' (optional) (default to 'all')
 
 const { status, data } = await apiInstance.getJobFilesApiCrmJobsJobIdFilesGet(
-    jobId
+    jobId,
+    fileFilter
 );
 ```
 
@@ -484,6 +486,7 @@ const { status, data } = await apiInstance.getJobFilesApiCrmJobsJobIdFilesGet(
 |Name | Type | Description  | Notes|
 |------------- | ------------- | ------------- | -------------|
 | **jobId** | [**string**] |  | defaults to undefined|
+| **fileFilter** | [**string**] | Filter by type: \&#39;all\&#39;, \&#39;images\&#39;, or \&#39;pdfs\&#39; | (optional) defaults to 'all'|
 
 
 ### Return type

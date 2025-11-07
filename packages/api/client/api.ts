@@ -2172,13 +2172,14 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
             };
         },
         /**
-         * Get all files attached to a specific job.  This endpoint returns metadata for all files/attachments associated with a job.  Args:     job_id: The unique identifier for the job     crm_service: The CRM service instance from dependency injection  Returns:     List of file metadata dictionaries containing:     - id: File identifier     - filename: Original filename     - content_type: MIME type     - size: File size in bytes     - record_type_name: Type of file (Photo, Document, etc.)     - description: Optional file description     - date_created: Unix timestamp of creation     - created_by_name: Name of uploader     - is_private: Whether file is private  Raises:     HTTPException: If an error occurs fetching files
+         * Get files attached to a specific job with optional type filtering.  This endpoint returns metadata for files/attachments associated with a job. Supports filtering by file type (all, images, or pdfs).  Args:     job_id: The unique identifier for the job     file_filter: Filter by type - \"all\", \"images\", or \"pdfs\" (default: \"all\")     crm_service: The CRM service instance from dependency injection  Returns:     List of file metadata dictionaries containing:     - id: File identifier     - filename: Original filename     - content_type: MIME type     - size: File size in bytes     - record_type_name: Type of file (Photo, Document, etc.)     - description: Optional file description     - date_created: Unix timestamp of creation     - created_by_name: Name of uploader     - is_private: Whether file is private  Raises:     HTTPException: If an error occurs fetching files
          * @summary Get Job Files
          * @param {string} jobId 
+         * @param {string} [fileFilter] Filter by type: \&#39;all\&#39;, \&#39;images\&#39;, or \&#39;pdfs\&#39;
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getJobFilesApiCrmJobsJobIdFilesGet: async (jobId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        getJobFilesApiCrmJobsJobIdFilesGet: async (jobId: string, fileFilter?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'jobId' is not null or undefined
             assertParamExists('getJobFilesApiCrmJobsJobIdFilesGet', 'jobId', jobId)
             const localVarPath = `/api/crm/jobs/{job_id}/files`
@@ -2197,6 +2198,10 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
             // authentication HTTPBearer required
             // http bearer authentication required
             await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            if (fileFilter !== undefined) {
+                localVarQueryParameter['file_filter'] = fileFilter;
+            }
 
 
     
@@ -2457,14 +2462,15 @@ export const CRMApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * Get all files attached to a specific job.  This endpoint returns metadata for all files/attachments associated with a job.  Args:     job_id: The unique identifier for the job     crm_service: The CRM service instance from dependency injection  Returns:     List of file metadata dictionaries containing:     - id: File identifier     - filename: Original filename     - content_type: MIME type     - size: File size in bytes     - record_type_name: Type of file (Photo, Document, etc.)     - description: Optional file description     - date_created: Unix timestamp of creation     - created_by_name: Name of uploader     - is_private: Whether file is private  Raises:     HTTPException: If an error occurs fetching files
+         * Get files attached to a specific job with optional type filtering.  This endpoint returns metadata for files/attachments associated with a job. Supports filtering by file type (all, images, or pdfs).  Args:     job_id: The unique identifier for the job     file_filter: Filter by type - \"all\", \"images\", or \"pdfs\" (default: \"all\")     crm_service: The CRM service instance from dependency injection  Returns:     List of file metadata dictionaries containing:     - id: File identifier     - filename: Original filename     - content_type: MIME type     - size: File size in bytes     - record_type_name: Type of file (Photo, Document, etc.)     - description: Optional file description     - date_created: Unix timestamp of creation     - created_by_name: Name of uploader     - is_private: Whether file is private  Raises:     HTTPException: If an error occurs fetching files
          * @summary Get Job Files
          * @param {string} jobId 
+         * @param {string} [fileFilter] Filter by type: \&#39;all\&#39;, \&#39;images\&#39;, or \&#39;pdfs\&#39;
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getJobFilesApiCrmJobsJobIdFilesGet(jobId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<any>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getJobFilesApiCrmJobsJobIdFilesGet(jobId, options);
+        async getJobFilesApiCrmJobsJobIdFilesGet(jobId: string, fileFilter?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<any>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getJobFilesApiCrmJobsJobIdFilesGet(jobId, fileFilter, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['CRMApi.getJobFilesApiCrmJobsJobIdFilesGet']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -2608,14 +2614,15 @@ export const CRMApiFactory = function (configuration?: Configuration, basePath?:
             return localVarFp.getJobApiCrmJobsJobIdGet(jobId, options).then((request) => request(axios, basePath));
         },
         /**
-         * Get all files attached to a specific job.  This endpoint returns metadata for all files/attachments associated with a job.  Args:     job_id: The unique identifier for the job     crm_service: The CRM service instance from dependency injection  Returns:     List of file metadata dictionaries containing:     - id: File identifier     - filename: Original filename     - content_type: MIME type     - size: File size in bytes     - record_type_name: Type of file (Photo, Document, etc.)     - description: Optional file description     - date_created: Unix timestamp of creation     - created_by_name: Name of uploader     - is_private: Whether file is private  Raises:     HTTPException: If an error occurs fetching files
+         * Get files attached to a specific job with optional type filtering.  This endpoint returns metadata for files/attachments associated with a job. Supports filtering by file type (all, images, or pdfs).  Args:     job_id: The unique identifier for the job     file_filter: Filter by type - \"all\", \"images\", or \"pdfs\" (default: \"all\")     crm_service: The CRM service instance from dependency injection  Returns:     List of file metadata dictionaries containing:     - id: File identifier     - filename: Original filename     - content_type: MIME type     - size: File size in bytes     - record_type_name: Type of file (Photo, Document, etc.)     - description: Optional file description     - date_created: Unix timestamp of creation     - created_by_name: Name of uploader     - is_private: Whether file is private  Raises:     HTTPException: If an error occurs fetching files
          * @summary Get Job Files
          * @param {string} jobId 
+         * @param {string} [fileFilter] Filter by type: \&#39;all\&#39;, \&#39;images\&#39;, or \&#39;pdfs\&#39;
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getJobFilesApiCrmJobsJobIdFilesGet(jobId: string, options?: RawAxiosRequestConfig): AxiosPromise<any> {
-            return localVarFp.getJobFilesApiCrmJobsJobIdFilesGet(jobId, options).then((request) => request(axios, basePath));
+        getJobFilesApiCrmJobsJobIdFilesGet(jobId: string, fileFilter?: string, options?: RawAxiosRequestConfig): AxiosPromise<any> {
+            return localVarFp.getJobFilesApiCrmJobsJobIdFilesGet(jobId, fileFilter, options).then((request) => request(axios, basePath));
         },
         /**
          * Get a specific project by ID.  This endpoint works across all CRM providers and returns a standardized Project schema.  Note: In flat CRMs like JobNimbus, projects and jobs are the same entity.  Args:     project_id: The unique identifier for the project (provider-specific format)     crm_service: The CRM service instance from dependency injection  Returns:     Project: The project information in universal format  Raises:     HTTPException: If the project is not found or an error occurs
@@ -2763,15 +2770,16 @@ export class CRMApi extends BaseAPI {
     }
 
     /**
-     * Get all files attached to a specific job.  This endpoint returns metadata for all files/attachments associated with a job.  Args:     job_id: The unique identifier for the job     crm_service: The CRM service instance from dependency injection  Returns:     List of file metadata dictionaries containing:     - id: File identifier     - filename: Original filename     - content_type: MIME type     - size: File size in bytes     - record_type_name: Type of file (Photo, Document, etc.)     - description: Optional file description     - date_created: Unix timestamp of creation     - created_by_name: Name of uploader     - is_private: Whether file is private  Raises:     HTTPException: If an error occurs fetching files
+     * Get files attached to a specific job with optional type filtering.  This endpoint returns metadata for files/attachments associated with a job. Supports filtering by file type (all, images, or pdfs).  Args:     job_id: The unique identifier for the job     file_filter: Filter by type - \"all\", \"images\", or \"pdfs\" (default: \"all\")     crm_service: The CRM service instance from dependency injection  Returns:     List of file metadata dictionaries containing:     - id: File identifier     - filename: Original filename     - content_type: MIME type     - size: File size in bytes     - record_type_name: Type of file (Photo, Document, etc.)     - description: Optional file description     - date_created: Unix timestamp of creation     - created_by_name: Name of uploader     - is_private: Whether file is private  Raises:     HTTPException: If an error occurs fetching files
      * @summary Get Job Files
      * @param {string} jobId 
+     * @param {string} [fileFilter] Filter by type: \&#39;all\&#39;, \&#39;images\&#39;, or \&#39;pdfs\&#39;
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof CRMApi
      */
-    public getJobFilesApiCrmJobsJobIdFilesGet(jobId: string, options?: RawAxiosRequestConfig) {
-        return CRMApiFp(this.configuration).getJobFilesApiCrmJobsJobIdFilesGet(jobId, options).then((request) => request(this.axios, this.basePath));
+    public getJobFilesApiCrmJobsJobIdFilesGet(jobId: string, fileFilter?: string, options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).getJobFilesApiCrmJobsJobIdFilesGet(jobId, fileFilter, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
