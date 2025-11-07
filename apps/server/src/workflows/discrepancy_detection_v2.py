@@ -252,13 +252,6 @@ class DiscrepancyDetectionV2Workflow:
                             f"        • Conversation {occ.rilla_conversation_index} at {occ.timestamp}"
                         )
 
-            # Compare with expected labels
-            expected_labels = entry.get("labels", [])
-            logger.info(f"\n📋 Expected Labels from Dataset: {len(expected_labels)}")
-            if expected_labels:
-                for label in expected_labels:
-                    logger.info(f"   • {label}")
-
             # Print Rilla links
             rilla_links = entry.get("rilla_links", [])
             if rilla_links:
@@ -289,7 +282,6 @@ class DiscrepancyDetectionV2Workflow:
                     }
                     for dev in review_result.deviations
                 ],
-                "expected_labels": expected_labels,
                 "rilla_links": rilla_links,
                 "timestamp": datetime.now(UTC).isoformat(),
             }
