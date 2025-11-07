@@ -5,10 +5,11 @@ This file contains hardcoded project data that can be easily removed
 when switching to real CRM integrations.
 """
 
+import uuid
 from datetime import UTC, datetime
 
 from src.integrations.crm.constants import CRMProvider, Status
-from src.integrations.crm.schemas import Project
+from src.integrations.crm.schemas import Note, Project
 
 # Default phone number for all mock data
 DEFAULT_PHONE_NUMBER = "+1-703-268-1917"
@@ -588,7 +589,7 @@ def get_mock_projects() -> list[Project]:
             sub_status=None,
             sub_status_id=None,
             workflow_type="Restoration",
-            description=data.get("notes"),
+            description=None,  # Using structured notes instead
             customer_id=data["id"],  # Use project ID as customer ID
             customer_name=data.get("customerName"),
             location_id=None,
@@ -614,6 +615,24 @@ def get_mock_projects() -> list[Project]:
             provider=CRMProvider.MOCK,
             provider_data={**data, "tenant": 1, "job_id": job_id},
         )
+        
+        # Create initial note if notes exist
+        if data.get("notes"):
+            note = Note(
+                id=str(uuid.uuid4()),
+                text=data["notes"],
+                entity_id=data["id"],
+                entity_type="project",
+                created_by_id=None,
+                created_by_name=None,
+                created_at=now,
+                updated_at=now,
+                is_pinned=False,
+                provider=CRMProvider.MOCK,
+                provider_data={},
+            )
+            project.notes = [note]
+        
         projects.append(project)
 
     return projects

@@ -18,14 +18,13 @@ from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
 from src.integrations.crm.schemas import FormSubmissionListResponse
 from src.integrations.crm.providers.job_nimbus.constants import JobNimbusEndpoints
 from src.integrations.crm.providers.job_nimbus.schemas import (
+    JobNimbusActivitiesListResponse,
     JobNimbusActivityResponse,
     JobNimbusContactResponse,
     JobNimbusContactsListResponse,
     JobNimbusCreateActivityRequest,
-    JobNimbusCreateContactRequest,
     JobNimbusJobResponse,
     JobNimbusJobsListResponse,
-    JobNimbusUpdateContactRequest,
 )
 from src.integrations.crm.schemas import (
     Contact,
@@ -35,7 +34,6 @@ from src.integrations.crm.schemas import (
     Job,
     JobList,
     JobNoteResponse,
-    JobResponse,
     MaterialsListResponse,
     Note,
     PricebookItemsRequest,
@@ -114,7 +112,13 @@ class JobNimbusProvider(CRMProvider):
             data = response.json()
             jn_job = JobNimbusJobResponse(**data)
 
-            return self._transform_jn_job_to_universal(jn_job)
+            # Transform to universal Job
+            job = self._transform_jn_job_to_universal(jn_job)
+            
+            # Fetch and attach notes
+            job.notes = await self._get_job_notes(job_id)
+            
+            return job
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
@@ -244,7 +248,13 @@ class JobNimbusProvider(CRMProvider):
             data = response.json()
             jn_job = JobNimbusJobResponse(**data)
 
-            return await self._transform_jn_job_to_universal_project_async(jn_job)
+            # Transform to universal Project
+            project = await self._transform_jn_job_to_universal_project_async(jn_job)
+            
+            # Fetch and attach notes
+            project.notes = await self._get_job_notes(project_id)
+            
+            return project
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
@@ -523,6 +533,73 @@ class JobNimbusProvider(CRMProvider):
     # ========================================================================
     # Helper Methods (transformation functions)
     # ========================================================================
+
+    async def _get_job_notes(self, job_id: str) -> list[Note]:
+        """
+        Fetch activities (notes) for a specific job.
+        
+        Args:
+            job_id: The job ID (JNID)
+            
+        Returns:
+            list[Note]: List of notes for the job (empty list if none or on error)
+        """
+        try:
+            logger.info(f"Fetching notes for job {job_id}")
+            
+            # Build filter to get activities related to this job
+            filter_query = json.dumps({
+                "must": [{"term": {"related.id": job_id}}]
+            })
+            
+            # Request activities from JobNimbus API
+            endpoint = f"{JobNimbusEndpoints.ACTIVITIES}?filter={filter_query}"
+            response = await self._make_request("GET", endpoint)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            # Log raw activity data for inspection
+            logger.info(f"[JobNimbus] Raw activities data for job {job_id}: {json.dumps(data, indent=2)}")
+            
+            # Parse activities list response
+            activities_response = JobNimbusActivitiesListResponse(**data)
+            
+            # Transform each activity to universal Note
+            notes = []
+            for jn_activity in activities_response.results:
+                try:
+                    # Only include note-type activities (filter by record_type_name, not type)
+                    if jn_activity.record_type_name == "Note":
+                        note = Note(
+                            id=jn_activity.jnid,
+                            text=jn_activity.note or "",
+                            entity_id=job_id,
+                            entity_type="job",
+                            created_by_id=jn_activity.created_by,
+                            created_by_name=jn_activity.created_by_name,
+                            created_at=self._unix_timestamp_to_datetime(jn_activity.date_created).isoformat(),
+                            updated_at=self._unix_timestamp_to_datetime(jn_activity.date_updated).isoformat()
+                            if jn_activity.date_updated
+                            else None,
+                            is_pinned=False,
+                            provider=CRMProviderEnum.JOB_NIMBUS,
+                            provider_data={
+                                "record_type": jn_activity.record_type,
+                                "record_type_name": jn_activity.record_type_name,
+                            },
+                        )
+                        notes.append(note)
+                except Exception as e:
+                    logger.warning(f"Failed to parse activity for job {job_id}: {e}")
+                    continue
+            
+            logger.info(f"Fetched {len(notes)} notes for job {job_id}")
+            return notes
+            
+        except Exception as e:
+            logger.warning(f"Error fetching notes for job {job_id}: {e}")
+            return []  # Return empty list on error - don't fail the job fetch
 
     def _transform_jn_job_to_universal(self, jn_job: JobNimbusJobResponse) -> Job:
         """Transform JobNimbus job to universal Job schema."""

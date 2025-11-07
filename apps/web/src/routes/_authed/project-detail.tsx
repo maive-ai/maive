@@ -261,14 +261,40 @@ function ProjectDetail() {
               )}
 
               {/* Notes */}
-              {providerData?.notes && (
+              {project.notes && project.notes.length > 0 && (
                 <div className="border-t pt-6">
                   <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
                     Notes
                   </p>
-                  <div className="space-y-3 pl-2">
-                    <p className="text-gray-600 whitespace-pre-wrap">{providerData.notes}</p>
+                  <div className="space-y-4">
+                    {[...project.notes]
+                      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                      .map((note) => (
+                        <div key={note.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <User className="size-4" />
+                              <span className="font-medium">
+                                {note.created_by_name || 'Unknown'}
+                              </span>
+                            </div>
+                            <time className="text-xs text-gray-500">
+                              {new Date(note.created_at).toLocaleString()}
+                            </time>
+                          </div>
+                          <p className="text-gray-700 whitespace-pre-wrap">{note.text}</p>
+                        </div>
+                      ))}
                   </div>
+                </div>
+              )}
+              
+              {project.notes && project.notes.length === 0 && (
+                <div className="border-t pt-6">
+                  <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
+                    Notes
+                  </p>
+                  <p className="text-gray-500 text-sm pl-2">No notes yet</p>
                 </div>
               )}
 

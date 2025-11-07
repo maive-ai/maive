@@ -36,10 +36,16 @@ class OwnerInfo(BaseModel):
 class RelatedEntity(BaseModel):
     """Related entity reference model."""
 
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
     id: str = Field(..., description="Entity JNID")
     type: str | None = Field(None, description="Entity type (job, contact, etc)")
     name: str | None = Field(None, description="Entity name")
     number: str | None = Field(None, description="Entity number")
+    email: str | None = Field(None, description="Email address if contact")
+    subject: str | None = Field(None, description="Subject if email/message")
+    new_status: int | None = Field(None, description="New status ID if status change", alias="newStatus")
+    old_status: int | None = Field(None, description="Old status ID if status change", alias="oldStatus")
 
 
 # Job schemas
@@ -273,8 +279,9 @@ class JobNimbusUpdateContactRequest(BaseModel):
 class JobNimbusActivityResponse(BaseModel):
     """Response model for a JobNimbus activity (note)."""
 
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
 
+    # Core fields
     jnid: str = Field(..., description="JobNimbus unique ID")
     type: str = Field(..., description="Record type (should be 'activity')")
     customer: str = Field(..., description="Customer JNID")
@@ -285,17 +292,40 @@ class JobNimbusActivityResponse(BaseModel):
     is_active: bool = Field(..., description="Whether the activity is active", alias="isActive")
     is_archived: bool = Field(..., description="Whether the activity is archived", alias="isArchived")
     is_editable: bool = Field(..., description="Whether the activity is editable", alias="isEditable")
+    is_private: bool | None = Field(None, description="Whether the activity is private", alias="isPrivate")
+    is_status_change: bool | None = Field(None, description="Whether this is a status change", alias="isStatusChange")
 
     # Activity-specific fields
     note: str = Field(..., description="Note text")
+    record_type: int | None = Field(None, description="Record type ID", alias="recordType")
     record_type_name: str = Field(..., description="Activity type name", alias="recordTypeName")
-    is_status_change: bool | None = Field(None, description="Whether this is a status change", alias="isStatusChange")
+    source: str | None = Field(None, description="Source of the activity")
+    
+    # Optional metadata
+    email_status: str | None = Field(None, description="Email status if applicable", alias="emailStatus")
+    external_id: str | None = Field(None, description="External ID if synced", alias="externalId")
+    merged: str | None = Field(None, description="Merged entity ID if merged")
+    stack: str | None = Field(None, description="Stack information")
+
+    # Sales rep
+    sales_rep: str | None = Field(None, description="Sales rep JNID", alias="salesRep")
+    sales_rep_name: str | None = Field(None, description="Sales rep name", alias="salesRepName")
 
     # Related entities
     primary: RelatedEntity | None = Field(None, description="Primary related entity")
     related: list[RelatedEntity] | None = Field(None, description="Related entities")
     owners: list[OwnerInfo] | None = Field(None, description="List of owners")
     location: LocationInfo | None = Field(None, description="Location information")
+    rules: list[dict] | None = Field(None, description="Rules associated with activity")
+
+
+class JobNimbusActivitiesListResponse(BaseModel):
+    """Response model for list of activities."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    count: int = Field(..., description="Total count of activities")
+    results: list[JobNimbusActivityResponse] = Field(..., description="List of activities", alias="activity")
 
 
 class JobNimbusCreateActivityRequest(BaseModel):
