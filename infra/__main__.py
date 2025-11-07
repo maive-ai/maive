@@ -723,6 +723,29 @@ if deploy_containers:
         opts=pulumi.ResourceOptions(parent=https_listener),
     )
 
+# Listener Rule for MCP traffic (conditional)
+alb_listener_rule_mcp = None
+if deploy_containers:
+    alb_listener_rule_mcp = lb.ListenerRule(
+        f"{server_app_name}-mcp-rule-{stack_name}",
+        listener_arn=https_listener.arn,
+        priority=5,  # Higher priority than API rule
+        actions=[
+            lb.ListenerRuleActionArgs(
+                type="forward",
+                target_group_arn=target_group.arn,
+            )
+        ],
+        conditions=[
+            lb.ListenerRuleConditionArgs(
+                path_pattern=lb.ListenerRuleConditionPathPatternArgs(
+                    values=["/crm/*"],
+                ),
+            )
+        ],
+        opts=pulumi.ResourceOptions(parent=https_listener),
+    )
+
 # Add Cognito configuration
 cognito_config = pulumi.Config("cognito")
 
@@ -1040,6 +1063,7 @@ if deploy_containers:
                     "environment": [
                         {"name": "ENVIRONMENT", "value": environment},
                         {"name": "CLIENT_BASE_URL", "value": app_domain_url},
+                        {"name": "SERVER_BASE_URL", "value": app_domain_url},
                         {
                             "name": "AWS_REGION",
                             "value": aws_cfg.require("region"),

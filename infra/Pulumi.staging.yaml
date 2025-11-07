@@ -1,4 +1,7 @@
+environment:
+  - maive-infra/staging
 config:
+  maive-infra:environment: staging
   maive-infra:certificate_domain: testing.maive.ai
   maive-infra:deploy_containers: "true"
   maive-infra:transport_protocol: https

@@ -28,7 +28,7 @@ class AppSettings(BaseSettings):
 
     # AWS Configuration
     aws_region: str = Field(
-        default="us-east-1",
+        default="us-west-1",
         description="AWS region for services (DynamoDB, Cognito, etc.)",
     )
     dynamodb_table_name: str = Field(
