@@ -160,7 +160,7 @@ class DeviationOccurrence(BaseModel):
     )
     timestamp: str = Field(
         description="Timestamp in HH:MM:SS or MM:SS format when this deviation was mentioned in the conversation",
-        pattern=r"^(([0-9]{1,2}):)?([0-5][0-9]):([0-5][0-9])$",
+        pattern=r"^(([01]?[0-9]|2[0-3]):)?([0-5][0-9]):([0-5][0-9])$",
     )
 
 
@@ -177,7 +177,8 @@ class PredictedLineItem(BaseModel):
         default=None, description="Unit of measurement (e.g., 'LF', 'EA', 'SQ', '%')"
     )
     notes: str | None = Field(
-        default=None, description="Additional notes or context for the line item prediction"
+        default=None,
+        description="Additional notes or context for the line item prediction",
     )
 
 
@@ -436,19 +437,29 @@ class DiscrepancyDetectionV2Workflow:
                     logger.info(f"\n   {i}. [{deviation.deviation_class}]")
                     logger.info(f"      {deviation.explanation}")
                     if deviation.occurrences:
-                        logger.info(f"      Occurrences ({len(deviation.occurrences)}):")
+                        logger.info(
+                            f"      Occurrences ({len(deviation.occurrences)}):"
+                        )
                         for occ in deviation.occurrences:
                             logger.info(
                                 f"        • Conversation {occ.rilla_conversation_index} at {occ.timestamp}"
                             )
                     else:
-                        logger.info("      Occurrences: None (not discussed in conversation)")
+                        logger.info(
+                            "      Occurrences: None (not discussed in conversation)"
+                        )
                     if deviation.predicted_line_item:
-                        logger.info(f"      Predicted Line Item: {deviation.predicted_line_item.description}")
+                        logger.info(
+                            f"      Predicted Line Item: {deviation.predicted_line_item.description}"
+                        )
                         if deviation.predicted_line_item.quantity:
-                            logger.info(f"        Quantity: {deviation.predicted_line_item.quantity} {deviation.predicted_line_item.unit or ''}")
+                            logger.info(
+                                f"        Quantity: {deviation.predicted_line_item.quantity} {deviation.predicted_line_item.unit or ''}"
+                            )
                         if deviation.predicted_line_item.notes:
-                            logger.info(f"        Notes: {deviation.predicted_line_item.notes}")
+                            logger.info(
+                                f"        Notes: {deviation.predicted_line_item.notes}"
+                            )
 
             # Print Rilla links
             rilla_links = entry.get("rilla_links", [])
@@ -476,13 +487,17 @@ class DiscrepancyDetectionV2Workflow:
                                 "timestamp": occ.timestamp,
                             }
                             for occ in dev.occurrences
-                        ] if dev.occurrences else [],
+                        ]
+                        if dev.occurrences
+                        else [],
                         "predicted_line_item": {
                             "description": dev.predicted_line_item.description,
                             "quantity": dev.predicted_line_item.quantity,
                             "unit": dev.predicted_line_item.unit,
                             "notes": dev.predicted_line_item.notes,
-                        } if dev.predicted_line_item else None,
+                        }
+                        if dev.predicted_line_item
+                        else None,
                     }
                     for dev in review_result.deviations
                 ],
@@ -568,7 +583,9 @@ class DiscrepancyDetectionV2Workflow:
             if isinstance(transcript_data, list) and len(transcript_data) > 0:
                 first_entry = transcript_data[0]
                 if "speaker" in first_entry and "words" in first_entry:
-                    logger.info("   Detected original Rilla format, attempting simplification...")
+                    logger.info(
+                        "   Detected original Rilla format, attempting simplification..."
+                    )
                     simplified = simplify_rilla_transcript(transcript_data)
                     simplified_size = len(json.dumps(simplified))
                     savings_pct = 100 - (simplified_size / original_size * 100)
@@ -577,9 +594,13 @@ class DiscrepancyDetectionV2Workflow:
                     )
                     transcript_data = simplified
                 else:
-                    logger.info("   Transcript already in compact format or unknown format, using as-is")
+                    logger.info(
+                        "   Transcript already in compact format or unknown format, using as-is"
+                    )
             else:
-                logger.info("   Transcript already in compact format or unknown format, using as-is")
+                logger.info(
+                    "   Transcript already in compact format or unknown format, using as-is"
+                )
         except Exception as e:
             logger.warning(f"   ⚠️ Failed to simplify transcript: {e}")
             logger.info("   Using original transcript format")
