@@ -705,21 +705,44 @@ class OpenAIProvider(AIProvider):
 
             logger.info(f"Using Responses API parse() with Pydantic model: {model}")
 
+            # Build tools list
+            tools: list[Any] = []
+
+            # Add file search if vector store IDs provided
+            if request.vector_store_ids:
+                logger.info(f"Adding FileSearchTool with {len(request.vector_store_ids)} vector store(s)")
+                tools.append(
+                    FileSearchToolParam(
+                        type="file_search",
+                        vector_store_ids=request.vector_store_ids
+                    )
+                )
+
             # Use Responses API parse() method which directly accepts Pydantic models
             # This is cleaner than manually constructing JSON schema
-            parsed_response = await client.responses.parse(
+            parse_params: dict[str, Any] = {
                 **model_params,
-                input=input_items,
-                text_format=response_model,
-            )
+                "input": input_items,
+                "text_format": response_model,
+            }
+
+            if tools:
+                parse_params["tools"] = tools
+
+            parsed_response = await client.responses.parse(**parse_params)
 
             # The parse() method returns a ParsedResponse with the parsed data
             # Extract the parsed Pydantic model from the response
             if not parsed_response.output:
                 raise OpenAIError("No output in parsed response")
 
+            logger.debug(f"Parsed response status: {parsed_response.status}")
+            logger.debug(f"Parsed response has {len(parsed_response.output)} output items")
+
             # Find the message output item with parsed content
             for output_item in parsed_response.output:
+                logger.debug(f"Output item type: {output_item.type}")
+
                 if output_item.type == "message":
                     # The content should be the parsed Pydantic model
                     if hasattr(output_item, "parsed") and output_item.parsed:
