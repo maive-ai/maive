@@ -7,4 +7,5 @@ dependencies = [
     "pulumi-aws>=6.83.0",
     "pulumi-docker>=4.8.0",
     "pulumi-docker-build>=0.0.12",
+    "pulumi-esc-sdk>=0.12.3",
 ]
