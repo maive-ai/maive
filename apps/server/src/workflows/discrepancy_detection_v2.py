@@ -7,12 +7,14 @@ This workflow analyzes sales calls for discrepancies using pre-collected dataset
 - Analyzes with AI for discrepancies
 - Outputs results without any CRM updates (evaluation-only)
 
-Uses the AI provider abstraction, defaulting to Gemini but configurable via AI_PROVIDER env var.
+Uses OpenAI provider for this workflow (forced via environment variable).
 """
 
 import argparse
 import asyncio
 import json
+import os
+import subprocess
 import tempfile
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -25,6 +27,32 @@ from pydantic import BaseModel, Field
 from src.ai.base import ContentAnalysisRequest
 from src.ai.providers import get_ai_provider
 from src.utils.logger import logger
+
+# Force OpenAI provider for this workflow
+os.environ["AI_PROVIDER"] = "openai"
+
+
+def convert_to_mp3(input_path: str, mp3_path: str, bitrate: str = "64k") -> bool:
+    """Convert any audio file to MP3 using ffmpeg with specified bitrate.
+
+    Args:
+        input_path: Path to input audio file
+        mp3_path: Path where MP3 should be saved
+        bitrate: Audio bitrate (default: 64k)
+
+    Returns:
+        bool: True if conversion successful, False otherwise
+    """
+    try:
+        subprocess.run(
+            ["ffmpeg", "-i", input_path, "-b:a", bitrate, "-y", mp3_path],
+            check=True,
+            capture_output=True,
+        )
+        return True
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Error converting {input_path} to MP3: {e}")
+        return False
 
 
 def _format_timestamp_from_seconds(seconds: float, use_hours: bool) -> str:
@@ -664,9 +692,10 @@ class DiscrepancyDetectionV2Workflow:
 
         # Use AI provider to analyze with structured output
         logger.info("   Initiating AI analysis...")
+        logger.info("   Using transcript only (testing GPT-5 with transcript before adding pricebook)")
 
         request = ContentAnalysisRequest(
-            audio_path=audio_path,
+            audio_path=None,  # No audio for now
             transcript_text=transcript_json,  # Pass compact JSON as text
             prompt=prompt,
             temperature=0.7,

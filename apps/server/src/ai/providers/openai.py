@@ -645,10 +645,10 @@ class OpenAIProvider(AIProvider):
         try:
             client = self._get_client()
 
-            logger.info("Analyzing content with structured output (OpenAI)")
+            logger.info("Analyzing content with structured output (Responses API)")
 
-            # Build the base message
-            content_parts = []
+            # Build input items for Responses API
+            input_items: list[dict[str, Any]] = []
 
             # If audio is provided, add it as input
             if request.audio_path:
@@ -664,13 +664,11 @@ class OpenAIProvider(AIProvider):
 
                 audio_format = path.suffix.lstrip(".")
 
-                content_parts.append(
+                input_items.append(
                     {
                         "type": "input_audio",
-                        "input_audio": {
-                            "data": audio_data,
-                            "format": audio_format,
-                        },
+                        "audio": audio_data,
+                        "format": audio_format,
                     }
                 )
 
@@ -688,10 +686,8 @@ class OpenAIProvider(AIProvider):
                 )
                 prompt_text += context_text
 
-            # Add text part
-            content_parts.append({"type": "text", "text": prompt_text})
-
-            messages = [{"role": "user", "content": content_parts}]
+            # Add message item
+            input_items.append({"type": "message", "role": "user", "content": prompt_text})
 
             # Choose appropriate model
             model = (
@@ -699,36 +695,50 @@ class OpenAIProvider(AIProvider):
                 if request.audio_path
                 else self.settings.model_name
             )
-            temperature = request.temperature or self.settings.temperature
 
-            # Convert Pydantic model to JSON schema
-            schema = response_model.model_json_schema()
-
-            logger.info(f"Using model with structured output: {model}")
-
-            completion = await client.chat.completions.create(
+            # Build model params using existing helper
+            model_params = self._build_model_params(
                 model=model,
-                messages=messages,
-                temperature=temperature,
+                temperature=request.temperature,
                 max_tokens=self.settings.max_tokens,
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": response_model.__name__,
-                        "schema": schema,
-                        "strict": True,
-                    },
-                },
             )
 
-            message = completion.choices[0].message
-            content = message.content or "{}"
+            logger.info(f"Using Responses API parse() with Pydantic model: {model}")
 
-            logger.debug(f"Structured content analysis response: {content[:500]}")
+            # Use Responses API parse() method which directly accepts Pydantic models
+            # This is cleaner than manually constructing JSON schema
+            parsed_response = await client.responses.parse(
+                **model_params,
+                input=input_items,
+                text_format=response_model,
+            )
 
-            # Parse and validate
-            data = json.loads(content)
-            return response_model(**data)
+            # The parse() method returns a ParsedResponse with the parsed data
+            # Extract the parsed Pydantic model from the response
+            if not parsed_response.output:
+                raise OpenAIError("No output in parsed response")
+
+            # Find the message output item with parsed content
+            for output_item in parsed_response.output:
+                if output_item.type == "message":
+                    # The content should be the parsed Pydantic model
+                    if hasattr(output_item, "parsed") and output_item.parsed:
+                        logger.debug("Successfully parsed structured output")
+                        return output_item.parsed
+                    # Fallback: content is a list of content parts, extract text
+                    elif hasattr(output_item, "content") and output_item.content:
+                        # Content is a list of content parts (output_text, etc.)
+                        text_content = ""
+                        for content_part in output_item.content:
+                            if hasattr(content_part, "type") and content_part.type == "output_text":
+                                text_content = content_part.text
+                                break
+
+                        if text_content:
+                            data = json.loads(text_content)
+                            return response_model(**data)
+
+            raise OpenAIError("Could not extract parsed data from response")
 
         except Exception as e:
             logger.error(f"Structured content analysis failed: {e}")
