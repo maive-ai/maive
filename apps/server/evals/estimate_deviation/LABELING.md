@@ -1,14 +1,33 @@
 # Discrepancy Detection Evaluation Guide
 
-This guide documents the evaluation workflow for the discrepancy detection system.
+This guide documents the Braintrust-powered evaluation workflow for the discrepancy detection system.
 
 ## Overview
 
 The evaluation system uses:
-- **Braintrust** for experiment tracking and tracing
+- **Braintrust** for experiment tracking, dataset management, and eval orchestration
 - **Pydantic models** for type-safe data structures
-- **Ground truth labels** stored in `dataset.json`
+- **Ground truth labels** stored in Braintrust datasets (with local YAML backups)
 - **Automated scorers** for classification metrics
+
+## Workflow: Prelabel → Label → Eval
+
+```
+┌─────────────────────────────────────────┐
+│ 1. PRELABEL: Run workflow with tracing │
+│    Generates predictions logged to BT   │
+└─────────────────────────────────────────┘
+                  ↓
+┌─────────────────────────────────────────┐
+│ 2. LABEL: Review and correct in BT UI  │
+│    Add corrected labels to dataset      │
+└─────────────────────────────────────────┘
+                  ↓
+┌─────────────────────────────────────────┐
+│ 3. EVAL: Run automated evaluation      │
+│    Compare predictions vs ground truth  │
+└─────────────────────────────────────────┘
+```
 
 ## Deviation Classes
 
@@ -27,204 +46,332 @@ See `classes.json` for the complete taxonomy. Key classes:
 - `scope_discrepancy` - Physical scope mismatch (e.g., shed roof not included)
 - `incorrect_quantity` - Quantity doesn't match conversation/form
 
-## Label Schema
+## Step 1: Prelabel (Generate Predictions)
 
-Labels use the same Pydantic models as workflow output for consistency:
-
-```json
-{
-  "uuid": "f3a7203d-29b6-441e-9e89-1198378410bb",
-  "labels": {
-    "deviations": [
-      {
-        "deviation_class": "product_or_component_undocumented",
-        "explanation": "Ridge vents discussed but not in estimate",
-        "occurrences": [
-          {
-            "rilla_conversation_index": 0,
-            "timestamp": "00:15:30"
-          }
-        ],
-        "predicted_line_item": {
-          "description": "Ridge Vents",
-          "quantity": 50.0,
-          "unit": "LF",
-          "notes": "Customer requested ridge vents for ventilation"
-        }
-      }
-    ],
-    "notes": "Verified against Rilla recording",
-    "verified_by": "will",
-    "verified_at": "2025-01-09T12:00:00Z"
-  }
-}
-```
-
-## Workflow
-
-### 1. Run Workflow with Tracing (Pre-labeling)
+Run the workflow with tracing enabled to generate prelabels:
 
 ```bash
-# Run workflow with Braintrust tracing enabled
-uv run python -m src.workflows.discrepancy_detection_v2 \
-  --dataset-path evals/estimate_deviation/dataset.json \
-  --uuid f3a7203d-29b6-441e-9e89-1198378410bb \
-  --trace \
-  --experiment-name "prelabel-2025-01-09"
+# Run workflow with Braintrust tracing (level 1 classes only)
+uv run python -m src.workflows.discrepancy_detection_v2 \\
+  --dataset-path evals/estimate_deviation/dataset.json \\
+  --uuid f3a7203d-29b6-441e-9e89-1198378410bb \\
+  --level 1 \\
+  --trace \\
+  --prelabel \\
+  --experiment-name "prelabel-2025-01-10"
+
+# For level 2 evaluation (includes level 1 and 2 classes)
+uv run python -m src.workflows.discrepancy_detection_v2 \\
+  --dataset-path evals/estimate_deviation/dataset.json \\
+  --uuid f3a7203d-29b6-441e-9e89-1198378410bb \\
+  --level 2 \\
+  --trace \\
+  --prelabel \\
+  --experiment-name "prelabel-level2-2025-01-10"
+
+# For level 3 evaluation (all classes)
+uv run python -m src.workflows.discrepancy_detection_v2 \\
+  --dataset-path evals/estimate_deviation/dataset.json \\
+  --uuid f3a7203d-29b6-441e-9e89-1198378410bb \\
+  --level 3 \\
+  --trace \\
+  --prelabel \\
+  --experiment-name "prelabel-level3-2025-01-10"
 ```
+
+**Flag explanations:**
+- `--level`: Controls which deviation class levels to include (default: 1)
+  - Level 1: Only level 1 classes (most critical deviations)
+  - Level 2: Level 1 and 2 classes
+  - Level 3: All classes (comprehensive evaluation)
+- `--prelabel`: Marks this run as prelabel data in Braintrust metadata (doesn't affect class filtering)
+- `--trace`: Enables Braintrust tracing and logging
+- `--experiment-name`: Name for the Braintrust experiment
 
 This will:
 - Execute the discrepancy detection workflow
-- Log inputs/outputs to Braintrust
-- Auto-trace all OpenAI API calls (GPT-5, embeddings)
-- Generate initial deviation predictions
+- Log inputs/outputs to Braintrust as an experiment
+- Auto-trace all OpenAI API calls (GPT-4o, embeddings)
+- Calculate cost savings from pricebook matches
+- Output format ready for dataset conversion
 
-View results at https://braintrust.dev
+View results at https://braintrust.dev in the "discrepancy-detection" project.
 
-### 2. Review and Label
+## Step 2: Label (Review and Correct)
 
-#### Manual Labeling Process
+### In Braintrust UI
 
-1. **Review workflow output** - Check console logs and Braintrust UI
-2. **Listen to Rilla recording** - Verify occurrences and timestamps
-3. **Check form data** - Look for items in form but not in estimate
-4. **Add/correct deviations** - Edit `dataset.json` directly
+1. Go to https://braintrust.dev
+2. Navigate to "discrepancy-detection" project
+3. Find your prelabel experiment (e.g., "prelabel-2025-01-10")
+4. Review each logged prediction:
+   - Check deviations for accuracy
+   - Validate cost_savings calculations
+   - Review pricebook matches
+5. For each entry:
+   - Correct any errors in the deviations list
+   - Adjust cost_savings if needed
+   - Click "Add to dataset" → Select "ground-truth-labels"
 
-#### Labeling Guidelines
+### Label Format
 
-- **Timestamps**: Use HH:MM:SS or MM:SS format (start of sentence where deviation mentioned)
-- **Occurrences**: Include all mentions in the conversation
-- **Predicted line items**: Estimate what should be added to fix the deviation
-- **Notes**: Document edge cases or ambiguities
+Each dataset entry contains:
 
-Example label in `dataset.json`:
-
+**Input:**
 ```json
 {
-  "uuid": "aa8f65aa-fe79-4c12-825b-9862dbe7e08c",
-  "labels": {
-    "deviations": [
-      {
-        "deviation_class": "discount_applied_not_tracked",
-        "explanation": "5% monthly promotion + 5% same-day savings not documented",
-        "occurrences": [
-          {"rilla_conversation_index": 0, "timestamp": "01:49:03"},
-          {"rilla_conversation_index": 0, "timestamp": "01:49:13"}
-        ],
-        "predicted_line_item": null
+  "uuid": "f3a7203d-29b6-441e-9e89-1198378410bb",
+  "project_id": "320698515",
+  "job_id": "292862484",
+  "estimate_id": "320707924"
+}
+```
+
+**Expected (Ground Truth):**
+```json
+{
+  "deviations": [
+    {
+      "deviation_class": "product_or_component_not_in_estimate",
+      "explanation": "The production notes specify that 351 units of gutters are included, but no line item exists in the estimate.",
+      "occurrences": [
+        {
+          "rilla_conversation_index": 0,
+          "timestamp": "00:15:30"
+        }
+      ],
+      "predicted_line_item": {
+        "description": "Install Gutters",
+        "quantity": 351.0,
+        "unit": "LF",
+        "notes": "From production notes",
+        "matched_pricebook_item_id": "...",
+        "matched_pricebook_item_code": "...",
+        "unit_cost": 12.50,
+        "total_cost": 4387.50
       }
-    ],
-    "verified_by": "will",
-    "verified_at": "2025-01-09T15:30:00Z"
+    }
+  ],
+  "cost_savings": {
+    "total": 4387.50,
+    "matched_items": 1,
+    "unmatched_items": 0
   }
 }
 ```
 
-### 3. Migrate Existing Labels (One-time)
+### Labeling Guidelines
 
-If you have labels in `labels.md`, migrate them:
+- **Timestamps**: Use HH:MM:SS or MM:SS format (start of sentence where deviation mentioned)
+- **Occurrences**: Include all mentions in the conversation
+- **Predicted line items**: Include pricebook matches when available
+- **Cost savings**: Total should match sum of matched line items
+- **Notes**: Use metadata field for edge cases or ambiguities
 
-```bash
-# Dry run to preview migration
-uv run python -m evals.estimate_deviation.migrate_labels \
-  --dry-run
+## Step 3: Run Evaluation
 
-# Actually migrate
-uv run python -m evals.estimate_deviation.migrate_labels
-```
-
-### 4. Run Evaluation
+Once you have labeled data in Braintrust:
 
 ```bash
-# Evaluate all labeled entries
-uv run python -m evals.estimate_deviation.run_eval
-
-# Evaluate specific subset
-uv run python -m evals.estimate_deviation.run_eval \
-  --subset f3a7203d-29b6-441e-9e89-1198378410bb aa8f65aa-fe79-4c12-825b-9862dbe7e08c
-
-# Log results to Braintrust
-uv run python -m evals.estimate_deviation.run_eval \
-  --experiment-name "eval-2025-01-09"
+# Run eval against labeled dataset
+uv run python -m evals.estimate_deviation.run_braintrust_eval
 ```
 
-The evaluation will output:
-- **Per-class F1 scores** - Classification accuracy for each deviation class
-- **Confusion matrix** - Which classes are confused with each other
-- **False positive/negative counts** - Hallucinations and missed detections
-- **Occurrence accuracy** - Timestamp matching within 30s tolerance
+Optional arguments:
+```bash
+# Specify dataset name
+uv run python -m evals.estimate_deviation.run_braintrust_eval \\
+  --dataset-name "ground-truth-labels"
 
-### 5. Analyze Results
-
-Review metrics in console output or Braintrust UI:
-
-```
-EVALUATION SUMMARY
-============================================================
-Total Entries Evaluated: 3
-Errors: 0
-
-Classification Metrics:
-  Average F1 Score:   0.875
-  Average Precision:  0.920
-  Average Recall:     0.835
-
-Error Analysis:
-  Total False Positives:  2
-  Total False Negatives:  3
-
-Occurrence Accuracy:
-  Average Timestamp Accuracy: 0.780
-============================================================
+# Specify experiment name
+uv run python -m evals.estimate_deviation.run_braintrust_eval \\
+  --experiment-name "eval-2025-01-10"
 ```
 
-### 6. Iterate
+The evaluation will:
+- Load dataset from Braintrust
+- Run workflow on each input
+- Apply all scorers automatically
+- Log results to Braintrust
+- Display summary metrics
+
+## Step 4: Analyze Results
+
+### In Braintrust UI
+
+1. Navigate to your eval experiment
+2. View aggregate metrics:
+   - Classification F1 score
+   - False positive/negative rates
+   - Occurrence accuracy
+   - Binary detection accuracy
+3. Drill down into failures:
+   - Which deviations were missed?
+   - Which deviations were hallucinated?
+   - Which timestamps were incorrect?
+4. Compare across experiments:
+   - Track improvements over time
+   - A/B test prompt changes
+   - Compare model versions
+
+### Metrics Explained
+
+**Classification F1** - Macro-averaged F1 across all deviation classes
+- Measures overall classification accuracy
+- Balances precision and recall
+- Ranges from 0.0 (worst) to 1.0 (perfect)
+
+**False Positive Rate** - Hallucinated deviations / total predictions
+- Lower is better
+- Score = 1.0 - FP rate
+
+**False Negative Rate** - Missed deviations / total ground truth
+- Lower is better
+- Score = 1.0 - FN rate
+
+**Occurrence Accuracy** - Timestamps within 30s tolerance / total occurrences
+- Measures timestamp accuracy
+- Helps validate model is finding correct conversation segments
+
+**Binary Detection** - Did we detect ANY deviations when we should have?
+- Simple yes/no accuracy
+- Useful for catching total failures
+
+## Dataset Management
+
+### Upload Local YAML Labels
+
+If you have YAML files with labels:
+
+```bash
+# Upload all YAML files in labels/ directory
+uv run python -m evals.estimate_deviation.manage_dataset --upload
+```
+
+### Export Dataset for Backup
+
+```bash
+# Export Braintrust dataset to local YAML files
+uv run python -m evals.estimate_deviation.manage_dataset --export
+```
+
+### Sync Both Ways
+
+```bash
+# Upload local changes and export current state
+uv run python -m evals.estimate_deviation.manage_dataset --upload --export
+```
+
+## Tips & Best Practices
+
+### Labeling
+
+- **Start small**: Label 3-5 entries first, run eval, iterate
+- **Use prelabel**: Let the model do initial detection, then correct
+- **Be consistent**: Use same deviation classes for similar issues
+- **Document ambiguity**: Use metadata notes for edge cases
+- **Validate pricebook**: Check that matched items make sense
+
+### Evaluation
+
+- **Run frequently**: Eval after every prompt change
+- **Track experiments**: Use descriptive experiment names
+- **Focus on failures**: Drill into false positives/negatives
+- **Compare versions**: Use Braintrust's experiment comparison
+- **Monitor costs**: Track token usage in Braintrust traces
+
+### Iteration
 
 1. **Identify weak classes** - Low F1 scores indicate classification issues
 2. **Review false positives** - Check if model is hallucinating specific classes
 3. **Review false negatives** - Check if model is missing specific patterns
-4. **Refine prompts** - Update `discrepancy_detection_prompt.md` for problem areas
-5. **Re-run evaluation** - Measure improvement
-
-## Evaluation Metrics
-
-### Classification Scores
-- **Overall F1**: Macro-averaged F1 across all classes
-- **Per-class F1**: F1 for each deviation class individually
-- **Precision/Recall**: Trade-off between false positives and false negatives
-
-### Confusion Matrix
-Shows which ground truth classes are predicted as which classes (or missed)
-
-### False Positive Analysis
-- **Count**: Number of predicted deviations not in ground truth
-- **Rate**: FP count / total predictions
-- **Classes**: Which classes are being hallucinated
-
-### False Negative Analysis
-- **Count**: Number of ground truth deviations missed
-- **Rate**: FN count / total ground truth
-- **Classes**: Which classes are being missed
-
-### Occurrence Accuracy
-- **Accuracy**: % of timestamps within 30s tolerance
-- **Errors**: Specific timestamp mismatches with error details
+4. **Refine prompts** - Update system prompts for problem areas
+5. **Re-evaluate** - Measure improvement with same dataset
 
 ## Files Reference
 
-- `dataset.json` - Dataset with ground truth labels
+- `run_braintrust_eval.py` - Main eval runner using Braintrust Eval()
+- `manage_dataset.py` - Dataset upload/export utilities
+- `schemas.py` - Pydantic models for workflow output and ground truth
+- `scorers.py` - Evaluation metric functions (with Braintrust wrappers)
 - `classes.json` - Deviation class taxonomy
-- `label_schema.py` - Pydantic models for labels
-- `schemas.py` - Pydantic models for evaluation results
-- `scorers.py` - Evaluation metric functions
-- `run_eval.py` - Main evaluation script
-- `migrate_labels.py` - Migration tool for old labels
-- `discrepancy_detection_v2.py` - Workflow implementation
+- `labels/` - Local YAML backups of Braintrust dataset
+- `discrepancy_detection_v2.py` - Workflow implementation with tracing
 
-## Tips
+## Troubleshooting
 
-- **Start small**: Label 3-5 entries first, run eval, iterate
-- **Use tracing**: Always trace runs during development for debugging
-- **Version experiments**: Use descriptive experiment names in Braintrust
-- **Document edge cases**: Use the `notes` field in labels
-- **Validate regularly**: Run `uv run python -m evals.estimate_deviation.label_schema` to validate label schema
+### "Dataset not found" Error
+
+The dataset must exist in Braintrust first. Either:
+1. Upload YAML labels: `manage_dataset.py --upload`
+2. Manually create dataset in Braintrust UI
+3. Run prelabel and add some entries manually
+
+### Scorer Errors
+
+If a scorer returns an error:
+- Check that expected output has required fields
+- Validate deviation format matches schema
+- Review error details in scorer metadata
+
+### Missing Pricebook Data
+
+If `unit_cost` or `total_cost` are None:
+- Pricebook matching didn't find a match
+- Check pricebook configuration
+- Manual labeling may need estimated costs
+
+## Advanced Usage
+
+### Custom Scorers
+
+Add your own scorers in `scorers.py`:
+
+```python
+def custom_scorer_bt(input, output, expected=None, **kwargs):
+    \"\"\"Custom scorer for specific metric.\"\"\"
+    if not expected:
+        return None
+
+    # Your scoring logic here
+    score = calculate_custom_score(output, expected)
+
+    return {
+        "name": "custom_metric",
+        "score": score,
+        "metadata": {
+            "details": "..."
+        }
+    }
+```
+
+Then add to `run_braintrust_eval.py` scorer list.
+
+### Dataset Versions
+
+Braintrust supports dataset versioning:
+- Label quality improvements over time
+- A/B test different label sets
+- Roll back to previous versions
+
+Access versions in Braintrust UI or via SDK:
+```python
+dataset = braintrust.init_dataset(
+    project="discrepancy-detection",
+    name="ground-truth-labels",
+    version="v2"  # Specify version
+)
+```
+
+### Parallel Evaluation
+
+For large datasets, run eval on multiple entries in parallel:
+- Braintrust Eval() handles concurrency automatically
+- Adjust `max_concurrency` parameter if needed
+- Monitor rate limits and costs
+
+## Resources
+
+- Braintrust Docs: https://braintrust.dev/docs
+- Braintrust Dashboard: https://braintrust.dev
+- Internal Docs: See CLAUDE.md for project architecture

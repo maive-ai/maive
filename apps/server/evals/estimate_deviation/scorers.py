@@ -305,3 +305,207 @@ def detection_binary_scorer(
         predicted_has_deviations=has_deviations_predicted,
         ground_truth_has_deviations=has_deviations_ground_truth,
     )
+
+
+# Braintrust-compatible scorer wrappers
+# These adapt our Pydantic-based scorers to Braintrust's dict-based format
+
+
+def classification_accuracy_scorer_bt(input, output, expected=None, **kwargs):
+    """Braintrust-compatible wrapper for classification accuracy scorer.
+
+    Args:
+        input: Input dict with uuid, project_id, etc.
+        output: Output dict with deviations and cost_savings
+        expected: Expected output dict with deviations
+        **kwargs: Additional metadata
+
+    Returns:
+        Dict with name, score, and metadata (Braintrust format) or None to skip
+    """
+    if not expected or "deviations" not in expected:
+        return None
+
+    try:
+        # Convert dicts to Pydantic models for validation
+        output_obj = DiscrepancyDetectionOutput(
+            status="success",
+            uuid=input["uuid"],
+            project_id=input.get("project_id", ""),
+            job_id=input.get("job_id", ""),
+            estimate_id=input.get("estimate_id", ""),
+            summary="",
+            deviations=output["deviations"],
+            cost_savings=output.get("cost_savings", {"total": 0, "matched_items": 0, "unmatched_items": 0}),
+            rilla_links=[],
+            timestamp="",
+        )
+        expected_obj = ExpectedOutput(deviations=expected["deviations"])
+
+        # Run existing scorer logic
+        scores = classification_accuracy_scorer(output_obj, expected_obj)
+
+        # Return Braintrust format
+        return {
+            "name": "classification_f1",
+            "score": scores.overall_f1,
+            "metadata": {
+                "precision": scores.overall_precision,
+                "recall": scores.overall_recall,
+                # Include per-class metrics for debugging
+                **{
+                    k: v
+                    for k, v in scores.model_dump().items()
+                    if k not in ["overall_f1", "overall_precision", "overall_recall"]
+                },
+            },
+        }
+    except Exception as e:
+        return {"name": "classification_f1", "score": 0.0, "metadata": {"error": str(e)}}
+
+
+def false_positive_scorer_bt(input, output, expected=None, **kwargs):
+    """Braintrust-compatible wrapper for false positive scorer."""
+    if not expected or "deviations" not in expected:
+        return None
+
+    try:
+        output_obj = DiscrepancyDetectionOutput(
+            status="success",
+            uuid=input["uuid"],
+            project_id=input.get("project_id", ""),
+            job_id=input.get("job_id", ""),
+            estimate_id=input.get("estimate_id", ""),
+            summary="",
+            deviations=output["deviations"],
+            cost_savings=output.get("cost_savings", {"total": 0, "matched_items": 0, "unmatched_items": 0}),
+            rilla_links=[],
+            timestamp="",
+        )
+        expected_obj = ExpectedOutput(deviations=expected["deviations"])
+
+        scores = false_positive_scorer(output_obj, expected_obj)
+
+        # Score is inverted - fewer false positives = better score
+        fp_rate = scores.false_positive_rate
+        score = 1.0 - fp_rate if fp_rate <= 1.0 else 0.0
+
+        return {
+            "name": "false_positive_rate",
+            "score": score,
+            "metadata": {
+                "false_positive_count": scores.false_positive_count,
+                "false_positive_rate": scores.false_positive_rate,
+                "false_positive_classes": scores.false_positive_classes,
+            },
+        }
+    except Exception as e:
+        return {"name": "false_positive_rate", "score": 0.0, "metadata": {"error": str(e)}}
+
+
+def false_negative_scorer_bt(input, output, expected=None, **kwargs):
+    """Braintrust-compatible wrapper for false negative scorer."""
+    if not expected or "deviations" not in expected:
+        return None
+
+    try:
+        output_obj = DiscrepancyDetectionOutput(
+            status="success",
+            uuid=input["uuid"],
+            project_id=input.get("project_id", ""),
+            job_id=input.get("job_id", ""),
+            estimate_id=input.get("estimate_id", ""),
+            summary="",
+            deviations=output["deviations"],
+            cost_savings=output.get("cost_savings", {"total": 0, "matched_items": 0, "unmatched_items": 0}),
+            rilla_links=[],
+            timestamp="",
+        )
+        expected_obj = ExpectedOutput(deviations=expected["deviations"])
+
+        scores = false_negative_scorer(output_obj, expected_obj)
+
+        # Score is inverted - fewer false negatives = better score
+        fn_rate = scores.false_negative_rate
+        score = 1.0 - fn_rate if fn_rate <= 1.0 else 0.0
+
+        return {
+            "name": "false_negative_rate",
+            "score": score,
+            "metadata": {
+                "false_negative_count": scores.false_negative_count,
+                "false_negative_rate": scores.false_negative_rate,
+                "false_negative_classes": scores.false_negative_classes,
+            },
+        }
+    except Exception as e:
+        return {"name": "false_negative_rate", "score": 0.0, "metadata": {"error": str(e)}}
+
+
+def occurrence_accuracy_scorer_bt(input, output, expected=None, **kwargs):
+    """Braintrust-compatible wrapper for occurrence accuracy scorer."""
+    if not expected or "deviations" not in expected:
+        return None
+
+    try:
+        output_obj = DiscrepancyDetectionOutput(
+            status="success",
+            uuid=input["uuid"],
+            project_id=input.get("project_id", ""),
+            job_id=input.get("job_id", ""),
+            estimate_id=input.get("estimate_id", ""),
+            summary="",
+            deviations=output["deviations"],
+            cost_savings=output.get("cost_savings", {"total": 0, "matched_items": 0, "unmatched_items": 0}),
+            rilla_links=[],
+            timestamp="",
+        )
+        expected_obj = ExpectedOutput(deviations=expected["deviations"])
+
+        scores = occurrence_accuracy_scorer(output_obj, expected_obj)
+
+        return {
+            "name": "occurrence_accuracy",
+            "score": scores.occurrence_accuracy,
+            "metadata": {
+                "matched_occurrences": scores.matched_occurrences,
+                "total_occurrences": scores.total_occurrences,
+                "timestamp_errors": [e.model_dump() for e in scores.timestamp_errors],
+            },
+        }
+    except Exception as e:
+        return {"name": "occurrence_accuracy", "score": 0.0, "metadata": {"error": str(e)}}
+
+
+def detection_binary_scorer_bt(input, output, expected=None, **kwargs):
+    """Braintrust-compatible wrapper for binary detection scorer."""
+    if not expected or "deviations" not in expected:
+        return None
+
+    try:
+        output_obj = DiscrepancyDetectionOutput(
+            status="success",
+            uuid=input["uuid"],
+            project_id=input.get("project_id", ""),
+            job_id=input.get("job_id", ""),
+            estimate_id=input.get("estimate_id", ""),
+            summary="",
+            deviations=output["deviations"],
+            cost_savings=output.get("cost_savings", {"total": 0, "matched_items": 0, "unmatched_items": 0}),
+            rilla_links=[],
+            timestamp="",
+        )
+        expected_obj = ExpectedOutput(deviations=expected["deviations"])
+
+        scores = detection_binary_scorer(output_obj, expected_obj)
+
+        return {
+            "name": "binary_detection_accuracy",
+            "score": scores.binary_detection_accuracy,
+            "metadata": {
+                "predicted_has_deviations": scores.predicted_has_deviations,
+                "ground_truth_has_deviations": scores.ground_truth_has_deviations,
+            },
+        }
+    except Exception as e:
+        return {"name": "binary_detection_accuracy", "score": 0.0, "metadata": {"error": str(e)}}

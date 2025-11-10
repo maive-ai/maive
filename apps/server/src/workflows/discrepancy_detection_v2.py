@@ -29,7 +29,6 @@ from src.ai.providers import get_ai_provider
 from src.utils.braintrust_tracing import (
     braintrust_experiment,
     braintrust_span,
-    traced_openai_client,
 )
 from src.utils.logger import logger
 
@@ -268,15 +267,22 @@ class DiscrepancyReview(BaseModel):
 class DiscrepancyDetectionV2Workflow:
     """Simplified workflow for detecting discrepancies using S3 dataset files."""
 
-    def __init__(self, prelabel: bool = False, experiment: Any | None = None):
+    def __init__(
+        self, level: int = 1, prelabel: bool = False, experiment: Any | None = None
+    ):
         """Initialize the workflow.
 
         Args:
-            prelabel: If True, use all classes; if False, use only level 1 classes
+            level: Maximum class level to include (1, 2, or 3). Default 1.
+                   Level 1 includes only level 1 classes.
+                   Level 2 includes level 1 and 2 classes.
+                   Level 3 includes all classes.
+            prelabel: If True, marks output as prelabel data (metadata only)
             experiment: Optional Braintrust experiment for tracing
         """
         self.ai_provider = get_ai_provider()
         self.s3_client = boto3.client("s3")
+        self.level = level
         self.prelabel = prelabel
         self.experiment = experiment
 
@@ -405,25 +411,42 @@ class DiscrepancyDetectionV2Workflow:
             ValueError: If dataset entry not found or files missing
             Exception: For other errors
         """
+        # Execute the internal workflow logic first to get project IDs
+        result = await self._execute_internal(uuid, dataset_path)
+
         # Create span for tracing if experiment is provided
+        # Include project metadata in input for easy dataset creation
         with braintrust_span(
             self.experiment,
             name=f"discrepancy_detection_{uuid[:8]}",
-            input={"uuid": uuid, "dataset_path": dataset_path, "prelabel": self.prelabel},
-            metadata={"workflow_version": "v2"},
+            input={
+                "uuid": uuid,
+                "project_id": result["project_id"],
+                "job_id": result["job_id"],
+                "estimate_id": result["estimate_id"],
+            },
+            metadata={
+                "prelabel": self.prelabel,
+            },
         ) as span:
-            # Execute the internal workflow logic
-            result = await self._execute_internal(uuid, dataset_path)
-
-            # Log output to span for tracing
+            # Log simplified output for dataset conversion
+            # Only include deviations and cost_savings, matching expected format
             if span:
-                span.log(output=result)
+                output_data = {
+                    "deviations": result["deviations"],
+                    "cost_savings": result["cost_savings"],
+                }
 
-            return result
+                # When prelabeling, set both output and expected so the UI shows
+                # the model's prediction as the expected value (which can then be corrected)
+                if self.prelabel:
+                    span.log(output=output_data, expected=output_data)
+                else:
+                    span.log(output=output_data)
 
-    async def _execute_internal(
-        self, uuid: str, dataset_path: str
-    ) -> dict[str, Any]:
+        return result
+
+    async def _execute_internal(self, uuid: str, dataset_path: str) -> dict[str, Any]:
         """Internal execution logic for the workflow.
 
         Args:
@@ -578,7 +601,9 @@ class DiscrepancyDetectionV2Workflow:
                     if deviation.predicted_line_item.total_cost:
                         total_cost_savings += deviation.predicted_line_item.total_cost
                         matched_items_count += 1
-                    elif deviation.predicted_line_item.matched_pricebook_item_id is None:
+                    elif (
+                        deviation.predicted_line_item.matched_pricebook_item_id is None
+                    ):
                         unmatched_items_count += 1
 
             # Log cost savings summary
@@ -759,19 +784,21 @@ class DiscrepancyDetectionV2Workflow:
         with open(classes_path, "r") as f:
             classes_data = json.load(f)
 
-        # Filter classes based on mode
-        if self.prelabel:
-            # Use all classes in prelabel mode
+        # Filter classes based on level
+        if self.level == 1:
+            # Level 1 only
+            filtered_classes = [c for c in classes_data["classes"] if c["level"] == 1]
+            logger.info(f"   Using {len(filtered_classes)} level 1 classes")
+        elif self.level == 2:
+            # Level 1 and 2
+            filtered_classes = [c for c in classes_data["classes"] if c["level"] <= 2]
+            logger.info(f"   Using {len(filtered_classes)} level 1-2 classes")
+        elif self.level == 3:
+            # All levels
             filtered_classes = classes_data["classes"]
-            logger.info(f"   Using all {len(filtered_classes)} classes (prelabel mode)")
+            logger.info(f"   Using all {len(filtered_classes)} classes (all levels)")
         else:
-            # Use only level 1 classes in standard mode
-            filtered_classes = [
-                cls for cls in classes_data["classes"] if cls.get("level") == 1
-            ]
-            logger.info(
-                f"   Using {len(filtered_classes)} level 1 classes (standard mode)"
-            )
+            raise ValueError(f"Invalid level: {self.level}. Must be 1, 2, or 3")
 
         # Format deviation classes for the prompt (using filtered classes)
         deviation_classes_text = []
@@ -836,9 +863,16 @@ async def main():
         help="UUID of the dataset entry to analyze",
     )
     parser.add_argument(
+        "--level",
+        type=int,
+        default=1,
+        choices=[1, 2, 3],
+        help="Maximum deviation class level to include (1=level 1 only, 2=levels 1-2, 3=all levels). Default: 1",
+    )
+    parser.add_argument(
         "--prelabel",
         action="store_true",
-        help="Use all classes instead of level 1 classes for deviation detection",
+        help="Mark this run as prelabel data (for Braintrust metadata only, does not affect class filtering)",
     )
     parser.add_argument(
         "--trace",
@@ -859,7 +893,10 @@ async def main():
     logger.info("=" * 60)
     logger.info(f"Dataset: {args.dataset_path}")
     logger.info(f"UUID: {args.uuid}")
-    logger.info(f"Mode: {'Prelabel' if args.prelabel else 'Standard'}")
+    logger.info(
+        f"Class Level: {args.level} ({'Level 1 only' if args.level == 1 else f'Levels 1-{args.level}' if args.level == 2 else 'All levels'})"
+    )
+    logger.info(f"Prelabel Mode: {'Yes' if args.prelabel else 'No'}")
     logger.info(f"Tracing: {'Enabled' if args.trace else 'Disabled'}")
     if args.trace and args.experiment_name:
         logger.info(f"Experiment: {args.experiment_name}")
@@ -873,7 +910,7 @@ async def main():
                 project_name="discrepancy-detection",
             ) as experiment:
                 workflow = DiscrepancyDetectionV2Workflow(
-                    prelabel=args.prelabel, experiment=experiment
+                    level=args.level, prelabel=args.prelabel, experiment=experiment
                 )
 
                 result = await workflow.execute_for_dataset_entry(
@@ -882,7 +919,9 @@ async def main():
                 )
         else:
             # Run without tracing
-            workflow = DiscrepancyDetectionV2Workflow(prelabel=args.prelabel)
+            workflow = DiscrepancyDetectionV2Workflow(
+                level=args.level, prelabel=args.prelabel
+            )
 
             result = await workflow.execute_for_dataset_entry(
                 uuid=args.uuid,

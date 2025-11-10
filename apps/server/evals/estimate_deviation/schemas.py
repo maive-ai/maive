@@ -1,10 +1,5 @@
 """Pydantic schemas for evaluation results and metrics."""
 
-import json
-from datetime import UTC, datetime
-from pathlib import Path
-from typing import Any
-
 from pydantic import BaseModel, Field
 
 from src.workflows.discrepancy_detection_v2 import Deviation
@@ -79,6 +74,10 @@ class ExpectedOutput(BaseModel):
     """Expected output (ground truth) for evaluation."""
 
     deviations: list[Deviation]
+    cost_savings: CostSavings | None = Field(
+        default=None,
+        description="Optional cost savings for validation (from prelabel or manual entry)",
+    )
 
 
 class ClassificationScores(BaseModel):
@@ -144,183 +143,3 @@ class DetectionScores(BaseModel):
     ground_truth_has_deviations: bool
 
 
-class AllScores(BaseModel):
-    """All scorer outputs combined."""
-
-    classification: ClassificationScores
-    confusion_matrix: ConfusionMatrixScores
-    false_positives: FalsePositiveScores
-    false_negatives: FalseNegativeScores
-    occurrences: OccurrenceScores
-    detection: DetectionScores
-
-
-class EvalResult(BaseModel):
-    """Single evaluation result with prediction, expected, and scores."""
-
-    uuid: str
-    prediction: DiscrepancyDetectionOutput
-    expected: ExpectedOutput
-    scores: AllScores
-    error: str | None = None
-
-
-class AggregateMetrics(BaseModel):
-    """Aggregated metrics across all evaluations."""
-
-    avg_f1: float
-    avg_precision: float
-    avg_recall: float
-    total_false_positives: int
-    total_false_negatives: int
-    avg_occurrence_accuracy: float
-    total_evaluated: int
-    total_errors: int
-
-
-class EvalSummary(BaseModel):
-    """Complete evaluation summary."""
-
-    results: list[EvalResult]
-    aggregate_metrics: AggregateMetrics
-    total_entries: int
-
-
-# Dataset helper functions
-def load_dataset(dataset_path: str) -> list[DatasetEntry]:
-    """Load dataset from JSON file.
-
-    Args:
-        dataset_path: Path to dataset.json file
-
-    Returns:
-        List of dataset entries
-
-    Raises:
-        FileNotFoundError: If dataset file doesn't exist
-        ValueError: If dataset JSON is invalid
-    """
-    path = Path(dataset_path)
-    if not path.exists():
-        raise FileNotFoundError(f"Dataset not found: {dataset_path}")
-
-    with open(path, "r") as f:
-        data = json.load(f)
-
-    return [DatasetEntry(**entry) for entry in data]
-
-
-def save_dataset(dataset: list[DatasetEntry], dataset_path: str) -> None:
-    """Save dataset to JSON file.
-
-    Args:
-        dataset: List of dataset entries
-        dataset_path: Path to dataset.json file
-    """
-    path = Path(dataset_path)
-
-    # Convert to dict and write
-    data = [entry.model_dump(mode="json", exclude_none=False) for entry in dataset]
-
-    with open(path, "w") as f:
-        json.dump(data, f, indent=2)
-
-
-def get_labeled_entries(dataset_path: str) -> list[DatasetEntry]:
-    """Get only dataset entries that have ground truth labels.
-
-    Args:
-        dataset_path: Path to dataset.json file
-
-    Returns:
-        List of labeled dataset entries
-    """
-    dataset = load_dataset(dataset_path)
-    return [entry for entry in dataset if entry.labels is not None]
-
-
-def add_labels_to_entry(
-    dataset_path: str,
-    uuid: str,
-    deviations: list[Deviation],
-    notes: str | None = None,
-    verified_by: str | None = None,
-) -> None:
-    """Add ground truth labels to a dataset entry.
-
-    Args:
-        dataset_path: Path to dataset.json file
-        uuid: UUID of the entry to label
-        deviations: List of verified deviations
-        notes: Optional notes about the labels
-        verified_by: Who verified these labels
-
-    Raises:
-        ValueError: If UUID not found in dataset
-    """
-    dataset = load_dataset(dataset_path)
-
-    # Find the entry
-    entry = None
-    for e in dataset:
-        if e.uuid == uuid:
-            entry = e
-            break
-
-    if entry is None:
-        raise ValueError(f"UUID {uuid} not found in dataset")
-
-    # Add labels
-    entry.labels = GroundTruthLabel(
-        deviations=deviations,
-        notes=notes,
-        verified_by=verified_by,
-        verified_at=datetime.now(UTC).isoformat(),
-    )
-
-    # Save updated dataset
-    save_dataset(dataset, dataset_path)
-
-
-def validate_labels(dataset_path: str) -> dict[str, Any]:
-    """Validate all labels in the dataset.
-
-    Checks that all labeled entries have valid schema and returns statistics.
-
-    Args:
-        dataset_path: Path to dataset.json file
-
-    Returns:
-        Dict with validation results and statistics
-    """
-    dataset = load_dataset(dataset_path)
-    labeled_entries = [e for e in dataset if e.labels is not None]
-
-    stats = {
-        "total_entries": len(dataset),
-        "labeled_entries": len(labeled_entries),
-        "unlabeled_entries": len(dataset) - len(labeled_entries),
-        "total_deviations": sum(
-            len(e.labels.deviations) for e in labeled_entries if e.labels
-        ),
-        "deviation_class_counts": {},
-        "entries_with_occurrences": 0,
-        "entries_with_predicted_line_items": 0,
-    }
-
-    # Count deviation classes
-    for entry in labeled_entries:
-        if entry.labels:
-            for deviation in entry.labels.deviations:
-                cls = deviation.deviation_class
-                stats["deviation_class_counts"][cls] = (
-                    stats["deviation_class_counts"].get(cls, 0) + 1
-                )
-
-                if deviation.occurrences:
-                    stats["entries_with_occurrences"] += 1
-
-                if deviation.predicted_line_item:
-                    stats["entries_with_predicted_line_items"] += 1
-
-    return stats
