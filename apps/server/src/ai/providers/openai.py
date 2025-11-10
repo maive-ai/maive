@@ -126,7 +126,7 @@ class OpenAIProvider(AIProvider):
                 raise OpenAIFileUploadError(f"File not found: {file_path}")
 
             purpose = kwargs.get("purpose", "assistants")
-            logger.info("Uploading file", file_path=str(path), purpose=purpose)
+            logger.info("[OPENAI] Uploading file", file_path=str(path), purpose=purpose)
 
             with open(path, "rb") as f:
                 uploaded_file = await client.files.create(file=f, purpose=purpose)
@@ -138,13 +138,13 @@ class OpenAIProvider(AIProvider):
                 size_bytes=uploaded_file.bytes,
             )
 
-            logger.info("File uploaded successfully", file_id=metadata.id)
+            logger.info("[OPENAI] File uploaded successfully", file_id=metadata.id)
             return metadata
 
         except OpenAIFileUploadError:
             raise
         except Exception as e:
-            logger.error("File upload failed", error=str(e))
+            logger.error("[OPENAI] File upload failed", error=str(e))
             raise OpenAIFileUploadError(f"Failed to upload file: {e}", e)
 
     async def upload_file_from_handle(
@@ -259,10 +259,10 @@ class OpenAIProvider(AIProvider):
         try:
             client = self._get_client()
             await client.files.delete(file_id)
-            logger.info("File deleted successfully", file_id=file_id)
+            logger.info("[OPENAI] File deleted successfully", file_id=file_id)
             return True
         except Exception as e:
-            logger.error("Failed to delete file", file_id=file_id, error=str(e))
+            logger.error("[OPENAI] Failed to delete file", file_id=file_id, error=str(e))
             return False
 
     async def transcribe_audio(self, audio_path: str, **kwargs) -> TranscriptionResult:
@@ -284,7 +284,7 @@ class OpenAIProvider(AIProvider):
                     f"Audio file not found: {audio_path}"
                 )
 
-            logger.info("Transcribing audio", audio_path=str(path))
+            logger.info("[OPENAI] Transcribing audio", audio_path=str(path))
 
             model = kwargs.get("model", "whisper-1")
             language = kwargs.get("language")
@@ -316,13 +316,13 @@ class OpenAIProvider(AIProvider):
                 # For text, srt, vtt formats
                 result = TranscriptionResult(text=str(transcript))
 
-            logger.info("Transcription complete", char_count=len(result.text))
+            logger.info("[OPENAI] Transcription complete", char_count=len(result.text))
             return result
 
         except OpenAIContentGenerationError:
             raise
         except Exception as e:
-            logger.error("Transcription failed", error=str(e))
+            logger.error("[OPENAI] Transcription failed", error=str(e))
             raise OpenAIContentGenerationError(f"Failed to transcribe audio: {e}", e)
 
     async def generate_content(
@@ -397,11 +397,11 @@ class OpenAIProvider(AIProvider):
                 finish_reason=response.status,
             )
 
-            logger.info("Content generation complete", finish_reason=result.finish_reason)
+            logger.info("[OPENAI] Content generation complete", finish_reason=result.finish_reason)
             return result
 
         except Exception as e:
-            logger.error("Content generation failed", error=str(e))
+            logger.error("[OPENAI] Content generation failed", error=str(e))
             raise OpenAIContentGenerationError(f"Failed to generate content: {e}", e)
 
     async def generate_structured_content(
@@ -429,7 +429,7 @@ class OpenAIProvider(AIProvider):
             temperature = kwargs.get("temperature", self.settings.temperature)
             max_tokens = kwargs.get("max_tokens", self.settings.max_tokens)
 
-            logger.info("Generating structured content", model=model)
+            logger.info("[OPENAI] Generating structured content", model=model)
 
             # Convert Pydantic model to JSON schema
             schema = response_model.model_json_schema()
@@ -454,14 +454,14 @@ class OpenAIProvider(AIProvider):
             message = completion.choices[0].message
             content = message.content or "{}"
 
-            logger.debug("Structured response", response_preview=content[:500])
+            logger.debug("[OPENAI] Structured response", response_preview=content[:500])
 
             # Parse and validate
             data = json.loads(content)
             return response_model(**data)
 
         except Exception as e:
-            logger.error("Structured content generation failed", error=str(e))
+            logger.error("[OPENAI] Structured content generation failed", error=str(e))
             raise OpenAIContentGenerationError(
                 f"Failed to generate structured content: {e}", e
             )
@@ -487,7 +487,7 @@ class OpenAIProvider(AIProvider):
             if not path.exists():
                 raise OpenAIError(f"Audio file not found: {request.audio_path}")
 
-            logger.info("Analyzing audio with context", audio_path=str(path))
+            logger.info("[OPENAI] Analyzing audio with context", audio_path=str(path))
 
             # Read and encode audio as base64
             with open(path, "rb") as audio_file:
@@ -523,7 +523,7 @@ class OpenAIProvider(AIProvider):
             model = self.settings.audio_model_name
             temperature = request.temperature or self.settings.temperature
 
-            logger.info("Using audio model", model=model)
+            logger.info("[OPENAI] Using audio model", model=model)
 
             completion: ChatCompletion = await client.chat.completions.create(
                 model=model,
@@ -540,11 +540,11 @@ class OpenAIProvider(AIProvider):
                 finish_reason=completion.choices[0].finish_reason,
             )
 
-            logger.info("Audio analysis complete", finish_reason=result.finish_reason)
+            logger.info("[OPENAI] Audio analysis complete", finish_reason=result.finish_reason)
             return result
 
         except Exception as e:
-            logger.error("Audio analysis failed", error=str(e))
+            logger.error("[OPENAI] Audio analysis failed", error=str(e))
             raise OpenAIContentGenerationError(f"Failed to analyze audio: {e}", e)
 
     async def analyze_audio_with_structured_output(
@@ -568,7 +568,7 @@ class OpenAIProvider(AIProvider):
             if not path.exists():
                 raise OpenAIError(f"Audio file not found: {request.audio_path}")
 
-            logger.info("Analyzing audio with structured output", audio_path=str(path))
+            logger.info("[OPENAI] Analyzing audio with structured output", audio_path=str(path))
 
             # Read and encode audio as base64
             with open(path, "rb") as audio_file:
@@ -605,7 +605,7 @@ class OpenAIProvider(AIProvider):
             # Convert Pydantic model to JSON schema
             schema = response_model.model_json_schema()
 
-            logger.info("Using audio model with structured output", model=model)
+            logger.info("[OPENAI] Using audio model with structured output", model=model)
 
             completion = await client.chat.completions.create(
                 model=model,
@@ -625,14 +625,14 @@ class OpenAIProvider(AIProvider):
             message = completion.choices[0].message
             content = message.content or "{}"
 
-            logger.debug("Structured audio analysis response", response_preview=content[:500])
+            logger.debug("[OPENAI] Structured audio analysis response", response_preview=content[:500])
 
             # Parse and validate
             data = json.loads(content)
             return response_model(**data)
 
         except Exception as e:
-            logger.error("Structured audio analysis failed", error=str(e))
+            logger.error("[OPENAI] Structured audio analysis failed", error=str(e))
             raise OpenAIContentGenerationError(
                 f"Failed to analyze audio with structured output: {e}", e
             )
@@ -654,7 +654,7 @@ class OpenAIProvider(AIProvider):
         try:
             client = self._get_client()
 
-            logger.info("Analyzing content with structured output (Responses API)")
+            logger.info("[OPENAI] Analyzing content with structured output")
 
             # Build input items for Responses API
             input_items: list[dict[str, Any]] = []
@@ -665,7 +665,7 @@ class OpenAIProvider(AIProvider):
                 if not path.exists():
                     raise OpenAIError(f"Audio file not found: {request.audio_path}")
 
-                logger.info("Including audio file", audio_path=str(path))
+                logger.info("[OPENAI] Including audio file", audio_path=str(path))
 
                 # Read and encode audio as base64
                 with open(path, "rb") as audio_file:
@@ -826,22 +826,22 @@ class OpenAIProvider(AIProvider):
                             meta = await client.files.retrieve(file_id)
                             filename = getattr(meta, 'filename', None)
                             logger.debug(
-                                "RAG file cited",
+                                "[OPENAI] RAG file cited",
                                 file_id=file_id,
                                 filename=filename,
                                 quoted=quoted_text[:100]
                             )
                         except Exception as e:
                             logger.debug(
-                                "Failed to retrieve file metadata",
+                                "[OPENAI] Failed to retrieve file metadata",
                                 file_id=file_id,
                                 error=str(e)
                             )
-                    
+
                     # Don't expose file citations to users - they're internal RAG files
                     return None
                 else:
-                    logger.debug("Skipped unknown annotation type", annotation_type=ann_type)
+                    logger.debug("[OPENAI] Skipped unknown annotation type", annotation_type=ann_type)
                     return None
                     
             # Handle object format annotations
@@ -855,13 +855,13 @@ class OpenAIProvider(AIProvider):
                 )
             else:
                 logger.debug(
-                    "Skipped unknown annotation format",
+                    "[OPENAI] Skipped unknown annotation format",
                     annotation_type=type(annotation).__name__
                 )
                 return None
 
         except Exception as e:
-            logger.error("Failed to parse annotation", error=str(e))
+            logger.error("[OPENAI] Failed to parse annotation", error=str(e))
             return None
 
     def _build_stream_params(
@@ -894,7 +894,7 @@ class OpenAIProvider(AIProvider):
         )
 
         logger.info(
-            "Streaming chat",
+            "[OPENAI] Streaming chat",
             web_search=enable_web_search,
             crm_search=enable_crm_search,
             file_search=bool(vector_store_ids),
@@ -958,7 +958,7 @@ class OpenAIProvider(AIProvider):
 
         # Add model-specific parameters
         if is_reasoning_model:
-            logger.info("Using reasoning model", model=model)
+            logger.info("[OPENAI] Using reasoning model", model=model)
 
             # Add reasoning configuration (use default from config if not specified)
             reasoning_effort: ReasoningEffort | None = kwargs.get(
@@ -989,21 +989,21 @@ class OpenAIProvider(AIProvider):
             # Log if incompatible parameters are provided
             if "temperature" in kwargs:
                 logger.warning(
-                    "temperature parameter ignored for reasoning model",
+                    "[OPENAI] temperature parameter ignored for reasoning model",
                     model=model
                 )
             if "top_p" in kwargs:
                 logger.warning(
-                    "top_p parameter ignored for reasoning model",
+                    "[OPENAI] top_p parameter ignored for reasoning model",
                     model=model
                 )
             if "logprobs" in kwargs:
                 logger.warning(
-                    "logprobs parameter ignored for reasoning model",
+                    "[OPENAI] logprobs parameter ignored for reasoning model",
                     model=model
                 )
         else:
-            logger.info("Using standard model", model=model)
+            logger.info("[OPENAI] Using standard model", model=model)
             temperature = kwargs.get("temperature", self.settings.temperature)
             max_tokens = kwargs.get("max_tokens", self.settings.max_tokens)
 
@@ -1013,7 +1013,7 @@ class OpenAIProvider(AIProvider):
                 stream_params["max_output_tokens"] = max_tokens
 
         logger.debug(
-            "Stream params",
+            "[OPENAI] Stream params",
             model=model,
             reasoning_effort=reasoning_effort if is_reasoning_model else 'N/A',
             input_items=len(input_items),
@@ -1491,7 +1491,7 @@ class OpenAIProvider(AIProvider):
                     # Handle completion events
                     elif isinstance(event, ResponseCompletedEvent):
                         finish_reason = "completed"
-                        logger.info("[Stream] Completed successfully")
+                        logger.info("[STREAM] Completed successfully")
                         
                         # Flush any remaining text in buffer
                         if text_buffer:
@@ -1500,7 +1500,7 @@ class OpenAIProvider(AIProvider):
 
                     elif isinstance(event, ResponseFailedEvent):
                         finish_reason = "failed"
-                        logger.error("[Stream] Failed", event_details=str(event))
+                        logger.error("[STREAM] Failed", event_details=str(event))
                         
                         # Flush any remaining text in buffer
                         if text_buffer:
@@ -1534,16 +1534,16 @@ class OpenAIProvider(AIProvider):
 
                 except Exception as e:
                     logger.error(
-                        "Error parsing event",
+                        "[STREAM] Error parsing event",
                         error=str(e),
                         event_type=type(event).__name__
                     )
                     continue
 
-            logger.info("Chat stream completed", citation_count=len(accumulated_citations))
+            logger.info("[STREAM] Chat stream completed", citation_count=len(accumulated_citations))
 
         except Exception as e:
-            logger.error("Streaming chat failed", error=str(e))
+            logger.error("[STREAM] Streaming chat failed", error=str(e))
             # Yield error as content
             yield ChatStreamChunk(
                 content=f"\n\nError: {str(e)}",
