@@ -1,10 +1,7 @@
-"""
-FastAPI router for roofing chat endpoints.
+"""FastAPI router for roofing chat endpoints with SSE streaming."""
 
-Provides streaming chat interface using Server-Sent Events (SSE).
-"""
-
-import time
+import asyncio
+from contextlib import suppress
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -78,54 +75,79 @@ async def stream_roofing_chat(
     # Create async generator for SSE
     async def event_generator():
         """Generate SSE events from chat stream with tool calls, citations and reasoning."""
-        start_time = time.time()
-        logger.debug(f"[STREAM] Starting SSE stream for user {current_user.id}")
-        
+        heartbeat_interval = 20.0
+        stream_finished = False
+
         try:
-            async for chunk in chat_service.stream_chat_response(messages):
-                # Send reasoning summaries first so UI can reflect thinking state
-                for reasoning_summary in chunk.reasoning_summaries:
-                    yield SSEEvent(
-                        event="reasoning_summary",
-                        data=reasoning_summary.model_dump_json(),
-                    ).format()
+            stream = chat_service.stream_chat_response(messages)
+            stream_iter = stream.__aiter__()
+            next_chunk_task = asyncio.create_task(stream_iter.__anext__())
 
-                # Send tool calls if present
-                for tool_call in chunk.tool_calls:
-                    yield SSEEvent(
-                        event="tool_call",
-                        data=tool_call.model_dump_json(),
-                    ).format()
+            while True:
+                done, _ = await asyncio.wait(
+                    {next_chunk_task}, timeout=heartbeat_interval
+                )
 
-                # Send content if present
-                if chunk.content:
-                    # Escape newlines in content for SSE format
-                    escaped_content = chunk.content.replace("\n", "\\n")
-                    yield SSEEvent(data=escaped_content).format()
+                if next_chunk_task in done:
+                    # Chunk is ready - get it and process
+                    try:
+                        chunk = next_chunk_task.result()
+                    except StopAsyncIteration:
+                        break
 
-                # Send citations as separate events
-                for citation in chunk.citations:
-                    yield SSEEvent(
-                        event="citation",
-                        data=citation.model_dump_json(),
-                    ).format()
+                    # Prefetch the next chunk for subsequent iterations
+                    next_chunk_task = asyncio.create_task(stream_iter.__anext__())
 
-                # Send finish signal if stream is complete
-                if chunk.finish_reason:
-                    elapsed = time.time() - start_time
-                    logger.debug(f"[STREAM] Stream completed with reason: {chunk.finish_reason} (elapsed: {elapsed:.1f}s)")
-                    yield SSEEvent(event="done", data=chunk.finish_reason).format()
-                    break
+                    # Send reasoning summaries first so UI can reflect thinking state
+                    for reasoning_summary in chunk.reasoning_summaries:
+                        yield SSEEvent(
+                            event="reasoning_summary",
+                            data=reasoning_summary.model_dump_json(),
+                        ).format()
+
+                    # Send tool calls if present
+                    for tool_call in chunk.tool_calls:
+                        yield SSEEvent(
+                            event="tool_call",
+                            data=tool_call.model_dump_json(),
+                        ).format()
+
+                    # Send content if present
+                    if chunk.content:
+                        # Escape newlines in content for SSE format
+                        escaped_content = chunk.content.replace("\n", "\\n")
+                        yield SSEEvent(data=escaped_content).format()
+
+                    # Send citations as separate events
+                    for citation in chunk.citations:
+                        yield SSEEvent(
+                            event="citation",
+                            data=citation.model_dump_json(),
+                        ).format()
+
+                    # Send finish signal if stream is complete
+                    if chunk.finish_reason:
+                        yield SSEEvent(event="done", data=chunk.finish_reason).format()
+                        stream_finished = True
+                        break
+
+                else:
+                    # Timeout waiting for next chunk: send heartbeat to keep HTTP/2 alive
+                    yield SSEEvent(event="heartbeat", data="keep-alive").format()
 
             # Send done signal if not already sent
-            elapsed = time.time() - start_time
-            logger.debug(f"[STREAM] Stream completed successfully (elapsed: {elapsed:.1f}s)")
-            yield SSEEvent(event="done", data="complete").format()
+            if not stream_finished:
+                yield SSEEvent(event="done", data="complete").format()
 
         except Exception as e:
-            elapsed = time.time() - start_time
-            logger.debug(f"[STREAM] Error in chat stream after {elapsed:.1f}s: {e}")
+            logger.error(f"Error in chat stream: {e}")
             yield SSEEvent(event="error", data=str(e)).format()
+        finally:
+            if "next_chunk_task" in locals() and next_chunk_task:
+                if not next_chunk_task.done():
+                    next_chunk_task.cancel()
+                    with suppress(asyncio.CancelledError):
+                        await next_chunk_task
 
     return StreamingResponse(
         event_generator(),

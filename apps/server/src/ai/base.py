@@ -133,7 +133,7 @@ class SSEEvent(BaseModel):
 
     data: str
     event: Literal[
-        "citation", "done", "error", "tool_call", "reasoning_summary"
+        "citation", "done", "error", "tool_call", "reasoning_summary", "heartbeat"
     ] | None = None
     id: str | None = None
     retry: int | None = None
