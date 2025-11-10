@@ -26,6 +26,11 @@ from pydantic import BaseModel, Field
 
 from src.ai.base import ContentAnalysisRequest
 from src.ai.providers import get_ai_provider
+from src.utils.braintrust_tracing import (
+    braintrust_experiment,
+    braintrust_span,
+    traced_openai_client,
+)
 from src.utils.logger import logger
 
 # Force OpenAI provider for this workflow
@@ -263,15 +268,17 @@ class DiscrepancyReview(BaseModel):
 class DiscrepancyDetectionV2Workflow:
     """Simplified workflow for detecting discrepancies using S3 dataset files."""
 
-    def __init__(self, prelabel: bool = False):
+    def __init__(self, prelabel: bool = False, experiment: Any | None = None):
         """Initialize the workflow.
 
         Args:
             prelabel: If True, use all classes; if False, use only level 1 classes
+            experiment: Optional Braintrust experiment for tracing
         """
         self.ai_provider = get_ai_provider()
         self.s3_client = boto3.client("s3")
         self.prelabel = prelabel
+        self.experiment = experiment
 
     def _create_dynamic_deviation_model(self, allowed_labels: list[str]):
         """Create a dynamic Deviation model with enum constrained to allowed labels.
@@ -398,6 +405,34 @@ class DiscrepancyDetectionV2Workflow:
             ValueError: If dataset entry not found or files missing
             Exception: For other errors
         """
+        # Create span for tracing if experiment is provided
+        with braintrust_span(
+            self.experiment,
+            name=f"discrepancy_detection_{uuid[:8]}",
+            input={"uuid": uuid, "dataset_path": dataset_path, "prelabel": self.prelabel},
+            metadata={"workflow_version": "v2"},
+        ) as span:
+            # Execute the internal workflow logic
+            result = await self._execute_internal(uuid, dataset_path)
+
+            # Log output to span for tracing
+            if span:
+                span.log(output=result)
+
+            return result
+
+    async def _execute_internal(
+        self, uuid: str, dataset_path: str
+    ) -> dict[str, Any]:
+        """Internal execution logic for the workflow.
+
+        Args:
+            uuid: UUID of the dataset entry
+            dataset_path: Path to dataset JSON
+
+        Returns:
+            Workflow result dict
+        """
         try:
             logger.info("=" * 60)
             logger.info(f"DISCREPANCY DETECTION V2 WORKFLOW - UUID {uuid}")
@@ -522,10 +557,11 @@ class DiscrepancyDetectionV2Workflow:
                             logger.info(
                                 f"           Code: {deviation.predicted_line_item.matched_pricebook_item_code}"
                             )
-                            logger.info(
-                                f"           Unit Cost: ${deviation.predicted_line_item.unit_cost:.2f}"
-                            )
-                            if deviation.predicted_line_item.total_cost:
+                            if deviation.predicted_line_item.unit_cost is not None:
+                                logger.info(
+                                    f"           Unit Cost: ${deviation.predicted_line_item.unit_cost:.2f}"
+                                )
+                            if deviation.predicted_line_item.total_cost is not None:
                                 logger.info(
                                     f"           Total Cost: ${deviation.predicted_line_item.total_cost:.2f}"
                                 )
@@ -802,12 +838,21 @@ async def main():
     parser.add_argument(
         "--prelabel",
         action="store_true",
-        help="Use classes.json instead of classes.json for deviation detection",
+        help="Use all classes instead of level 1 classes for deviation detection",
+    )
+    parser.add_argument(
+        "--trace",
+        action="store_true",
+        help="Enable Braintrust tracing for this run",
+    )
+    parser.add_argument(
+        "--experiment-name",
+        type=str,
+        default=None,
+        help="Name for Braintrust experiment (defaults to timestamp)",
     )
 
     args = parser.parse_args()
-
-    workflow = DiscrepancyDetectionV2Workflow(prelabel=args.prelabel)
 
     logger.info("=" * 60)
     logger.info("DATASET-BASED DISCREPANCY DETECTION WORKFLOW")
@@ -815,13 +860,34 @@ async def main():
     logger.info(f"Dataset: {args.dataset_path}")
     logger.info(f"UUID: {args.uuid}")
     logger.info(f"Mode: {'Prelabel' if args.prelabel else 'Standard'}")
+    logger.info(f"Tracing: {'Enabled' if args.trace else 'Disabled'}")
+    if args.trace and args.experiment_name:
+        logger.info(f"Experiment: {args.experiment_name}")
     logger.info("")
 
     try:
-        result = await workflow.execute_for_dataset_entry(
-            uuid=args.uuid,
-            dataset_path=args.dataset_path,
-        )
+        # Create Braintrust experiment if tracing enabled
+        if args.trace:
+            with braintrust_experiment(
+                experiment_name=args.experiment_name,
+                project_name="discrepancy-detection",
+            ) as experiment:
+                workflow = DiscrepancyDetectionV2Workflow(
+                    prelabel=args.prelabel, experiment=experiment
+                )
+
+                result = await workflow.execute_for_dataset_entry(
+                    uuid=args.uuid,
+                    dataset_path=args.dataset_path,
+                )
+        else:
+            # Run without tracing
+            workflow = DiscrepancyDetectionV2Workflow(prelabel=args.prelabel)
+
+            result = await workflow.execute_for_dataset_entry(
+                uuid=args.uuid,
+                dataset_path=args.dataset_path,
+            )
 
         print("\n" + "=" * 60)
         print("WORKFLOW RESULT")
