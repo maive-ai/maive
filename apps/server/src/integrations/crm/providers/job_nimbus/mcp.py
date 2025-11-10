@@ -208,6 +208,11 @@ async def search_jobs(
     Use this tool to find jobs based on customer information, job details, or status.
     You can combine multiple search criteria to narrow down results.
     
+    Use this tool for focused searches when you need a small number of results (default 10, max 50 per page).
+    This is ideal for finding specific jobs, browsing through results page by page, or when you only need
+    a few matching records. For bulk retrieval of many jobs (100+), use search_jobs_bulk instead, which is more efficient
+    for fetching large chunks of data in a single call.
+    
     Args:
         customer_name: Search by customer name (partial match, case-insensitive)
         job_id: Search by exact job ID
@@ -273,6 +278,91 @@ async def search_jobs(
     except Exception as e:
         logger.error("[MCP JobNimbus] Unexpected error searching jobs", error=str(e))
         raise Exception(f"Failed to search jobs: {str(e)}")
+
+
+@mcp.tool
+async def search_jobs_bulk(
+    customer_name: str | None = None,
+    job_id: str | None = None,
+    address: str | None = None,
+    claim_number: str | None = None,
+    status: str | None = None,
+    limit: int = 1000,
+    start_offset: int = 0,
+) -> dict[str, Any]:
+    """Search for jobs in JobNimbus with bulk retrieval support.
+    
+    This tool allows the agent to fetch large chunks of jobs (up to 1000 per request)
+    in a single call, which is more efficient than paginating through multiple pages.
+    If limit exceeds 1000, it will automatically paginate through multiple API calls.
+    
+    Use this when you need to analyze or search through many jobs at once, such as
+    finding all jobs matching certain criteria or getting a comprehensive view.
+    
+    Args:
+        customer_name: Search by customer name (partial match, case-insensitive)
+        job_id: Search by exact job ID
+        address: Search by address (partial match)
+        claim_number: Search by insurance claim number (exact match)
+        status: Filter by job status (e.g., "In Progress", "Scheduled", "Completed")
+        limit: Maximum number of jobs to retrieve (default: 1000, max: 1000 per JobNimbus API)
+        start_offset: Zero-based offset to start from (default: 0)
+        
+    Returns:
+        Dictionary containing:
+        - jobs (list[dict]): List of matching jobs, each with same structure as get_job()
+          (includes id, name, number, status, customer info, address, dates, notes, etc.)
+        - total_count (int): Total number of matching jobs available
+        - returned_count (int): Number of jobs returned in this response
+        - next_offset (int | None): Offset for next page if more results available, None otherwise
+        - has_more (bool): Whether there are more results available beyond this response
+        
+    Examples:
+        - Get first 500 jobs: search_jobs_bulk(limit=500)
+        - Search with filters: search_jobs_bulk(customer_name="Smith", limit=1000)
+        - Continue from offset: search_jobs_bulk(limit=500, start_offset=500)
+    """
+    try:
+        logger.info("[MCP JobNimbus] Bulk searching jobs", customer_name=customer_name, job_id=job_id, address=address, claim_number=claim_number, status=status, limit=limit, start_offset=start_offset)
+        
+        # Build filters dict for provider
+        filters = {}
+        if customer_name:
+            filters["customer_name"] = customer_name
+        if job_id:
+            filters["job_id"] = job_id
+        if address:
+            filters["address"] = address
+        if claim_number:
+            filters["claim_number"] = claim_number
+        if status:
+            filters["status"] = status
+        
+        # Delegate to provider's bulk retrieval method
+        jobs, total_count, next_offset, has_more = await _provider.get_jobs_bulk(
+            filters=filters if filters else None,
+            limit=limit,
+            start_offset=start_offset,
+            include_contact_details=False,
+        )
+        
+        result = {
+            "jobs": [job.model_dump() for job in jobs],
+            "total_count": total_count,
+            "returned_count": len(jobs),
+            "next_offset": next_offset,
+            "has_more": has_more,
+        }
+        
+        logger.info("[MCP JobNimbus] Bulk search returned jobs", returned_count=result["returned_count"], total_count=result["total_count"], has_more=result["has_more"])
+        return result
+        
+    except CRMError as e:
+        logger.error("[MCP JobNimbus] CRM error bulk searching jobs", message=e.message)
+        raise Exception(f"Failed to bulk search jobs: {e.message}")
+    except Exception as e:
+        logger.error("[MCP JobNimbus] Unexpected error bulk searching jobs", error=str(e))
+        raise Exception(f"Failed to bulk search jobs: {str(e)}")
 
 
 @mcp.tool

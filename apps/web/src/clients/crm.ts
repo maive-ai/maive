@@ -59,10 +59,10 @@ export async function fetchProject(projectId: string): Promise<Project> {
  * React Query hook for fetching all projects
  * Polls every 30 seconds to keep data fresh
  */
-export function useFetchProjects(): UseQueryResult<ProjectList, Error> {
+export function useFetchProjects(page: number = 1, pageSize: number = 50): UseQueryResult<ProjectList, Error> {
   return useQuery({
-    queryKey: ['projects'],
-    queryFn: () => fetchAllProjects(),
+    queryKey: ['projects', page, pageSize],
+    queryFn: () => fetchAllProjects(page, pageSize),
     staleTime: 30 * 1000, // Data is fresh for 30 seconds
     refetchInterval: 30 * 1000, // Poll every 30 seconds
     refetchIntervalInBackground: true,

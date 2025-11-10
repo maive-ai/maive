@@ -1,3 +1,7 @@
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { AlertCircle, ChevronLeft, ChevronRight, Eye, FileSearch, Search } from 'lucide-react';
+import { useMemo, useState } from 'react';
+
 import { useAddToCallList, useCallList } from '@/clients/callList';
 import { useFetchProjects } from '@/clients/crm';
 import { CallListSheet } from '@/components/CallListSheet';
@@ -5,16 +9,16 @@ import { ProjectCard } from '@/components/ProjectCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { AlertCircle, Eye, FileSearch, Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export const Route = createFileRoute('/_authed/projects')({
   component: Projects,
 });
 
 function Projects() {
-  const { data, isLoading, isError, error } = useFetchProjects();
+  const [page, setPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(50);
+  const { data, isLoading, isError, error } = useFetchProjects(page, pageSize);
   const { data: callListData } = useCallList();
   const addToCallList = useAddToCallList();
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -239,6 +243,7 @@ function Projects() {
           </p>
         </div>
       ) : (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProjects.map((project) => (
             <ProjectCard
@@ -251,6 +256,69 @@ function Projects() {
             />
           ))}
         </div>
+
+          {/* Pagination Controls */}
+          {!searchQuery && data && (
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-sm text-gray-600">
+                Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, data.total_count)} of {data.total_count} projects
+              </div>
+              
+              <div className="flex items-center gap-4">
+                {/* Page Size Selector */}
+                <div className="flex items-center gap-2">
+                  <label htmlFor="page-size" className="text-sm text-gray-600">
+                    Show:
+                  </label>
+                  <Select
+                    value={pageSize.toString()}
+                    onValueChange={(value) => {
+                      setPageSize(Number(value));
+                      setPage(1); // Reset to first page when changing page size
+                    }}
+                  >
+                    <SelectTrigger id="page-size" className="w-20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Pagination Buttons */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1 || isLoading}
+                  >
+                    <ChevronLeft className="size-4" />
+                    Previous
+                  </Button>
+                  
+                  <div className="text-sm text-gray-600 px-2">
+                    Page {page} of {Math.ceil(data.total_count / pageSize) || 1}
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => p + 1)}
+                    disabled={!data.has_more || isLoading}
+                  >
+                    Next
+                    <ChevronRight className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Call List Sheet */}
