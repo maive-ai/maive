@@ -173,6 +173,7 @@ class ContentAnalysisRequest(BaseModel):
     prompt: str
     context_data: dict[str, Any] | None = None
     temperature: float | None = None
+    vector_store_ids: list[str] | None = None
 
 
 class AIProvider(ABC):

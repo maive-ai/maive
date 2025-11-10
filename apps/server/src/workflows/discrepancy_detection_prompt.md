@@ -46,3 +46,39 @@ The transcript is provided in compact JSON format with this structure:
 ## Output Format
 - There can be different instances of the same class of deviation. These should be treated as separate instances rather than the same instance with multiple occurrences. For example, if two different discounts are given and neither are tracked, then each should be its own instance in your response.
 - For a given deviation, only include an occurence / timestamp where the rep explicitly agrees to provide the service that isn't documented in the estimate or form. Don't include a timestamp for a problem that is just mentioned. Rather, include a timestamp only when they say that a service item will be provided. For example, if they discuss a problem with a pipe boot and later he says that they will replace it, then only include the timestamp for when they state they will replace it.
+
+## Pricebook Matching & Cost Calculation
+
+For each predicted line item in your output, you MUST search the pricebook vector store to match it to an actual pricebook item and calculate the cost savings:
+
+1. **Search the Pricebook**: Use the file search tool to query the pricebook vector store with the predicted line item description. Search for similar materials, services, or equipment.
+
+2. **Match to Best Item**: Select the most appropriate pricebook item that matches the description. Consider:
+   - Item type (material, service, equipment)
+   - Description similarity
+   - Unit of measurement compatibility
+   - Common roofing terminology (e.g., "gutter" might match "5\" K-Style Gutter" or "6\" Seamless Gutter")
+
+3. **Extract Pricebook Data**: From the matched pricebook item, extract:
+   - `id`: The item ID (integer)
+   - `code`: The item code (string)
+   - `displayName`: The display name (string)
+   - `primaryVendor.cost`: The unit cost (float)
+
+4. **Calculate Total Cost**:
+   - If you have a quantity prediction: `total_cost = unit_cost × quantity`
+   - If no quantity: set `total_cost = unit_cost` (assume 1 unit)
+
+5. **Populate Fields**: Include ALL of the following fields in your predicted_line_item:
+   - `matched_pricebook_item_id`: The pricebook item ID
+   - `matched_pricebook_item_code`: The pricebook item code
+   - `matched_pricebook_item_display_name`: The pricebook display name
+   - `unit_cost`: The unit cost from primaryVendor.cost
+   - `total_cost`: The calculated total cost
+
+**IMPORTANT**:
+- You MUST search the pricebook for EVERY predicted line item
+- If you cannot find a reasonable match, leave the pricebook fields as `null`
+- Do not make up or estimate costs - they must come from the pricebook
+- The pricebook contains materials, services, and equipment - search thoroughly
+- Use semantic search - the pricebook description doesn't need to exactly match your predicted description

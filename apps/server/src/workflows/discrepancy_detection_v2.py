@@ -7,12 +7,14 @@ This workflow analyzes sales calls for discrepancies using pre-collected dataset
 - Analyzes with AI for discrepancies
 - Outputs results without any CRM updates (evaluation-only)
 
-Uses the AI provider abstraction, defaulting to Gemini but configurable via AI_PROVIDER env var.
+Uses OpenAI provider for this workflow (forced via environment variable).
 """
 
 import argparse
 import asyncio
 import json
+import os
+import subprocess
 import tempfile
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -25,6 +27,35 @@ from pydantic import BaseModel, Field
 from src.ai.base import ContentAnalysisRequest
 from src.ai.providers import get_ai_provider
 from src.utils.logger import logger
+
+# Force OpenAI provider for this workflow
+os.environ["AI_PROVIDER"] = "openai"
+
+# Pricebook vector store ID (created via scripts/ingest_pricebook.py)
+PRICEBOOK_VECTOR_STORE_ID = "vs_690e9d9523a8819192c6f111227b90a5"
+
+
+def convert_to_mp3(input_path: str, mp3_path: str, bitrate: str = "64k") -> bool:
+    """Convert any audio file to MP3 using ffmpeg with specified bitrate.
+
+    Args:
+        input_path: Path to input audio file
+        mp3_path: Path where MP3 should be saved
+        bitrate: Audio bitrate (default: 64k)
+
+    Returns:
+        bool: True if conversion successful, False otherwise
+    """
+    try:
+        subprocess.run(
+            ["ffmpeg", "-i", input_path, "-b:a", bitrate, "-y", mp3_path],
+            check=True,
+            capture_output=True,
+        )
+        return True
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Error converting {input_path} to MP3: {e}")
+        return False
 
 
 def _format_timestamp_from_seconds(seconds: float, use_hours: bool) -> str:
@@ -179,6 +210,28 @@ class PredictedLineItem(BaseModel):
     notes: str | None = Field(
         default=None,
         description="Additional notes or context for the line item prediction",
+    )
+
+    # Pricebook matching fields
+    matched_pricebook_item_id: int | None = Field(
+        default=None,
+        description="ID of the matched pricebook item from the vector store (if found)",
+    )
+    matched_pricebook_item_code: str | None = Field(
+        default=None,
+        description="Item code of the matched pricebook item (e.g., 'MAT-001')",
+    )
+    matched_pricebook_item_display_name: str | None = Field(
+        default=None,
+        description="Display name of the matched pricebook item",
+    )
+    unit_cost: float | None = Field(
+        default=None,
+        description="Unit cost from the matched pricebook item's primaryVendor",
+    )
+    total_cost: float | None = Field(
+        default=None,
+        description="Total cost calculated as unit_cost × quantity",
     )
 
 
@@ -470,6 +523,45 @@ class DiscrepancyDetectionV2Workflow:
                                 notes=deviation.predicted_line_item.notes
                             )
 
+                        # Log pricebook matching info
+                        if deviation.predicted_line_item.matched_pricebook_item_id:
+                            logger.info(
+                                f"        ✅ Matched Pricebook Item: {deviation.predicted_line_item.matched_pricebook_item_display_name}"
+                            )
+                            logger.info(
+                                f"           Code: {deviation.predicted_line_item.matched_pricebook_item_code}"
+                            )
+                            logger.info(
+                                f"           Unit Cost: ${deviation.predicted_line_item.unit_cost:.2f}"
+                            )
+                            if deviation.predicted_line_item.total_cost:
+                                logger.info(
+                                    f"           Total Cost: ${deviation.predicted_line_item.total_cost:.2f}"
+                                )
+                        else:
+                            logger.info("        ⚠️  No pricebook match found")
+
+            # Calculate total cost savings
+            total_cost_savings = 0.0
+            matched_items_count = 0
+            unmatched_items_count = 0
+
+            for deviation in review_result.deviations:
+                if deviation.predicted_line_item:
+                    if deviation.predicted_line_item.total_cost:
+                        total_cost_savings += deviation.predicted_line_item.total_cost
+                        matched_items_count += 1
+                    elif deviation.predicted_line_item.matched_pricebook_item_id is None:
+                        unmatched_items_count += 1
+
+            # Log cost savings summary
+            if matched_items_count > 0 or unmatched_items_count > 0:
+                logger.info("\n💰 Cost Savings Summary:")
+                logger.info(f"   Total Cost Savings: ${total_cost_savings:.2f}")
+                logger.info(f"   Matched Items: {matched_items_count}")
+                if unmatched_items_count > 0:
+                    logger.info(f"   ⚠️  Unmatched Items: {unmatched_items_count}")
+
             # Print Rilla links
             rilla_links = entry.get("rilla_links", [])
             if rilla_links:
@@ -504,12 +596,22 @@ class DiscrepancyDetectionV2Workflow:
                             "quantity": dev.predicted_line_item.quantity,
                             "unit": dev.predicted_line_item.unit,
                             "notes": dev.predicted_line_item.notes,
+                            "matched_pricebook_item_id": dev.predicted_line_item.matched_pricebook_item_id,
+                            "matched_pricebook_item_code": dev.predicted_line_item.matched_pricebook_item_code,
+                            "matched_pricebook_item_display_name": dev.predicted_line_item.matched_pricebook_item_display_name,
+                            "unit_cost": dev.predicted_line_item.unit_cost,
+                            "total_cost": dev.predicted_line_item.total_cost,
                         }
                         if dev.predicted_line_item
                         else None,
                     }
                     for dev in review_result.deviations
                 ],
+                "cost_savings": {
+                    "total": total_cost_savings,
+                    "matched_items": matched_items_count,
+                    "unmatched_items": unmatched_items_count,
+                },
                 "rilla_links": rilla_links,
                 "timestamp": datetime.now(UTC).isoformat(),
             }
@@ -677,12 +779,14 @@ class DiscrepancyDetectionV2Workflow:
 
         # Use AI provider to analyze with structured output
         logger.info("   Initiating AI analysis...")
+        logger.info("   Using GPT-5 with transcript and pricebook vector store for RAG")
 
         request = ContentAnalysisRequest(
-            audio_path=audio_path,
+            audio_path=None,  # No audio for now
             transcript_text=transcript_json,  # Pass compact JSON as text
             prompt=prompt,
             temperature=0.7,
+            vector_store_ids=[PRICEBOOK_VECTOR_STORE_ID],
         )
 
         review_result = await self.ai_provider.analyze_content_with_structured_output(
