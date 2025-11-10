@@ -275,13 +275,13 @@ class DiscrepancyDetectionV2Workflow:
         Raises:
             ValueError: If UUID not found in dataset
         """
-        logger.info(f"Loading dataset from: {dataset_path}")
+        logger.info("Loading dataset from path", path=dataset_path)
         with open(dataset_path, "r") as f:
             dataset = json.load(f)
 
         for entry in dataset:
             if entry.get("uuid") == uuid:
-                logger.info(f"✅ Found dataset entry for UUID: {uuid}")
+                logger.info("Found dataset entry for UUID", uuid=uuid)
                 return entry
 
         raise ValueError(f"UUID {uuid} not found in dataset")
@@ -317,12 +317,12 @@ class DiscrepancyDetectionV2Workflow:
             tmp_path = tmp_file.name
 
             try:
-                logger.info(f"   Downloading {s3_uri}")
+                logger.info("Downloading from S3", s3_uri=s3_uri)
                 # Download from S3
                 self.s3_client.download_fileobj(
                     Bucket=bucket, Key=key, Fileobj=tmp_file
                 )
-                logger.info(f"   ✅ Downloaded to {tmp_path}")
+                logger.info("Downloaded to temporary path", tmp_path=tmp_path)
 
                 yield tmp_path
             finally:
@@ -347,17 +347,17 @@ class DiscrepancyDetectionV2Workflow:
         """
         try:
             logger.info("=" * 60)
-            logger.info(f"DISCREPANCY DETECTION V2 WORKFLOW - UUID {uuid}")
+            logger.info("DISCREPANCY DETECTION V2 WORKFLOW - UUID", uuid=uuid)
             logger.info("=" * 60)
 
             # Step 1: Load dataset entry
-            logger.info(f"\nStep 1: Loading dataset entry for UUID {uuid}")
+            logger.info("Step 1: Loading dataset entry for UUID", uuid=uuid)
             entry = self._load_dataset_entry(dataset_path, uuid)
 
-            logger.info(f"   Project ID: {entry['project_id']}")
-            logger.info(f"   Job ID: {entry['job_id']}")
-            logger.info(f"   Estimate ID: {entry['estimate_id']}")
-            logger.info(f"   Labels: {len(entry.get('labels', []))} expected issues")
+            logger.info("Project ID", project_id=entry['project_id'])
+            logger.info("Job ID", job_id=entry['job_id'])
+            logger.info("Estimate ID", estimate_id=entry['estimate_id'])
+            logger.info("Labels count", labels_count=len(entry.get('labels', [])))
 
             # Step 2: Download estimate from S3
             logger.info("\nStep 2: Downloading estimate from S3")
@@ -400,9 +400,9 @@ class DiscrepancyDetectionV2Workflow:
                         f"No transcript available for UUID {uuid}. Both recording and transcript are required."
                     )
 
-                logger.info("\nStep 4: Downloading recording and transcript from S3")
-                logger.info(f"   Recordings available: {len(recording_uris)}")
-                logger.info(f"   Transcripts available: {len(transcript_uris)}")
+                logger.info("Step 4: Downloading recording and transcript from S3")
+                logger.info("Recordings available", count=len(recording_uris))
+                logger.info("Transcripts available", count=len(transcript_uris))
 
                 # Download both recording and transcript (use first if multiple)
                 async with self._download_from_s3(
@@ -426,47 +426,56 @@ class DiscrepancyDetectionV2Workflow:
                             transcript_path=transcript_path,
                         )
 
-            logger.info("\n✅ Analysis complete")
-            logger.info(f"   Summary: {review_result.summary}")
-            logger.info(f"   Deviations Found: {len(review_result.deviations)}")
+            logger.info("Analysis complete")
+            logger.info("Analysis summary", summary=review_result.summary)
+            logger.info("Deviations found", count=len(review_result.deviations))
 
             # Log each deviation
             if review_result.deviations:
-                logger.info("\n📋 Detected Deviations:")
+                logger.info("Detected Deviations")
                 for i, deviation in enumerate(review_result.deviations, 1):
-                    logger.info(f"\n   {i}. [{deviation.deviation_class}]")
-                    logger.info(f"      {deviation.explanation}")
+                    logger.info(
+                        "Deviation found",
+                        index=i,
+                        deviation_class=deviation.deviation_class,
+                        explanation=deviation.explanation
+                    )
                     if deviation.occurrences:
                         logger.info(
-                            f"      Occurrences ({len(deviation.occurrences)}):"
+                            "Deviation occurrences",
+                            count=len(deviation.occurrences)
                         )
                         for occ in deviation.occurrences:
                             logger.info(
-                                f"        • Conversation {occ.rilla_conversation_index} at {occ.timestamp}"
+                                "Occurrence",
+                                conversation_index=occ.rilla_conversation_index,
+                                timestamp=occ.timestamp
                             )
                     else:
-                        logger.info(
-                            "      Occurrences: None (not discussed in conversation)"
-                        )
+                        logger.info("Occurrences: None (not discussed in conversation)")
                     if deviation.predicted_line_item:
                         logger.info(
-                            f"      Predicted Line Item: {deviation.predicted_line_item.description}"
+                            "Predicted line item",
+                            description=deviation.predicted_line_item.description
                         )
                         if deviation.predicted_line_item.quantity:
                             logger.info(
-                                f"        Quantity: {deviation.predicted_line_item.quantity} {deviation.predicted_line_item.unit or ''}"
+                                "Line item quantity",
+                                quantity=deviation.predicted_line_item.quantity,
+                                unit=deviation.predicted_line_item.unit or ''
                             )
                         if deviation.predicted_line_item.notes:
                             logger.info(
-                                f"        Notes: {deviation.predicted_line_item.notes}"
+                                "Line item notes",
+                                notes=deviation.predicted_line_item.notes
                             )
 
             # Print Rilla links
             rilla_links = entry.get("rilla_links", [])
             if rilla_links:
-                logger.info("\n🔗 Rilla Conversation Links:")
+                logger.info("Rilla Conversation Links")
                 for i, link in enumerate(rilla_links):
-                    logger.info(f"   {i}. {link}")
+                    logger.info("Rilla link", index=i, link=link)
 
             logger.info("\n✅ DISCREPANCY DETECTION V2 WORKFLOW COMPLETE")
 
@@ -506,10 +515,10 @@ class DiscrepancyDetectionV2Workflow:
             }
 
         except Exception as e:
-            logger.error(f"❌ Error during workflow: {e}")
+            logger.error("Error during workflow", error=str(e))
             import traceback
 
-            logger.error(traceback.format_exc())
+            logger.error("Traceback", traceback=traceback.format_exc())
             raise
 
     async def _analyze_content(
@@ -568,7 +577,7 @@ class DiscrepancyDetectionV2Workflow:
             notes_to_production = {"message": "No Notes to Production found"}
 
         # Load and process transcript
-        logger.info(f"   Loading transcript from: {transcript_path}")
+        logger.info("Loading transcript from path", transcript_path=transcript_path)
         with open(transcript_path, "r") as f:
             transcript_data = json.load(f)
 
@@ -584,31 +593,34 @@ class DiscrepancyDetectionV2Workflow:
                 first_entry = transcript_data[0]
                 if "speaker" in first_entry and "words" in first_entry:
                     logger.info(
-                        "   Detected original Rilla format, attempting simplification..."
+                        "Detected original Rilla format, attempting simplification"
                     )
                     simplified = simplify_rilla_transcript(transcript_data)
                     simplified_size = len(json.dumps(simplified))
                     savings_pct = 100 - (simplified_size / original_size * 100)
                     logger.info(
-                        f"   ✅ Simplified: {original_size // 4} → {simplified_size // 4} tokens (~{savings_pct:.1f}% reduction)"
+                        "Simplified transcript",
+                        original_tokens=original_size // 4,
+                        simplified_tokens=simplified_size // 4,
+                        savings_pct=round(savings_pct, 1)
                     )
                     transcript_data = simplified
                 else:
                     logger.info(
-                        "   Transcript already in compact format or unknown format, using as-is"
+                        "Transcript already in compact format or unknown format, using as-is"
                     )
             else:
                 logger.info(
-                    "   Transcript already in compact format or unknown format, using as-is"
+                    "Transcript already in compact format or unknown format, using as-is"
                 )
         except Exception as e:
-            logger.warning(f"   ⚠️ Failed to simplify transcript: {e}")
-            logger.info("   Using original transcript format")
+            logger.warning("Failed to simplify transcript", error=str(e))
+            logger.info("Using original transcript format")
             # transcript_data remains unchanged
 
         # Convert to JSON string for passing to LLM
         transcript_json = json.dumps(transcript_data, indent=2)
-        logger.info(f"   ✅ Final transcript size: ~{len(transcript_json) // 4} tokens")
+        logger.info("Final transcript size", tokens=len(transcript_json) // 4)
 
         # Load deviation classes from JSON file (always use classes.json)
         classes_path = (
@@ -625,14 +637,15 @@ class DiscrepancyDetectionV2Workflow:
         if self.prelabel:
             # Use all classes in prelabel mode
             filtered_classes = classes_data["classes"]
-            logger.info(f"   Using all {len(filtered_classes)} classes (prelabel mode)")
+            logger.info("Using all classes (prelabel mode)", count=len(filtered_classes))
         else:
             # Use only level 1 classes in standard mode
             filtered_classes = [
                 cls for cls in classes_data["classes"] if cls.get("level") == 1
             ]
             logger.info(
-                f"   Using {len(filtered_classes)} level 1 classes (standard mode)"
+                "Using level 1 classes (standard mode)",
+                count=len(filtered_classes)
             )
 
         # Format deviation classes for the prompt (using filtered classes)
@@ -708,9 +721,9 @@ async def main():
     logger.info("=" * 60)
     logger.info("DATASET-BASED DISCREPANCY DETECTION WORKFLOW")
     logger.info("=" * 60)
-    logger.info(f"Dataset: {args.dataset_path}")
-    logger.info(f"UUID: {args.uuid}")
-    logger.info(f"Mode: {'Prelabel' if args.prelabel else 'Standard'}")
+    logger.info("Dataset path", dataset_path=args.dataset_path)
+    logger.info("UUID", uuid=args.uuid)
+    logger.info("Mode", mode='Prelabel' if args.prelabel else 'Standard')
     logger.info("")
 
     try:
@@ -726,7 +739,7 @@ async def main():
         print("=" * 60)
 
     except Exception as e:
-        logger.error(f"Failed to process dataset entry: {e}")
+        logger.error("Failed to process dataset entry", error=str(e))
         raise
 
 

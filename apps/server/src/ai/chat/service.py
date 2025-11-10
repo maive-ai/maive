@@ -39,7 +39,7 @@ class RoofingChatService:
             self._vector_store_id = (
                 await self._vector_store_service.get_or_create_vector_store()
             )
-            logger.info(f"Initialized vector store for RAG: {self._vector_store_id}")
+            logger.info("Initialized vector store for RAG", vector_store_id=self._vector_store_id)
         return self._vector_store_id
 
     def _build_system_prompt(self) -> str:
@@ -52,9 +52,9 @@ class RoofingChatService:
         # Load base prompt from markdown file
         try:
             base_prompt = self.system_prompt_file.read_text(encoding="utf-8")
-            logger.info(f"Loaded system prompt from {self.system_prompt_file.name}")
+            logger.info("Loaded system prompt", file_name=self.system_prompt_file.name)
         except Exception as e:
-            logger.error(f"Failed to load system prompt file: {e}")
+            logger.error("Failed to load system prompt file", error=str(e))
             # Fallback to a minimal prompt
             base_prompt = "You are RoofGPT, an expert roofing consultant."
 
@@ -84,8 +84,9 @@ class RoofingChatService:
             vector_store_id = await self._get_vector_store_id()
 
             logger.info(
-                f"Streaming chat with {len(messages)} messages, "
-                f"RAG enabled with vector store: {vector_store_id}"
+                "Streaming chat with RAG enabled",
+                message_count=len(messages),
+                vector_store_id=vector_store_id
             )
 
             # Stream response from provider with web search and file search
@@ -104,7 +105,7 @@ class RoofingChatService:
             logger.info("Chat stream completed successfully")
 
         except Exception as e:
-            logger.error(f"Error streaming chat response: {e}")
+            logger.error("Error streaming chat response", error=str(e))
             yield ChatStreamChunk(
                 content=f"\n\nError: {str(e)}",
                 citations=[],
