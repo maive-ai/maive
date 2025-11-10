@@ -81,7 +81,10 @@ class CallRepository:
         await self.session.refresh(call)
 
         logger.info(
-            f"[CallRepository] Created call record: id={call.id}, call_id={call_id}, user_id={user_id}"
+            "[CallRepository] Created call record",
+            id=call.id,
+            call_id=call_id,
+            user_id=user_id,
         )
         return call
 
@@ -140,7 +143,8 @@ class CallRepository:
         call = await self.get_call_by_call_id(call_id)
         if not call:
             logger.warning(
-                f"[CallRepository] Cannot update status: call {call_id} not found"
+                "[CallRepository] Cannot update status: call not found",
+                call_id=call_id,
             )
             return None
 
@@ -154,7 +158,9 @@ class CallRepository:
         await self.session.refresh(call)
 
         logger.info(
-            f"[CallRepository] Updated call status: call_id={call_id}, status={status.value}"
+            "[CallRepository] Updated call status",
+            call_id=call_id,
+            status=status.value,
         )
         return call
 
@@ -184,7 +190,8 @@ class CallRepository:
         call = await self.get_call_by_call_id(call_id)
         if not call:
             logger.warning(
-                f"[CallRepository] Cannot end call: call {call_id} not found"
+                "[CallRepository] Cannot end call: call not found",
+                call_id=call_id,
             )
             return None
 
@@ -206,7 +213,9 @@ class CallRepository:
         await self.session.refresh(call)
 
         logger.info(
-            f"[CallRepository] Ended call: call_id={call_id}, status={final_status.value}"
+            "[CallRepository] Ended call",
+            call_id=call_id,
+            status=final_status.value,
         )
         return call
 
@@ -235,11 +244,13 @@ class CallRepository:
 
         if updated_count > 0:
             logger.info(
-                f"[CallRepository] Removed active call for user {user_id} ({updated_count} records)"
+                "[CallRepository] Removed active call for user",
+                user_id=user_id,
+                updated_count=updated_count,
             )
             return True
 
-        logger.debug(f"[CallRepository] No active call found for user {user_id}")
+        logger.debug("[CallRepository] No active call found for user", user_id=user_id)
         return False
 
     async def get_call_history(
@@ -274,8 +285,10 @@ class CallRepository:
         calls = list(result.scalars().all())
 
         logger.debug(
-            f"[CallRepository] Retrieved {len(calls)} call records "
-            f"(user_id={user_id}, project_id={project_id})"
+            "[CallRepository] Retrieved call records",
+            count=len(calls),
+            user_id=user_id,
+            project_id=project_id,
         )
         return calls
 

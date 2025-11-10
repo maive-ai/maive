@@ -34,3 +34,16 @@ Error Handling and Validation
   - Use guard clauses to handle preconditions and invalid states early.
   - Implement proper error logging and user-friendly error messages.
   - Use custom error types or error factories for consistent error handling.
+
+Logging
+- Use structured logging with keyword arguments instead of f-strings
+- Prefix all log messages with `[MODULE]` or `[COMPONENT]` to identify the source at a glance
+- Good: `logger.info("[AUTH] User logged in", user_id=user.id, email=user.email)`
+- Bad: `logger.info(f"User {user.id} logged in with email {user.email}")`
+- Structured logs enable better CloudWatch Insights queries and log analysis
+- Keep log messages as simple descriptive labels, put all data in keyword arguments
+- Example prefixes: `[AGENT]`, `[MCP]`, `[WEB_SEARCH]`, `[FILE_SEARCH]`, `[AUTH]`, `[CRM]`, `[STREAM]`
+- Example patterns:
+  - `logger.info("[USER_INPUT]", user_id=str(user_id), input=message)`
+  - `logger.info("[MCP] Tool call started", item_id=item_id)`
+  - `logger.error("[AUTH] Login failed", user_id=user_id, error=str(e))`

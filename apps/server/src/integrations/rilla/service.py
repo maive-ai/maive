@@ -43,12 +43,12 @@ class RillaService:
             ConversationsExportResponse: The exported conversations data
         """
         try:
-            logger.info(f"Exporting conversations from {request.from_date} to {request.to_date}")
+            logger.info("Exporting conversations", from_date=str(request.from_date), to_date=str(request.to_date))
             result = await self.rilla_client.export_conversations(request)
-            logger.info(f"Successfully exported {len(result.conversations)} conversations")
+            logger.info("Successfully exported conversations", count=len(result.conversations))
             return result
         except Exception as e:
-            logger.error(f"Error exporting conversations: {e}")
+            logger.error("Error exporting conversations", error=str(e))
             raise
 
     async def export_all_conversations(self, request: ConversationsExportRequest) -> ConversationsExportResponse:
@@ -62,7 +62,7 @@ class RillaService:
             ConversationsExportResponse: All conversations from all pages
         """
         try:
-            logger.info(f"Exporting ALL conversations from {request.from_date} to {request.to_date}")
+            logger.info("Exporting ALL conversations", from_date=str(request.from_date), to_date=str(request.to_date))
 
             # First, get page 1 to determine total pages
             first_request = ConversationsExportRequest(

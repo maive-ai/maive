@@ -64,7 +64,7 @@ class VapiProvider(VoiceAIProvider):
         Raises:
             VoiceAIError: If the call creation fails
         """
-        logger.info(f"[Vapi Provider] Creating outbound call to {request.phone_number}")
+        logger.info("[Vapi Provider] Creating outbound call", phone_number=request.phone_number)
 
         try:
             # Build typed objects for SDK
@@ -88,7 +88,7 @@ class VapiProvider(VoiceAIProvider):
             
         except Exception as e:
             error_msg = f"Error creating call: {str(e)}"
-            logger.error(f"[Vapi Provider] {error_msg}")
+            logger.error("[Vapi Provider] Error creating call", error=str(e))
             raise VoiceAIError(error_msg, error_code=VoiceAIErrorCode.HTTP_ERROR)
 
     async def get_call_status(self, call_id: str) -> CallResponse:
@@ -113,7 +113,7 @@ class VapiProvider(VoiceAIProvider):
             
         except Exception as e:
             error_msg = f"Error getting call status: {str(e)}"
-            logger.error(f"[Vapi Provider] {error_msg}")
+            logger.error("[Vapi Provider] Error getting call status", error=str(e))
             raise VoiceAIError(error_msg, error_code=VoiceAIErrorCode.HTTP_ERROR)
 
     async def end_call(self, call_id: str, control_url: str | None = None) -> bool:
@@ -130,7 +130,7 @@ class VapiProvider(VoiceAIProvider):
         Raises:
             VoiceAIError: If the call is not found or cannot be ended
         """
-        logger.info(f"[Vapi Provider] Ending call {call_id}")
+        logger.info("[Vapi Provider] Ending call", call_id=call_id)
 
         # If control_url not provided, fetch it from call status
         if not control_url:
@@ -156,7 +156,7 @@ class VapiProvider(VoiceAIProvider):
         headers = {"Content-Type": "application/json"}
         payload = {"type": "end-call"}
 
-        logger.info(f"[Vapi Provider] Sending end-call to control URL: {control_url}")
+        logger.info("[Vapi Provider] Sending end-call to control URL", control_url=control_url)
 
         try:
             async with httpx.AsyncClient(
@@ -172,17 +172,17 @@ class VapiProvider(VoiceAIProvider):
                     error_msg = (
                         f"Failed to end call: {response.status_code} - {response.text}"
                     )
-                    logger.error(f"[Vapi Provider] {error_msg}")
+                    logger.error("[Vapi Provider] Failed to end call", status_code=response.status_code, response_text=response.text)
                     raise VoiceAIError(
                         error_msg, error_code=VoiceAIErrorCode.HTTP_ERROR
                     )
 
-                logger.info(f"[Vapi Provider] Successfully ended call {call_id}")
+                logger.info("[Vapi Provider] Successfully ended call", call_id=call_id)
                 return True
 
         except httpx.HTTPError as e:
             error_msg = f"HTTP error ending call: {str(e)}"
-            logger.error(f"[Vapi Provider] {error_msg}")
+            logger.error("[Vapi Provider] HTTP error ending call", error=str(e))
             raise VoiceAIError(error_msg, error_code=VoiceAIErrorCode.HTTP_ERROR)
 
 
@@ -217,7 +217,8 @@ class VapiProvider(VoiceAIProvider):
 
         except phonenumbers.NumberParseException:
             logger.warning(
-                f"[Vapi Provider] Could not parse phone number: {phone_number}"
+                "[Vapi Provider] Could not parse phone number",
+                phone_number=phone_number,
             )
 
         # Fallback: return as-is if parsing fails
