@@ -4,6 +4,7 @@ import {
   type ChatModelAdapter,
 } from '@assistant-ui/react';
 import { Thread } from './Thread';
+import { chatHistoryAdapter } from './chatHistoryAdapter';
 import { FileSearchToolUI } from './tool-ui/FileSearchToolUI';
 import { McpToolUI } from './tool-ui/McpToolUI';
 import { ReasoningToolUI } from './tool-ui/ReasoningToolUI';
@@ -269,7 +270,9 @@ const chatAdapter: ChatModelAdapter = {
 };
 
 export function ChatRuntimeProvider() {
-  const runtime = useLocalRuntime(chatAdapter);
+  const runtime = useLocalRuntime(chatAdapter, {
+    adapters: { history: chatHistoryAdapter },
+  });
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>
