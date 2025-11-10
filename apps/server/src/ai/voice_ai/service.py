@@ -39,21 +39,21 @@ class VoiceAIService:
             CallResponse or VoiceAIErrorResponse: The result of the operation
         """
         try:
-            logger.info(f"Creating outbound call to: {request.phone_number}")
+            logger.info("Creating outbound call", phone_number=request.phone_number)
             result = await self.voice_ai_provider.create_outbound_call(request)
             logger.info(
-                f"Successfully created call {result.call_id} with status: {result.status}"
+                "Successfully created call", call_id=result.call_id, status=result.status
             )
             return result
         except VoiceAIError as e:
-            logger.error(f"Voice AI error creating call: {e.message}")
+            logger.error("Voice AI error creating call", error_message=e.message)
             return VoiceAIErrorResponse(
                 error=e.message,
                 error_code=e.error_code,
                 provider=getattr(self.voice_ai_provider, "provider_name", None),
             )
         except Exception as e:
-            logger.error(f"Unexpected error creating call: {e}")
+            logger.error("Unexpected error creating call", error=str(e))
             return VoiceAIErrorResponse(
                 error=f"Unexpected error: {str(e)}",
                 error_code=VoiceAIErrorCode.UNKNOWN_ERROR,
@@ -73,21 +73,21 @@ class VoiceAIService:
             CallResponse or VoiceAIErrorResponse: The result of the operation
         """
         try:
-            logger.info(f"Getting status for call: {call_id}")
+            logger.info("Getting status for call", call_id=call_id)
             result = await self.voice_ai_provider.get_call_status(call_id)
             logger.info(
-                f"Successfully retrieved status for call {call_id}: {result.status}"
+                "Successfully retrieved status for call", call_id=call_id, status=result.status
             )
             return result
         except VoiceAIError as e:
-            logger.error(f"Voice AI error getting call {call_id}: {e.message}")
+            logger.error("Voice AI error getting call", call_id=call_id, error_message=e.message)
             return VoiceAIErrorResponse(
                 error=e.message,
                 error_code=e.error_code,
                 provider=getattr(self.voice_ai_provider, "provider_name", None),
             )
         except Exception as e:
-            logger.error(f"Unexpected error getting call {call_id}: {e}")
+            logger.error("Unexpected error getting call", call_id=call_id, error=str(e))
             return VoiceAIErrorResponse(
                 error=f"Unexpected error: {str(e)}",
                 error_code=VoiceAIErrorCode.UNKNOWN_ERROR,
@@ -106,19 +106,19 @@ class VoiceAIService:
             bool (True if successful) or VoiceAIErrorResponse on error
         """
         try:
-            logger.info(f"Ending call: {call_id}")
+            logger.info("Ending call", call_id=call_id)
             result = await self.voice_ai_provider.end_call(call_id, control_url=control_url)
-            logger.info(f"Successfully ended call {call_id}")
+            logger.info("Successfully ended call", call_id=call_id)
             return result
         except VoiceAIError as e:
-            logger.error(f"Voice AI error ending call {call_id}: {e.message}")
+            logger.error("Voice AI error ending call", call_id=call_id, error_message=e.message)
             return VoiceAIErrorResponse(
                 error=e.message,
                 error_code=e.error_code,
                 provider=getattr(self.voice_ai_provider, "provider_name", None),
             )
         except Exception as e:
-            logger.error(f"Unexpected error ending call {call_id}: {e}")
+            logger.error("Unexpected error ending call", call_id=call_id, error=str(e))
             return VoiceAIErrorResponse(
                 error=f"Unexpected error: {str(e)}",
                 error_code=VoiceAIErrorCode.UNKNOWN_ERROR,

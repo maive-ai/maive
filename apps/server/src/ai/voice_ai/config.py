@@ -71,7 +71,7 @@ def get_voice_ai_settings() -> VoiceAISettings:
     global _voice_ai_settings
     if _voice_ai_settings is None:
         _voice_ai_settings = VoiceAISettings()
-        logger.info(f"VoiceAISettings loaded. Provider: {_voice_ai_settings.provider}")
+        logger.info("VoiceAISettings loaded", provider=_voice_ai_settings.provider)
     return _voice_ai_settings
 
 
@@ -87,9 +87,9 @@ def get_vapi_settings() -> VapiSettings:
         _vapi_settings = VapiSettings()
         logger.info("VapiSettings loaded")
         if _vapi_settings.phone_number_id:
-            logger.info(f"Vapi Phone Number ID: {_vapi_settings.phone_number_id}")
+            logger.info("Vapi Phone Number ID", phone_number_id=_vapi_settings.phone_number_id)
         if _vapi_settings.default_assistant_id:
-            logger.info(f"Vapi Default Assistant ID: {_vapi_settings.default_assistant_id}")
+            logger.info("Vapi Default Assistant ID", default_assistant_id=_vapi_settings.default_assistant_id)
     return _vapi_settings
 
 

@@ -56,14 +56,14 @@ async def get_job(job_id: str) -> dict[str, Any]:
         get_job(job_id="12345")
     """
     try:
-        logger.info(f"[MCP ServiceTitan] Getting job {job_id}")
+        logger.info("[MCP ServiceTitan] Getting job", job_id=job_id)
         job = await _provider.get_job(job_id)
         return job.model_dump()
-        
+
     except CRMError as e:
-        logger.error(f"[MCP ServiceTitan] CRM error getting job {job_id}: {e.message}")
+        logger.error("[MCP ServiceTitan] CRM error getting job", job_id=job_id, error_message=e.message)
         raise Exception(f"Failed to get job: {e.message}")
     except Exception as e:
-        logger.error(f"[MCP ServiceTitan] Unexpected error getting job {job_id}: {e}")
+        logger.error("[MCP ServiceTitan] Unexpected error getting job", job_id=job_id, error=str(e))
         raise Exception(f"Failed to get job: {str(e)}")
 

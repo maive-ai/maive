@@ -29,7 +29,7 @@ try:
     crm_mcp_app = crm_mcp.http_app(path='')
     logger.info("CRM MCP app created")
 except Exception as e:
-    logger.warning(f"Failed to create CRM MCP app: {e}")
+    logger.warning("Failed to create CRM MCP app", error=str(e))
     crm_mcp_app = None
 
 

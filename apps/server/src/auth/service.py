@@ -167,10 +167,11 @@ class CognitoAuthProvider(AuthProvider):
         if not all([self.user_pool_id, self.client_id]):
             raise ValueError("COGNITO_USER_POOL_ID and COGNITO_CLIENT_ID must be set")
 
-        logger.info(f"CognitoAuthProvider initialized with Client ID: {self.client_id}")
+        logger.info("CognitoAuthProvider initialized", client_id=self.client_id)
         if self.client_secret:
             logger.info(
-                f"CognitoAuthProvider initialized with Client Secret (first 5 chars): {self.client_secret[:5]}..."
+                "CognitoAuthProvider initialized with Client Secret",
+                client_secret_prefix=self.client_secret[:5],
             )
         else:
             logger.info("CognitoAuthProvider initialized without Client Secret.")
@@ -239,7 +240,8 @@ class CognitoAuthProvider(AuthProvider):
         (for refresh token rotation).
         """
         logger.info(
-            f"Attempting to refresh session with refresh token: {refresh_token[:5]}..."
+            "Attempting to refresh session",
+            refresh_token_prefix=refresh_token[:5],
         )
         try:
             # When refresh token rotation is enabled, we must use
@@ -277,12 +279,13 @@ class CognitoAuthProvider(AuthProvider):
                 id_token=auth_result.get("IdToken"),
             )
             logger.info(
-                f"Successfully refreshed session. New access token starts with: {session.access_token[:5]}..."
+                "Successfully refreshed session",
+                access_token_prefix=session.access_token[:5],
             )
             return AuthResult(success=True, session=session)
 
         except ClientError as e:
-            logger.error(f"ClientError during token refresh: {e.response['Error']}")
+            logger.error("ClientError during token refresh", error=e.response['Error'])
             error_code = e.response["Error"]["Code"]
             error_message = e.response["Error"]["Message"]
 
@@ -395,9 +398,9 @@ class CognitoAuthProvider(AuthProvider):
 
             # Debug: Log the URL being constructed
             token_url = urljoin(self.cognito_domain, OAuthEndpoints.TOKEN_ENDPOINT)
-            logger.debug(f"Token URL: {token_url}")
-            logger.debug(f"Cognito domain: {self.cognito_domain}")
-            logger.debug(f"Token endpoint: {OAuthEndpoints.TOKEN_ENDPOINT}")
+            logger.debug("Token URL constructed", token_url=token_url)
+            logger.debug("Using Cognito domain", cognito_domain=self.cognito_domain)
+            logger.debug("Using token endpoint", token_endpoint=OAuthEndpoints.TOKEN_ENDPOINT)
 
             response = requests.post(
                 token_url,
@@ -451,13 +454,14 @@ class CognitoAuthProvider(AuthProvider):
 
         except requests.exceptions.RequestException as e:
             logger.error(
-                f"HTTP error during token exchange: {e.response.text if e.response else e}"
+                "HTTP error during token exchange",
+                error_response=e.response.text if e.response else str(e),
             )
             return AuthResult(
                 success=False, error=f"HTTP error during token exchange: {e}"
             )
         except Exception as e:
-            logger.exception(f"Failed to exchange authorization code: {e}")
+            logger.exception("Failed to exchange authorization code", error=str(e))
             return AuthResult(
                 success=False, error=f"Failed to exchange authorization code: {str(e)}"
             )
@@ -558,7 +562,7 @@ class CognitoAuthProvider(AuthProvider):
                 updated_at=datetime.now(UTC),
             )
         except Exception as e:
-            logger.exception(f"Error creating user from userinfo: {e}")
+            logger.exception("Error creating user from userinfo", error=str(e))
             return None
 
 

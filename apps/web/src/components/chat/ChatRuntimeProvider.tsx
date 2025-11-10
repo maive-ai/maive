@@ -212,6 +212,9 @@ const chatAdapter: ChatModelAdapter = {
               } catch (e) {
                 console.error('Failed to parse reasoning summary:', e);
               }
+            } else if (currentEventType === 'heartbeat') {
+              // SSE keepalive to prevent HTTP/2 timeout - ignore
+              continue;
             } else {
               // Regular message content
               const unescapedData = data.replace(/\\n/g, '\n');

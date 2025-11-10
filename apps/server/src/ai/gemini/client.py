@@ -46,7 +46,7 @@ class GeminiClient:
                 self._client = genai.Client(api_key=self.settings.api_key)
                 logger.info("Gemini client initialized")
             except Exception as e:
-                logger.error(f"Failed to initialize Gemini client: {e}")
+                logger.error("Failed to initialize Gemini client", error=str(e))
                 raise GeminiError(f"Failed to authenticate: {e}")
         return self._client
 
@@ -81,7 +81,7 @@ class GeminiClient:
                 if not mime_type:
                     mime_type = "application/octet-stream"
 
-            logger.info(f"Uploading file: {file_path} with MIME type: {mime_type}")
+            logger.info("Uploading file", file_path=str(file_path), mime_type=mime_type)
 
             # Upload file using the google-genai library
             uploaded_file = client.files.upload(file=str(file_path))
@@ -98,11 +98,11 @@ class GeminiClient:
                 state=getattr(uploaded_file, "state", None),
             )
 
-            logger.info(f"File uploaded successfully: {metadata.name}")
+            logger.info("File uploaded successfully", file_name=metadata.name)
             return metadata
 
         except Exception as e:
-            logger.error(f"File upload failed: {e}")
+            logger.error("File upload failed", error=str(e))
             if isinstance(e, GeminiError):
                 raise
             self._handle_api_error(e, "File upload")
@@ -134,9 +134,9 @@ class GeminiClient:
                     try:
                         file_obj = client.files.get(name=file_name)
                         contents.append(file_obj)
-                        logger.info(f"Added file to content: {file_name}")
+                        logger.info("Added file to content", file_name=file_name)
                     except Exception as e:
-                        logger.warning(f"Failed to retrieve file {file_name}: {e}")
+                        logger.warning("Failed to retrieve file", file_name=file_name, error=str(e))
                         # Continue without this file rather than failing completely
 
             # Prepare generation config
@@ -151,7 +151,7 @@ class GeminiClient:
                 generation_config["response_mime_type"] = "application/json"
                 logger.debug("Calling model API with response schema")
 
-            logger.info(f"Generating content with model: {model_name}")
+            logger.info("Generating content with model", model_name=model_name)
 
             # Generate content
             response = client.models.generate_content(
@@ -171,7 +171,7 @@ class GeminiClient:
             )
 
         except Exception as e:  
-            logger.error(f"Content generation failed: {e}")
+            logger.error("Content generation failed", error=str(e))
             if isinstance(e, GeminiError):
                 raise
             self._handle_api_error(e, "Content generation")
@@ -212,23 +212,23 @@ class GeminiClient:
 
             try:
                 logger.debug(
-                    f"Response text: {response.text[:500]}"
+                    "Response text", text_preview=response.text[:500]
                 )  # Log first 500 chars
                 if not response.text:
                     logger.error("Response text is empty!")
-                    logger.error(f"Response usage: {response.usage}")
-                    logger.error(f"Response finish_reason: {response.finish_reason}")
+                    logger.error("Response usage", usage=response.usage)
+                    logger.error("Response finish_reason", finish_reason=response.finish_reason)
                     raise GeminiError("Empty response from Gemini API")
 
                 json_data = json.loads(response.text)
                 return request.response_model(**json_data)
             except (json.JSONDecodeError, ValueError) as e:
-                logger.error(f"Failed to parse structured response: {e}")
-                logger.error(f"Response text: {response.text}")
+                logger.error("Failed to parse structured response", error=str(e))
+                logger.error("Response text", text=response.text)
                 raise GeminiError(f"Failed to parse structured response: {e}")
 
         except Exception as e:
-            logger.error(f"Structured content generation failed: {e}")
+            logger.error("Structured content generation failed", error=str(e))
             if isinstance(e, GeminiError):
                 raise
             self._handle_api_error(e, "Structured content generation")
@@ -260,7 +260,7 @@ class GeminiClient:
             )
 
         except Exception as e:
-            logger.error(f"Failed to get file {file_name}: {e}")
+            logger.error("Failed to get file", file_name=file_name, error=str(e))
             self._handle_api_error(e, "Get file")
 
     async def delete_file(self, file_name: str) -> DeleteFileResponse:
@@ -279,13 +279,13 @@ class GeminiClient:
             client = self._get_client()
             client.files.delete(name=file_name)
 
-            logger.info(f"File deleted successfully: {file_name}")
+            logger.info("File deleted successfully", file_name=file_name)
             return DeleteFileResponse(
                 success=True, message=f"File {file_name} deleted successfully"
             )
 
         except Exception as e:
-            logger.error(f"Failed to delete file {file_name}: {e}")
+            logger.error("Failed to delete file", file_name=file_name, error=str(e))
             return DeleteFileResponse(
                 success=False, message=f"Failed to delete file {file_name}: {e}"
             )

@@ -130,7 +130,7 @@ async def end_call(
 
     # If call is already ended, return success (idempotent)
     if not call.is_active:
-        logger.info(f"[End Call] Call {call_id} already ended, returning success")
+        logger.info("[End Call] Call already ended, returning success", call_id=call_id)
         return None
 
     # Extract control URL from stored provider data
@@ -140,18 +140,18 @@ async def end_call(
         control_url = monitor.get('control_url')
 
     if not control_url:
-        logger.error(f"[End Call] No control URL found for call {call_id}")
+        logger.error("[End Call] No control URL found for call", call_id=call_id)
         raise HTTPException(
             status_code=HTTPStatus.BAD_REQUEST,
             detail="Control URL not available for this call"
         )
 
     # Try to end call via Vapi using the control URL
-    logger.info(f"[End Call] Attempting to end call {call_id} via control URL: {control_url}")
+    logger.info("[End Call] Attempting to end call via control URL", call_id=call_id, control_url=control_url)
     result = await voice_ai_service.end_call(call_id, control_url=control_url)
 
     if isinstance(result, VoiceAIErrorResponse):
-        logger.error(f"[End Call] Failed to end call {call_id} via Vapi: {result.error}")
+        logger.error("[End Call] Failed to end call via Vapi", call_id=call_id, error=result.error)
         # If Vapi fails, still mark as ended in DB so UI can update
         # The monitoring task will sync the actual state
         await call_repository.end_call(
@@ -170,7 +170,7 @@ async def end_call(
         final_status=CallStatus.ENDED,
     )
     await call_repository.session.commit()
-    logger.info(f"[End Call] Successfully ended call {call_id} and updated database")
+    logger.info("[End Call] Successfully ended call and updated database", call_id=call_id)
 
     # Success - 204 No Content response
     return None

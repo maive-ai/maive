@@ -71,7 +71,9 @@ class CallAndWriteToCRMWorkflow:
 
         # Persist call to database
         logger.info(
-            f"[Call Monitoring Workflow] Attempting to persist call. user_id={user_id}, call_id={result.call_id}"
+            "[Call Monitoring Workflow] Attempting to persist call",
+            user_id=user_id,
+            call_id=result.call_id,
         )
 
         if not user_id:
@@ -88,7 +90,8 @@ class CallAndWriteToCRMWorkflow:
                     )
 
                 logger.info(
-                    f"[Call Monitoring Workflow] Creating Call record with listen_url={listen_url}"
+                    "[Call Monitoring Workflow] Creating Call record",
+                    listen_url=listen_url,
                 )
 
                 # Create call record using repository
@@ -112,11 +115,13 @@ class CallAndWriteToCRMWorkflow:
                 await self.call_repository.session.commit()
 
                 logger.info(
-                    f"[Call Monitoring Workflow] Successfully persisted call for {result.call_id}"
+                    "[Call Monitoring Workflow] Successfully persisted call",
+                    call_id=result.call_id,
                 )
             except Exception as e:
                 logger.error(
-                    f"[Call Monitoring Workflow] Failed to persist call: {e}",
+                    "[Call Monitoring Workflow] Failed to persist call",
+                    error=str(e),
                     exc_info=True,
                 )
 
@@ -130,11 +135,14 @@ class CallAndWriteToCRMWorkflow:
                 )
             )
             logger.info(
-                f"[Call Monitoring Workflow] Started monitoring for call {result.call_id}"
+                "[Call Monitoring Workflow] Started monitoring for call",
+                call_id=result.call_id,
             )
         except Exception as e:
             logger.error(
-                f"[Call Monitoring Workflow] Failed to start monitoring task for call {result.call_id}: {e}"
+                "[Call Monitoring Workflow] Failed to start monitoring task for call",
+                call_id=result.call_id,
+                error=str(e),
             )
 
         return result
@@ -176,7 +184,8 @@ class CallAndWriteToCRMWorkflow:
                     elapsed = asyncio.get_event_loop().time() - start_time
                     if elapsed > max_polling_duration:
                         logger.warning(
-                            f"[Call Monitoring Workflow] Monitoring timed out for call {call_id}"
+                            "[Call Monitoring Workflow] Monitoring timed out for call",
+                            call_id=call_id,
                         )
                         break
 
@@ -185,12 +194,16 @@ class CallAndWriteToCRMWorkflow:
 
                     if isinstance(status_result, VoiceAIErrorResponse):
                         logger.error(
-                            f"[Call Monitoring Workflow] Error polling call {call_id}: {status_result.error}"
+                            "[Call Monitoring Workflow] Error polling call",
+                            call_id=call_id,
+                            error=status_result.error,
                         )
                         break
 
                     logger.info(
-                        f"[Call Monitoring Workflow] Call {call_id} status: {status_result.status}"
+                        "[Call Monitoring Workflow] Call status",
+                        call_id=call_id,
+                        status=status_result.status,
                     )
 
                     # Update call status in database
@@ -207,18 +220,22 @@ class CallAndWriteToCRMWorkflow:
                             )
                             await session.commit()
                             logger.debug(
-                                f"[Call Monitoring Workflow] Committed status update for call {call_id}"
+                                "[Call Monitoring Workflow] Committed status update for call",
+                                call_id=call_id,
                             )
                         except Exception as e:
                             logger.error(
-                                f"[Call Monitoring Workflow] Failed to update call status: {e}"
+                                "[Call Monitoring Workflow] Failed to update call status",
+                                error=str(e),
                             )
                             await session.rollback()
 
                     # Check if call has ended
                     if CallStatus.is_call_ended(status_result.status):
                         logger.info(
-                            f"[Call Monitoring Workflow] Call {call_id} ended with status: {status_result.status}"
+                            "[Call Monitoring Workflow] Call ended",
+                            call_id=call_id,
+                            status=status_result.status,
                         )
 
                         # Extract structured data and update CRM
@@ -235,7 +252,8 @@ class CallAndWriteToCRMWorkflow:
                         )
                         await session.commit()
                         logger.info(
-                            f"[Call Monitoring Workflow] Committed final call state for {call_id}"
+                            "[Call Monitoring Workflow] Committed final call state",
+                            call_id=call_id,
                         )
                         break
 
@@ -243,11 +261,14 @@ class CallAndWriteToCRMWorkflow:
 
         except asyncio.CancelledError:
             logger.info(
-                f"[Call Monitoring Workflow] Monitoring task for call {call_id} canceled"
+                "[Call Monitoring Workflow] Monitoring task canceled",
+                call_id=call_id,
             )
         except Exception as e:
             logger.error(
-                f"[Call Monitoring Workflow] Unexpected error monitoring call {call_id}: {e}"
+                "[Call Monitoring Workflow] Unexpected error monitoring call",
+                call_id=call_id,
+                error=str(e),
             )
 
 
@@ -290,7 +311,8 @@ class CallAndWriteToCRMWorkflow:
                 else None,
             )
             logger.info(
-                f"[Call Monitoring Workflow] Marked call {call_id} as ended in database"
+                "[Call Monitoring Workflow] Marked call as ended in database",
+                call_id=call_id,
             )
 
             # Extract typed analysis data from provider response
@@ -298,12 +320,14 @@ class CallAndWriteToCRMWorkflow:
 
             if analysis is None or analysis.structured_data is None:
                 logger.info(
-                    f"[Call Monitoring Workflow] No analysis available for call {call_id} after polling"
+                    "[Call Monitoring Workflow] No analysis available for call after polling",
+                    call_id=call_id,
                 )
                 return
 
             logger.info(
-                f"[Call Monitoring Workflow] Extracted structured data for call {call_id}"
+                "[Call Monitoring Workflow] Extracted structured data for call",
+                call_id=call_id,
             )
 
             # Update CRM if we have tenant and job_id
@@ -312,7 +336,8 @@ class CallAndWriteToCRMWorkflow:
 
             if tenant is None or job_id is None:
                 logger.info(
-                    f"[Call Monitoring Workflow] Missing tenant/job_id for call {call_id}; skipping CRM note"
+                    "[Call Monitoring Workflow] Missing tenant/job_id for call; skipping CRM note",
+                    call_id=call_id,
                 )
                 return
 
@@ -329,17 +354,22 @@ class CallAndWriteToCRMWorkflow:
 
             if hasattr(crm_result, "error"):
                 logger.error(
-                    f"[Call Monitoring Workflow] Failed to add job note for job {job_id}: {crm_result.error}"
+                    "[Call Monitoring Workflow] Failed to add job note",
+                    job_id=job_id,
+                    error=crm_result.error,
                 )
             else:
                 logger.info(
-                    f"[Call Monitoring Workflow] Successfully added CRM note for job {job_id}"
+                    "[Call Monitoring Workflow] Successfully added CRM note",
+                    job_id=job_id,
                 )
 
             # Update project status in CRM (skip if status is empty)
             if analysis.structured_data.claim_status:
                 logger.info(
-                    f"[Call Monitoring Workflow] Updating project status for job {job_id} to {analysis.structured_data.claim_status}"
+                    "[Call Monitoring Workflow] Updating project status",
+                    job_id=job_id,
+                    claim_status=analysis.structured_data.claim_status,
                 )
                 status_update_result = await self.crm_service.update_job_status(
                     job_id=job_id,
@@ -350,16 +380,21 @@ class CallAndWriteToCRMWorkflow:
                     status_update_result, "error"
                 ):
                     logger.error(
-                        f"[Call Monitoring Workflow] Failed to update project status for job {job_id}: {status_update_result.error}"
+                        "[Call Monitoring Workflow] Failed to update project status",
+                        job_id=job_id,
+                        error=status_update_result.error,
                     )
                 else:
                     logger.info(
-                        f"[Call Monitoring Workflow] Successfully updated project status for job {job_id}"
+                        "[Call Monitoring Workflow] Successfully updated project status",
+                        job_id=job_id,
                     )
 
         except Exception as e:
             logger.error(
-                f"[Call Monitoring Workflow] Error processing completed call {call_id}: {e}"
+                "[Call Monitoring Workflow] Error processing completed call",
+                call_id=call_id,
+                error=str(e),
             )
 
     def _format_crm_note(self, analysis: AnalysisData | None) -> str:
@@ -433,6 +468,9 @@ class CallAndWriteToCRMWorkflow:
             return "\n".join(note_lines)
 
         except Exception as e:
-            logger.error(f"[Call Monitoring Workflow] Error formatting CRM note: {e}")
+            logger.error(
+                "[Call Monitoring Workflow] Error formatting CRM note",
+                error=str(e),
+            )
             # Fallback: return model as JSON
             return f"Voice AI Call Results:\n\n```json\n{structured_data.model_dump_json(indent=2)}\n```"

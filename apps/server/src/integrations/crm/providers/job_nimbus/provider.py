@@ -106,7 +106,7 @@ class JobNimbusProvider(CRMProvider):
         try:
             endpoint = JobNimbusEndpoints.JOB_BY_ID.format(jnid=job_id)
 
-            logger.debug(f"Fetching job for JNID: {job_id}")
+            logger.debug("Fetching job for JNID", job_id=job_id)
 
             response = await self._make_request("GET", endpoint)
             response.raise_for_status()
@@ -126,10 +126,10 @@ class JobNimbusProvider(CRMProvider):
             if e.response.status_code == 404:
                 raise CRMError(f"Job with JNID {job_id} not found", "NOT_FOUND")
             else:
-                logger.error(f"HTTP error fetching job {job_id}: {e}")
+                logger.error("HTTP error fetching job", job_id=job_id, error=str(e))
                 raise CRMError(f"Failed to fetch job: {e}", "HTTP_ERROR")
         except Exception as e:
-            logger.error(f"Unexpected error fetching job {job_id}: {e}")
+            logger.error("Unexpected error fetching job", job_id=job_id, error=str(e))
             raise CRMError(f"Failed to fetch job: {str(e)}", "UNKNOWN_ERROR")
 
     async def get_all_jobs(
@@ -155,7 +155,7 @@ class JobNimbusProvider(CRMProvider):
             JobList: Paginated list of jobs
         """
         try:
-            logger.debug(f"Fetching all jobs (page={page}, size={page_size}, filters={filters})")
+            logger.debug("Fetching all jobs", page=page, page_size=page_size, filters=filters)
 
             endpoint = JobNimbusEndpoints.JOBS
             response = await self._make_request("GET", endpoint)
@@ -220,7 +220,7 @@ class JobNimbusProvider(CRMProvider):
             )
 
         except Exception as e:
-            logger.error(f"Error fetching all jobs: {e}")
+            logger.error("Error fetching all jobs", error=str(e))
             raise CRMError(f"Failed to fetch jobs: {str(e)}", "UNKNOWN_ERROR")
 
     async def get_project(self, project_id: str) -> Project:
@@ -238,7 +238,7 @@ class JobNimbusProvider(CRMProvider):
         Raises:
             CRMError: If the project is not found
         """
-        logger.info(f"Getting JobNimbus project: {project_id}")
+        logger.info("Getting JobNimbus project", project_id=project_id)
 
         # Get job first
         endpoint = JobNimbusEndpoints.JOB_BY_ID.format(jnid=project_id)
@@ -284,7 +284,7 @@ class JobNimbusProvider(CRMProvider):
         Returns:
             ProjectList: Paginated list of projects
         """
-        logger.info(f"Getting all JobNimbus projects (page={page}, size={page_size})")
+        logger.info("Getting all JobNimbus projects", page=page, page_size=page_size)
 
         try:
             endpoint = JobNimbusEndpoints.JOBS
@@ -315,7 +315,7 @@ class JobNimbusProvider(CRMProvider):
             )
 
         except Exception as e:
-            logger.error(f"Error fetching all projects: {e}")
+            logger.error("Error fetching all projects", error=str(e))
             raise CRMError(f"Failed to fetch projects: {str(e)}", "UNKNOWN_ERROR")
 
     async def get_contact(self, contact_id: str) -> Contact:
@@ -334,7 +334,7 @@ class JobNimbusProvider(CRMProvider):
         try:
             endpoint = JobNimbusEndpoints.CONTACT_BY_ID.format(jnid=contact_id)
 
-            logger.debug(f"Fetching contact for JNID: {contact_id}")
+            logger.debug("Fetching contact for JNID", contact_id=contact_id)
 
             response = await self._make_request("GET", endpoint)
             response.raise_for_status()
@@ -348,10 +348,10 @@ class JobNimbusProvider(CRMProvider):
             if e.response.status_code == 404:
                 raise CRMError(f"Contact with JNID {contact_id} not found", "NOT_FOUND")
             else:
-                logger.error(f"HTTP error fetching contact {contact_id}: {e}")
+                logger.error("HTTP error fetching contact", contact_id=contact_id, error=str(e))
                 raise CRMError(f"Failed to fetch contact: {e}", "HTTP_ERROR")
         except Exception as e:
-            logger.error(f"Unexpected error fetching contact {contact_id}: {e}")
+            logger.error("Unexpected error fetching contact", contact_id=contact_id, error=str(e))
             raise CRMError(f"Failed to fetch contact: {str(e)}", "UNKNOWN_ERROR")
 
     async def get_all_contacts(
@@ -372,7 +372,7 @@ class JobNimbusProvider(CRMProvider):
             ContactList: Paginated list of contacts
         """
         try:
-            logger.debug(f"Fetching all contacts (page={page}, size={page_size})")
+            logger.debug("Fetching all contacts", page=page, page_size=page_size)
 
             endpoint = JobNimbusEndpoints.CONTACTS
             response = await self._make_request("GET", endpoint)
@@ -402,7 +402,7 @@ class JobNimbusProvider(CRMProvider):
             )
 
         except Exception as e:
-            logger.error(f"Error fetching all contacts: {e}")
+            logger.error("Error fetching all contacts", error=str(e))
             raise CRMError(f"Failed to fetch contacts: {str(e)}", "UNKNOWN_ERROR")
 
     async def add_note(
@@ -428,7 +428,7 @@ class JobNimbusProvider(CRMProvider):
             CRMError: If the entity is not found or note creation fails
         """
         try:
-            logger.info(f"Adding note to {entity_type} {entity_id}")
+            logger.info("Adding note to entity", entity_type=entity_type, entity_id=entity_id)
 
             # Create activity in JobNimbus
             activity_request = JobNimbusCreateActivityRequest(
@@ -467,7 +467,7 @@ class JobNimbusProvider(CRMProvider):
             )
 
         except Exception as e:
-            logger.error(f"Error adding note to {entity_type} {entity_id}: {e}")
+            logger.error("Error adding note to entity", entity_type=entity_type, entity_id=entity_id, error=str(e))
             raise CRMError(f"Failed to add note: {str(e)}", "UNKNOWN_ERROR")
 
     async def update_job_status(
@@ -487,7 +487,7 @@ class JobNimbusProvider(CRMProvider):
         Raises:
             CRMError: If the job is not found or update fails
         """
-        logger.info(f"Updating JobNimbus job {job_id} status to {status}")
+        logger.info("Updating JobNimbus job status", job_id=job_id, status=status)
 
         # JobNimbus requires updating via PATCH with status_name
         try:
@@ -501,7 +501,7 @@ class JobNimbusProvider(CRMProvider):
             response = await self._make_request("PATCH", endpoint, json=update_data)
             response.raise_for_status()
 
-            logger.info(f"Successfully updated job {job_id} status")
+            logger.info("Successfully updated job status", job_id=job_id)
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
@@ -529,7 +529,7 @@ class JobNimbusProvider(CRMProvider):
         Raises:
             CRMError: If the project is not found or update fails
         """
-        logger.info(f"Updating JobNimbus project {project_id} status to {status}")
+        logger.info("Updating JobNimbus project status", project_id=project_id, status=status)
         await self.update_job_status(project_id, status, **kwargs)
 
     # ========================================================================
@@ -547,7 +547,7 @@ class JobNimbusProvider(CRMProvider):
             list[Note]: List of notes for the job (empty list if none or on error)
         """
         try:
-            logger.info(f"Fetching notes for job {job_id}")
+            logger.info("Fetching notes for job", job_id=job_id)
             
             # Build filter to get activities related to this job
             filter_query = json.dumps({
@@ -590,14 +590,14 @@ class JobNimbusProvider(CRMProvider):
                         )
                         notes.append(note)
                 except Exception as e:
-                    logger.warning(f"Failed to parse activity for job {job_id}: {e}")
+                    logger.warning("Failed to parse activity for job", job_id=job_id, error=str(e))
                     continue
             
-            logger.info(f"Fetched {len(notes)} notes for job {job_id}")
+            logger.info("Fetched notes for job", job_id=job_id, note_count=len(notes))
             return notes
             
         except Exception as e:
-            logger.warning(f"Error fetching notes for job {job_id}: {e}")
+            logger.warning("Error fetching notes for job", job_id=job_id, error=str(e))
             return []  # Return empty list on error - don't fail the job fetch
 
     # ========================================================================
@@ -626,7 +626,7 @@ class JobNimbusProvider(CRMProvider):
         all_files = await self.get_job_files(job_id, "all")
         matching_files = [f for f in all_files if f.id == file_id]
         if not matching_files:
-            logger.error(f"File {file_id} not found in job {job_id}")
+            logger.error("File not found in job", file_id=file_id, job_id=job_id)
             return None
         return matching_files[0]
 
@@ -651,7 +651,7 @@ class JobNimbusProvider(CRMProvider):
         try:
             endpoint = JobNimbusEndpoints.FILES
             params = {"related": job_id}
-            logger.info(f"[JobNimbus] Fetching files for job {job_id} with filter: {file_filter}")
+            logger.info("[JobNimbus] Fetching files for job", job_id=job_id, file_filter=file_filter)
             
             response = await self._make_request("GET", endpoint, params=params)
             response.raise_for_status()
@@ -685,17 +685,17 @@ class JobNimbusProvider(CRMProvider):
             else:  # "all"
                 filtered_files = all_files
             
-            logger.info(f"[JobNimbus] Found {len(filtered_files)} {file_filter} file(s) for job {job_id}")
+            logger.info("[JobNimbus] Found files for job", job_id=job_id, file_filter=file_filter, file_count=len(filtered_files))
             return filtered_files
             
         except httpx.HTTPStatusError as e:
-            logger.error(f"HTTP error fetching files for job {job_id}: {e}")
+            logger.error("HTTP error fetching files for job", job_id=job_id, error=str(e))
             raise CRMError(
                 f"Failed to fetch files: {e.response.status_code}",
                 "API_ERROR"
             )
         except Exception as e:
-            logger.error(f"Error fetching files for job {job_id}: {e}")
+            logger.error("Error fetching files for job", job_id=job_id, error=str(e))
             raise CRMError(f"Failed to fetch files: {str(e)}", "UNKNOWN_ERROR")
 
     async def download_file(
@@ -720,7 +720,7 @@ class JobNimbusProvider(CRMProvider):
         """
         try:
             endpoint = JobNimbusEndpoints.FILE_BY_ID.format(jnid=file_id)
-            logger.info(f"[JobNimbus] Downloading file {file_id}")
+            logger.info("[JobNimbus] Downloading file", file_id=file_id)
             
             # JobNimbus returns a 302 redirect to the actual file on CloudFront/S3
             response = await self._make_request("GET", endpoint, follow_redirects=True)
@@ -730,14 +730,14 @@ class JobNimbusProvider(CRMProvider):
             resolved_filename = filename or f"download_{file_id}"
             resolved_content_type = content_type or "application/octet-stream"
             
-            logger.info(f"[JobNimbus] Downloaded {resolved_filename} ({len(response.content)} bytes)")
+            logger.info("[JobNimbus] Downloaded file", filename=resolved_filename, size_bytes=len(response.content))
             return (response.content, resolved_filename, resolved_content_type)
             
         except httpx.HTTPStatusError as e:
-            logger.error(f"[JobNimbus] HTTP error downloading file {file_id}: {e}")
+            logger.error("[JobNimbus] HTTP error downloading file", file_id=file_id, error=str(e))
             raise CRMError(f"Failed to download file: {e.response.status_code}", "API_ERROR")
         except Exception as e:
-            logger.error(f"[JobNimbus] Error downloading file {file_id}: {e}")
+            logger.error("[JobNimbus] Error downloading file", file_id=file_id, error=str(e))
             raise CRMError(f"Failed to download file: {str(e)}", "UNKNOWN_ERROR")
 
     # ========================================================================
@@ -827,9 +827,9 @@ class JobNimbusProvider(CRMProvider):
                 contact = await self.get_contact(jn_job.primary.id)
                 customer_email = contact.email
                 customer_phone = contact.phone or contact.mobile_phone or contact.work_phone
-                logger.debug(f"[JobNimbus] Fetched contact {jn_job.primary.id} - phone: {customer_phone}, email: {customer_email}")
+                logger.debug("[JobNimbus] Fetched contact", contact_id=jn_job.primary.id, phone=customer_phone, email=customer_email)
             except Exception as e:
-                logger.warning(f"[JobNimbus] Failed to fetch contact {jn_job.primary.id}: {e}")
+                logger.warning("[JobNimbus] Failed to fetch contact", contact_id=jn_job.primary.id, error=str(e))
 
         # Extract adjuster information (fallback to _extract_custom_field for fields not in typed schema)
         adjuster_name = self._extract_custom_field(
@@ -950,7 +950,7 @@ class JobNimbusProvider(CRMProvider):
         try:
             endpoint = JobNimbusEndpoints.JOB_BY_ID.format(jnid=project_id)
 
-            logger.debug(f"Fetching job status for JNID: {project_id}")
+            logger.debug("Fetching job status for JNID", project_id=project_id)
 
             response = await self._make_request("GET", endpoint)
             response.raise_for_status()
@@ -989,10 +989,10 @@ class JobNimbusProvider(CRMProvider):
             if e.response.status_code == 404:
                 raise CRMError(f"Job with JNID {project_id} not found", "NOT_FOUND")
             else:
-                logger.error(f"HTTP error fetching job status {project_id}: {e}")
+                logger.error("HTTP error fetching job status", project_id=project_id, error=str(e))
                 raise CRMError(f"Failed to fetch job status: {e}", "HTTP_ERROR")
         except Exception as e:
-            logger.error(f"Unexpected error fetching job status {project_id}: {e}")
+            logger.error("Unexpected error fetching job status", project_id=project_id, error=str(e))
             raise CRMError(f"Failed to fetch job status: {str(e)}", "UNKNOWN_ERROR")
 
     async def get_all_project_statuses(self) -> ProjectStatusListResponse:
@@ -1052,10 +1052,10 @@ class JobNimbusProvider(CRMProvider):
             )
 
         except httpx.HTTPStatusError as e:
-            logger.error(f"HTTP error fetching all jobs: {e}")
+            logger.error("HTTP error fetching all jobs", error=str(e))
             raise CRMError(f"Failed to fetch job statuses: {e}", "HTTP_ERROR")
         except Exception as e:
-            logger.error(f"Unexpected error fetching all jobs: {e}")
+            logger.error("Unexpected error fetching all jobs", error=str(e))
             raise CRMError(f"Failed to fetch job statuses: {str(e)}", "UNKNOWN_ERROR")
 
     async def get_appointment_status(
@@ -1128,7 +1128,7 @@ class JobNimbusProvider(CRMProvider):
                 dateCreated=int(datetime.now(UTC).timestamp()),
             )
 
-            logger.debug(f"Adding note to job {jnid}")
+            logger.debug("Adding note to job", job_id=jnid)
 
             response = await self._make_request(
                 "POST", endpoint, json=request_body.model_dump(by_alias=True, exclude_none=True)
@@ -1153,10 +1153,10 @@ class JobNimbusProvider(CRMProvider):
             if e.response.status_code == 404:
                 raise CRMError(f"Job with JNID {job_id} not found", "NOT_FOUND")
             else:
-                logger.error(f"HTTP error adding note to job {job_id}: {e}")
+                logger.error("HTTP error adding note to job", job_id=job_id, error=str(e))
                 raise CRMError(f"Failed to add note to job: {e}", "HTTP_ERROR")
         except Exception as e:
-            logger.error(f"Unexpected error adding note to job {job_id}: {e}")
+            logger.error("Unexpected error adding note to job", job_id=job_id, error=str(e))
             raise CRMError(f"Failed to add note to job: {str(e)}", "UNKNOWN_ERROR")
 
     # Unsupported Service Titan-specific methods

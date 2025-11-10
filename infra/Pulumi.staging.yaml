@@ -5,6 +5,7 @@ config:
   maive-infra:certificate_domain: testing.maive.ai
   maive-infra:deploy_containers: "true"
   maive-infra:transport_protocol: https
+  maive-infra:public_server_url: https://testing.maive.ai
+  maive-infra:public_cognito_scopes: "openid email profile"
   cognito:callback_urls:
     - https://testing.maive.ai/api/auth/callback
-    - http://localhost:8080/api/auth/callback

@@ -126,7 +126,7 @@ class RillaClient:
         try:
             return ConversationsExportResponse(**response_data)
         except ValidationError as e:
-            logger.error(f"Failed to parse conversations response: {e}")
+            logger.error("Failed to parse conversations response", error=str(e))
             raise RillaAPIError(f"Invalid response format: {e}") from e
 
     async def export_teams(self, request: TeamsExportRequest) -> TeamsExportResponse:
@@ -141,7 +141,7 @@ class RillaClient:
         Raises:
             RillaAPIError: For API errors
         """
-        logger.info(f"Exporting teams from {request.from_date} to {request.to_date}")
+        logger.info("Exporting teams", from_date=str(request.from_date), to_date=str(request.to_date))
 
         # Use Pydantic's serialization with aliases
         api_request = request.model_dump(by_alias=True, exclude_none=True, mode="json")
@@ -153,7 +153,7 @@ class RillaClient:
         try:
             return TeamsExportResponse(**response_data)
         except ValidationError as e:
-            logger.error(f"Failed to parse teams response: {e}")
+            logger.error("Failed to parse teams response", error=str(e))
             raise RillaAPIError(f"Invalid response format: {e}") from e
 
     async def export_users(self, request: UsersExportRequest) -> UsersExportResponse:
@@ -168,7 +168,7 @@ class RillaClient:
         Raises:
             RillaAPIError: For API errors
         """
-        logger.info(f"Exporting users from {request.from_date} to {request.to_date}")
+        logger.info("Exporting users", from_date=str(request.from_date), to_date=str(request.to_date))
 
         # Use Pydantic's serialization with aliases
         api_request = request.model_dump(by_alias=True, exclude_none=True, mode="json")
@@ -180,5 +180,5 @@ class RillaClient:
         try:
             return UsersExportResponse(**response_data)
         except ValidationError as e:
-            logger.error(f"Failed to parse users response: {e}")
+            logger.error("Failed to parse users response", error=str(e))
             raise RillaAPIError(f"Invalid response format: {e}") from e

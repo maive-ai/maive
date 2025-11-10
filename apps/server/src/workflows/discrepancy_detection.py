@@ -81,32 +81,40 @@ class DiscrepancyDetectionWorkflow:
         """
         try:
             logger.info("=" * 60)
-            logger.info(f"DISCREPANCY DETECTION WORKFLOW - Job {job_id}")
+            logger.info("DISCREPANCY DETECTION WORKFLOW - Job", job_id=job_id)
             logger.info("=" * 60)
 
             # Step 1: Get the job details
-            logger.info(f"\nStep 1: Fetching job {job_id}")
+            logger.info("\nStep 1: Fetching job", job_id=job_id)
             job = await self.crm_provider.get_job(job_id)
-            logger.info(f"✅ Job fetched: {job.number}")
+            logger.info("✅ Job fetched", job_number=job.number)
 
             # Get project_id from provider_data for Service Titan
             project_id = job.provider_data.get("project_id")
             if not project_id:
-                raise CRMError(f"Job {job_id} has no associated project", "NO_PROJECT")
+                raise CRMError(
+                    f"Job {job_id} has no associated project", "NO_PROJECT"
+                )
 
             # Step 2: Get the sold estimate (try job first, then project)
             logger.info("\nStep 2: Getting sold estimate")
             selected_estimate = await self._find_sold_estimate(job_id, project_id)
 
-            logger.info(f"✅ Selected estimate: {selected_estimate.id}")
-            logger.info(f"   Name: {selected_estimate.name or '(no name)'}")
             logger.info(
-                f"   Total: ${selected_estimate.subtotal + selected_estimate.tax:,.2f}"
+                "✅ Selected estimate", estimate_id=selected_estimate.id
+            )
+            logger.info(
+                "   Name", estimate_name=selected_estimate.name or "(no name)"
+            )
+            logger.info(
+                "   Total",
+                total=f"${selected_estimate.subtotal + selected_estimate.tax:,.2f}",
             )
 
             # Step 3: Get estimate items
             logger.info(
-                f"\nStep 3: Fetching estimate items for estimate {selected_estimate.id}"
+                "\nStep 3: Fetching estimate items for estimate",
+                estimate_id=selected_estimate.id,
             )
             items_result = await self._fetch_estimate_items(selected_estimate.id)
 
@@ -121,7 +129,9 @@ class DiscrepancyDetectionWorkflow:
             ]
             filtered_count = len(items_result.items) - len(active_items)
             logger.info(
-                f"✅ Found {len(active_items)} active chargeable items (filtered out {filtered_count} invoiced/non-chargeable items)"
+                "✅ Found active chargeable items",
+                active_items_count=len(active_items),
+                filtered_count=filtered_count,
             )
 
             # Save raw estimate data to JSON file
@@ -137,7 +147,7 @@ class DiscrepancyDetectionWorkflow:
             output_filename = f"estimate_data_job_{job_id}_estimate_{selected_estimate.id}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.json"
             with open(output_filename, "w") as f:
                 json.dump(estimate_data_output, f, indent=2, default=str)
-            logger.info(f"✅ Estimate data saved to: {output_filename}")
+            logger.info("✅ Estimate data saved to", filename=output_filename)
 
             # Step 4: Get form submission (Notes to Production)
             if form_submission:
@@ -146,13 +156,17 @@ class DiscrepancyDetectionWorkflow:
                     form_submission
                 )
             else:
-                logger.info(f"\nStep 4: Fetching form submission for job {job_id}")
+                logger.info(
+                    "\nStep 4: Fetching form submission for job", job_id=job_id
+                )
                 notes_to_production = await self._fetch_form_submission(job_id)
 
             if notes_to_production:
                 logger.info("✅ Found Notes to Production data")
             else:
-                logger.warning(f"⚠️ No Notes to Production found for job {job_id}")
+                logger.warning(
+                    "⚠️ No Notes to Production found for job", job_id=job_id
+                )
                 notes_to_production = {"message": "No Notes to Production found"}
 
             # Step 5: Analyze audio/transcript with AI
@@ -166,8 +180,10 @@ class DiscrepancyDetectionWorkflow:
             )
 
             logger.info("✅ Analysis complete")
-            logger.info(f"   Needs Review: {review_result.needs_review}")
-            logger.info(f"   Explanation: {review_result.hold_explanation}")
+            logger.info("   Needs Review", needs_review=review_result.needs_review)
+            logger.info(
+                "   Explanation", explanation=review_result.hold_explanation
+            )
 
             # Step 6: Conditional project hold
             if review_result.needs_review:
@@ -195,14 +211,16 @@ class DiscrepancyDetectionWorkflow:
 
         except CRMError as e:
             logger.error(
-                f"❌ CRM error during workflow: {e.message} (Code: {e.error_code})"
+                "❌ CRM error during workflow",
+                error_message=e.message,
+                error_code=e.error_code,
             )
             raise
         except Exception as e:
-            logger.error(f"❌ Unexpected error during workflow: {e}")
+            logger.error("❌ Unexpected error during workflow", error=str(e))
             import traceback
 
-            logger.error(traceback.format_exc())
+            logger.error("Traceback", traceback=traceback.format_exc())
             raise
 
     async def _fetch_project(self, project_id: int):
@@ -225,7 +243,7 @@ class DiscrepancyDetectionWorkflow:
         tenant_id = getattr(self.crm_provider, "tenant_id", 0)
 
         # Step 1: Try to find sold estimate for this specific job
-        logger.info(f"   Querying estimates for job {job_id}")
+        logger.info("   Querying estimates for job", job_id=job_id)
         job_estimates_request = EstimatesRequest(
             tenant=int(tenant_id),
             job_id=job_id,
@@ -236,7 +254,9 @@ class DiscrepancyDetectionWorkflow:
             job_estimates_request
         )
         logger.info(
-            f"   Found {len(job_estimates_response.estimates)} estimates for job {job_id}"
+            "   Found estimates for job",
+            estimate_count=len(job_estimates_response.estimates),
+            job_id=job_id,
         )
 
         # Check for sold estimates on this job
@@ -246,19 +266,24 @@ class DiscrepancyDetectionWorkflow:
 
         if len(job_sold_estimates) > 0:
             logger.info(
-                f"   ✅ Found {len(job_sold_estimates)} sold estimate(s) on job {job_id}"
+                "   ✅ Found sold estimate(s) on job",
+                sold_estimate_count=len(job_sold_estimates),
+                job_id=job_id,
             )
             if len(job_sold_estimates) > 1:
                 estimate_list = ", ".join([str(e.id) for e in job_sold_estimates])
                 logger.warning(
-                    f"   Multiple sold estimates found: {estimate_list}. Using most recent."
+                    "   Multiple sold estimates found - using most recent",
+                    estimate_ids=estimate_list,
                 )
                 job_sold_estimates.sort(key=lambda e: e.sold_on, reverse=True)
             return job_sold_estimates[0]
 
         # Step 2: No sold estimate on job, search at project level
-        logger.info(f"   No sold estimate found for job {job_id}")
-        logger.info(f"   Searching for sold estimates across project {project_id}")
+        logger.info("   No sold estimate found for job", job_id=job_id)
+        logger.info(
+            "   Searching for sold estimates across project", project_id=project_id
+        )
 
         project_estimates_request = EstimatesRequest(
             tenant=int(tenant_id),
@@ -270,7 +295,9 @@ class DiscrepancyDetectionWorkflow:
             project_estimates_request
         )
         logger.info(
-            f"   Found {len(project_estimates_response.estimates)} total estimates for project {project_id}"
+            "   Found total estimates for project",
+            estimate_count=len(project_estimates_response.estimates),
+            project_id=project_id,
         )
 
         # Filter for sold estimates
@@ -286,13 +313,15 @@ class DiscrepancyDetectionWorkflow:
             )
 
         logger.info(
-            f"   ✅ Found {len(project_sold_estimates)} sold estimate(s) at project level"
+            "   ✅ Found sold estimate(s) at project level",
+            sold_estimate_count=len(project_sold_estimates),
         )
 
         if len(project_sold_estimates) > 1:
             estimate_list = ", ".join([str(e.id) for e in project_sold_estimates])
             logger.warning(
-                f"   Multiple sold estimates found: {estimate_list}. Using most recent."
+                "   Multiple sold estimates found - using most recent",
+                estimate_ids=estimate_list,
             )
             project_sold_estimates.sort(key=lambda e: e.sold_on, reverse=True)
 
@@ -393,7 +422,7 @@ class DiscrepancyDetectionWorkflow:
         # Load transcript if provided
         transcript_text = None
         if transcript_path:
-            logger.info(f"   Loading transcript from: {transcript_path}")
+            logger.info("   Loading transcript from", transcript_path=transcript_path)
             with open(transcript_path, "r") as f:
                 transcript_data = json.load(f)
 
@@ -406,7 +435,10 @@ class DiscrepancyDetectionWorkflow:
                 transcript_lines.append(f"[{timestamp}] {speaker}: {text}")
 
             transcript_text = "\n".join(transcript_lines)
-            logger.info(f"   Loaded transcript with {len(transcript_data)} entries")
+            logger.info(
+                "   Loaded transcript with entries",
+                entry_count=len(transcript_data),
+            )
 
         # Build the prompt
         prompt = f"""You are an expert sales admin for a roofing company. You are reviewing a conversation between one of our sales reps and a customer. The conversation may be provided as audio, transcript, or both.
@@ -469,8 +501,8 @@ There are several fields in the estimate that you should explicity NOT consider 
 
         # Add note to project
         note_text = f"Maive AI - I detected job details discussed in sales call not being tracked in Service Titan: {explanation}"
-        logger.info("   Adding note to project (pinned to top):")
-        logger.info(f"   Note content: {note_text}")
+        logger.info("   Adding note to project (pinned to top)")
+        logger.info("   Note content", note_text=note_text)
 
         await self.crm_provider.add_project_note(
             project_id=project_id, text=note_text, pin_to_top=True
@@ -519,11 +551,11 @@ async def main():
         logger.info("=" * 60)
         logger.info("SINGLE JOB DISCREPANCY DETECTION WORKFLOW")
         logger.info("=" * 60)
-        logger.info(f"Job ID: {args.job_id}")
+        logger.info("Job ID", job_id=args.job_id)
         if args.audio_path:
-            logger.info(f"Audio file: {args.audio_path}")
+            logger.info("Audio file", audio_path=args.audio_path)
         if args.transcript_path:
-            logger.info(f"Transcript file: {args.transcript_path}")
+            logger.info("Transcript file", transcript_path=args.transcript_path)
         logger.info("")
 
         try:
@@ -540,7 +572,9 @@ async def main():
             print("=" * 60)
 
         except Exception as e:
-            logger.error(f"Failed to process job {args.job_id}: {e}")
+            logger.error(
+                "Failed to process job", job_id=args.job_id, error=str(e)
+            )
             raise
 
         return
@@ -556,11 +590,11 @@ async def main():
     logger.info("=" * 60)
     logger.info("BATCH DISCREPANCY DETECTION WORKFLOW")
     logger.info("=" * 60)
-    logger.info(f"Time range: {start_time} to {end_time}")
+    logger.info("Time range", start_time=start_time, end_time=end_time)
     if args.audio_path:
-        logger.info(f"Audio file: {args.audio_path}")
+        logger.info("Audio file", audio_path=args.audio_path)
     if args.transcript_path:
-        logger.info(f"Transcript file: {args.transcript_path}")
+        logger.info("Transcript file", transcript_path=args.transcript_path)
     logger.info("")
 
     # Step 1: Fetch all form submissions in the time range
@@ -590,7 +624,10 @@ async def main():
         if submitted_on and start_time <= submitted_on <= end_time:
             submissions_in_range.append(submission)
 
-    logger.info(f"Found {len(submissions_in_range)} form submissions in time range")
+    logger.info(
+        "Found form submissions in time range",
+        submission_count=len(submissions_in_range),
+    )
 
     if not submissions_in_range:
         logger.warning("No form submissions found in the specified time range")
@@ -620,7 +657,7 @@ async def main():
                     job_ids.append(job_id)
                     submission_by_job[job_id] = submission
 
-    logger.info(f"Found {len(job_ids)} unique jobs to process")
+    logger.info("Found unique jobs to process", job_count=len(job_ids))
     logger.info("")
 
     # Step 3: Process each job
@@ -637,7 +674,7 @@ async def main():
             )
             results.append(result)
         except Exception as e:
-            logger.error(f"Failed to process job {job_id}: {e}")
+            logger.error("Failed to process job", job_id=job_id, error=str(e))
             failed_jobs.append({"job_id": job_id, "error": str(e)})
 
     # Step 4: Summary
