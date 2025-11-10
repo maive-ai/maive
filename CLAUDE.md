@@ -91,6 +91,7 @@ When adding new APIs:
 2. Sync: Run `pnpm api:sync` to update client
 3. Frontend: Import and use typed API client functions
 4. Always run `pnpm typecheck` and `pnpm lint` before committing
+5. Prefer pydantic models over large dictionaries
 
 ### Infrastructure Changes
 1. Modify Pulumi code in infra/
