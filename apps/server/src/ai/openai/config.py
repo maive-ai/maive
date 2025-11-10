@@ -61,6 +61,11 @@ class OpenAISettings(BaseSettings):
         default="low",
         description="Default text verbosity for reasoning models (low, medium, high)",
     )
+    request_timeout: int = Field(
+        default=300,
+        gt=0,
+        description="HTTP request timeout in seconds (default: 300s for long-running MCP calls)",
+    )
 
 
 @lru_cache

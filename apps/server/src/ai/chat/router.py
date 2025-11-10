@@ -4,6 +4,7 @@ FastAPI router for roofing chat endpoints.
 Provides streaming chat interface using Server-Sent Events (SSE).
 """
 
+import time
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -77,6 +78,9 @@ async def stream_roofing_chat(
     # Create async generator for SSE
     async def event_generator():
         """Generate SSE events from chat stream with tool calls, citations and reasoning."""
+        start_time = time.time()
+        logger.debug(f"[STREAM] Starting SSE stream for user {current_user.id}")
+        
         try:
             async for chunk in chat_service.stream_chat_response(messages):
                 # Send reasoning summaries first so UI can reflect thinking state
@@ -108,14 +112,19 @@ async def stream_roofing_chat(
 
                 # Send finish signal if stream is complete
                 if chunk.finish_reason:
+                    elapsed = time.time() - start_time
+                    logger.debug(f"[STREAM] Stream completed with reason: {chunk.finish_reason} (elapsed: {elapsed:.1f}s)")
                     yield SSEEvent(event="done", data=chunk.finish_reason).format()
                     break
 
             # Send done signal if not already sent
+            elapsed = time.time() - start_time
+            logger.debug(f"[STREAM] Stream completed successfully (elapsed: {elapsed:.1f}s)")
             yield SSEEvent(event="done", data="complete").format()
 
         except Exception as e:
-            logger.error(f"Error in chat stream: {e}")
+            elapsed = time.time() - start_time
+            logger.debug(f"[STREAM] Error in chat stream after {elapsed:.1f}s: {e}")
             yield SSEEvent(event="error", data=str(e)).format()
 
     return StreamingResponse(

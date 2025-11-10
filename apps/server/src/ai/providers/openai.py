@@ -2,9 +2,11 @@
 
 import base64
 import json
+import time
 from pathlib import Path
 from typing import Any, AsyncGenerator, BinaryIO, TypeVar
 
+import httpx
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion
 from openai.types.responses import (
@@ -90,8 +92,16 @@ class OpenAIProvider(AIProvider):
         """Get or create the OpenAI client."""
         if self._client is None:
             try:
-                self._client = AsyncOpenAI(api_key=self.settings.api_key)
-                logger.info("OpenAI client initialized")
+                # Configure timeout for long-running MCP calls
+                timeout = httpx.Timeout(
+                    timeout=self.settings.request_timeout,
+                    connect=10.0,  # Connection timeout: 10s
+                )
+                self._client = AsyncOpenAI(
+                    api_key=self.settings.api_key,
+                    timeout=timeout,
+                )
+                logger.info(f"OpenAI client initialized with {self.settings.request_timeout}s timeout")
             except Exception as e:
                 logger.error(f"Failed to initialize OpenAI client: {e}")
                 raise OpenAIAuthenticationError(
@@ -1121,7 +1131,7 @@ class OpenAIProvider(AIProvider):
         # Note: The in_progress event doesn't include the tool name - only item_id, output_index, sequence_number, type
         elif event_type == "ResponseMcpCallInProgressEvent":
             item_id = getattr(event, "item_id", "unknown")
-            logger.info(f"[MCP] Tool call started (item_id={item_id})")
+            logger.debug(f"[MCP] Tool call started (item_id={item_id}, timestamp={time.time()})")
             
             # Return a hard coded "CRM search" message since we don't have the specific tool name yet
             return ToolCall(
@@ -1145,7 +1155,7 @@ class OpenAIProvider(AIProvider):
         # MCP tool call completed
         elif event_type == "ResponseMcpCallCompletedEvent":
             item_id = getattr(event, "item_id", "unknown")
-            logger.info(f"[MCP] Tool call completed (item_id={item_id})")
+            logger.debug(f"[MCP] Tool call completed (item_id={item_id}, timestamp={time.time()})")
             return ToolCall(
                 tool_call_id=item_id,
                 tool_name=ToolName.MCP_TOOL,
@@ -1269,9 +1279,10 @@ class OpenAIProvider(AIProvider):
             )
 
             # Create streaming response using Responses API
-            logger.info("Creating stream with OpenAI Responses API...")
+            stream_start_time = time.time()
+            logger.debug(f"[STREAM] Creating stream with OpenAI Responses API (timeout={self.settings.request_timeout}s)...")
             stream = await client.responses.create(**stream_params)
-            logger.info("Stream created successfully, starting to read events...")
+            logger.debug(f"[STREAM] Stream created successfully at {stream_start_time}, starting to read events...")
 
             # Track citations from web search
             accumulated_citations: list[SearchCitation] = []
@@ -1431,8 +1442,9 @@ class OpenAIProvider(AIProvider):
 
                     # Handle completion events
                     elif isinstance(event, ResponseCompletedEvent):
+                        elapsed = time.time() - stream_start_time
                         finish_reason = "completed"
-                        logger.info("[COMPLETED] Stream completed successfully")
+                        logger.debug(f"[STREAM] Stream completed successfully (elapsed: {elapsed:.1f}s)")
                         
                         # Flush any remaining text in buffer
                         if text_buffer:
@@ -1440,8 +1452,9 @@ class OpenAIProvider(AIProvider):
                             text_buffer = ""
 
                     elif isinstance(event, ResponseFailedEvent):
+                        elapsed = time.time() - stream_start_time
                         finish_reason = "failed"
-                        logger.error(f"[FAILED] Stream failed: {event}")
+                        logger.debug(f"[STREAM] Stream failed after {elapsed:.1f}s: {event}")
                         
                         # Flush any remaining text in buffer
                         if text_buffer:
@@ -1478,12 +1491,15 @@ class OpenAIProvider(AIProvider):
                     )
                     continue
 
-            logger.info(
-                f"Chat stream completed with {len(accumulated_citations)} total citations"
+            total_elapsed = time.time() - stream_start_time
+            logger.debug(
+                f"[STREAM] Chat stream completed with {len(accumulated_citations)} total citations "
+                f"(total time: {total_elapsed:.1f}s)"
             )
 
         except Exception as e:
-            logger.error(f"Streaming chat with search failed: {e}")
+            elapsed = time.time() - stream_start_time
+            logger.debug(f"[STREAM] Streaming chat with search failed after {elapsed:.1f}s: {e}")
             # Yield error as content
             yield ChatStreamChunk(
                 content=f"\n\nError: {str(e)}",
