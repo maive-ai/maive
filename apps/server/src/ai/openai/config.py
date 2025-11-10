@@ -49,7 +49,7 @@ class OpenAISettings(BaseSettings):
         description="Default temperature for non-reasoning models (not used with reasoning models)",
     )
     max_tokens: int = Field(
-        default=4096,
+        default=128000,
         gt=0,
         description="Default max output tokens for generation",
     )
