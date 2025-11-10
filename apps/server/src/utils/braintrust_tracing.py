@@ -16,12 +16,13 @@ from src.utils.logger import logger
 # Import Braintrust, but handle gracefully if not installed
 try:
     import braintrust
-    from braintrust import init_logger, wrap_openai
+    from braintrust import ExternalAttachment, init_logger, wrap_openai
     from openai import AsyncOpenAI
 
     BRAINTRUST_AVAILABLE = True
 except ImportError:
     BRAINTRUST_AVAILABLE = False
+    ExternalAttachment = None  # type: ignore
     logger.warning("Braintrust not installed. Tracing will be disabled.")
 
 

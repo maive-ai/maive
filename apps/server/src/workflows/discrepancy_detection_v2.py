@@ -24,9 +24,17 @@ from typing import Any
 import boto3
 from pydantic import BaseModel, Field
 
+from evals.estimate_deviation.schemas import (
+    BraintrustSpanInput,
+    BraintrustSpanMetadata,
+    Deviation,
+    DeviationOccurrence,
+    PredictedLineItem,
+)
 from src.ai.base import ContentAnalysisRequest
 from src.ai.providers import get_ai_provider
 from src.utils.braintrust_tracing import (
+    ExternalAttachment,
     braintrust_experiment,
     braintrust_span,
 )
@@ -187,72 +195,6 @@ def simplify_rilla_transcript(rilla_transcript: list[dict]) -> dict:
     return {"conversations": conversations}
 
 
-class DeviationOccurrence(BaseModel):
-    """Timestamp and context for a deviation occurrence."""
-
-    rilla_conversation_index: int = Field(
-        description="Zero-based index into the list of Rilla conversations (0 for first conversation, 1 for second, etc.)"
-    )
-    timestamp: str = Field(
-        description="Timestamp in HH:MM:SS or MM:SS format when this deviation was mentioned in the conversation",
-        pattern=r"^(([01]?[0-9]|2[0-3]):)?([0-5][0-9]):([0-5][0-9])$",
-    )
-
-
-class PredictedLineItem(BaseModel):
-    """Predicted estimate line item for a deviation."""
-
-    description: str = Field(
-        description="Description of the line item (e.g., 'Ridge Vent', 'Attic Fan')"
-    )
-    quantity: float | None = Field(
-        default=None, description="Predicted quantity for the line item"
-    )
-    unit: str | None = Field(
-        default=None, description="Unit of measurement (e.g., 'LF', 'EA', 'SQ', '%')"
-    )
-    notes: str | None = Field(
-        default=None,
-        description="Additional notes or context for the line item prediction",
-    )
-
-    # Pricebook matching fields
-    matched_pricebook_item_id: int | None = Field(
-        default=None,
-        description="ID of the matched pricebook item from the vector store (if found)",
-    )
-    matched_pricebook_item_code: str | None = Field(
-        default=None,
-        description="Item code of the matched pricebook item (e.g., 'MAT-001')",
-    )
-    matched_pricebook_item_display_name: str | None = Field(
-        default=None,
-        description="Display name of the matched pricebook item",
-    )
-    unit_cost: float | None = Field(
-        default=None,
-        description="Unit cost from the matched pricebook item's primaryVendor",
-    )
-    total_cost: float | None = Field(
-        default=None,
-        description="Total cost calculated as unit_cost × quantity",
-    )
-
-
-class Deviation(BaseModel):
-    """A single deviation found between conversation and documentation."""
-
-    deviation_class: str = Field(
-        description="The label of the deviation class from the classes list"
-    )
-    explanation: str = Field(
-        description="A brief explanation of what specific deviation was found"
-    )
-    occurrences: list[DeviationOccurrence] = Field(
-        description="List of specific timestamps where this deviation was mentioned in the conversation(s)"
-    )
-
-
 class DiscrepancyReview(BaseModel):
     """Structured output for discrepancy review with classified deviations."""
 
@@ -411,30 +353,79 @@ class DiscrepancyDetectionV2Workflow:
             ValueError: If dataset entry not found or files missing
             Exception: For other errors
         """
+        # Load dataset entry first to get all fields for tracing
+        entry = self._load_dataset_entry(dataset_path, uuid)
+
         # Execute the internal workflow logic first to get project IDs
         result = await self._execute_internal(uuid, dataset_path)
 
         # Create span for tracing if experiment is provided
-        # Include project metadata in input for easy dataset creation
+        # Build input with only data files (S3 URIs)
+        span_input = BraintrustSpanInput()
+
+        # Add S3 URIs as ExternalAttachment objects if available
+        if ExternalAttachment is not None:
+            estimate_s3_uri = entry.get("estimate_s3_uri")
+            if estimate_s3_uri:
+                span_input.estimate_s3_uri = ExternalAttachment(
+                    url=estimate_s3_uri,
+                    filename="estimate.json",
+                    content_type="application/json",
+                )
+
+            form_s3_uri = entry.get("form_s3_uri")
+            if form_s3_uri:
+                span_input.form_s3_uri = ExternalAttachment(
+                    url=form_s3_uri,
+                    filename="form.json",
+                    content_type="application/json",
+                )
+
+            # Handle arrays of S3 URIs for recordings and transcripts
+            rilla_recordings_s3_uri = entry.get("rilla_recordings_s3_uri", [])
+            if rilla_recordings_s3_uri:
+                span_input.rilla_recordings_s3_uri = [
+                    ExternalAttachment(
+                        url=uri,
+                        filename=f"recording_{i}.m4a",
+                        content_type="audio/m4a",
+                    )
+                    for i, uri in enumerate(rilla_recordings_s3_uri)
+                ]
+
+            rilla_transcripts_s3_uri = entry.get("rilla_transcripts_s3_uri", [])
+            if rilla_transcripts_s3_uri:
+                span_input.rilla_transcripts_s3_uri = [
+                    ExternalAttachment(
+                        url=uri,
+                        filename=f"transcript_{i}.json",
+                        content_type="application/json",
+                    )
+                    for i, uri in enumerate(rilla_transcripts_s3_uri)
+                ]
+
+        # Build metadata with all identifying information
+        span_metadata = BraintrustSpanMetadata(
+            uuid=uuid,
+            project_id=result["project_id"],
+            job_id=result["job_id"],
+            estimate_id=result["estimate_id"],
+            prelabel=self.prelabel,
+            rilla_links=entry.get("rilla_links", []),
+            project_created_date=entry.get("project_created_date"),
+            estimate_sold_date=entry.get("estimate_sold_date"),
+        )
+
         with braintrust_span(
             self.experiment,
             name=f"discrepancy_detection_{uuid[:8]}",
-            input={
-                "uuid": uuid,
-                "project_id": result["project_id"],
-                "job_id": result["job_id"],
-                "estimate_id": result["estimate_id"],
-            },
-            metadata={
-                "prelabel": self.prelabel,
-            },
+            input=span_input.model_dump(),
+            metadata=span_metadata.model_dump(),
         ) as span:
-            # Log simplified output for dataset conversion
-            # Only include deviations and cost_savings, matching expected format
+            # Log deviations output for dataset conversion
             if span:
                 output_data = {
                     "deviations": result["deviations"],
-                    "cost_savings": result["cost_savings"],
                 }
 
                 # When prelabeling, set both output and expected so the UI shows

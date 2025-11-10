@@ -117,13 +117,51 @@ View results at https://braintrust.dev in the "discrepancy-detection" project.
 
 Each dataset entry contains:
 
-**Input:**
+**Input (Data Files):**
+```json
+{
+  "estimate_s3_uri": {
+    "url": "s3://vertex-rilla-data/val/f3a7203d-.../estimate.json",
+    "filename": "estimate.json",
+    "content_type": "application/json"
+  },
+  "form_s3_uri": {
+    "url": "s3://vertex-rilla-data/val/f3a7203d-.../form.json",
+    "filename": "form.json",
+    "content_type": "application/json"
+  },
+  "rilla_recordings_s3_uri": [
+    {
+      "url": "s3://vertex-rilla-data/val/f3a7203d-.../recording.m4a",
+      "filename": "recording_0.m4a",
+      "content_type": "audio/m4a"
+    }
+  ],
+  "rilla_transcripts_s3_uri": [
+    {
+      "url": "s3://vertex-rilla-data/val/f3a7203d-.../transcript.json",
+      "filename": "transcript_0.json",
+      "content_type": "application/json"
+    }
+  ]
+}
+```
+
+Note: S3 URIs are stored as Braintrust `ExternalAttachment` objects, enabling direct file viewing and downloading from the Braintrust UI without uploading the files to Braintrust storage.
+
+**Metadata (Identifying Information):**
 ```json
 {
   "uuid": "f3a7203d-29b6-441e-9e89-1198378410bb",
   "project_id": "320698515",
   "job_id": "292862484",
-  "estimate_id": "320707924"
+  "estimate_id": "320707924",
+  "prelabel": true,
+  "rilla_links": [
+    "https://app.rillavoice.com/conversations/single?id=f3a7203d-29b6-441e-9e89-1198378410bb"
+  ],
+  "project_created_date": "2025-07-03T16:54:51.977992+00:00",
+  "estimate_sold_date": "2025-07-03T16:54:49.650000+00:00"
 }
 ```
 
@@ -151,12 +189,7 @@ Each dataset entry contains:
         "total_cost": 4387.50
       }
     }
-  ],
-  "cost_savings": {
-    "total": 4387.50,
-    "matched_items": 1,
-    "unmatched_items": 0
-  }
+  ]
 }
 ```
 
@@ -165,7 +198,6 @@ Each dataset entry contains:
 - **Timestamps**: Use HH:MM:SS or MM:SS format (start of sentence where deviation mentioned)
 - **Occurrences**: Include all mentions in the conversation
 - **Predicted line items**: Include pricebook matches when available
-- **Cost savings**: Total should match sum of matched line items
 - **Notes**: Use metadata field for edge cases or ambiguities
 
 ## Step 3: Run Evaluation
