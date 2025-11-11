@@ -244,53 +244,6 @@ class JobNimbusProvider(CRMProvider):
         data = response.json()
         return JobNimbusJobsListResponse(**data)
 
-    def _apply_client_filters(self, jobs: list[Job], filters: dict[str, Any]) -> list[Job]:
-        """
-        Apply client-side filtering to a list of jobs.
-        
-        Args:
-            jobs: List of jobs to filter
-            filters: Dictionary of filter criteria
-            
-        Returns:
-            Filtered list of jobs
-        """
-        if not filters:
-            return jobs
-        
-        filtered_jobs = []
-        for job in jobs:
-            # Customer name filter (partial, case-insensitive)
-            if "customer_name" in filters:
-                if filters["customer_name"].lower() not in (job.customer_name or "").lower():
-                    continue
-            
-            # Job ID filter (exact match)
-            if "job_id" in filters:
-                if job.id != filters["job_id"]:
-                    continue
-            
-            # Address filter (partial, case-insensitive)
-            if "address" in filters:
-                full_address = f"{job.address_line1 or ''} {job.city or ''} {job.state or ''} {job.postal_code or ''}"
-                if filters["address"].lower() not in full_address.lower():
-                    continue
-            
-            # Claim number filter (exact match from provider_data)
-            if "claim_number" in filters:
-                job_claim = job.provider_data.get("claim_number") if job.provider_data else None
-                if job_claim != filters["claim_number"]:
-                    continue
-            
-            # Status filter (exact match)
-            if "status" in filters:
-                if job.status != filters["status"]:
-                    continue
-            
-            filtered_jobs.append(job)
-        
-        return filtered_jobs
-
     async def _get_jobs_internal(
         self,
         filters: dict[str, Any] | None,
@@ -320,17 +273,8 @@ class JobNimbusProvider(CRMProvider):
             ]
         )
 
-        # Apply client-side filtering if provided
-        # TODO: Remove this once we are confident in the server-side filtering
-        if filters:
-            filtered_jobs = self._apply_client_filters(jobs, filters)
-            if len(filtered_jobs) != len(jobs):
-                jobs = filtered_jobs
-
-        # Use API total count for pagination metadata. If client-side filtering reduced the dataset,
-        # fall back to the filtered length since we don't know the total matches without server-side filtering.
-        total_count = jn_jobs_list.count if filters is None or len(jobs) == len(jn_jobs_list.results) else len(jobs)
-
+        # Use API total count and results for pagination metadata (server-side filtering)
+        total_count = jn_jobs_list.count
         from_offset = (page - 1) * page_size
         has_more = len(jn_jobs_list.results) == page_size and (from_offset + page_size) < total_count
 
