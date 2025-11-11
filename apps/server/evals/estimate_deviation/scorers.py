@@ -12,6 +12,8 @@ Usage:
 """
 
 from autoevals import LLMClassifier
+from braintrust import Score
+from braintrust.framework import EvalScorer
 
 from evals.estimate_deviation.schemas import Deviation
 
@@ -39,7 +41,7 @@ Return:
 (A) Yes, same deviation
 (B) No, different deviations""",
     choice_scores={"A": 1.0, "B": 0.0},
-    model="gemini-2.5-flash",
+    model="gpt-4o-mini",
 )
 
 
@@ -66,11 +68,11 @@ Return:
 (D) Poor - misses key details or unclear
 (F) Fail - wrong issue or seriously inaccurate""",
     choice_scores={"A": 1.0, "B": 0.8, "C": 0.6, "D": 0.4, "F": 0.0},
-    model="gemini-2.5-flash",
+    model="gpt-4o",
 )
 
 
-def comprehensive_deviation_scorer(input, output, expected=None, **kwargs):
+def comprehensive_deviation_scorer(input, output, expected=None, **kwargs) -> EvalScorer:
     """Comprehensive scorer with LLM-based semantic matching + deterministic metrics.
 
     Workflow:
@@ -179,14 +181,9 @@ def comprehensive_deviation_scorer(input, output, expected=None, **kwargs):
         fn = len(expected_devs) - tp  # Expected deviations not matched
         fp = len(output_devs) - tp  # Predicted deviations not matched
 
-        # Step 3: Calculate precision, recall, F1
+        # Step 3: Calculate precision and recall
         precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
         recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-        f1 = (
-            2 * (precision * recall) / (precision + recall)
-            if (precision + recall) > 0
-            else 0.0
-        )
 
         # Step 4: Score explanation quality on matched pairs
         quality_scores = []
@@ -210,37 +207,42 @@ def comprehensive_deviation_scorer(input, output, expected=None, **kwargs):
             sum(quality_scores) / len(quality_scores) if quality_scores else 0.0
         )
 
-        # Step 5: Combined score (weighted average of F1 and quality)
-        combined_score = 0.7 * f1 + 0.3 * avg_quality
-
         debug_logger.info(
-            f"Final metrics: F1={f1:.2f}, Precision={precision:.2f}, Recall={recall:.2f}, Quality={avg_quality:.2f}"
+            f"Final metrics: Precision={precision:.2f}, Recall={recall:.2f}, Quality={avg_quality:.2f}"
         )
-        debug_logger.info(f"TP={tp}, FP={fp}, FN={fn}, Combined={combined_score:.2f}")
+        debug_logger.info(f"TP={tp}, FP={fp}, FN={fn}")
 
-        return {
-            "name": "comprehensive_score",
-            "score": combined_score,
-            "metadata": {
-                "f1": f1,
-                "precision": precision,
-                "recall": recall,
-                "tp": tp,
-                "fp": fp,
-                "fn": fn,
-                "avg_explanation_quality": avg_quality,
-                "num_matches": len(matches),
-                "match_threshold": MATCH_THRESHOLD,
-                "matches": [
-                    {
-                        "expected_explanation": exp.explanation[:100],
-                        "predicted_explanation": pred.explanation[:100],
-                        "similarity_score": score,
-                    }
-                    for (exp, pred, score) in matches
-                ],
-            },
-        }
+        # Return TWO separate scores as Score objects: precision and explanation quality
+        return [
+            Score(
+                name="precision",
+                score=precision,
+                metadata={
+                    "tp": tp,
+                    "fp": fp,
+                    "fn": fn,
+                    "recall": recall,
+                    "num_matches": len(matches),
+                    "match_threshold": MATCH_THRESHOLD,
+                    "matches": [
+                        {
+                            "expected_explanation": exp.explanation[:100],
+                            "predicted_explanation": pred.explanation[:100],
+                            "similarity_score": score,
+                        }
+                        for (exp, pred, score) in matches
+                    ],
+                },
+            ),
+            Score(
+                name="explanation_quality",
+                score=avg_quality,
+                metadata={
+                    "num_evaluated": len(quality_scores),
+                    "individual_scores": quality_scores,
+                },
+            ),
+        ]
 
     except Exception as e:
         import traceback
