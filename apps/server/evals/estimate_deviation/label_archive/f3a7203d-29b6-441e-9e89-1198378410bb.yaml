@@ -1,0 +1,25 @@
+input:
+  uuid: f3a7203d-29b6-441e-9e89-1198378410bb
+  project_id: "320698515"
+  job_id: "292862484"
+  estimate_id: "320707924"
+
+expected:
+  deviations:
+    - deviation_class: product_or_component_not_in_estimate
+      explanation: The production notes specify that 351 units (presumably linear feet) of gutters are included in the scope of work, but there is no corresponding line item in the estimate.
+
+    - deviation_class: product_or_component_not_in_estimate
+      explanation: The production notes indicate that gutter guards are included in the project ('Gutter Guards: Yes'), but they are not listed as a line item on the estimate.
+
+    - deviation_class: untracked_or_incorrect_customer_preference
+      explanation: The production notes specify 'Copper' for the chimney flashing. The estimate includes a line item for 'STEP FLASHING FLAT MILL,' which typically indicates a standard aluminum product, not copper.
+
+    - deviation_class: untracked_or_incorrect_customer_preference
+      explanation: The production notes state the 'Flashing Color' is 'White'. However, the estimate line item for 'Install Berger Aluminum Drip Edge' specifies 'Color Selection Needed,' indicating the preference was not transferred to the estimate.
+
+metadata:
+  verified_by: will
+  verified_at: "2025-01-09T12:00:00Z"
+  notes: Migrated from labels.md
+  total_deviations: 4
