@@ -234,8 +234,7 @@ class DiscrepancyDetectionV2Workflow:
         )
 
         # Use AI provider to analyze with structured output
-        logger.info("   Initiating AI analysis...")
-        logger.info("   Using GPT-5 with transcript and pricebook vector store for RAG")
+        logger.info("Initiating AI analysis...")
 
         request = ContentAnalysisRequest(
             audio_path=None,  # No audio for now

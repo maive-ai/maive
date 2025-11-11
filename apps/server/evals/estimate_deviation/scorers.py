@@ -503,7 +503,15 @@ def comprehensive_deviation_scorer(
 
         # Calculate value_created (zero if ANY deviation FPs exist)
         total_value = sum(line_item_metrics["values"])
-        value_created = 0.0 if fp > 0 else total_value
+        value_created_dollars = 0.0 if fp > 0 else total_value
+
+        # Log raw dollar amount as a metric (not constrained to 0-1)
+        from braintrust import current_span
+        current_span().log(metrics={"value_created_dollars": value_created_dollars})
+
+        # Normalize to 0-1 for the score (using $10k as max reasonable value per task)
+        MAX_VALUE_PER_TASK = 10000.0
+        value_created_normalized = min(1.0, value_created_dollars / MAX_VALUE_PER_TASK)
 
         debug_logger.info(
             f"Line item metrics: TP={line_item_metrics['tp']}, FP={line_item_metrics['fp']}, FN={line_item_metrics['fn']}"
@@ -512,7 +520,10 @@ def comprehensive_deviation_scorer(
             f"Quantity accuracy: {avg_quantity_accuracy:.2f}, Unit cost accuracy: {avg_unit_cost_accuracy:.2f}"
         )
         debug_logger.info(
-            f"Total value: ${total_value:.2f}, Value created: ${value_created:.2f} (Deviation FPs: {fp})"
+            f"Total value: ${total_value:.2f}, Value created: ${value_created_dollars:.2f} (Deviation FPs: {fp})"
+        )
+        debug_logger.info(
+            f"Value created normalized: {value_created_normalized:.4f} (logged ${value_created_dollars:.2f} as metric)"
         )
 
         debug_logger.info(
@@ -601,8 +612,10 @@ def comprehensive_deviation_scorer(
             ),
             Score(
                 name="value_created",
-                score=value_created,
+                score=value_created_normalized,
                 metadata={
+                    "value_created_dollars": value_created_dollars,
+                    "max_value_per_task": MAX_VALUE_PER_TASK,
                     "total_value": total_value,
                     "deviation_fps": fp,
                     "num_line_items_with_value": len(line_item_metrics["values"]),
