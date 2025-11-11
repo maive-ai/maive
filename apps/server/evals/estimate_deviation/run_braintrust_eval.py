@@ -16,13 +16,7 @@ from pathlib import Path
 import braintrust
 from braintrust import Eval
 
-from evals.estimate_deviation.scorers import (
-    classification_accuracy_scorer_bt,
-    detection_binary_scorer_bt,
-    false_negative_scorer_bt,
-    false_positive_scorer_bt,
-    occurrence_accuracy_scorer_bt,
-)
+from evals.estimate_deviation.scorers import comprehensive_deviation_scorer
 from src.utils.logger import logger
 from src.workflows.discrepancy_detection_v2 import DiscrepancyDetectionV2Workflow
 
@@ -130,17 +124,13 @@ def main():
         project="discrepancy-detection", name=args.dataset_name
     )
 
-    # Run eval
+    # Run eval with comprehensive LLM-based scorer
     result = Eval(
         "discrepancy-detection",
         data=lambda: dataset,
         task=task,
         scores=[
-            classification_accuracy_scorer_bt,
-            false_positive_scorer_bt,
-            false_negative_scorer_bt,
-            occurrence_accuracy_scorer_bt,
-            detection_binary_scorer_bt,
+            comprehensive_deviation_scorer,
         ],
         experiment_name=args.experiment_name,
     )

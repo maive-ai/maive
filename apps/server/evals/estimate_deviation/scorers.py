@@ -1,116 +1,185 @@
-"""Evaluation scorers for discrepancy detection workflow.
+"""LLM-based scorers for discrepancy detection using autoevals.
 
-These scorers compare predicted deviations against ground truth labels
-to measure classification accuracy, precision, recall, and other metrics.
+Comprehensive scorer that:
+- Matches predicted deviations to expected using LLM semantic similarity
+- Computes deterministic precision, recall, F1
+- Evaluates explanation quality on matched pairs
+
+Usage:
+    from evals.estimate_deviation.scorers import comprehensive_deviation_scorer
+
+    Eval(..., scores=[comprehensive_deviation_scorer])
 """
 
-from collections import defaultdict
-
-from pydantic import BaseModel, Field
+from autoevals import LLMClassifier
 
 from evals.estimate_deviation.schemas import Deviation
 
+# Semantic matching scorer: Are output and expected describing the same deviation?
+deviation_semantic_match = LLMClassifier(
+    name="DeviationSemanticMatch",
+    prompt_template="""You are evaluating if two deviation descriptions refer to the same underlying issue.
 
-class ClassificationScores(BaseModel):
-    """Classification accuracy metrics."""
+Expected deviation:
+Class: {{{expected.deviation_class}}}
+Explanation: {{{expected.explanation}}}
 
-    overall_precision: float
-    overall_recall: float
-    overall_f1: float
-    # Per-class metrics stored as extra fields
-    model_config = {"extra": "allow"}
+Predicted deviation:
+Class: {{{output.deviation_class}}}
+Explanation: {{{output.explanation}}}
 
+Question: Do these two deviations describe the SAME specific issue/discrepancy?
 
-class ConfusionMatrixScores(BaseModel):
-    """Confusion matrix for classification."""
+Consider:
+- Same component/item (e.g., both about skylights, not one skylight one chimney)
+- Same type of problem (e.g., both about missing from estimate)
+- Same root cause
 
-    confusion_matrix: dict[str, dict[str, int]]
-    all_classes: list[str]
-    total_ground_truth: int
-    total_predicted: int
-
-
-class FalsePositiveScores(BaseModel):
-    """False positive analysis."""
-
-    false_positive_count: int
-    false_positive_rate: float
-    false_positive_classes: list[str]
-
-
-class FalseNegativeScores(BaseModel):
-    """False negative analysis."""
-
-    false_negative_count: int
-    false_negative_rate: float
-    false_negative_classes: list[str]
+Return:
+(A) Yes, same deviation
+(B) No, different deviations""",
+    choice_scores={"A": 1.0, "B": 0.0},
+    model="gemini-2.5-flash",
+)
 
 
-class TimestampError(BaseModel):
-    """Timestamp mismatch details."""
+# Explanation quality scorer: How well does the predicted explanation match expected?
+explanation_quality = LLMClassifier(
+    name="ExplanationQuality",
+    prompt_template="""You are evaluating the quality of a predicted deviation explanation against ground truth.
 
-    deviation_class: str = Field(alias="class")
-    expected: str
-    closest_predicted: str | None
-    error_seconds: float | None
+Expected (ground truth):
+{{{expected.explanation}}}
 
-    model_config = {"populate_by_name": True}
+Predicted:
+{{{output.explanation}}}
 
+Evaluate the predicted explanation quality:
+- Does it correctly identify the same issue as expected?
+- Does it include key details?
+- Is it clear and specific?
 
-class OccurrenceScores(BaseModel):
-    """Occurrence timestamp accuracy metrics."""
-
-    occurrence_accuracy: float
-    matched_occurrences: int
-    total_occurrences: int
-    timestamp_errors: list[TimestampError]
-
-
-class DetectionScores(BaseModel):
-    """Binary detection metrics."""
-
-    binary_detection_accuracy: float
-    predicted_has_deviations: bool
-    ground_truth_has_deviations: bool
+Return:
+(A) Excellent - matches expected quality and accuracy
+(B) Good - mostly accurate, minor details missing
+(C) Fair - correct issue but explanation lacks detail
+(D) Poor - misses key details or unclear
+(F) Fail - wrong issue or seriously inaccurate""",
+    choice_scores={"A": 1.0, "B": 0.8, "C": 0.6, "D": 0.4, "F": 0.0},
+    model="gemini-2.5-flash",
+)
 
 
-def classification_accuracy_scorer(
-    output: list[Deviation], expected: list[Deviation]
-) -> ClassificationScores:
-    """Score classification accuracy with per-class precision, recall, and F1.
+def comprehensive_deviation_scorer(input, output, expected=None, **kwargs):
+    """Comprehensive scorer with LLM-based semantic matching + deterministic metrics.
 
-    Compares predicted deviation classes against ground truth labels.
+    Workflow:
+    1. Match predicted deviations to expected using LLM semantic similarity
+    2. Compute TP/FP/FN counts from matches
+    3. Calculate precision, recall, F1
+    4. Score explanation quality on matched pairs
+    5. Return combined score + detailed breakdown
 
     Args:
-        output: Workflow output with deviations
-        expected: Ground truth with deviations
+        input: Input data (not used, deviations are in output/expected)
+        output: Dict with "deviations" list
+        expected: Dict with "deviations" list
+        **kwargs: Additional metadata
 
     Returns:
-        ClassificationScores with per-class and overall metrics
+        Dict with score and detailed metrics
     """
-    # Extract deviation classes
-    predicted_classes = [d.deviation_class for d in output]
-    ground_truth_classes = [d.deviation_class for d in expected]
+    if not expected or "deviations" not in expected:
+        return None
 
-    # Calculate per-class metrics
-    all_classes = set(predicted_classes + ground_truth_classes)
-    per_class_metrics = {}
+    if not output or "deviations" not in output:
+        return {
+            "name": "comprehensive_score",
+            "score": 0.0,
+            "metadata": {"error": "No output deviations"},
+        }
 
-    for cls in all_classes:
-        # True positives: in both predicted and ground truth
-        tp = sum(1 for c in predicted_classes if c == cls and c in ground_truth_classes)
+    try:
+        # Parse deviations into Pydantic objects
+        output_devs = [Deviation(**d) for d in output["deviations"]]
+        expected_devs = [Deviation(**d) for d in expected["deviations"]]
 
-        # False positives: in predicted but not in ground truth
-        fp = sum(
-            1 for c in predicted_classes if c == cls and c not in ground_truth_classes
+        # Step 1: Match deviations using LLM semantic similarity
+        matches = []  # (expected_dev, predicted_dev, similarity_score)
+        matched_predicted_indices = set()
+
+        from src.utils.logger import logger as debug_logger
+
+        debug_logger.info(
+            f"Starting comprehensive scorer: {len(output_devs)} predicted, {len(expected_devs)} expected"
         )
 
-        # False negatives: in ground truth but not in predicted
-        fn = sum(
-            1 for c in ground_truth_classes if c == cls and c not in predicted_classes
-        )
+        for exp_dev in expected_devs:
+            # Find candidates with same class
+            candidates = [
+                (i, pred)
+                for i, pred in enumerate(output_devs)
+                if pred.deviation_class == exp_dev.deviation_class
+                and i not in matched_predicted_indices
+            ]
 
-        # Calculate precision, recall, F1
+            if not candidates:
+                # No candidates for this class - will be counted as FN
+                debug_logger.info(
+                    f"No candidates for expected: {exp_dev.explanation[:50]}"
+                )
+                continue
+
+            debug_logger.info(
+                f"Found {len(candidates)} candidates for expected: {exp_dev.explanation[:50]}"
+            )
+
+            # Score each candidate using LLM
+            best_match = None
+            best_score = 0.0
+
+            for idx, candidate in candidates:
+                # Use the deviation_semantic_match LLM classifier
+                result = deviation_semantic_match(
+                    output={
+                        "deviation_class": candidate.deviation_class,
+                        "explanation": candidate.explanation,
+                    },
+                    expected={
+                        "deviation_class": exp_dev.deviation_class,
+                        "explanation": exp_dev.explanation,
+                    },
+                )
+
+                # Extract score from result (autoevals returns Score object with .score attribute)
+                if isinstance(result, dict):
+                    match_score = result.get("score", 0.0)
+                elif hasattr(result, "score"):
+                    match_score = result.score
+                else:
+                    match_score = float(result) if result is not None else 0.0
+
+                debug_logger.info(f"  Candidate {idx}: score={match_score}")
+
+                if match_score > best_score:
+                    best_score = match_score
+                    best_match = (idx, candidate)
+
+            # Accept match if above threshold
+            MATCH_THRESHOLD = 0.7
+            if best_match and best_score >= MATCH_THRESHOLD:
+                matched_predicted_indices.add(best_match[0])
+                matches.append((exp_dev, best_match[1], best_score))
+                debug_logger.info(f"  ✓ Matched with score {best_score}")
+            else:
+                debug_logger.info(f"  ✗ No match above threshold (best: {best_score})")
+
+        # Step 2: Compute TP/FP/FN
+        tp = len(matches)
+        fn = len(expected_devs) - tp  # Expected deviations not matched
+        fp = len(output_devs) - tp  # Predicted deviations not matched
+
+        # Step 3: Calculate precision, recall, F1
         precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
         recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
         f1 = (
@@ -119,432 +188,65 @@ def classification_accuracy_scorer(
             else 0.0
         )
 
-        per_class_metrics[f"{cls}_precision"] = precision
-        per_class_metrics[f"{cls}_recall"] = recall
-        per_class_metrics[f"{cls}_f1"] = f1
+        # Step 4: Score explanation quality on matched pairs
+        quality_scores = []
+        for exp_dev, pred_dev, _ in matches:
+            quality_result = explanation_quality(
+                output={"explanation": pred_dev.explanation},
+                expected={"explanation": exp_dev.explanation},
+            )
+            # Extract score from Score object or dict
+            if isinstance(quality_result, dict):
+                quality_score = quality_result.get("score", 0.0)
+            elif hasattr(quality_result, "score"):
+                quality_score = quality_result.score
+            else:
+                quality_score = (
+                    float(quality_result) if quality_result is not None else 0.0
+                )
+            quality_scores.append(quality_score)
 
-    # Overall metrics (macro-averaged)
-    if all_classes:
-        overall_precision = sum(
-            per_class_metrics[f"{cls}_precision"] for cls in all_classes
-        ) / len(all_classes)
-        overall_recall = sum(
-            per_class_metrics[f"{cls}_recall"] for cls in all_classes
-        ) / len(all_classes)
-        overall_f1 = sum(per_class_metrics[f"{cls}_f1"] for cls in all_classes) / len(
-            all_classes
-        )
-    else:
-        overall_precision = overall_recall = overall_f1 = 0.0
-
-    return ClassificationScores(
-        overall_precision=overall_precision,
-        overall_recall=overall_recall,
-        overall_f1=overall_f1,
-        **per_class_metrics,
-    )
-
-
-def confusion_matrix_scorer(
-    output: list[Deviation], expected: list[Deviation]
-) -> ConfusionMatrixScores:
-    """Generate confusion matrix for deviation classification.
-
-    Args:
-        output: Workflow output with deviations
-        expected: Ground truth with deviations
-
-    Returns:
-        ConfusionMatrixScores with confusion matrix and class counts
-    """
-    # Extract deviation classes
-    predicted_classes = [d.deviation_class for d in output]
-    ground_truth_classes = [d.deviation_class for d in expected]
-
-    # Build confusion matrix
-    all_classes = sorted(set(predicted_classes + ground_truth_classes))
-    confusion_matrix = defaultdict(lambda: defaultdict(int))
-
-    # For each ground truth class, count predictions
-    for gt_cls in ground_truth_classes:
-        # Find if this was predicted (simple matching by class name)
-        if gt_cls in predicted_classes:
-            confusion_matrix[gt_cls][gt_cls] += 1
-            # Remove from predicted to avoid double counting
-            predicted_classes.remove(gt_cls)
-        else:
-            # Missed this ground truth (false negative)
-            confusion_matrix[gt_cls]["<missed>"] += 1
-
-    # Remaining predictions are false positives
-    for pred_cls in predicted_classes:
-        confusion_matrix["<none>"][pred_cls] += 1
-
-    return ConfusionMatrixScores(
-        confusion_matrix=dict(confusion_matrix),
-        all_classes=all_classes,
-        total_ground_truth=len(ground_truth_classes),
-        total_predicted=len(output),
-    )
-
-
-def false_positive_scorer(
-    output: list[Deviation], expected: list[Deviation]
-) -> FalsePositiveScores:
-    """Count false positive deviations (hallucinations).
-
-    Args:
-        output: Workflow output with deviations
-        expected: Ground truth with deviations
-
-    Returns:
-        FalsePositiveScores with count and rate
-    """
-    predicted_classes = [d.deviation_class for d in output]
-    ground_truth_classes = [d.deviation_class for d in expected]
-
-    # False positives: predicted classes not in ground truth
-    false_positives = [c for c in predicted_classes if c not in ground_truth_classes]
-
-    fp_count = len(false_positives)
-    total_predicted = len(output)
-
-    fp_rate = fp_count / total_predicted if total_predicted > 0 else 0.0
-
-    return FalsePositiveScores(
-        false_positive_count=fp_count,
-        false_positive_rate=fp_rate,
-        false_positive_classes=false_positives,
-    )
-
-
-def false_negative_scorer(
-    output: list[Deviation], expected: list[Deviation]
-) -> FalseNegativeScores:
-    """Count false negative deviations (missed detections).
-
-    Args:
-        output: Workflow output with deviations
-        expected: Ground truth with deviations
-
-    Returns:
-        FalseNegativeScores with count and rate
-    """
-    predicted_classes = [d.deviation_class for d in output]
-    ground_truth_classes = [d.deviation_class for d in expected]
-
-    # False negatives: ground truth classes not in predicted
-    false_negatives = [c for c in ground_truth_classes if c not in predicted_classes]
-
-    fn_count = len(false_negatives)
-    total_ground_truth = len(expected)
-
-    fn_rate = fn_count / total_ground_truth if total_ground_truth > 0 else 0.0
-
-    return FalseNegativeScores(
-        false_negative_count=fn_count,
-        false_negative_rate=fn_rate,
-        false_negative_classes=false_negatives,
-    )
-
-
-def occurrence_accuracy_scorer(
-    output: list[Deviation], expected: list[Deviation], tolerance_seconds: int = 30
-) -> OccurrenceScores:
-    """Score timestamp accuracy for deviation occurrences.
-
-    Checks if predicted timestamps are within tolerance of ground truth timestamps.
-
-    Args:
-        output: Workflow output with deviations
-        expected: Ground truth with deviations
-        tolerance_seconds: Tolerance for timestamp matching (default: 30s)
-
-    Returns:
-        OccurrenceScores with accuracy metrics
-    """
-
-    total_occurrences_gt = 0
-    matched_occurrences = 0
-    timestamp_errors = []
-
-    def parse_timestamp(ts_str: str) -> int:
-        """Parse HH:MM:SS or MM:SS timestamp to seconds."""
-        parts = ts_str.split(":")
-        if len(parts) == 3:
-            # HH:MM:SS
-            return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
-        elif len(parts) == 2:
-            # MM:SS
-            return int(parts[0]) * 60 + int(parts[1])
-        else:
-            return 0
-
-    # Match deviations by class
-    for gt_dev in expected:
-        gt_class = gt_dev.deviation_class
-        gt_occurrences = gt_dev.occurrences or []
-
-        # Find matching predicted deviation
-        pred_dev = next(
-            (d for d in output if d.deviation_class == gt_class), None
+        avg_quality = (
+            sum(quality_scores) / len(quality_scores) if quality_scores else 0.0
         )
 
-        if pred_dev and gt_occurrences:
-            pred_occurrences = pred_dev.occurrences or []
-            total_occurrences_gt += len(gt_occurrences)
-
-            # Check each ground truth occurrence
-            for gt_occ in gt_occurrences:
-                gt_ts = parse_timestamp(gt_occ.timestamp)
-
-                # Find closest predicted occurrence
-                closest_match = None
-                min_diff = float("inf")
-
-                for pred_occ in pred_occurrences:
-                    pred_ts = parse_timestamp(pred_occ.timestamp)
-                    diff = abs(gt_ts - pred_ts)
-
-                    if diff < min_diff:
-                        min_diff = diff
-                        closest_match = pred_occ
-
-                # Check if within tolerance
-                if closest_match and min_diff <= tolerance_seconds:
-                    matched_occurrences += 1
-                else:
-                    timestamp_errors.append(
-                        TimestampError(
-                            deviation_class=gt_class,
-                            expected=gt_occ.timestamp,
-                            closest_predicted=(
-                                closest_match.timestamp if closest_match else None
-                            ),
-                            error_seconds=min_diff if closest_match else None,
-                        )
-                    )
-
-    accuracy = (
-        matched_occurrences / total_occurrences_gt if total_occurrences_gt > 0 else 0.0
-    )
-
-    return OccurrenceScores(
-        occurrence_accuracy=accuracy,
-        matched_occurrences=matched_occurrences,
-        total_occurrences=total_occurrences_gt,
-        timestamp_errors=timestamp_errors,
-    )
-
-
-def detection_binary_scorer(
-    output: list[Deviation], expected: list[Deviation]
-) -> DetectionScores:
-    """Binary detection scorer: did we detect any deviations when we should have?
-
-    Args:
-        output: Workflow output with deviations
-        expected: Ground truth with deviations
-
-    Returns:
-        DetectionScores with binary detection accuracy
-    """
-    has_deviations_predicted = len(output) > 0
-    has_deviations_ground_truth = len(expected) > 0
-
-    # Binary accuracy: did we get it right?
-    correct = has_deviations_predicted == has_deviations_ground_truth
-
-    return DetectionScores(
-        binary_detection_accuracy=1.0 if correct else 0.0,
-        predicted_has_deviations=has_deviations_predicted,
-        ground_truth_has_deviations=has_deviations_ground_truth,
-    )
-
-
-# Braintrust-compatible scorer wrappers
-# These adapt our Pydantic-based scorers to Braintrust's dict-based format
-
-
-def classification_accuracy_scorer_bt(input, output, expected=None, **kwargs):
-    """Braintrust-compatible wrapper for classification accuracy scorer.
-
-    Args:
-        input: Input dict with JSONAttachment objects
-        output: Output dict with deviations list
-        expected: Expected output dict with deviations list
-        **kwargs: Additional metadata
-
-    Returns:
-        Dict with name, score, and metadata (Braintrust format) or None to skip
-    """
-    if not expected or "deviations" not in expected:
-        return None
-
-    try:
-        # Debug: log what we received
-        from src.utils.logger import logger as debug_logger
+        # Step 5: Combined score (weighted average of F1 and quality)
+        combined_score = 0.7 * f1 + 0.3 * avg_quality
 
         debug_logger.info(
-            f"Scorer received output deviations: {len(output.get('deviations', []))}"
+            f"Final metrics: F1={f1:.2f}, Precision={precision:.2f}, Recall={recall:.2f}, Quality={avg_quality:.2f}"
         )
-        debug_logger.info(
-            f"Scorer received expected deviations: {len(expected.get('deviations', []))}"
-        )
-        if output.get("deviations"):
-            debug_logger.info(
-                f"First output deviation keys: {output['deviations'][0].keys() if output['deviations'] else 'empty'}"
-            )
-        if expected.get("deviations"):
-            debug_logger.info(
-                f"First expected deviation keys: {expected['deviations'][0].keys() if expected['deviations'] else 'empty'}"
-            )
+        debug_logger.info(f"TP={tp}, FP={fp}, FN={fn}, Combined={combined_score:.2f}")
 
-        # Convert deviation dicts to Pydantic Deviation objects
-        output_deviations = [Deviation(**d) for d in output["deviations"]]
-        expected_deviations = [Deviation(**d) for d in expected["deviations"]]
-
-        # Run scorer logic with lists of Deviation objects
-        scores = classification_accuracy_scorer(output_deviations, expected_deviations)
-
-        # Return Braintrust format
         return {
-            "name": "classification_f1",
-            "score": scores.overall_f1,
+            "name": "comprehensive_score",
+            "score": combined_score,
             "metadata": {
-                "precision": scores.overall_precision,
-                "recall": scores.overall_recall,
-                **{
-                    k: v
-                    for k, v in scores.model_dump().items()
-                    if k not in ["overall_f1", "overall_precision", "overall_recall"]
-                },
+                "f1": f1,
+                "precision": precision,
+                "recall": recall,
+                "tp": tp,
+                "fp": fp,
+                "fn": fn,
+                "avg_explanation_quality": avg_quality,
+                "num_matches": len(matches),
+                "match_threshold": MATCH_THRESHOLD,
+                "matches": [
+                    {
+                        "expected_explanation": exp.explanation[:100],
+                        "predicted_explanation": pred.explanation[:100],
+                        "similarity_score": score,
+                    }
+                    for (exp, pred, score) in matches
+                ],
             },
         }
+
     except Exception as e:
         import traceback
 
         return {
-            "name": "classification_f1",
+            "name": "comprehensive_score",
             "score": 0.0,
             "metadata": {"error": str(e), "traceback": traceback.format_exc()},
-        }
-
-
-def false_positive_scorer_bt(input, output, expected=None, **kwargs):
-    """Braintrust-compatible wrapper for false positive scorer."""
-    if not expected or "deviations" not in expected:
-        return None
-
-    try:
-        output_deviations = [Deviation(**d) for d in output["deviations"]]
-        expected_deviations = [Deviation(**d) for d in expected["deviations"]]
-
-        scores = false_positive_scorer(output_deviations, expected_deviations)
-
-        # Score is inverted - fewer false positives = better score
-        fp_rate = scores.false_positive_rate
-        score = 1.0 - fp_rate if fp_rate <= 1.0 else 0.0
-
-        return {
-            "name": "false_positive_rate",
-            "score": score,
-            "metadata": {
-                "false_positive_count": scores.false_positive_count,
-                "false_positive_rate": scores.false_positive_rate,
-                "false_positive_classes": scores.false_positive_classes,
-            },
-        }
-    except Exception as e:
-        return {
-            "name": "false_positive_rate",
-            "score": 0.0,
-            "metadata": {"error": str(e)},
-        }
-
-
-def false_negative_scorer_bt(input, output, expected=None, **kwargs):
-    """Braintrust-compatible wrapper for false negative scorer."""
-    if not expected or "deviations" not in expected:
-        return None
-
-    try:
-        output_deviations = [Deviation(**d) for d in output["deviations"]]
-        expected_deviations = [Deviation(**d) for d in expected["deviations"]]
-
-        scores = false_negative_scorer(output_deviations, expected_deviations)
-
-        # Score is inverted - fewer false negatives = better score
-        fn_rate = scores.false_negative_rate
-        score = 1.0 - fn_rate if fn_rate <= 1.0 else 0.0
-
-        return {
-            "name": "false_negative_rate",
-            "score": score,
-            "metadata": {
-                "false_negative_count": scores.false_negative_count,
-                "false_negative_rate": scores.false_negative_rate,
-                "false_negative_classes": scores.false_negative_classes,
-            },
-        }
-    except Exception as e:
-        return {
-            "name": "false_negative_rate",
-            "score": 0.0,
-            "metadata": {"error": str(e)},
-        }
-
-
-def occurrence_accuracy_scorer_bt(input, output, expected=None, **kwargs):
-    """Braintrust-compatible wrapper for occurrence accuracy scorer."""
-    if not expected or "deviations" not in expected:
-        return None
-
-    try:
-        output_deviations = [Deviation(**d) for d in output["deviations"]]
-        expected_deviations = [Deviation(**d) for d in expected["deviations"]]
-
-        scores = occurrence_accuracy_scorer(output_deviations, expected_deviations)
-
-        return {
-            "name": "occurrence_accuracy",
-            "score": scores.occurrence_accuracy,
-            "metadata": {
-                "matched_occurrences": scores.matched_occurrences,
-                "total_occurrences": scores.total_occurrences,
-                "timestamp_errors": [e.model_dump() for e in scores.timestamp_errors],
-            },
-        }
-    except Exception as e:
-        return {
-            "name": "occurrence_accuracy",
-            "score": 0.0,
-            "metadata": {"error": str(e)},
-        }
-
-
-def detection_binary_scorer_bt(input, output, expected=None, **kwargs):
-    """Braintrust-compatible wrapper for binary detection scorer."""
-    if not expected or "deviations" not in expected:
-        return None
-
-    try:
-        output_deviations = [Deviation(**d) for d in output["deviations"]]
-        expected_deviations = [Deviation(**d) for d in expected["deviations"]]
-
-        scores = detection_binary_scorer(output_deviations, expected_deviations)
-
-        return {
-            "name": "binary_detection_accuracy",
-            "score": scores.binary_detection_accuracy,
-            "metadata": {
-                "predicted_has_deviations": scores.predicted_has_deviations,
-                "ground_truth_has_deviations": scores.ground_truth_has_deviations,
-            },
-        }
-    except Exception as e:
-        return {
-            "name": "binary_detection_accuracy",
-            "score": 0.0,
-            "metadata": {"error": str(e)},
         }

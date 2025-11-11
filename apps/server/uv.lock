@@ -85,6 +85,21 @@ wheels = [
 ]
 
 [[package]]
+name = "autoevals"
+version = "0.0.130"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "chevron" },
+    { name = "jsonschema" },
+    { name = "polyleven" },
+    { name = "pyyaml" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/de/92/d80c8a7a34a2b64927ba0844fc6b71cf0c7224c4244d87f618cd3043da06/autoevals-0.0.130.tar.gz", hash = "sha256:92f87ab95a575b56d9d7377e6f1399932d09180d2f3a8266b4f693f46f49b86d", size = 51839, upload-time = "2025-09-08T05:30:01.52Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/94/a0/f59dd73e8582c59672cf1f4e5f3ec60d1ee312f8f2a56ae54af5293173c7/autoevals-0.0.130-py3-none-any.whl", hash = "sha256:ffb7b3a21070d2a4e593bb118180c04e43531e608bffd854624377bd857ceec0", size = 56034, upload-time = "2025-09-08T05:29:59.908Z" },
+]
+
+[[package]]
 name = "beartype"
 version = "0.22.5"
 source = { registry = "https://pypi.org/simple" }
@@ -1268,6 +1283,21 @@ wheels = [
 ]
 
 [[package]]
+name = "polyleven"
+version = "0.9.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/5c/a9/5fcf2c4d77270d9f8cd5e3d1c878ca7ffcab22debc27c16d9c67288632de/polyleven-0.9.0.tar.gz", hash = "sha256:299a93766761b5e5fb4092388f3dc6401224fd436c05f11c4ee48b262587e8da", size = 6274, upload-time = "2025-02-26T08:25:21.812Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a9/42/ddd88c802aec287d678537844a0ea77ab8152a0cfe7fafe9736da256fdbf/polyleven-0.9.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:45cea2885c61bda9711244a51aed068f9a55f1d776d4caad6c574a3f401945ae", size = 7342, upload-time = "2025-02-26T08:24:36.706Z" },
+    { url = "https://files.pythonhosted.org/packages/06/e4/d3b3ea3a931117f0dc79f095c0523cad533773290e66b4d719dfbc6c54f2/polyleven-0.9.0-cp313-cp313-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:62b039e9dc8fa53ad740de02d168a7e9d0edce3734b2927f40fe851b328b766f", size = 22691, upload-time = "2025-02-26T08:24:37.752Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/5c/61faf77ed4de6ee2b7f137db12d4d49b96d71e03e2157a06352d54cd4d39/polyleven-0.9.0-cp313-cp313-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e0a0c1ecd2dc356fd94edc80e18a30ad28e93ccc840127e765b83ad60426b2d5", size = 21018, upload-time = "2025-02-26T08:24:41.034Z" },
+    { url = "https://files.pythonhosted.org/packages/40/ef/6404cbd3934a77bf7776173366e8e39846a6bd0128e2cf9714753dc0b512/polyleven-0.9.0-cp313-cp313-musllinux_1_2_i686.whl", hash = "sha256:20576da0c8000bd1c4a07cee43db9169b7d094f5dcc03b20775506d07c56f4fb", size = 21671, upload-time = "2025-02-26T08:24:42.193Z" },
+    { url = "https://files.pythonhosted.org/packages/4d/39/d20098cef731f42b84b58af676910333a68782060298326849489d4bf884/polyleven-0.9.0-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:ba356ce9e7e7e8ddf4eff17eb39df5b822cb8899450c6d289a22249b78c9a5f4", size = 20542, upload-time = "2025-02-26T08:24:43.661Z" },
+    { url = "https://files.pythonhosted.org/packages/b6/2d/4b47edc0467ded497d95cb1fdb13dc138b4abf01f53597bcf47c01e111ea/polyleven-0.9.0-cp313-cp313-win32.whl", hash = "sha256:244d759986486252121061d727a642d3505cbdd9e6616467b42935e662a9fa61", size = 11299, upload-time = "2025-02-26T08:24:44.69Z" },
+    { url = "https://files.pythonhosted.org/packages/47/c9/b4584ddbd246e221f17fb90bd902653ca1564d1e60b8c87fe4ed46f30b54/polyleven-0.9.0-cp313-cp313-win_amd64.whl", hash = "sha256:8f671df664924b3ec14195be7bf778d5f71811989e59a3f9547f8066cefc596f", size = 10676, upload-time = "2025-02-26T08:24:45.779Z" },
+]
+
+[[package]]
 name = "pre-commit"
 version = "4.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1942,6 +1972,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "alembic" },
     { name = "asyncpg" },
+    { name = "autoevals" },
     { name = "boto3" },
     { name = "braintrust" },
     { name = "cryptography" },
@@ -1982,6 +2013,7 @@ dev = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.15.1" },
     { name = "asyncpg", specifier = ">=0.30.0" },
+    { name = "autoevals", specifier = ">=0.0.130" },
     { name = "boto3", specifier = ">=1.39.3" },
     { name = "braintrust", specifier = ">=0.3.6" },
     { name = "cryptography", specifier = ">=45.0.5" },
