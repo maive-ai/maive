@@ -14,7 +14,6 @@ import argparse
 import asyncio
 import json
 import os
-import subprocess
 import tempfile
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -34,176 +33,18 @@ from evals.estimate_deviation.schemas import (
 from src.ai.base import ContentAnalysisRequest
 from src.ai.providers import get_ai_provider
 from src.utils.braintrust_tracing import (
-    ExternalAttachment,
+    JSONAttachment,
     braintrust_experiment,
     braintrust_span,
 )
 from src.utils.logger import logger
+from src.utils.rilla import simplify_rilla_transcript
 
 # Force OpenAI provider for this workflow
 os.environ["AI_PROVIDER"] = "openai"
 
 # Pricebook vector store ID (created via scripts/ingest_pricebook.py)
 PRICEBOOK_VECTOR_STORE_ID = "vs_690e9d9523a8819192c6f111227b90a5"
-
-
-def convert_to_mp3(input_path: str, mp3_path: str, bitrate: str = "64k") -> bool:
-    """Convert any audio file to MP3 using ffmpeg with specified bitrate.
-
-    Args:
-        input_path: Path to input audio file
-        mp3_path: Path where MP3 should be saved
-        bitrate: Audio bitrate (default: 64k)
-
-    Returns:
-        bool: True if conversion successful, False otherwise
-    """
-    try:
-        subprocess.run(
-            ["ffmpeg", "-i", input_path, "-b:a", bitrate, "-y", mp3_path],
-            check=True,
-            capture_output=True,
-        )
-        return True
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Error converting {input_path} to MP3: {e}")
-        return False
-
-
-def _format_timestamp_from_seconds(seconds: float, use_hours: bool) -> str:
-    """
-    Convert timestamp from seconds to MM:SS or HH:MM:SS format.
-
-    Args:
-        seconds: Timestamp in seconds
-        use_hours: If True, use HH:MM:SS format; if False, use MM:SS
-
-    Returns:
-        Formatted timestamp stringS
-    """
-    hours = int(seconds // 3600)
-    minutes = int((seconds % 3600) // 60)
-    secs = int(seconds % 60)
-
-    if use_hours:
-        return f"{hours:02d}:{minutes:02d}:{secs:02d}"
-    else:
-        return f"{minutes:02d}:{secs:02d}"
-
-
-def simplify_rilla_transcript(rilla_transcript: list[dict]) -> dict:
-    """
-    Convert Rilla word-level transcript to compact format for LLM efficiency.
-
-    Reduces token count by ~70% by:
-    - Combining words into space-separated strings
-    - Using parallel arrays for timestamps and confidence
-    - Grouping by speaker turns
-    - Using shorter timestamp format when possible
-
-    Args:
-        rilla_transcript: List of Rilla entries with format:
-            [{"speaker": str, "words": [{"word": str, "start_time": float, "confidence": float}]}]
-
-    Returns:
-        Compact format dict:
-            {
-                "conversations": [
-                    {
-                        "speaker": str,
-                        "words": str (space-separated),
-                        "timestamps": [str] (MM:SS or HH:MM:SS),
-                        "confidence": [float]
-                    }
-                ]
-            }
-
-    Raises:
-        ValueError: If transcript is empty or malformed
-    """
-    if not rilla_transcript:
-        raise ValueError("Transcript is empty")
-
-    # Determine if we need hours in timestamps (any timestamp >= 1 hour)
-    max_time = 0.0
-    for entry in rilla_transcript:
-        words = entry.get("words", [])
-        if words:
-            for word_obj in words:
-                start_time = word_obj.get("start_time", 0)
-                max_time = max(max_time, start_time)
-
-    use_hours = max_time >= 3600
-
-    # Group by speaker turns (consecutive entries with same speaker)
-    conversations = []
-    current_speaker = None
-    current_words = []
-    current_timestamps = []
-    current_confidence = []
-
-    for entry in rilla_transcript:
-        speaker = entry.get("speaker", "Unknown")
-        words = entry.get("words", [])
-
-        if not words:
-            continue
-
-        # If speaker changed, save previous turn and start new one
-        if speaker != current_speaker and current_words:
-            conversations.append(
-                {
-                    "speaker": current_speaker,
-                    "words": " ".join(current_words),
-                    "timestamps": current_timestamps,
-                    "confidence": current_confidence,
-                }
-            )
-            current_words = []
-            current_timestamps = []
-            current_confidence = []
-
-        current_speaker = speaker
-
-        # Extract word, timestamp, confidence from each word object
-        for word_obj in words:
-            word = word_obj.get("word", "")
-            start_time = word_obj.get("start_time", 0)
-            conf = word_obj.get("confidence", 0.0)
-
-            if word:  # Skip empty words
-                current_words.append(word)
-                current_timestamps.append(
-                    _format_timestamp_from_seconds(start_time, use_hours)
-                )
-                current_confidence.append(round(conf, 2))
-
-    # Don't forget the last turn
-    if current_words:
-        conversations.append(
-            {
-                "speaker": current_speaker,
-                "words": " ".join(current_words),
-                "timestamps": current_timestamps,
-                "confidence": current_confidence,
-            }
-        )
-
-    if not conversations:
-        raise ValueError("No valid conversation turns found in transcript")
-
-    return {"conversations": conversations}
-
-
-class DiscrepancyReview(BaseModel):
-    """Structured output for discrepancy review with classified deviations."""
-
-    deviations: list[Deviation] = Field(
-        description="List of all deviations found between the conversation and documented data"
-    )
-    summary: str = Field(
-        description="Brief overall summary of findings (e.g., 'Found 3 deviations: material specifications, additional services, and special requests not documented')"
-    )
 
 
 class DiscrepancyDetectionV2Workflow:
@@ -235,7 +76,7 @@ class DiscrepancyDetectionV2Workflow:
             allowed_labels: List of allowed deviation class labels
 
         Returns:
-            Pydantic model class for Deviation with constrained enum
+            Pydantic model class with list of deviations (no summary field)
         """
         from typing import Literal
 
@@ -260,15 +101,14 @@ class DiscrepancyDetectionV2Workflow:
                 description="Optional predicted estimate line item for deviations that include line item prediction",
             )
 
-        class DynamicDiscrepancyReview(BaseModel):
-            """Structured output for discrepancy review with classified deviations."""
+        class DynamicDiscrepancyResult(BaseModel):
+            """Structured output for discrepancy detection (no summary)."""
 
             deviations: list[DynamicDeviation] = Field(
                 description="List of all deviations found between the conversation and documented data"
             )
-            summary: str = Field(description="Brief overall summary of findings")
 
-        return DynamicDiscrepancyReview
+        return DynamicDiscrepancyResult
 
     def _load_dataset_entry(self, dataset_path: str, uuid: str) -> dict[str, Any]:
         """Load a specific dataset entry by UUID.
@@ -337,6 +177,59 @@ class DiscrepancyDetectionV2Workflow:
                 # Cleanup
                 Path(tmp_path).unlink(missing_ok=True)
 
+    async def execute_with_parsed_data(
+        self,
+        estimate_data: dict,
+        form_data: dict | None,
+        transcript_data: dict | bytes,
+    ) -> list[Deviation]:
+        """Execute discrepancy detection with pre-parsed JSON data.
+
+        This method is used during evaluation when data is provided as
+        JSONAttachment objects from Braintrust (no S3 fetching needed).
+
+        Args:
+            estimate_data: Parsed estimate JSON
+            form_data: Parsed form JSON (optional)
+            transcript_data: Parsed transcript JSON or bytes
+
+        Returns:
+            list[Deviation]: List of detected deviations
+
+        Raises:
+            Exception: For analysis errors
+        """
+        # Handle bytes if JSONAttachment returned bytes instead of parsed JSON
+        if isinstance(transcript_data, bytes):
+            transcript_dict = json.loads(transcript_data.decode("utf-8"))
+        else:
+            transcript_dict = transcript_data
+
+        # Write transcript to temp file (required by _analyze_content)
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False
+        ) as temp_transcript:
+            json.dump(transcript_dict, temp_transcript)
+            temp_transcript_path = temp_transcript.name
+
+        try:
+            # Run analysis using shared logic
+            deviations, _ = await self._execute_analysis(
+                estimate_data=estimate_data,
+                form_data=form_data,
+                transcript_path=temp_transcript_path,
+                recording_path=None,  # No audio in eval
+                rilla_links=None,  # No links in eval
+            )
+
+            return deviations
+
+        finally:
+            # Clean up temp file
+            Path(temp_transcript_path).unlink(missing_ok=True)
+
     async def execute_for_dataset_entry(
         self, uuid: str, dataset_path: str
     ) -> dict[str, Any]:
@@ -356,53 +249,49 @@ class DiscrepancyDetectionV2Workflow:
         # Load dataset entry first to get all fields for tracing
         entry = self._load_dataset_entry(dataset_path, uuid)
 
-        # Execute the internal workflow logic first to get project IDs
-        result = await self._execute_internal(uuid, dataset_path)
-
-        # Create span for tracing if experiment is provided
-        # Build input with only data files (S3 URIs)
+        # Download and parse JSON files for Braintrust attachments (if tracing enabled)
         span_input = BraintrustSpanInput()
 
-        # Add S3 URIs as ExternalAttachment objects if available
-        if ExternalAttachment is not None:
+        if JSONAttachment is not None and self.experiment is not None:
+            # Download and parse estimate
             estimate_s3_uri = entry.get("estimate_s3_uri")
             if estimate_s3_uri:
-                span_input.estimate_s3_uri = ExternalAttachment(
-                    url=estimate_s3_uri,
-                    filename="estimate.json",
-                    content_type="application/json",
-                )
+                async with self._download_from_s3(
+                    estimate_s3_uri, ".json"
+                ) as estimate_path:
+                    with open(estimate_path, "r") as f:
+                        estimate_data = json.load(f)
 
+                    span_input.estimate = JSONAttachment(
+                        data=estimate_data, filename="estimate.json"
+                    )
+
+            # Download and parse form
             form_s3_uri = entry.get("form_s3_uri")
             if form_s3_uri:
-                span_input.form_s3_uri = ExternalAttachment(
-                    url=form_s3_uri,
-                    filename="form.json",
-                    content_type="application/json",
-                )
+                async with self._download_from_s3(form_s3_uri, ".json") as form_path:
+                    with open(form_path, "r") as f:
+                        form_data = json.load(f)
 
-            # Handle arrays of S3 URIs for recordings and transcripts
-            rilla_recordings_s3_uri = entry.get("rilla_recordings_s3_uri", [])
-            if rilla_recordings_s3_uri:
-                span_input.rilla_recordings_s3_uri = [
-                    ExternalAttachment(
-                        url=uri,
-                        filename=f"recording_{i}.m4a",
-                        content_type="audio/m4a",
+                    span_input.form = JSONAttachment(
+                        data=form_data, filename="form.json"
                     )
-                    for i, uri in enumerate(rilla_recordings_s3_uri)
-                ]
 
+            # Download and parse transcripts
             rilla_transcripts_s3_uri = entry.get("rilla_transcripts_s3_uri", [])
-            if rilla_transcripts_s3_uri:
-                span_input.rilla_transcripts_s3_uri = [
-                    ExternalAttachment(
-                        url=uri,
-                        filename=f"transcript_{i}.json",
-                        content_type="application/json",
+            for i, uri in enumerate(rilla_transcripts_s3_uri):
+                async with self._download_from_s3(uri, ".json") as transcript_path:
+                    with open(transcript_path, "r") as f:
+                        transcript_data = json.load(f)
+
+                    span_input.rilla_transcripts.append(
+                        JSONAttachment(
+                            data=transcript_data, filename=f"transcript_{i}.json"
+                        )
                     )
-                    for i, uri in enumerate(rilla_transcripts_s3_uri)
-                ]
+
+        # Execute the internal workflow logic to get results
+        result = await self._execute_internal(uuid, dataset_path)
 
         # Build metadata with all identifying information
         span_metadata = BraintrustSpanMetadata(
@@ -423,9 +312,10 @@ class DiscrepancyDetectionV2Workflow:
             metadata=span_metadata.model_dump(),
         ) as span:
             # Log deviations output for dataset conversion
+            # Serialize Pydantic models to dicts for Braintrust
             if span:
                 output_data = {
-                    "deviations": result["deviations"],
+                    "deviations": [d.model_dump() for d in result["deviations"]],
                 }
 
                 # When prelabeling, set both output and expected so the UI shows
@@ -521,141 +411,24 @@ class DiscrepancyDetectionV2Workflow:
                         logger.info(
                             "\nStep 5: Analyzing with both audio and transcript"
                         )
-                        review_result = await self._analyze_content(
+                        review_result, cost_savings = await self._execute_analysis(
                             estimate_data=estimate_data,
                             form_data=form_data,
-                            audio_path=recording_path,
                             transcript_path=transcript_path,
+                            recording_path=recording_path,
+                            rilla_links=entry.get("rilla_links", []),
                         )
 
-            logger.info("\n✅ Analysis complete")
-            logger.info(f"   Summary: {review_result.summary}")
-            logger.info(f"   Deviations Found: {len(review_result.deviations)}")
-
-            # Log each deviation
-            if review_result.deviations:
-                logger.info("\n📋 Detected Deviations:")
-                for i, deviation in enumerate(review_result.deviations, 1):
-                    logger.info(f"\n   {i}. [{deviation.deviation_class}]")
-                    logger.info(f"      {deviation.explanation}")
-                    if deviation.occurrences:
-                        logger.info(
-                            f"      Occurrences ({len(deviation.occurrences)}):"
-                        )
-                        for occ in deviation.occurrences:
-                            logger.info(
-                                f"        • Conversation {occ.rilla_conversation_index} at {occ.timestamp}"
-                            )
-                    else:
-                        logger.info(
-                            "      Occurrences: None (not discussed in conversation)"
-                        )
-                    if deviation.predicted_line_item:
-                        logger.info(
-                            f"      Predicted Line Item: {deviation.predicted_line_item.description}"
-                        )
-                        if deviation.predicted_line_item.quantity:
-                            logger.info(
-                                f"        Quantity: {deviation.predicted_line_item.quantity} {deviation.predicted_line_item.unit or ''}"
-                            )
-                        if deviation.predicted_line_item.notes:
-                            logger.info(
-                                f"        Notes: {deviation.predicted_line_item.notes}"
-                            )
-
-                        # Log pricebook matching info
-                        if deviation.predicted_line_item.matched_pricebook_item_id:
-                            logger.info(
-                                f"        ✅ Matched Pricebook Item: {deviation.predicted_line_item.matched_pricebook_item_display_name}"
-                            )
-                            logger.info(
-                                f"           Code: {deviation.predicted_line_item.matched_pricebook_item_code}"
-                            )
-                            if deviation.predicted_line_item.unit_cost is not None:
-                                logger.info(
-                                    f"           Unit Cost: ${deviation.predicted_line_item.unit_cost:.2f}"
-                                )
-                            if deviation.predicted_line_item.total_cost is not None:
-                                logger.info(
-                                    f"           Total Cost: ${deviation.predicted_line_item.total_cost:.2f}"
-                                )
-                        else:
-                            logger.info("        ⚠️  No pricebook match found")
-
-            # Calculate total cost savings
-            total_cost_savings = 0.0
-            matched_items_count = 0
-            unmatched_items_count = 0
-
-            for deviation in review_result.deviations:
-                if deviation.predicted_line_item:
-                    if deviation.predicted_line_item.total_cost:
-                        total_cost_savings += deviation.predicted_line_item.total_cost
-                        matched_items_count += 1
-                    elif (
-                        deviation.predicted_line_item.matched_pricebook_item_id is None
-                    ):
-                        unmatched_items_count += 1
-
-            # Log cost savings summary
-            if matched_items_count > 0 or unmatched_items_count > 0:
-                logger.info("\n💰 Cost Savings Summary:")
-                logger.info(f"   Total Cost Savings: ${total_cost_savings:.2f}")
-                logger.info(f"   Matched Items: {matched_items_count}")
-                if unmatched_items_count > 0:
-                    logger.info(f"   ⚠️  Unmatched Items: {unmatched_items_count}")
-
-            # Print Rilla links
-            rilla_links = entry.get("rilla_links", [])
-            if rilla_links:
-                logger.info("\n🔗 Rilla Conversation Links:")
-                for i, link in enumerate(rilla_links):
-                    logger.info(f"   {i}. {link}")
-
-            logger.info("\n✅ DISCREPANCY DETECTION V2 WORKFLOW COMPLETE")
-
+            # Return Pydantic models directly for type safety
             return {
                 "status": "success",
                 "uuid": uuid,
                 "project_id": entry["project_id"],
                 "job_id": entry["job_id"],
                 "estimate_id": entry["estimate_id"],
-                "summary": review_result.summary,
-                "deviations": [
-                    {
-                        "class": dev.deviation_class,
-                        "explanation": dev.explanation,
-                        "occurrences": [
-                            {
-                                "conversation_index": occ.rilla_conversation_index,
-                                "timestamp": occ.timestamp,
-                            }
-                            for occ in dev.occurrences
-                        ]
-                        if dev.occurrences
-                        else [],
-                        "predicted_line_item": {
-                            "description": dev.predicted_line_item.description,
-                            "quantity": dev.predicted_line_item.quantity,
-                            "unit": dev.predicted_line_item.unit,
-                            "notes": dev.predicted_line_item.notes,
-                            "matched_pricebook_item_id": dev.predicted_line_item.matched_pricebook_item_id,
-                            "matched_pricebook_item_code": dev.predicted_line_item.matched_pricebook_item_code,
-                            "matched_pricebook_item_display_name": dev.predicted_line_item.matched_pricebook_item_display_name,
-                            "unit_cost": dev.predicted_line_item.unit_cost,
-                            "total_cost": dev.predicted_line_item.total_cost,
-                        }
-                        if dev.predicted_line_item
-                        else None,
-                    }
-                    for dev in review_result.deviations
-                ],
-                "cost_savings": {
-                    "total": total_cost_savings,
-                    "matched_items": matched_items_count,
-                    "unmatched_items": unmatched_items_count,
-                },
-                "rilla_links": rilla_links,
+                "deviations": review_result,  # Return Pydantic Deviation objects directly
+                "cost_savings": cost_savings,
+                "rilla_links": entry.get("rilla_links", []),
                 "timestamp": datetime.now(UTC).isoformat(),
             }
 
@@ -666,29 +439,149 @@ class DiscrepancyDetectionV2Workflow:
             logger.error(traceback.format_exc())
             raise
 
+    async def _execute_analysis(
+        self,
+        estimate_data: dict,
+        form_data: dict | None,
+        transcript_path: str,
+        recording_path: str | None = None,
+        rilla_links: list[str] | None = None,
+    ) -> tuple[list[Deviation], dict[str, Any]]:
+        """Core analysis logic - processes parsed data and returns deviations.
+
+        This method contains the shared logic between execute_for_dataset_entry()
+        (which fetches from S3) and execute_with_parsed_data() (which uses
+        JSONAttachment data from Braintrust).
+
+        Args:
+            estimate_data: Parsed estimate JSON
+            form_data: Parsed form JSON (optional)
+            transcript_path: Path to transcript JSON file
+            recording_path: Path to audio file (optional, not currently used)
+            rilla_links: List of Rilla conversation links (for logging)
+
+        Returns:
+            tuple: (deviations list, cost_savings dict)
+        """
+        # Run AI analysis
+        review_result = await self._analyze_content(
+            estimate_data=estimate_data,
+            form_data=form_data,
+            audio_path=recording_path,
+            transcript_path=transcript_path,
+        )
+
+        logger.info("\n✅ Analysis complete")
+        logger.info(f"   Deviations Found: {len(review_result)}")
+
+        # Log each deviation
+        if review_result:
+            logger.info("\n📋 Detected Deviations:")
+            for i, deviation in enumerate(review_result, 1):
+                logger.info(f"\n   {i}. [{deviation.deviation_class}]")
+                logger.info(f"      {deviation.explanation}")
+                if deviation.occurrences:
+                    logger.info(f"      Occurrences ({len(deviation.occurrences)}):")
+                    for occ in deviation.occurrences:
+                        logger.info(
+                            f"        • Conversation {occ.rilla_conversation_index} at {occ.timestamp}"
+                        )
+                else:
+                    logger.info(
+                        "      Occurrences: None (not discussed in conversation)"
+                    )
+                if deviation.predicted_line_item:
+                    logger.info(
+                        f"      Predicted Line Item: {deviation.predicted_line_item.description}"
+                    )
+                    if deviation.predicted_line_item.quantity:
+                        logger.info(
+                            f"        Quantity: {deviation.predicted_line_item.quantity} {deviation.predicted_line_item.unit or ''}"
+                        )
+                    if deviation.predicted_line_item.notes:
+                        logger.info(
+                            f"        Notes: {deviation.predicted_line_item.notes}"
+                        )
+
+                    # Log pricebook matching info
+                    if deviation.predicted_line_item.matched_pricebook_item_id:
+                        logger.info(
+                            f"        ✅ Matched Pricebook Item: {deviation.predicted_line_item.matched_pricebook_item_display_name}"
+                        )
+                        logger.info(
+                            f"           Code: {deviation.predicted_line_item.matched_pricebook_item_code}"
+                        )
+                        if deviation.predicted_line_item.unit_cost is not None:
+                            logger.info(
+                                f"           Unit Cost: ${deviation.predicted_line_item.unit_cost:.2f}"
+                            )
+                        if deviation.predicted_line_item.total_cost is not None:
+                            logger.info(
+                                f"           Total Cost: ${deviation.predicted_line_item.total_cost:.2f}"
+                            )
+                    else:
+                        logger.info("        ⚠️  No pricebook match found")
+
+        # Calculate total cost savings
+        total_cost_savings = 0.0
+        matched_items_count = 0
+        unmatched_items_count = 0
+
+        for deviation in review_result:
+            if deviation.predicted_line_item:
+                if deviation.predicted_line_item.total_cost:
+                    total_cost_savings += deviation.predicted_line_item.total_cost
+                    matched_items_count += 1
+                elif deviation.predicted_line_item.matched_pricebook_item_id is None:
+                    unmatched_items_count += 1
+
+        # Log cost savings summary
+        if matched_items_count > 0 or unmatched_items_count > 0:
+            logger.info("\n💰 Cost Savings Summary:")
+            logger.info(f"   Total Cost Savings: ${total_cost_savings:.2f}")
+            logger.info(f"   Matched Items: {matched_items_count}")
+            if unmatched_items_count > 0:
+                logger.info(f"   ⚠️  Unmatched Items: {unmatched_items_count}")
+
+        # Print Rilla links
+        if rilla_links:
+            logger.info("\n🔗 Rilla Conversation Links:")
+            for i, link in enumerate(rilla_links):
+                logger.info(f"   {i}. {link}")
+
+        logger.info("\n✅ DISCREPANCY DETECTION V2 WORKFLOW COMPLETE")
+
+        cost_savings = {
+            "total": total_cost_savings,
+            "matched_items": matched_items_count,
+            "unmatched_items": unmatched_items_count,
+        }
+
+        return review_result, cost_savings
+
     async def _analyze_content(
         self,
         estimate_data: dict,
         form_data: dict | None,
         audio_path: str,
         transcript_path: str,
-    ) -> DiscrepancyReview:
+    ) -> list[Deviation]:
         """Analyze estimate, form, and audio/transcript for discrepancies.
 
         Args:
             estimate_data: Estimate data from S3 JSON file
             form_data: Form submission data from S3 JSON file
-            audio_path: Path to the audio file (required)
+            audio_path: Path to the audio file (optional, not currently used)
             transcript_path: Path to the transcript JSON file (required)
 
         Returns:
-            DiscrepancyReview: Analysis result
+            list[Deviation]: List of detected deviations
 
         Raises:
-            ValueError: If audio_path or transcript_path not provided
+            ValueError: If transcript_path not provided
         """
-        if not audio_path or not transcript_path:
-            raise ValueError("Both audio_path and transcript_path are required")
+        if not transcript_path:
+            raise ValueError("transcript_path is required")
 
         # Extract estimate items for the prompt
         estimate_items = estimate_data.get("items", [])
@@ -802,7 +695,7 @@ class DiscrepancyDetectionV2Workflow:
         deviation_classes_formatted = "\n\n".join(deviation_classes_text)
 
         # Create dynamic response model based on filtered classes
-        DynamicDiscrepancyReview = self._create_dynamic_deviation_model(
+        DynamicDiscrepancyResult = self._create_dynamic_deviation_model(
             filtered_class_labels
         )
 
@@ -830,12 +723,12 @@ class DiscrepancyDetectionV2Workflow:
             vector_store_ids=[PRICEBOOK_VECTOR_STORE_ID],
         )
 
-        review_result = await self.ai_provider.analyze_content_with_structured_output(
+        result = await self.ai_provider.analyze_content_with_structured_output(
             request=request,
-            response_model=DynamicDiscrepancyReview,
+            response_model=DynamicDiscrepancyResult,
         )
 
-        return review_result
+        return result.deviations
 
 
 async def main():

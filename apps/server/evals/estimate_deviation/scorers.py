@@ -20,7 +20,7 @@ from evals.estimate_deviation.schemas import (
 
 
 def classification_accuracy_scorer(
-    output: DiscrepancyDetectionOutput, expected: ExpectedOutput
+    output: ExpectedOutput, expected: ExpectedOutput
 ) -> ClassificationScores:
     """Score classification accuracy with per-class precision, recall, and F1.
 
@@ -91,7 +91,7 @@ def classification_accuracy_scorer(
 
 
 def confusion_matrix_scorer(
-    output: DiscrepancyDetectionOutput, expected: ExpectedOutput
+    output: ExpectedOutput, expected: ExpectedOutput
 ) -> ConfusionMatrixScores:
     """Generate confusion matrix for deviation classification.
 
@@ -134,7 +134,7 @@ def confusion_matrix_scorer(
 
 
 def false_positive_scorer(
-    output: DiscrepancyDetectionOutput, expected: ExpectedOutput
+    output: ExpectedOutput, expected: ExpectedOutput
 ) -> FalsePositiveScores:
     """Count false positive deviations (hallucinations).
 
@@ -164,7 +164,7 @@ def false_positive_scorer(
 
 
 def false_negative_scorer(
-    output: DiscrepancyDetectionOutput, expected: ExpectedOutput
+    output: ExpectedOutput, expected: ExpectedOutput
 ) -> FalseNegativeScores:
     """Count false negative deviations (missed detections).
 
@@ -194,7 +194,7 @@ def false_negative_scorer(
 
 
 def occurrence_accuracy_scorer(
-    output: DiscrepancyDetectionOutput, expected: ExpectedOutput, tolerance_seconds: int = 30
+    output: ExpectedOutput, expected: ExpectedOutput, tolerance_seconds: int = 30
 ) -> OccurrenceScores:
     """Score timestamp accuracy for deviation occurrences.
 
@@ -283,7 +283,7 @@ def occurrence_accuracy_scorer(
 
 
 def detection_binary_scorer(
-    output: DiscrepancyDetectionOutput, expected: ExpectedOutput
+    output: ExpectedOutput, expected: ExpectedOutput
 ) -> DetectionScores:
     """Binary detection scorer: did we detect any deviations when we should have?
 
@@ -315,9 +315,9 @@ def classification_accuracy_scorer_bt(input, output, expected=None, **kwargs):
     """Braintrust-compatible wrapper for classification accuracy scorer.
 
     Args:
-        input: Input dict with uuid, project_id, etc.
-        output: Output dict with deviations and cost_savings
-        expected: Expected output dict with deviations
+        input: Input dict with JSONAttachment objects
+        output: Output dict with deviations list
+        expected: Expected output dict with deviations list
         **kwargs: Additional metadata
 
     Returns:
@@ -327,22 +327,22 @@ def classification_accuracy_scorer_bt(input, output, expected=None, **kwargs):
         return None
 
     try:
-        # Convert dicts to Pydantic models for validation
-        output_obj = DiscrepancyDetectionOutput(
-            status="success",
-            uuid=input["uuid"],
-            project_id=input.get("project_id", ""),
-            job_id=input.get("job_id", ""),
-            estimate_id=input.get("estimate_id", ""),
-            summary="",
-            deviations=output["deviations"],
-            cost_savings=output.get("cost_savings", {"total": 0, "matched_items": 0, "unmatched_items": 0}),
-            rilla_links=[],
-            timestamp="",
-        )
+        # Debug: log what we received
+        from src.utils.logger import logger as debug_logger
+
+        debug_logger.info(f"Scorer received output deviations: {len(output.get('deviations', []))}")
+        debug_logger.info(f"Scorer received expected deviations: {len(expected.get('deviations', []))}")
+        if output.get("deviations"):
+            debug_logger.info(f"First output deviation keys: {output['deviations'][0].keys() if output['deviations'] else 'empty'}")
+        if expected.get("deviations"):
+            debug_logger.info(f"First expected deviation keys: {expected['deviations'][0].keys() if expected['deviations'] else 'empty'}")
+
+        # Convert deviation dicts to Pydantic models for validation
+        # Both output and expected now use the same Deviation model structure
+        output_obj = ExpectedOutput(deviations=output["deviations"])
         expected_obj = ExpectedOutput(deviations=expected["deviations"])
 
-        # Run existing scorer logic
+        # Run scorer logic directly on ExpectedOutput objects
         scores = classification_accuracy_scorer(output_obj, expected_obj)
 
         # Return Braintrust format
@@ -352,7 +352,6 @@ def classification_accuracy_scorer_bt(input, output, expected=None, **kwargs):
             "metadata": {
                 "precision": scores.overall_precision,
                 "recall": scores.overall_recall,
-                # Include per-class metrics for debugging
                 **{
                     k: v
                     for k, v in scores.model_dump().items()
@@ -361,7 +360,13 @@ def classification_accuracy_scorer_bt(input, output, expected=None, **kwargs):
             },
         }
     except Exception as e:
-        return {"name": "classification_f1", "score": 0.0, "metadata": {"error": str(e)}}
+        import traceback
+
+        return {
+            "name": "classification_f1",
+            "score": 0.0,
+            "metadata": {"error": str(e), "traceback": traceback.format_exc()},
+        }
 
 
 def false_positive_scorer_bt(input, output, expected=None, **kwargs):
@@ -370,18 +375,7 @@ def false_positive_scorer_bt(input, output, expected=None, **kwargs):
         return None
 
     try:
-        output_obj = DiscrepancyDetectionOutput(
-            status="success",
-            uuid=input["uuid"],
-            project_id=input.get("project_id", ""),
-            job_id=input.get("job_id", ""),
-            estimate_id=input.get("estimate_id", ""),
-            summary="",
-            deviations=output["deviations"],
-            cost_savings=output.get("cost_savings", {"total": 0, "matched_items": 0, "unmatched_items": 0}),
-            rilla_links=[],
-            timestamp="",
-        )
+        output_obj = ExpectedOutput(deviations=output["deviations"])
         expected_obj = ExpectedOutput(deviations=expected["deviations"])
 
         scores = false_positive_scorer(output_obj, expected_obj)
@@ -409,18 +403,7 @@ def false_negative_scorer_bt(input, output, expected=None, **kwargs):
         return None
 
     try:
-        output_obj = DiscrepancyDetectionOutput(
-            status="success",
-            uuid=input["uuid"],
-            project_id=input.get("project_id", ""),
-            job_id=input.get("job_id", ""),
-            estimate_id=input.get("estimate_id", ""),
-            summary="",
-            deviations=output["deviations"],
-            cost_savings=output.get("cost_savings", {"total": 0, "matched_items": 0, "unmatched_items": 0}),
-            rilla_links=[],
-            timestamp="",
-        )
+        output_obj = ExpectedOutput(deviations=output["deviations"])
         expected_obj = ExpectedOutput(deviations=expected["deviations"])
 
         scores = false_negative_scorer(output_obj, expected_obj)
@@ -448,18 +431,7 @@ def occurrence_accuracy_scorer_bt(input, output, expected=None, **kwargs):
         return None
 
     try:
-        output_obj = DiscrepancyDetectionOutput(
-            status="success",
-            uuid=input["uuid"],
-            project_id=input.get("project_id", ""),
-            job_id=input.get("job_id", ""),
-            estimate_id=input.get("estimate_id", ""),
-            summary="",
-            deviations=output["deviations"],
-            cost_savings=output.get("cost_savings", {"total": 0, "matched_items": 0, "unmatched_items": 0}),
-            rilla_links=[],
-            timestamp="",
-        )
+        output_obj = ExpectedOutput(deviations=output["deviations"])
         expected_obj = ExpectedOutput(deviations=expected["deviations"])
 
         scores = occurrence_accuracy_scorer(output_obj, expected_obj)
@@ -483,18 +455,7 @@ def detection_binary_scorer_bt(input, output, expected=None, **kwargs):
         return None
 
     try:
-        output_obj = DiscrepancyDetectionOutput(
-            status="success",
-            uuid=input["uuid"],
-            project_id=input.get("project_id", ""),
-            job_id=input.get("job_id", ""),
-            estimate_id=input.get("estimate_id", ""),
-            summary="",
-            deviations=output["deviations"],
-            cost_savings=output.get("cost_savings", {"total": 0, "matched_items": 0, "unmatched_items": 0}),
-            rilla_links=[],
-            timestamp="",
-        )
+        output_obj = ExpectedOutput(deviations=output["deviations"])
         expected_obj = ExpectedOutput(deviations=expected["deviations"])
 
         scores = detection_binary_scorer(output_obj, expected_obj)

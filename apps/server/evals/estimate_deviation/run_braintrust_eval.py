@@ -11,7 +11,6 @@ Usage:
 """
 
 import argparse
-import asyncio
 
 import braintrust
 from braintrust import Eval
@@ -31,26 +30,50 @@ async def task(input, hooks):
     """Run workflow on a single dataset entry.
 
     Args:
-        input: Dict with uuid, project_id, job_id, estimate_id
-        hooks: Braintrust hooks for adding metadata
+        input: Dict with JSONAttachment objects (estimate, form, rilla_transcripts)
+        hooks: Braintrust hooks
 
     Returns:
-        Dict with deviations and cost_savings
+        Dict with deviations
     """
-    uuid = input["uuid"]
-    logger.info(f"Running workflow for {uuid}")
+    import json as json_module
 
+    logger.info("Running workflow with parsed data from Braintrust")
+
+    # Helper to extract JSON from JSONAttachment (handles bytes)
+    def extract_json(attachment):
+        if not attachment:
+            return None
+        data = attachment.data
+        if isinstance(data, bytes):
+            return json_module.loads(data.decode("utf-8"))
+        return data
+
+    # Extract JSON data from JSONAttachment objects
+    estimate_data = extract_json(input.get("estimate"))
+    form_data = extract_json(input.get("form"))
+
+    # Get first transcript (we only use one)
+    rilla_transcripts = input.get("rilla_transcripts", [])
+    transcript_data = (
+        extract_json(rilla_transcripts[0]) if rilla_transcripts else None
+    )
+
+    if not estimate_data or not transcript_data:
+        raise ValueError("Missing required data: estimate and transcript are required")
+
+    # Create workflow and run with parsed data (no S3 fetching!)
     workflow = DiscrepancyDetectionV2Workflow(prelabel=False, experiment=None)
 
-    # Execute workflow (will fetch data from S3)
-    result = await workflow.execute_for_dataset_entry(
-        uuid=uuid, dataset_path=None  # None means fetch from S3
+    deviations = await workflow.execute_with_parsed_data(
+        estimate_data=estimate_data,
+        form_data=form_data,
+        transcript_data=transcript_data,
     )
 
     # Return simplified output for scoring
     return {
-        "deviations": [d.model_dump() for d in result["deviations"]],
-        "cost_savings": result["cost_savings"],
+        "deviations": [d.model_dump() for d in deviations],
     }
 
 
@@ -114,4 +137,4 @@ def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

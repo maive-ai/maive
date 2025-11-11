@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, Field
 
-from src.utils.braintrust_tracing import ExternalAttachment
+from src.utils.braintrust_tracing import JSONAttachment
 
 
 # Workflow models (shared between workflow and evals)
@@ -215,15 +215,14 @@ class DetectionScores(BaseModel):
 class BraintrustSpanInput(BaseModel):
     """Input structure for Braintrust span logging.
 
-    Contains only the actual data files (S3 URIs) being processed.
-    Uses Braintrust ExternalAttachment objects for S3 URIs to enable
-    direct file viewing/downloading in the Braintrust UI.
+    Contains only the actual JSON data files being processed.
+    Uses Braintrust JSONAttachment objects to upload JSON content to Braintrust storage
+    for viewing/downloading in the Braintrust UI.
     """
 
-    estimate_s3_uri: ExternalAttachment | None = None
-    form_s3_uri: ExternalAttachment | None = None
-    rilla_recordings_s3_uri: list[ExternalAttachment] = Field(default_factory=list)
-    rilla_transcripts_s3_uri: list[ExternalAttachment] = Field(default_factory=list)
+    estimate: JSONAttachment | None = None
+    form: JSONAttachment | None = None
+    rilla_transcripts: list[JSONAttachment] = Field(default_factory=list)
 
     model_config = {"arbitrary_types_allowed": True}
 

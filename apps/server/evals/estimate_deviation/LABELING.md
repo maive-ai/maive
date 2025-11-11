@@ -120,34 +120,24 @@ Each dataset entry contains:
 **Input (Data Files):**
 ```json
 {
-  "estimate_s3_uri": {
-    "url": "s3://vertex-rilla-data/val/f3a7203d-.../estimate.json",
-    "filename": "estimate.json",
-    "content_type": "application/json"
+  "estimate": {
+    "data": { ... },  // Parsed estimate JSON content
+    "filename": "estimate.json"
   },
-  "form_s3_uri": {
-    "url": "s3://vertex-rilla-data/val/f3a7203d-.../form.json",
-    "filename": "form.json",
-    "content_type": "application/json"
+  "form": {
+    "data": { ... },  // Parsed form JSON content
+    "filename": "form.json"
   },
-  "rilla_recordings_s3_uri": [
+  "rilla_transcripts": [
     {
-      "url": "s3://vertex-rilla-data/val/f3a7203d-.../recording.m4a",
-      "filename": "recording_0.m4a",
-      "content_type": "audio/m4a"
-    }
-  ],
-  "rilla_transcripts_s3_uri": [
-    {
-      "url": "s3://vertex-rilla-data/val/f3a7203d-.../transcript.json",
-      "filename": "transcript_0.json",
-      "content_type": "application/json"
+      "data": { ... },  // Parsed transcript JSON content
+      "filename": "transcript_0.json"
     }
   ]
 }
 ```
 
-Note: S3 URIs are stored as Braintrust `ExternalAttachment` objects, enabling direct file viewing and downloading from the Braintrust UI without uploading the files to Braintrust storage.
+Note: JSON files are uploaded to Braintrust as `JSONAttachment` objects during prelabeling. Braintrust hosts the JSON content, making it viewable and downloadable in the UI. Audio recordings are not uploaded (not actively used in evaluation).
 
 **Metadata (Identifying Information):**
 ```json

@@ -37,6 +37,8 @@ from openai.types.responses import (
 )
 from openai.types.responses.response_create_params import (
     Reasoning as ReasoningParam,
+)
+from openai.types.responses.response_create_params import (
     ResponseCreateParams,
     ResponseCreateParamsStreaming,
     ResponseTextConfigParam,
@@ -139,103 +141,99 @@ class OpenAIProvider(AIProvider):
             raise OpenAIFileUploadError(f"Failed to upload file: {e}", e)
 
     async def upload_file_from_handle(
-        self,
-        file: BinaryIO,
-        filename: str,
-        purpose: str = "user_data"
+        self, file: BinaryIO, filename: str, purpose: str = "user_data"
     ) -> str:
         """Upload file from file handle to OpenAI with 24-hour auto-expiration.
-        
+
         Files are automatically deleted 24 hours after upload to save storage costs.
         Use purpose="user_data" for Responses API.
-        
+
         Args:
             file: File-like object (e.g., BytesIO, open file handle)
             filename: Name for the file
             purpose: OpenAI file purpose (default: "user_data" for Responses API)
-        
+
         Returns:
             OpenAI file_id
-            
+
         Raises:
             OpenAIFileUploadError: If upload fails
         """
         try:
             client = self._get_client()
-            
+
             logger.info(f"[OpenAI] Uploading file: {filename} with purpose: {purpose}")
-            
+
             uploaded_file = await client.files.create(
                 file=(filename, file),
                 purpose=purpose,
                 expires_after={
                     "anchor": "created_at",
-                    "seconds": 86400  # 24 hours
-                }
+                    "seconds": 86400,  # 24 hours
+                },
             )
-            
-            logger.info(f"[OpenAI] File uploaded successfully with 24h expiration: {uploaded_file.id}")
+
+            logger.info(
+                f"[OpenAI] File uploaded successfully with 24h expiration: {uploaded_file.id}"
+            )
             return uploaded_file.id
-                    
+
         except Exception as e:
             logger.error(f"[OpenAI] File upload failed: {e}")
             raise OpenAIFileUploadError(f"[OpenAI] Failed to upload file: {e}", e)
 
     def _is_reasoning_model(self, model: str) -> bool:
         """Check if a model is a reasoning model.
-        
+
         Args:
             model: Model name
-            
+
         Returns:
             True if reasoning model (gpt-5, o1, o3), False otherwise
         """
         return any(model.startswith(prefix) for prefix in ["gpt-5", "o1", "o3"])
 
     def _build_model_params(
-        self, 
+        self,
         model: str | None = None,
         temperature: float | None = None,
         max_tokens: int | None = None,
         max_output_tokens: int | None = None,
-        reasoning_effort: str | None = None
+        reasoning_effort: str | None = None,
     ) -> dict[str, Any]:
         """Build model-specific parameters for API calls.
-        
+
         Args:
             model: Model name (defaults to settings.model_name)
             temperature: Temperature for standard models (ignored for reasoning models)
             max_tokens: Max tokens for standard models (ignored for reasoning models)
             max_output_tokens: Max output tokens (reasoning models) or overrides max_tokens
             reasoning_effort: Reasoning effort for reasoning models ("minimal", "low", "medium", "high")
-            
+
         Returns:
             Dict with model name and model-appropriate parameters
         """
         _model = model or self.settings.model_name
         is_reasoning = self._is_reasoning_model(_model)
-        
+
         # Build params as dict (ResponseCreateParams is a TypedDict, not a class)
         params: ResponseCreateParams = {"model": _model}
-        
+
         if is_reasoning:
             # Reasoning models use max_output_tokens and reasoning_effort
             output_tokens = max_output_tokens or self.settings.max_tokens
             params["max_output_tokens"] = output_tokens
-            
+
             # Add reasoning effort if provided
             if reasoning_effort:
-                params["reasoning"] = {
-                    "effort": reasoning_effort,
-                    "summary": "auto"
-                }
+                params["reasoning"] = {"effort": reasoning_effort, "summary": "auto"}
         else:
             # Standard models use temperature and max_output_tokens
             temp = temperature if temperature is not None else self.settings.temperature
             tokens = max_output_tokens or max_tokens or self.settings.max_tokens
             params["temperature"] = temp
             params["max_output_tokens"] = tokens
-        
+
         return params
 
     async def delete_file(self, file_id: str) -> bool:
@@ -340,28 +338,23 @@ class OpenAIProvider(AIProvider):
             if file_attachments:
                 # Build content as array with file references and text (Responses API format)
                 content_parts = []
-                
+
                 # Add each file with appropriate type (input_image for images, input_file for docs)
                 for file_id, filename, is_image in file_attachments:
                     if is_image:
-                        content_parts.append({
-                            "type": "input_image",
-                            "file_id": file_id
-                        })
+                        content_parts.append(
+                            {"type": "input_image", "file_id": file_id}
+                        )
                     else:
-                        content_parts.append({
-                            "type": "input_file",
-                            "file_id": file_id
-                        })
-                
+                        content_parts.append({"type": "input_file", "file_id": file_id})
+
                 # Add text prompt
-                content_parts.append({
-                    "type": "input_text",
-                    "text": prompt
-                })
-                
+                content_parts.append({"type": "input_text", "text": prompt})
+
                 input_items = [{"role": "user", "content": content_parts}]
-                logger.info(f"[OpenAI] Including {len(file_attachments)} file(s) in message content")
+                logger.info(
+                    f"[OpenAI] Including {len(file_attachments)} file(s) in message content"
+                )
             else:
                 # No files, just text
                 input_items = [{"role": "user", "content": prompt}]
@@ -372,11 +365,13 @@ class OpenAIProvider(AIProvider):
                 temperature=kwargs.get("temperature"),
                 max_tokens=kwargs.get("max_tokens"),
                 max_output_tokens=kwargs.get("max_output_tokens"),
-                reasoning_effort=kwargs.get("reasoning_effort")
+                reasoning_effort=kwargs.get("reasoning_effort"),
             )
             response_params["input"] = input_items
-            
-            logger.info(f"[OpenAI] Generating content with model: {response_params['model']}")
+
+            logger.info(
+                f"[OpenAI] Generating content with model: {response_params['model']}"
+            )
 
             # Use Responses API (not streaming)
             response: Response = await client.responses.create(**response_params)
@@ -687,7 +682,9 @@ class OpenAIProvider(AIProvider):
                 prompt_text += context_text
 
             # Add message item
-            input_items.append({"type": "message", "role": "user", "content": prompt_text})
+            input_items.append(
+                {"type": "message", "role": "user", "content": prompt_text}
+            )
 
             # Choose appropriate model
             model = (
@@ -710,11 +707,12 @@ class OpenAIProvider(AIProvider):
 
             # Add file search if vector store IDs provided
             if request.vector_store_ids:
-                logger.info(f"Adding FileSearchTool with {len(request.vector_store_ids)} vector store(s)")
+                logger.info(
+                    f"Adding FileSearchTool with {len(request.vector_store_ids)} vector store(s)"
+                )
                 tools.append(
                     FileSearchToolParam(
-                        type="file_search",
-                        vector_store_ids=request.vector_store_ids
+                        type="file_search", vector_store_ids=request.vector_store_ids
                     )
                 )
 
@@ -729,6 +727,7 @@ class OpenAIProvider(AIProvider):
             if tools:
                 parse_params["tools"] = tools
 
+            logger.info("Issuing request to Responses API:")
             parsed_response = await client.responses.parse(**parse_params)
 
             # The parse() method returns a ParsedResponse with the parsed data
@@ -737,7 +736,9 @@ class OpenAIProvider(AIProvider):
                 raise OpenAIError("No output in parsed response")
 
             logger.debug(f"Parsed response status: {parsed_response.status}")
-            logger.debug(f"Parsed response has {len(parsed_response.output)} output items")
+            logger.debug(
+                f"Parsed response has {len(parsed_response.output)} output items"
+            )
 
             # Find the message output item with parsed content
             for output_item in parsed_response.output:
@@ -753,7 +754,10 @@ class OpenAIProvider(AIProvider):
                         # Content is a list of content parts (output_text, etc.)
                         text_content = ""
                         for content_part in output_item.content:
-                            if hasattr(content_part, "type") and content_part.type == "output_text":
+                            if (
+                                hasattr(content_part, "type")
+                                and content_part.type == "output_text"
+                            ):
                                 text_content = content_part.text
                                 break
 
@@ -787,10 +791,10 @@ class OpenAIProvider(AIProvider):
             # Handle dict format annotations
             if isinstance(annotation, dict):
                 ann_type = annotation.get("type")
-                
+
                 if ann_type == "url_citation":
                     url_citation = AnnotationURLCitation(**annotation)
-                    
+
                     # Create citation from URL annotation
                     return SearchCitation(
                         url=url_citation.url,
@@ -798,24 +802,22 @@ class OpenAIProvider(AIProvider):
                         snippet=None,
                         accessed_at=None,
                     )
-                    
+
                 elif ann_type == "file_citation":
                     # Log RAG file hits for debugging (don't expose to user)
                     file_id = annotation.get("file_citation", {}).get(
                         "file_id"
                     ) or annotation.get("file_id")
                     quoted_text = (
-                        annotation.get("text")
-                        or annotation.get("quote")
-                        or ""
+                        annotation.get("text") or annotation.get("quote") or ""
                     )
-                    
+
                     if file_id:
                         # Try to fetch file metadata for logging
                         filename = None
                         try:
                             meta = await client.files.retrieve(file_id)
-                            filename = getattr(meta, 'filename', None)
+                            filename = getattr(meta, "filename", None)
                             logger.debug(
                                 f"RAG file cited: id={file_id}, filename={filename}, quoted={quoted_text[:100]!r}"
                             )
@@ -823,13 +825,13 @@ class OpenAIProvider(AIProvider):
                             logger.debug(
                                 f"Failed to retrieve file metadata for {file_id}: {e}"
                             )
-                    
+
                     # Don't expose file citations to users - they're internal RAG files
                     return None
                 else:
                     logger.debug(f"Skipped unknown annotation type: {ann_type}")
                     return None
-                    
+
             # Handle object format annotations
             elif isinstance(annotation, AnnotationURLCitation):
                 # Create citation from URL annotation
@@ -905,7 +907,7 @@ class OpenAIProvider(AIProvider):
                 mcp_config["headers"] = {
                     "Authorization": f"Bearer {self.app_settings.mcp_auth_token}"
                 }
-            
+
             tools.append(mcp_config)
 
         # Add file search if vector store IDs provided
@@ -954,9 +956,7 @@ class OpenAIProvider(AIProvider):
                 )
 
             # Add text verbosity
-            text_verbosity = kwargs.get(
-                "text_verbosity", self.settings.text_verbosity
-            )
+            text_verbosity = kwargs.get("text_verbosity", self.settings.text_verbosity)
             if text_verbosity:
                 stream_params["text"] = ResponseTextConfigParam(
                     verbosity=text_verbosity
@@ -975,9 +975,7 @@ class OpenAIProvider(AIProvider):
                     f"temperature parameter ignored for reasoning model {model}"
                 )
             if "top_p" in kwargs:
-                logger.warning(
-                    f"top_p parameter ignored for reasoning model {model}"
-                )
+                logger.warning(f"top_p parameter ignored for reasoning model {model}")
             if "logprobs" in kwargs:
                 logger.warning(
                     f"logprobs parameter ignored for reasoning model {model}"
@@ -1060,7 +1058,9 @@ class OpenAIProvider(AIProvider):
             # Just skip - don't yield to prevent flickering
             return None
         elif isinstance(event, ResponseFileSearchCallCompletedEvent):
-            logger.info(f"[FILE_SEARCH] File search completed (item_id={event.item_id})")
+            logger.info(
+                f"[FILE_SEARCH] File search completed (item_id={event.item_id})"
+            )
             return ToolCall(
                 tool_call_id=event.item_id,
                 tool_name=ToolName.FILE_SEARCH,
@@ -1071,20 +1071,20 @@ class OpenAIProvider(AIProvider):
 
     def _clean_citation_markers(self, text: str) -> str:
         """Remove citation markers from text.
-        
+
         Removes file citation markers and barcode symbols that OpenAI includes
         for internal RAG document references.
         Also strips MCP/tool marker tokens and Private Use Area (PUA) control
         characters that the Responses API may embed (renders as boxes/barcodes).
-        
+
         Args:
             text: Text potentially containing citation markers
-            
+
         Returns:
             Text with citation markers removed
         """
         import re
-        
+
         cleaned = text
         # Remove well-known literal markers
         cleaned = cleaned.replace("filecite", "")
@@ -1097,41 +1097,39 @@ class OpenAIProvider(AIProvider):
         cleaned = re.sub(r"[\uE000-\uF8FF]", "", cleaned)
         # Remove any stray box-drawing/equals-like artifacts sometimes used as separators
         cleaned = cleaned.replace("≡", "").replace("░", "").replace("█", "")
-        
+
         return cleaned
 
-    def _buffer_and_clean_text(
-        self, buffer: str, delta: str
-    ) -> tuple[str | None, str]:
+    def _buffer_and_clean_text(self, buffer: str, delta: str) -> tuple[str | None, str]:
         """Buffer text deltas and clean citation markers at word boundaries.
-        
+
         Buffers incoming text until a space is encountered, then cleans citation
         markers from complete words before streaming to the frontend. This prevents
         users from seeing citation markers flash during streaming.
-        
+
         Args:
             buffer: Current text buffer
             delta: New text delta from stream
-            
+
         Returns:
             Tuple of (cleaned_content, new_buffer):
             - cleaned_content: Cleaned text to send (None if still buffering)
             - new_buffer: Updated buffer for next iteration
         """
         buffer += delta
-        
+
         # Wait for a space (word boundary) before cleaning and sending
         if " " not in buffer:
             return None, buffer
-        
+
         # Split on last space to keep incomplete word in buffer
         parts = buffer.rsplit(" ", 1)
         words_to_send = parts[0] + " "  # Include the space
         new_buffer = parts[1] if len(parts) > 1 else ""
-        
+
         # Clean citation markers from complete words
         cleaned = self._clean_citation_markers(words_to_send)
-        
+
         return cleaned, new_buffer
 
     def _handle_mcp_event(self, event: Any) -> ToolCall | None:
@@ -1144,18 +1142,21 @@ class OpenAIProvider(AIProvider):
             ToolCall if the event should be yielded, None otherwise
         """
         event_type = type(event).__name__
-        
+
         # MCP tool listing events (not individual tool calls)
-        if event_type in ("ResponseMcpListToolsInProgressEvent", "ResponseMcpListToolsCompletedEvent"):
+        if event_type in (
+            "ResponseMcpListToolsInProgressEvent",
+            "ResponseMcpListToolsCompletedEvent",
+        ):
             logger.debug(f"[MCP] {event_type}")
             return None
-        
+
         # MCP tool call started
         # Note: The in_progress event doesn't include the tool name - only item_id, output_index, sequence_number, type
         elif event_type == "ResponseMcpCallInProgressEvent":
             item_id = getattr(event, "item_id", "unknown")
             logger.info(f"[MCP] Tool call started (item_id={item_id})")
-            
+
             # Return a hard coded "CRM search" message since we don't have the specific tool name yet
             return ToolCall(
                 tool_call_id=item_id,
@@ -1163,18 +1164,18 @@ class OpenAIProvider(AIProvider):
                 args={"description": "Searching CRM..."},  # Generic message for UI
                 result=None,
             )
-        
+
         # MCP tool arguments being streamed
         elif event_type == "ResponseMcpCallArgumentsDeltaEvent":
             # Don't yield - just accumulate args
             logger.debug("[MCP] Arguments delta")
             return None
-        
+
         # MCP tool arguments complete
         elif event_type == "ResponseMcpCallArgumentsDoneEvent":
             # Don't yield - wait for completion
             return None
-        
+
         # MCP tool call completed
         elif event_type == "ResponseMcpCallCompletedEvent":
             item_id = getattr(event, "item_id", "unknown")
@@ -1185,12 +1186,12 @@ class OpenAIProvider(AIProvider):
                 args={},
                 result={"status": ToolStatus.COMPLETE.value},
             )
-        
+
         # MCP tool listing failed
         elif event_type == "ResponseMcpListToolsFailedEvent":
             logger.error("[MCP] Tool listing failed")
             return None
-        
+
         # MCP tool call failed
         elif event_type == "ResponseMcpCallFailedEvent":
             item_id = getattr(event, "item_id", "unknown")
@@ -1198,7 +1199,7 @@ class OpenAIProvider(AIProvider):
             logger.warning(f"[MCP] Tool call failed (item_id={item_id}): {error}")
             # OpenAI typically retries automatically, so don't yield error to UI
             return None
-        
+
         return None
 
     def _handle_reasoning_summary_delta(
@@ -1209,13 +1210,13 @@ class OpenAIProvider(AIProvider):
         current_reasoning_summary: str,
     ) -> tuple[str | None, int, str, ReasoningSummary | None]:
         """Handle reasoning summary delta events.
-        
+
         Args:
             event: Reasoning summary text delta event from OpenAI
             current_reasoning_id: Current reasoning summary ID (None if starting new summary)
             reasoning_summary_count: Counter for unique reasoning IDs
             current_reasoning_summary: Accumulated summary text
-            
+
         Returns:
             Tuple of (updated_reasoning_id, updated_count, updated_summary, reasoning_summary_to_append)
         """
@@ -1225,10 +1226,7 @@ class OpenAIProvider(AIProvider):
             reasoning_summary_count += 1
             current_reasoning_id = f"reasoning_{reasoning_summary_count}"
             current_reasoning_summary = summary_delta
-        elif (
-            summary_delta.strip().startswith("**")
-            and current_reasoning_summary
-        ):
+        elif summary_delta.strip().startswith("**") and current_reasoning_summary:
             reasoning_summary_count += 1
             current_reasoning_id = f"reasoning_{reasoning_summary_count}"
             current_reasoning_summary = summary_delta
@@ -1308,7 +1306,7 @@ class OpenAIProvider(AIProvider):
 
             # Track citations from web search
             accumulated_citations: list[SearchCitation] = []
-            
+
             # Buffer for word-by-word streaming with citation cleaning
             text_buffer = ""
             # Track reasoning summary state
@@ -1338,11 +1336,11 @@ class OpenAIProvider(AIProvider):
                     ):
                         # These are status/lifecycle events, just continue
                         continue
-                    
+
                     # Handle MCP tool events
                     elif type(event).__name__ in (
                         "ResponseMcpListToolsInProgressEvent",
-                        "ResponseMcpListToolsCompletedEvent", 
+                        "ResponseMcpListToolsCompletedEvent",
                         "ResponseMcpListToolsFailedEvent",
                         "ResponseMcpCallInProgressEvent",
                         "ResponseMcpCallArgumentsDeltaEvent",
@@ -1398,7 +1396,8 @@ class OpenAIProvider(AIProvider):
 
                     # Handle reasoning summary delta events
                     elif isinstance(event, ResponseReasoningSummaryTextDeltaEvent):
-                        (   current_reasoning_id,
+                        (
+                            current_reasoning_id,
                             reasoning_summary_count,
                             current_reasoning_summary,
                             reasoning_summary,
@@ -1408,7 +1407,7 @@ class OpenAIProvider(AIProvider):
                             reasoning_summary_count=reasoning_summary_count,
                             current_reasoning_summary=current_reasoning_summary,
                         )
-                        
+
                         if reasoning_summary:
                             reasoning_summaries_to_yield.append(reasoning_summary)
 
@@ -1430,7 +1429,7 @@ class OpenAIProvider(AIProvider):
                         cleaned_content, text_buffer = self._buffer_and_clean_text(
                             text_buffer, event.delta
                         )
-                        
+
                         if cleaned_content:
                             content = cleaned_content
                         else:
@@ -1443,11 +1442,11 @@ class OpenAIProvider(AIProvider):
                             annotation=event.annotation,
                             client=client,
                         )
-                        
+
                         # Add citation if it's a web citation (file citations return None)
                         if citation:
                             citations.append(citation)
-                            
+
                             # Track unique citations
                             if citation not in accumulated_citations:
                                 accumulated_citations.append(citation)
@@ -1456,7 +1455,7 @@ class OpenAIProvider(AIProvider):
                     elif isinstance(event, ResponseTextDoneEvent):
                         # Text content is done, no action needed
                         continue
-                    
+
                     # Handle content part done events (completion marker for content parts)
                     elif isinstance(event, ResponseContentPartDoneEvent):
                         # Content part is done, no action needed
@@ -1466,7 +1465,7 @@ class OpenAIProvider(AIProvider):
                     elif isinstance(event, ResponseCompletedEvent):
                         finish_reason = "completed"
                         logger.info("[COMPLETED] Stream completed successfully")
-                        
+
                         # Flush any remaining text in buffer
                         if text_buffer:
                             content = self._clean_citation_markers(text_buffer)
@@ -1475,7 +1474,7 @@ class OpenAIProvider(AIProvider):
                     elif isinstance(event, ResponseFailedEvent):
                         finish_reason = "failed"
                         logger.error(f"[FAILED] Stream failed: {event}")
-                        
+
                         # Flush any remaining text in buffer
                         if text_buffer:
                             content = self._clean_citation_markers(text_buffer)
