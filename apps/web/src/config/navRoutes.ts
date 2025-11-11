@@ -71,5 +71,12 @@ export const navItems: NavItem[] = allNavItems.filter((item) => {
     }
   }
 
+  // Filter out voice AI items if voice AI is disabled
+  if (!env.PUBLIC_ENABLE_VOICE_AI) {
+    if (['Projects', 'Phone Input'].includes(item.label)) {
+      return false;
+    }
+  }
+
   return true;
 });

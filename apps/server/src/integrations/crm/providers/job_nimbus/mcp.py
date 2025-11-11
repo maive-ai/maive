@@ -194,7 +194,7 @@ async def get_job(job_id: str) -> dict[str, Any]:
 
 
 @mcp.tool
-async def search_jobs(
+async def get_all_jobs(
     customer_name: str | None = None,
     job_id: str | None = None,
     address: str | None = None,

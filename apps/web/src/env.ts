@@ -56,6 +56,17 @@ export const envSchema = v.object({
     ),
     'false',
   ),
+
+  /**
+   * Feature flag to enable/disable voice AI functionality (Projects and Phone Input tabs)
+   */
+  PUBLIC_ENABLE_VOICE_AI: v.optional(
+    v.pipe(
+      v.string(),
+      v.transform((s) => s.toLowerCase() === 'true'),
+    ),
+    'false',
+  ),
 });
 
 export const env = v.parse(envSchema, import.meta.env);

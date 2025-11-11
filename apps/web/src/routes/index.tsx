@@ -11,10 +11,13 @@ import { env } from '../env';
 export const Route: AnyRoute = createFileRoute('/')({
   beforeLoad: ({ context }) => {
     if (context.auth.isAuthenticated) {
-      // Redirect to voice-ai if workflows are disabled, otherwise workflows
-      const defaultRoute = env.PUBLIC_ENABLE_WORKFLOWS
-        ? '/workflows'
-        : '/projects';
+      // Determine default route based on feature flags
+      let defaultRoute = '/chat';
+      if (env.PUBLIC_ENABLE_WORKFLOWS) {
+        defaultRoute = '/workflows';
+      } else if (env.PUBLIC_ENABLE_VOICE_AI) {
+        defaultRoute = '/projects';
+      }
       throw redirect({
         to: defaultRoute,
         replace: true, // optional, avoids pushing the "/" into history
