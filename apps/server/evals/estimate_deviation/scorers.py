@@ -172,19 +172,61 @@ Return:
 )
 
 
+# Line item semantic matcher: Are the pricebook items the same product type?
+line_item_semantic_match = LLMClassifier(
+    name="LineItemSemanticMatch",
+    prompt_template="""You are evaluating if two pricebook line items refer to the same type of product/service.
+
+Expected line item:
+{{{expected.display_name}}}
+
+Predicted line item:
+{{{output.display_name}}}
+
+Question: Do these refer to the SAME TYPE of product/service?
+
+Consider:
+- Focus on the CATEGORY (e.g., skylight, shingle, vent) not exact specifications
+- Different brands/sizes of the same item type should MATCH
+- "KQ Skylight Velux Fixed S/M-BOH" matches "Velux Skylight 2x4" (both skylights)
+- Minor variations in naming are acceptable
+
+Return:
+(A) Yes, same product type
+(B) No, different product types""",
+    choice_scores={"A": 1.0, "B": 0.0},
+    model="gpt-4o-mini",
+)
+
+
+def _extract_score(result) -> float:
+    """Helper to extract score from LLM classifier result."""
+    if isinstance(result, dict):
+        return result.get("score", 0.0)
+    elif hasattr(result, "score"):
+        return result.score
+    else:
+        return float(result) if result is not None else 0.0
+
+
 def comprehensive_deviation_scorer(
     input, output, expected=None, **kwargs
 ) -> EvalScorer:
-    """Comprehensive scorer with LLM-based semantic matching + occurrence validation.
+    """Comprehensive scorer with LLM-based semantic matching + occurrence validation + line item scoring.
 
     Workflow:
     1. Match predicted deviations to expected using LLM semantic similarity
     2. Validate occurrences: must match timestamps within ±10 seconds
-    3. Compute TP/FP/FN counts from matches
+    3. Compute deviation-level TP/FP/FN counts from matches
     4. Calculate deviation-level precision and recall
     5. Calculate occurrence-level precision and recall
     6. Score explanation quality on matched pairs
-    7. Return 4 scores: precision, explanation_quality, occurrence_precision, occurrence_recall
+    7. Score line item predictions using semantic matching
+    8. Calculate quantity and unit_cost accuracy for matched line items
+    9. Calculate value (quantity * unit_cost) for TP line items
+    10. Calculate value_created (sum of values, zero if any FP deviations)
+    11. Return 8 scores: precision, explanation_quality, occurrence_precision, occurrence_recall,
+        line_item_precision, quantity_accuracy, unit_cost_accuracy, value_created
 
     Args:
         input: Input data (not used, deviations are in output/expected)
@@ -193,7 +235,7 @@ def comprehensive_deviation_scorer(
         **kwargs: Additional metadata
 
     Returns:
-        List of Score objects with detailed metrics
+        List of 8 Score objects with detailed metrics
     """
     if not expected or "deviations" not in expected:
         return None
@@ -259,12 +301,7 @@ def comprehensive_deviation_scorer(
                 )
 
                 # Extract score from result (autoevals returns Score object with .score attribute)
-                if isinstance(result, dict):
-                    match_score = result.get("score", 0.0)
-                elif hasattr(result, "score"):
-                    match_score = result.score
-                else:
-                    match_score = float(result) if result is not None else 0.0
+                match_score = _extract_score(result)
 
                 debug_logger.info(f"  Candidate {idx}: score={match_score}")
 
@@ -363,19 +400,119 @@ def comprehensive_deviation_scorer(
                 output={"explanation": pred_dev.explanation},
                 expected={"explanation": exp_dev.explanation},
             )
-            # Extract score from Score object or dict
-            if isinstance(quality_result, dict):
-                quality_score = quality_result.get("score", 0.0)
-            elif hasattr(quality_result, "score"):
-                quality_score = quality_result.score
-            else:
-                quality_score = (
-                    float(quality_result) if quality_result is not None else 0.0
-                )
+            quality_score = _extract_score(quality_result)
             quality_scores.append(quality_score)
 
         avg_quality = (
             sum(quality_scores) / len(quality_scores) if quality_scores else 0.0
+        )
+
+        # Step 5: Score line item predictions on matched pairs
+        line_item_metrics = {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "quantity_accuracies": [],
+            "unit_cost_accuracies": [],
+            "values": [],
+        }
+
+        for exp_dev, pred_dev, _, _ in matches:
+            # Check if both have line items
+            if exp_dev.predicted_line_item and pred_dev.predicted_line_item:
+                exp_item = exp_dev.predicted_line_item
+                pred_item = pred_dev.predicted_line_item
+
+                # Semantic match check
+                if (
+                    exp_item.matched_pricebook_item_display_name
+                    and pred_item.matched_pricebook_item_display_name
+                ):
+                    match_result = line_item_semantic_match(
+                        output={
+                            "display_name": pred_item.matched_pricebook_item_display_name
+                        },
+                        expected={
+                            "display_name": exp_item.matched_pricebook_item_display_name
+                        },
+                    )
+                    match_score = _extract_score(match_result)
+
+                    if match_score >= 0.7:  # TP
+                        line_item_metrics["tp"] += 1
+
+                        # Calculate quantity accuracy
+                        if exp_item.quantity and pred_item.quantity:
+                            pct_error = (
+                                abs(pred_item.quantity - exp_item.quantity)
+                                / exp_item.quantity
+                            )
+                            quantity_accuracy = max(0.0, 1.0 - pct_error)
+                            line_item_metrics["quantity_accuracies"].append(
+                                quantity_accuracy
+                            )
+
+                        # Calculate unit_cost accuracy
+                        if exp_item.unit_cost and pred_item.unit_cost:
+                            pct_error = (
+                                abs(pred_item.unit_cost - exp_item.unit_cost)
+                                / exp_item.unit_cost
+                            )
+                            unit_cost_accuracy = max(0.0, 1.0 - pct_error)
+                            line_item_metrics["unit_cost_accuracies"].append(
+                                unit_cost_accuracy
+                            )
+
+                        # Calculate value for this deviation (only for TP line items)
+                        if pred_item.quantity and pred_item.unit_cost:
+                            value = pred_item.quantity * pred_item.unit_cost
+                            line_item_metrics["values"].append(value)
+                    else:  # FP - wrong line item
+                        line_item_metrics["fp"] += 1
+                else:  # FP - no display name
+                    line_item_metrics["fp"] += 1
+            elif exp_dev.predicted_line_item and not pred_dev.predicted_line_item:
+                # FN - expected had line item, predicted didn't
+                line_item_metrics["fn"] += 1
+            elif not exp_dev.predicted_line_item and pred_dev.predicted_line_item:
+                # FP - predicted line item when not expected
+                line_item_metrics["fp"] += 1
+
+        # Calculate line item precision
+        line_item_precision = (
+            line_item_metrics["tp"]
+            / (line_item_metrics["tp"] + line_item_metrics["fp"])
+            if (line_item_metrics["tp"] + line_item_metrics["fp"]) > 0
+            else 0.0
+        )
+
+        # Calculate average quantity and unit cost accuracies
+        avg_quantity_accuracy = (
+            sum(line_item_metrics["quantity_accuracies"])
+            / len(line_item_metrics["quantity_accuracies"])
+            if line_item_metrics["quantity_accuracies"]
+            else 0.0
+        )
+
+        avg_unit_cost_accuracy = (
+            sum(line_item_metrics["unit_cost_accuracies"])
+            / len(line_item_metrics["unit_cost_accuracies"])
+            if line_item_metrics["unit_cost_accuracies"]
+            else 0.0
+        )
+
+        # Calculate value_created (zero if ANY deviation FPs exist)
+        total_value = sum(line_item_metrics["values"])
+        value_created = 0.0 if fp > 0 else total_value
+
+        debug_logger.info(
+            f"Line item metrics: TP={line_item_metrics['tp']}, FP={line_item_metrics['fp']}, FN={line_item_metrics['fn']}"
+        )
+        debug_logger.info(
+            f"Quantity accuracy: {avg_quantity_accuracy:.2f}, Unit cost accuracy: {avg_unit_cost_accuracy:.2f}"
+        )
+        debug_logger.info(
+            f"Total value: ${total_value:.2f}, Value created: ${value_created:.2f} (Deviation FPs: {fp})"
         )
 
         debug_logger.info(
@@ -383,7 +520,7 @@ def comprehensive_deviation_scorer(
         )
         debug_logger.info(f"TP={tp}, FP={fp}, FN={fn}")
 
-        # Return FOUR separate scores as Score objects: precision, explanation quality, occurrence precision, and occurrence recall
+        # Return EIGHT separate scores as Score objects
         return [
             Score(
                 name="precision",
@@ -429,6 +566,48 @@ def comprehensive_deviation_scorer(
                 metadata={
                     "total_matched": total_matched_occs,
                     "total_expected": total_expected_occs,
+                },
+            ),
+            Score(
+                name="line_item_precision",
+                score=line_item_precision,
+                metadata={
+                    "tp": line_item_metrics["tp"],
+                    "fp": line_item_metrics["fp"],
+                    "fn": line_item_metrics["fn"],
+                    "recall": (
+                        line_item_metrics["tp"]
+                        / (line_item_metrics["tp"] + line_item_metrics["fn"])
+                        if (line_item_metrics["tp"] + line_item_metrics["fn"]) > 0
+                        else 0.0
+                    ),
+                },
+            ),
+            Score(
+                name="quantity_accuracy",
+                score=avg_quantity_accuracy,
+                metadata={
+                    "num_evaluated": len(line_item_metrics["quantity_accuracies"]),
+                    "individual_accuracies": line_item_metrics["quantity_accuracies"],
+                },
+            ),
+            Score(
+                name="unit_cost_accuracy",
+                score=avg_unit_cost_accuracy,
+                metadata={
+                    "num_evaluated": len(line_item_metrics["unit_cost_accuracies"]),
+                    "individual_accuracies": line_item_metrics["unit_cost_accuracies"],
+                },
+            ),
+            Score(
+                name="value_created",
+                score=value_created,
+                metadata={
+                    "total_value": total_value,
+                    "deviation_fps": fp,
+                    "num_line_items_with_value": len(line_item_metrics["values"]),
+                    "individual_values": line_item_metrics["values"],
+                    "penalized": fp > 0,
                 },
             ),
         ]
