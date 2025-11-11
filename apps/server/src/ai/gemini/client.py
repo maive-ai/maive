@@ -4,6 +4,7 @@ import mimetypes
 from pathlib import Path
 from typing import TypeVar
 
+from braintrust.wrappers.google_genai import setup_genai
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
@@ -18,6 +19,7 @@ from src.ai.gemini.schemas import (
     GenerateContentResponse,
     GenerateStructuredContentRequest,
 )
+from src.config import get_app_settings
 from src.utils.logger import logger
 
 T = TypeVar("T", bound=BaseModel)
@@ -30,19 +32,38 @@ class GeminiClient:
     and generate structured output. Handles authentication and error handling.
     """
 
-    def __init__(self, settings: GeminiSettings) -> None:
+    def __init__(
+        self,
+        settings: GeminiSettings,
+        enable_braintrust: bool = False,
+        braintrust_project_name: str | None = None,
+    ) -> None:
         """Initialize Gemini client.
 
         Args:
             settings: Gemini settings instance with API configuration
+            enable_braintrust: Whether to enable Braintrust tracing for this client instance
+            braintrust_project_name: Braintrust project name (only used if enable_braintrust=True)
         """
         self.settings = settings
         self._client: genai.Client | None = None
+        self.enable_braintrust = enable_braintrust
+        self.braintrust_project_name = braintrust_project_name
 
     def _get_client(self) -> genai.Client:
-        """Get or create the Gemini client."""
+        """Get or create the Gemini client.
+
+        Automatically sets up Braintrust tracing if enabled.
+        """
         if self._client is None:
             try:
+                # Setup Braintrust tracing if enabled for this instance
+                if self.enable_braintrust and self.braintrust_project_name:
+                    logger.info(
+                        f"Setting up Gemini with Braintrust tracing enabled (project: {self.braintrust_project_name})"
+                    )
+                    setup_genai(project_name=self.braintrust_project_name)
+
                 self._client = genai.Client(api_key=self.settings.api_key)
                 logger.info("Gemini client initialized")
             except Exception as e:

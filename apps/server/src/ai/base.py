@@ -280,25 +280,6 @@ class AIProvider(ABC):
         pass
 
     @abstractmethod
-    async def analyze_audio_with_structured_output(
-        self,
-        request: AudioAnalysisRequest,
-        response_model: type[T],
-    ) -> T:
-        """Analyze audio directly and return structured output.
-
-        Combines audio analysis with structured output generation.
-
-        Args:
-            request: Audio analysis request
-            response_model: Pydantic model for structured output
-
-        Returns:
-            Instance of response_model with analysis results
-        """
-        pass
-
-    @abstractmethod
     async def analyze_content_with_structured_output(
         self,
         request: ContentAnalysisRequest,

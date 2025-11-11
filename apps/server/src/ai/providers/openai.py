@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Any, AsyncGenerator, BinaryIO, TypeVar
 
+from braintrust import wrap_openai
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion
 from openai.types.responses import (
@@ -82,18 +83,47 @@ class OpenAIProvider(AIProvider):
     Supports native audio input for models like gpt-4o-audio-preview.
     """
 
-    def __init__(self):
-        """Initialize OpenAI provider."""
+    def __init__(
+        self,
+        enable_braintrust: bool = False,
+        braintrust_project_name: str | None = None,
+    ):
+        """Initialize OpenAI provider.
+
+        Args:
+            enable_braintrust: Whether to enable Braintrust tracing for this provider instance
+            braintrust_project_name: Braintrust project name (only used if enable_braintrust=True)
+        """
         self.settings = get_openai_settings()
         self.app_settings = get_app_settings()
         self._client: AsyncOpenAI | None = None
+        self.enable_braintrust = enable_braintrust
+        self.braintrust_project_name = braintrust_project_name
 
     def _get_client(self) -> AsyncOpenAI:
-        """Get or create the OpenAI client."""
+        """Get or create the OpenAI client.
+
+        Automatically wraps the client with Braintrust tracing if enabled.
+        """
         if self._client is None:
             try:
-                self._client = AsyncOpenAI(api_key=self.settings.api_key)
-                logger.info("OpenAI client initialized")
+                client = AsyncOpenAI(api_key=self.settings.api_key)
+
+                # Wrap with Braintrust if logging is enabled for this instance
+                if self.enable_braintrust:
+                    project_info = (
+                        f" (project: {self.braintrust_project_name})"
+                        if self.braintrust_project_name
+                        else ""
+                    )
+                    logger.info(
+                        f"OpenAI client initialized with Braintrust tracing enabled{project_info}"
+                    )
+                    self._client = wrap_openai(client)
+                else:
+                    logger.info("OpenAI client initialized")
+                    self._client = client
+
             except Exception as e:
                 logger.error(f"Failed to initialize OpenAI client: {e}")
                 raise OpenAIAuthenticationError(
@@ -532,96 +562,6 @@ class OpenAIProvider(AIProvider):
         except Exception as e:
             logger.error(f"Audio analysis failed: {e}")
             raise OpenAIContentGenerationError(f"Failed to analyze audio: {e}", e)
-
-    async def analyze_audio_with_structured_output(
-        self,
-        request: AudioAnalysisRequest,
-        response_model: type[T],
-    ) -> T:
-        """Analyze audio directly and return structured output.
-
-        Args:
-            request: Audio analysis request
-            response_model: Pydantic model for structured output
-
-        Returns:
-            Instance of response_model with analysis results
-        """
-        try:
-            client = self._get_client()
-            path = Path(request.audio_path)
-
-            if not path.exists():
-                raise OpenAIError(f"Audio file not found: {request.audio_path}")
-
-            logger.info(f"Analyzing audio with structured output: {path}")
-
-            # Read and encode audio as base64
-            with open(path, "rb") as audio_file:
-                audio_data = base64.b64encode(audio_file.read()).decode("utf-8")
-
-            audio_format = path.suffix.lstrip(".")
-
-            # Build message with audio input
-            messages = [
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "input_audio",
-                            "input_audio": {
-                                "data": audio_data,
-                                "format": audio_format,
-                            },
-                        },
-                        {"type": "text", "text": request.prompt},
-                    ],
-                }
-            ]
-
-            if request.context_data:
-                context_text = (
-                    f"\n\nContext Data:\n{json.dumps(request.context_data, indent=2)}"
-                )
-                messages[0]["content"].append({"type": "text", "text": context_text})
-
-            model = self.settings.audio_model_name
-            temperature = request.temperature or self.settings.temperature
-
-            # Convert Pydantic model to JSON schema
-            schema = response_model.model_json_schema()
-
-            logger.info(f"Using audio model with structured output: {model}")
-
-            completion = await client.chat.completions.create(
-                model=model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=self.settings.max_tokens,
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": response_model.__name__,
-                        "schema": schema,
-                        "strict": True,
-                    },
-                },
-            )
-
-            message = completion.choices[0].message
-            content = message.content or "{}"
-
-            logger.debug(f"Structured audio analysis response: {content[:500]}")
-
-            # Parse and validate
-            data = json.loads(content)
-            return response_model(**data)
-
-        except Exception as e:
-            logger.error(f"Structured audio analysis failed: {e}")
-            raise OpenAIContentGenerationError(
-                f"Failed to analyze audio with structured output: {e}", e
-            )
 
     async def analyze_content_with_structured_output(
         self,

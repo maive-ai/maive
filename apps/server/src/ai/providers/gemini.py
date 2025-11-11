@@ -35,9 +35,21 @@ class GeminiProvider(AIProvider):
     Gemini supports native multimodal input including audio files.
     """
 
-    def __init__(self):
-        """Initialize Gemini provider."""
-        self.client = get_gemini_client()
+    def __init__(
+        self,
+        enable_braintrust: bool = False,
+        braintrust_project_name: str | None = None,
+    ):
+        """Initialize Gemini provider.
+
+        Args:
+            enable_braintrust: Whether to enable Braintrust tracing for this provider instance
+            braintrust_project_name: Braintrust project name (only used if enable_braintrust=True)
+        """
+        self.client = get_gemini_client(
+            enable_braintrust=enable_braintrust,
+            braintrust_project_name=braintrust_project_name,
+        )
 
     async def upload_file(self, file_path: str, **kwargs) -> FileMetadata:
         """Upload a file to Gemini Files API.
@@ -243,55 +255,6 @@ class GeminiProvider(AIProvider):
             )
         except Exception as e:
             logger.error(f"Audio analysis failed: {e}")
-            raise
-
-    async def analyze_audio_with_structured_output(
-        self,
-        request: AudioAnalysisRequest,
-        response_model: type[T],
-    ) -> T:
-        """Analyze audio and return structured output using Gemini.
-
-        Args:
-            request: Audio analysis request
-            response_model: Pydantic model for structured output
-
-        Returns:
-            Instance of response_model with analysis results
-        """
-        try:
-            logger.info(
-                f"Analyzing audio with structured output (Gemini): {request.audio_path}"
-            )
-
-            # Upload audio file
-            file_metadata = await self.upload_file(request.audio_path)
-            logger.info("Uploaded file to Files API!")
-
-            # Build prompt with context
-            full_prompt = request.prompt
-            if request.context_data:
-                context_text = (
-                    f"\n\nContext Data:\n{json.dumps(request.context_data, indent=2)}"
-                )
-                full_prompt += context_text
-
-            # Generate structured analysis
-            gen_request = GenerateStructuredContentRequest(
-                prompt=full_prompt,
-                response_model=response_model,
-                files=[file_metadata.id],
-                temperature=request.temperature,
-            )
-
-            result = await self.client.generate_structured_content(gen_request)
-
-            # Clean up uploaded file
-            await self.delete_file(file_metadata.id)
-
-            return result
-        except Exception as e:
-            logger.error(f"Structured audio analysis failed: {e}")
             raise
 
     async def analyze_content_with_structured_output(
