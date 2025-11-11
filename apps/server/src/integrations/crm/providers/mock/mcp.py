@@ -45,18 +45,18 @@ async def get_job(job_id: str) -> dict[str, Any]:
         Exception: If the job is not found or an error occurs
     """
     try:
-        logger.info(f"[MCP Mock] Getting job: {job_id}")
+        logger.info("[MCP Mock] Getting job", job_id=job_id)
         job = await _provider.get_job(job_id)
         
         result = job.model_dump()
-        logger.info(f"[MCP Mock] Successfully retrieved job {job_id}")
+        logger.info("[MCP Mock] Successfully retrieved job", job_id=job_id)
         return result
         
     except CRMError as e:
-        logger.error(f"[MCP Mock] CRM error getting job {job_id}: {e.message}")
+        logger.error("[MCP Mock] CRM error getting job", job_id=job_id, error_message=e.message)
         raise Exception(f"Failed to get job: {e.message}")
     except Exception as e:
-        logger.error(f"[MCP Mock] Unexpected error getting job {job_id}: {e}")
+        logger.error("[MCP Mock] Unexpected error getting job", job_id=job_id, error=str(e))
         raise Exception(f"Failed to get job: {str(e)}")
 
 
@@ -99,9 +99,9 @@ async def search_jobs(
         - Combine filters: search_jobs(customer_name="Smith", status="Completed")
     """
     try:
-        logger.info(f"[MCP Mock] Searching jobs with filters: customer_name={customer_name}, "
-                   f"job_id={job_id}, address={address}, claim_number={claim_number}, "
-                   f"status={status}")
+        logger.info("[MCP Mock] Searching jobs with filters",
+                   customer_name=customer_name, job_id=job_id, address=address,
+                   claim_number=claim_number, status=status)
         
         # Build filters dict for provider
         filters = {}
@@ -132,13 +132,13 @@ async def search_jobs(
             "has_more": job_list.has_more,
         }
         
-        logger.info(f"[MCP Mock] Search returned {len(job_list.jobs)} of {job_list.total_count} total jobs")
+        logger.info("[MCP Mock] Search returned jobs", results_count=len(job_list.jobs), total_count=job_list.total_count)
         return result
         
     except CRMError as e:
-        logger.error(f"[MCP Mock] CRM error searching jobs: {e.message}")
+        logger.error("[MCP Mock] CRM error searching jobs", error_message=e.message)
         raise Exception(f"Failed to search jobs: {e.message}")
     except Exception as e:
-        logger.error(f"[MCP Mock] Unexpected error searching jobs: {e}")
+        logger.error("[MCP Mock] Unexpected error searching jobs", error=str(e))
         raise Exception(f"Failed to search jobs: {str(e)}")
 

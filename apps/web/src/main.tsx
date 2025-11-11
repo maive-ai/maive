@@ -35,7 +35,11 @@ declare module '@tanstack/react-router' {
 function InnerApp() {
   const auth = useAuth();
   if (auth.isLoading) {
-    return <Spinner />;
+    return (
+      <div className="flex h-screen w-screen items-center justify-center">
+        <Spinner className="size-12" />
+      </div>
+    );
   }
   return <RouterProvider router={router} context={{ auth }} />;
 }

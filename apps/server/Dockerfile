@@ -22,6 +22,10 @@ RUN uv sync --no-dev
 # Copy the application source code
 COPY apps/server/src ./src
 
+# Copy Alembic migration files
+COPY apps/server/alembic.ini ./
+COPY apps/server/alembic ./alembic
+
 # Expose the backend port
 EXPOSE 8080
 

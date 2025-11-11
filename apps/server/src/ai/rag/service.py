@@ -40,22 +40,22 @@ class VectorStoreService:
             for vs in vector_stores.data:
                 if vs.name == self.VECTOR_STORE_NAME:
                     self._vector_store_id = vs.id
-                    logger.info(f"Found existing vector store: {vs.id}")
+                    logger.info("Found existing vector store", vector_store_id=vs.id)
                     return vs.id
         except Exception as e:
-            logger.error(f"Error listing vector stores: {e}")
+            logger.error("Error listing vector stores", error=str(e))
 
         # Create new vector store
         try:
-            logger.info(f"Creating new vector store: {self.VECTOR_STORE_NAME}")
+            logger.info("Creating new vector store", name=self.VECTOR_STORE_NAME)
             vector_store = await self.client.vector_stores.create(
                 name=self.VECTOR_STORE_NAME,
             )
             self._vector_store_id = vector_store.id
-            logger.info(f"Created vector store: {vector_store.id}")
+            logger.info("Created vector store", vector_store_id=vector_store.id)
             return vector_store.id
         except Exception as e:
-            logger.error(f"Failed to create vector store: {e}")
+            logger.error("Failed to create vector store", error=str(e))
             raise
 
     async def upload_document(
@@ -113,8 +113,10 @@ class VectorStoreService:
                     )
 
                 logger.info(
-                    f"Uploaded file: {uploaded_file.id} ({filename}) "
-                    f"for {metadata.jurisdiction_name}"
+                    "Uploaded file",
+                    file_id=uploaded_file.id,
+                    filename=filename,
+                    jurisdiction=metadata.jurisdiction_name,
                 )
 
                 # Attach file to vector store with attributes (with retry logic)
@@ -134,8 +136,11 @@ class VectorStoreService:
                             if e.status_code == 500 and attempt < max_retries - 1:
                                 wait_time = retry_delay * (2 ** attempt)  # Exponential backoff
                                 logger.warning(
-                                    f"OpenAI 500 error attaching file {uploaded_file.id}, "
-                                    f"retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})..."
+                                    "OpenAI 500 error attaching file, retrying",
+                                    file_id=uploaded_file.id,
+                                    wait_time=wait_time,
+                                    attempt=attempt + 1,
+                                    max_retries=max_retries,
                                 )
                                 await asyncio.sleep(wait_time)
                             else:
@@ -143,17 +148,20 @@ class VectorStoreService:
                 except Exception as attach_error:
                     # If attachment failed, delete the uploaded file to avoid orphaning it
                     logger.warning(
-                        f"Failed to attach file {uploaded_file.id} to vector store, cleaning up..."
+                        "Failed to attach file to vector store, cleaning up",
+                        file_id=uploaded_file.id,
                     )
                     try:
                         await self.client.files.delete(uploaded_file.id)
-                        logger.info(f"Cleaned up orphaned file {uploaded_file.id}")
+                        logger.info("Cleaned up orphaned file", file_id=uploaded_file.id)
                     except Exception as delete_error:
-                        logger.error(f"Failed to cleanup file {uploaded_file.id}: {delete_error}")
+                        logger.error("Failed to cleanup file", file_id=uploaded_file.id, error=str(delete_error))
                     raise attach_error
 
                 logger.info(
-                    f"Attached file {uploaded_file.id} to vector store {vector_store_id}"
+                    "Attached file to vector store",
+                    file_id=uploaded_file.id,
+                    vector_store_id=vector_store_id,
                 )
 
                 return uploaded_file.id
@@ -164,10 +172,10 @@ class VectorStoreService:
                     try:
                         Path(file_path).unlink()
                     except Exception as e:
-                        logger.warning(f"Failed to cleanup temp file: {e}")
+                        logger.warning("Failed to cleanup temp file", error=str(e))
 
         except Exception as e:
-            logger.error(f"Failed to upload document {filename}: {e}")
+            logger.error("Failed to upload document", filename=filename, error=str(e))
             raise
 
     async def find_file_id_by_filename(
@@ -252,14 +260,15 @@ class VectorStoreService:
             )
 
             logger.info(
-                f"Vector store status: {file_count} files, "
-                f"{total_size / 1024 / 1024:.2f} MB"
+                "Vector store status",
+                file_count=file_count,
+                size_mb=round(total_size / 1024 / 1024, 2),
             )
 
             return status
 
         except Exception as e:
-            logger.error(f"Failed to get vector store status: {e}")
+            logger.error("Failed to get vector store status", error=str(e))
             raise
 
     async def delete_file(self, file_id: str) -> bool:
@@ -283,11 +292,11 @@ class VectorStoreService:
             # Delete the actual file
             await self.client.files.delete(file_id)
 
-            logger.info(f"Deleted file: {file_id}")
+            logger.info("Deleted file", file_id=file_id)
             return True
 
         except Exception as e:
-            logger.error(f"Failed to delete file {file_id}: {e}")
+            logger.error("Failed to delete file", file_id=file_id, error=str(e))
             return False
 
     async def list_files(self, limit: int = 100) -> list[dict]:
@@ -320,7 +329,7 @@ class VectorStoreService:
             return files
 
         except Exception as e:
-            logger.error(f"Failed to list files: {e}")
+            logger.error("Failed to list files", error=str(e))
             raise
 
     async def clear_all_files(self) -> int:
@@ -356,12 +365,14 @@ class VectorStoreService:
                     await self.client.files.delete(f.id)
                     deleted_count += 1
                 except Exception as e:
-                    logger.warning(f"Failed deleting file {getattr(f, 'id', '?')}: {e}")
+                    logger.warning("Failed deleting file", file_id=getattr(f, 'id', '?'), error=str(e))
 
             has_more = bool(getattr(response, "has_more", False))
             cursor = getattr(response, "last_id", None)
 
         logger.info(
-            f"Cleared {deleted_count} files from vector store {vector_store_id}"
+            "Cleared files from vector store",
+            deleted_count=deleted_count,
+            vector_store_id=vector_store_id,
         )
         return deleted_count

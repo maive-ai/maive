@@ -5,7 +5,6 @@ import {
   MessagePrimitive,
   ThreadPrimitive,
 } from '@assistant-ui/react';
-import type { FC } from 'react';
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -15,13 +14,16 @@ import {
   CopyIcon,
   RefreshCwIcon,
 } from 'lucide-react';
+import type { FC } from 'react';
+import { NewChatButton } from './NewChatButton';
+import { MarkdownText } from '@/components/assistant-ui/markdown-text';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { MarkdownText } from '@/components/assistant-ui/markdown-text';
 
 export const Thread: FC = () => {
   return (
-    <ThreadPrimitive.Root className="flex h-full flex-col overflow-hidden bg-background text-foreground">
+    <ThreadPrimitive.Root className="relative flex h-full flex-col overflow-hidden bg-background text-foreground">
+      <NewChatButton />
       <ThreadPrimitive.Viewport className="flex h-full flex-col items-center overflow-y-scroll scroll-smooth bg-inherit px-4 pt-8">
         <ThreadWelcome />
 

@@ -4,6 +4,7 @@ import {
   type ChatModelAdapter,
 } from '@assistant-ui/react';
 import { Thread } from './Thread';
+import { chatHistoryAdapter } from './chatHistoryAdapter';
 import { FileSearchToolUI } from './tool-ui/FileSearchToolUI';
 import { McpToolUI } from './tool-ui/McpToolUI';
 import { ReasoningToolUI } from './tool-ui/ReasoningToolUI';
@@ -212,6 +213,9 @@ const chatAdapter: ChatModelAdapter = {
               } catch (e) {
                 console.error('Failed to parse reasoning summary:', e);
               }
+            } else if (currentEventType === 'heartbeat') {
+              // SSE keepalive to prevent HTTP/2 timeout - ignore
+              continue;
             } else {
               // Regular message content
               const unescapedData = data.replace(/\\n/g, '\n');
@@ -266,7 +270,9 @@ const chatAdapter: ChatModelAdapter = {
 };
 
 export function ChatRuntimeProvider() {
-  const runtime = useLocalRuntime(chatAdapter);
+  const runtime = useLocalRuntime(chatAdapter, {
+    adapters: { history: chatHistoryAdapter },
+  });
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>

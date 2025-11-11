@@ -128,24 +128,29 @@ def get_crm_settings() -> CRMSettings:
     global _crm_settings
     if _crm_settings is None:
         _crm_settings = CRMSettings()
-        logger.info(f"CRMSettings loaded. Provider: {_crm_settings.provider}")
+        logger.info("CRMSettings loaded", provider=_crm_settings.provider)
         
         # Log provider-specific config if available
         if _crm_settings.provider == CRMProvider.SERVICE_TITAN:
             config = _crm_settings.provider_config
             if isinstance(config, ServiceTitanConfig):
-                logger.info(f"Service Titan Tenant ID: {config.tenant_id}")
-                logger.info(f"Service Titan Client ID: {config.client_id}")
+                logger.info("Service Titan Tenant ID", tenant_id=config.tenant_id)
+                logger.info("Service Titan Client ID", client_id=config.client_id)
                 logger.info(
-                    f"Service Titan Client Secret (first 5 chars): {config.client_secret[:5]}..."
+                    "Service Titan Client Secret (first 5 chars)",
+                    client_secret_preview=f"{config.client_secret[:5]}..."
                 )
                 logger.info(
-                    f"Service Titan App Key (first 5 chars): {config.app_key[:5]}..."
+                    "Service Titan App Key (first 5 chars)",
+                    app_key_preview=f"{config.app_key[:5]}..."
                 )
         elif _crm_settings.provider == CRMProvider.JOB_NIMBUS:
             config = _crm_settings.provider_config
             if isinstance(config, JobNimbusConfig):
-                logger.info(f"JobNimbus API Key (first 5 chars): {config.api_key[:5]}...")
+                logger.info(
+                    "JobNimbus API Key (first 5 chars)",
+                    api_key_preview=f"{config.api_key[:5]}..."
+                )
     return _crm_settings
 
 

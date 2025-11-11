@@ -7,6 +7,7 @@ import type { User } from '@maive/api/client';
 import { SettingsModal } from './SettingsModal';
 import { Button } from '@/components/ui/button';
 import { navItems } from '@/config/navRoutes';
+import { env } from '@/env';
 import { cn } from '@/lib/utils';
 
 export type SidebarNavProps = {
@@ -75,25 +76,27 @@ export default function SidebarNav({ user }: SidebarNavProps) {
                 </Link>
               );
             })}
-          <button
-            onClick={() => setSettingsOpen(true)}
-            className={cn(
-              'flex items-center text-sm font-medium transition-colors rounded-md hover:bg-neutral-700/10 cursor-pointer mt-auto',
-              collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
-            )}
-            aria-label="Settings"
-          >
-            <Settings className="h-5 w-5 flex-shrink-0 text-gray-500" />
-            {!collapsed && 'Settings'}
-          </button>
+          {env.PUBLIC_ENABLE_VOICE_AI && (
+            <button
+              onClick={() => setSettingsOpen(true)}
+              className={cn(
+                'flex items-center text-sm font-medium transition-colors rounded-md hover:bg-neutral-700/10 cursor-pointer mt-auto',
+                collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
+              )}
+              aria-label="Settings"
+            >
+              <Settings className="h-5 w-5 flex-shrink-0 text-gray-500" />
+              {!collapsed && 'Settings'}
+            </button>
+          )}
         </nav>
       </div>
       <Button
-        variant="tertiary"
+        variant="outline"
         size="icon"
         aria-label="Toggle sidebar"
         onClick={() => setCollapsed((c) => !c)}
-        className="absolute bottom-4 right-0 translate-x-1/2 z-10 shadow-sm border border-primary-600 flex items-center justify-center transition-all duration-200 hover:scale-105"
+        className="absolute bottom-4 right-0 translate-x-1/2 z-10 shadow-sm border-primary-600 flex items-center justify-center transition-all duration-200 hover:scale-105"
       >
         {collapsed ? (
           <ChevronRight className="h-4 w-4 text-primary-600" />

@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Any, AsyncGenerator, TypeVar
+from typing import AsyncGenerator, TypeVar
 
 from pydantic import BaseModel
 
@@ -14,7 +14,6 @@ from src.ai.base import (
     ContentAnalysisRequest,
     ContentGenerationResult,
     FileMetadata,
-    SearchCitation,
     TranscriptionResult,
 )
 from src.ai.gemini import get_gemini_client
@@ -77,7 +76,7 @@ class GeminiProvider(AIProvider):
                 size_bytes=result.size_bytes,
             )
         except Exception as e:
-            logger.error(f"File upload failed: {e}")
+            logger.error("File upload failed", error=str(e))
             raise
 
     async def delete_file(self, file_id: str) -> bool:
@@ -93,7 +92,7 @@ class GeminiProvider(AIProvider):
             result = await self.client.delete_file(file_id)
             return result.success
         except Exception as e:
-            logger.error(f"Failed to delete file {file_id}: {e}")
+            logger.error("Failed to delete file", file_id=file_id, error=str(e))
             return False
 
     async def transcribe_audio(self, audio_path: str, **kwargs) -> TranscriptionResult:
@@ -110,7 +109,7 @@ class GeminiProvider(AIProvider):
             TranscriptionResult: Transcription result
         """
         try:
-            logger.info(f"Transcribing audio with Gemini: {audio_path}")
+            logger.info("Transcribing audio with Gemini", audio_path=audio_path)
 
             # Upload audio file
             file_metadata = await self.upload_file(audio_path)
@@ -137,7 +136,7 @@ class GeminiProvider(AIProvider):
                 language=kwargs.get("language"),
             )
         except Exception as e:
-            logger.error(f"Transcription failed: {e}")
+            logger.error("Transcription failed", error=str(e))
             raise
 
     async def generate_content(
@@ -172,7 +171,7 @@ class GeminiProvider(AIProvider):
                 finish_reason=response.finish_reason,
             )
         except Exception as e:
-            logger.error(f"Content generation failed: {e}")
+            logger.error("Content generation failed", error=str(e))
             raise
 
     async def generate_structured_content(
@@ -205,7 +204,7 @@ class GeminiProvider(AIProvider):
             result = await self.client.generate_structured_content(request)
             return result
         except Exception as e:
-            logger.error(f"Structured content generation failed: {e}")
+            logger.error("Structured content generation failed", error=str(e))
             raise
 
     async def analyze_audio_with_context(
@@ -223,7 +222,7 @@ class GeminiProvider(AIProvider):
             ContentGenerationResult: Analysis result
         """
         try:
-            logger.info(f"Analyzing audio with Gemini: {request.audio_path}")
+            logger.info("Analyzing audio with Gemini", audio_path=request.audio_path)
 
             # Upload audio file
             file_metadata = await self.upload_file(request.audio_path)
@@ -254,7 +253,7 @@ class GeminiProvider(AIProvider):
                 finish_reason=response.finish_reason,
             )
         except Exception as e:
-            logger.error(f"Audio analysis failed: {e}")
+            logger.error("Audio analysis failed", error=str(e))
             raise
 
     async def analyze_content_with_structured_output(
@@ -289,7 +288,7 @@ class GeminiProvider(AIProvider):
             file_ids = []
             file_metadata = None
             if request.audio_path:
-                logger.info(f"Uploading audio file: {request.audio_path}")
+                logger.info("Uploading audio file", audio_path=request.audio_path)
                 file_metadata = await self.upload_file(request.audio_path)
                 file_ids = [file_metadata.id]
 
@@ -309,7 +308,7 @@ class GeminiProvider(AIProvider):
 
             return result
         except Exception as e:
-            logger.error(f"Structured content analysis failed: {e}")
+            logger.error("Structured content analysis failed", error=str(e))
             raise
 
     async def stream_chat(

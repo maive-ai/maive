@@ -43,12 +43,12 @@ class RillaService:
             ConversationsExportResponse: The exported conversations data
         """
         try:
-            logger.info(f"Exporting conversations from {request.from_date} to {request.to_date}")
+            logger.info("Exporting conversations", from_date=str(request.from_date), to_date=str(request.to_date))
             result = await self.rilla_client.export_conversations(request)
-            logger.info(f"Successfully exported {len(result.conversations)} conversations")
+            logger.info("Successfully exported conversations", count=len(result.conversations))
             return result
         except Exception as e:
-            logger.error(f"Error exporting conversations: {e}")
+            logger.error("Error exporting conversations", error=str(e))
             raise
 
     async def export_all_conversations(self, request: ConversationsExportRequest) -> ConversationsExportResponse:
@@ -62,7 +62,7 @@ class RillaService:
             ConversationsExportResponse: All conversations from all pages
         """
         try:
-            logger.info(f"Exporting ALL conversations from {request.from_date} to {request.to_date}")
+            logger.info("Exporting ALL conversations", from_date=str(request.from_date), to_date=str(request.to_date))
 
             # First, get page 1 to determine total pages
             first_request = ConversationsExportRequest(
@@ -75,7 +75,7 @@ class RillaService:
             )
             first_result = await self.rilla_client.export_conversations(first_request)
 
-            logger.info(f"Found {first_result.total_conversations} conversations across {first_result.total_pages} pages")
+            logger.info("Found conversations across pages", total_conversations=first_result.total_conversations, total_pages=first_result.total_pages)
 
             if first_result.total_pages <= 1:
                 # Only one page, return as is
@@ -95,7 +95,7 @@ class RillaService:
                 remaining_requests.append(page_request)
 
             # Execute all remaining page requests concurrently
-            logger.info(f"Fetching {len(remaining_requests)} additional pages concurrently")
+            logger.info("Fetching additional pages concurrently", page_count=len(remaining_requests))
             remaining_tasks = [
                 self.rilla_client.export_conversations(req) for req in remaining_requests
             ]
@@ -106,7 +106,7 @@ class RillaService:
             for result in remaining_results:
                 all_conversations.extend(result.conversations)
 
-            logger.info(f"Successfully collected {len(all_conversations)} conversations from all pages")
+            logger.info("Successfully collected conversations from all pages", count=len(all_conversations))
 
             # Return combined result
             return ConversationsExportResponse(
@@ -117,7 +117,7 @@ class RillaService:
             )
 
         except Exception as e:
-            logger.error(f"Error exporting all conversations: {e}")
+            logger.error("Error exporting all conversations", error=str(e))
             raise
 
     async def export_teams(self, request: TeamsExportRequest) -> TeamsExportResponse:
@@ -131,12 +131,12 @@ class RillaService:
             TeamsExportResponse: The exported teams data
         """
         try:
-            logger.info(f"Exporting teams from {request.from_date} to {request.to_date}")
+            logger.info("Exporting teams", from_date=str(request.from_date), to_date=str(request.to_date))
             result = await self.rilla_client.export_teams(request)
-            logger.info(f"Successfully exported {len(result.teams)} teams")
+            logger.info("Successfully exported teams", count=len(result.teams))
             return result
         except Exception as e:
-            logger.error(f"Error exporting teams: {e}")
+            logger.error("Error exporting teams", error=str(e))
             raise
 
     async def export_users(self, request: UsersExportRequest) -> UsersExportResponse:
@@ -150,12 +150,12 @@ class RillaService:
             UsersExportResponse: The exported users data
         """
         try:
-            logger.info(f"Exporting users from {request.from_date} to {request.to_date}")
+            logger.info("Exporting users", from_date=str(request.from_date), to_date=str(request.to_date))
             result = await self.rilla_client.export_users(request)
-            logger.info(f"Successfully exported {len(result.users)} users")
+            logger.info("Successfully exported users", count=len(result.users))
             return result
         except Exception as e:
-            logger.error(f"Error exporting users: {e}")
+            logger.error("Error exporting users", error=str(e))
             raise
 
     async def get_conversations_for_appointment(

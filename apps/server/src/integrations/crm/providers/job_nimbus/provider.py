@@ -90,6 +90,28 @@ class JobNimbusProvider(CRMProvider):
     # Universal CRM Interface Implementation (required abstract methods)
     # ========================================================================
 
+    async def _get_job_by_id(self, job_id: str) -> JobNimbusJobResponse:
+        """
+        Internal helper to fetch a single job from JobNimbus API.
+        
+        Args:
+            job_id: The JobNimbus JNID
+            
+        Returns:
+            JobNimbusJobResponse: Raw job data from API
+            
+        Raises:
+            CRMError: If the job is not found or an error occurs
+        """
+        endpoint = JobNimbusEndpoints.JOB_BY_ID.format(jnid=job_id)
+        logger.debug("Fetching job for JNID", job_id=job_id)
+        
+        response = await self._make_request("GET", endpoint)
+        response.raise_for_status()
+        
+        data = response.json()
+        return JobNimbusJobResponse(**data)
+
     async def get_job(self, job_id: str) -> Job:
         """
         Get a specific job by JNID from JobNimbus.
@@ -104,18 +126,13 @@ class JobNimbusProvider(CRMProvider):
             CRMError: If the job is not found or an error occurs
         """
         try:
-            endpoint = JobNimbusEndpoints.JOB_BY_ID.format(jnid=job_id)
-
-            logger.debug(f"Fetching job for JNID: {job_id}")
-
-            response = await self._make_request("GET", endpoint)
-            response.raise_for_status()
-
-            data = response.json()
-            jn_job = JobNimbusJobResponse(**data)
-
-            # Transform to universal Job
-            job = self._transform_jn_job_to_universal(jn_job)
+            jn_job = await self._get_job_by_id(job_id)
+            
+            # Transform to universal Job with contact details
+            job = await self._transform_jn_job_to_universal_async(
+                jn_job,
+                include_contact_details=True,
+            )
             
             # Fetch and attach notes
             job.notes = await self._get_job_notes(job_id)
@@ -126,11 +143,142 @@ class JobNimbusProvider(CRMProvider):
             if e.response.status_code == 404:
                 raise CRMError(f"Job with JNID {job_id} not found", "NOT_FOUND")
             else:
-                logger.error(f"HTTP error fetching job {job_id}: {e}")
+                logger.error("HTTP error fetching job", job_id=job_id, error=str(e))
                 raise CRMError(f"Failed to fetch job: {e}", "HTTP_ERROR")
         except Exception as e:
-            logger.error(f"Unexpected error fetching job {job_id}: {e}")
+            logger.error("Unexpected error fetching job", job_id=job_id, error=str(e))
             raise CRMError(f"Failed to fetch job: {str(e)}", "UNKNOWN_ERROR")
+
+    def _build_filter_query(self, filters: dict[str, Any]) -> dict[str, Any]:
+        """
+        Build a JobNimbus filter query from universal filter inputs.
+
+        JobNimbus accepts an Elasticsearch-style filter JSON via the `filter` query parameter.
+        """
+        if not filters:
+            return {}
+
+        filter_query: dict[str, Any] = {"must": []}
+        should_conditions: list[dict[str, Any]] = []
+
+        customer_name = filters.get("customer_name")
+        if customer_name:
+            filter_query["must"].append(
+                {"wildcard": {"primary.name": f"*{customer_name}*"}}
+            )
+
+        job_id = filters.get("job_id")
+        if job_id:
+            filter_query["must"].append({"term": {"jnid": job_id}})
+
+        claim_number = filters.get("claim_number")
+        if claim_number:
+            filter_query["must"].append({"term": {"claim_number": claim_number}})
+
+        status = filters.get("status")
+        if status:
+            filter_query["must"].append({"term": {"status_name": status}})
+
+        address = filters.get("address")
+        if address:
+            address_fields = [
+                "address_line1",
+                "address_line2",
+                "city",
+                "state_text",
+                "zip",
+            ]
+            should_conditions.extend(
+                {"wildcard": {field: f"*{address}*"}} for field in address_fields
+            )
+
+        if should_conditions:
+            filter_query["should"] = should_conditions
+            filter_query["minimum_should_match"] = 1
+
+        if not filter_query["must"] and "should" not in filter_query:
+            # No valid filters translated
+            return {}
+
+        return filter_query
+
+    async def _fetch_jobs_list(
+        self,
+        filters: dict[str, Any] | None = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> JobNimbusJobsListResponse:
+        """
+        Internal helper to fetch paginated jobs list from JobNimbus API.
+        
+        Args:
+            filters: Optional dictionary of filters (for future server-side filtering)
+            page: Page number (1-indexed)
+            page_size: Number of items per page
+            
+        Returns:
+            JobNimbusJobsListResponse: Raw jobs list data from API
+            
+        Raises:
+            CRMError: If the API request fails
+        """
+        logger.debug("Fetching jobs list from API", page=page, page_size=page_size, filters=filters)
+
+        endpoint = JobNimbusEndpoints.JOBS
+        
+        # Convert page/page_size to JobNimbus from/size params
+        # JobNimbus uses zero-based offset, we use 1-indexed pages
+        from_offset = (page - 1) * page_size
+        params = {
+            "size": page_size,
+            "from": from_offset,
+        }
+
+        api_filter = self._build_filter_query(filters or {})
+        if api_filter:
+            params["filter"] = json.dumps(api_filter)
+        
+        response = await self._make_request("GET", endpoint, params=params)
+        response.raise_for_status()
+
+        data = response.json()
+        return JobNimbusJobsListResponse(**data)
+
+    async def _get_jobs_internal(
+        self,
+        filters: dict[str, Any] | None,
+        page: int,
+        page_size: int,
+        include_contact_details: bool,
+    ) -> tuple[list[Job], int, bool]:
+        """
+        Internal helper that fetches JobNimbus jobs and converts them to universal Job models.
+
+        Args:
+            filters: Optional dictionary of filters
+            page: Page number (1-indexed)
+            page_size: Number of items per page
+            include_contact_details: Whether to fetch contact details for the primary contact
+
+        Returns:
+            tuple of (jobs list, total_count, has_more)
+        """
+        jn_jobs_list = await self._fetch_jobs_list(filters=filters, page=page, page_size=page_size)
+
+        # Transform to universal Job schemas (async to optionally fetch contact details)
+        jobs = await asyncio.gather(
+            *[
+                self._transform_jn_job_to_universal_async(jn_job, include_contact_details=include_contact_details)
+                for jn_job in jn_jobs_list.results
+            ]
+        )
+
+        # Use API total count and results for pagination metadata (server-side filtering)
+        total_count = jn_jobs_list.count
+        from_offset = (page - 1) * page_size
+        has_more = len(jn_jobs_list.results) == page_size and (from_offset + page_size) < total_count
+
+        return jobs, total_count, has_more
 
     async def get_all_jobs(
         self,
@@ -155,72 +303,24 @@ class JobNimbusProvider(CRMProvider):
             JobList: Paginated list of jobs
         """
         try:
-            logger.debug(f"Fetching all jobs (page={page}, size={page_size}, filters={filters})")
-
-            endpoint = JobNimbusEndpoints.JOBS
-            response = await self._make_request("GET", endpoint)
-            response.raise_for_status()
-
-            data = response.json()
-            jn_jobs_list = JobNimbusJobsListResponse(**data)
-
-            # Transform to universal Job schemas
-            jobs = [
-                self._transform_jn_job_to_universal(jn_job)
-                for jn_job in jn_jobs_list.results
-            ]
-
-            # Apply client-side filtering if provided
-            if filters:
-                filtered_jobs = []
-                for job in jobs:
-                    # Customer name filter (partial, case-insensitive)
-                    if "customer_name" in filters:
-                        if filters["customer_name"].lower() not in (job.customer_name or "").lower():
-                            continue
-                    
-                    # Job ID filter (exact match)
-                    if "job_id" in filters:
-                        if job.id != filters["job_id"]:
-                            continue
-                    
-                    # Address filter (partial, case-insensitive)
-                    if "address" in filters:
-                        full_address = f"{job.address_line1 or ''} {job.city or ''} {job.state or ''} {job.postal_code or ''}"
-                        if filters["address"].lower() not in full_address.lower():
-                            continue
-                    
-                    # Claim number filter (exact match from provider_data)
-                    if "claim_number" in filters:
-                        job_claim = job.provider_data.get("claim_number") if job.provider_data else None
-                        if job_claim != filters["claim_number"]:
-                            continue
-                    
-                    # Status filter (exact match)
-                    if "status" in filters:
-                        if job.status != filters["status"]:
-                            continue
-                    
-                    filtered_jobs.append(job)
-                
-                jobs = filtered_jobs
-
-            # Apply pagination
-            start_idx = (page - 1) * page_size
-            end_idx = start_idx + page_size
-            paginated_jobs = jobs[start_idx:end_idx]
+            jobs, total_count, has_more = await self._get_jobs_internal(
+                filters=filters,
+                page=page,
+                page_size=page_size,
+                include_contact_details=False,
+            )
 
             return JobList(
-                jobs=paginated_jobs,
-                total_count=len(jobs),
+                jobs=jobs,
+                total_count=total_count,
                 provider=CRMProviderEnum.JOB_NIMBUS,
                 page=page,
                 page_size=page_size,
-                has_more=end_idx < len(jobs),
+                has_more=has_more,
             )
 
         except Exception as e:
-            logger.error(f"Error fetching all jobs: {e}")
+            logger.error("Error fetching all jobs", error=str(e))
             raise CRMError(f"Failed to fetch jobs: {str(e)}", "UNKNOWN_ERROR")
 
     async def get_project(self, project_id: str) -> Project:
@@ -238,32 +338,13 @@ class JobNimbusProvider(CRMProvider):
         Raises:
             CRMError: If the project is not found
         """
-        logger.info(f"Getting JobNimbus project: {project_id}")
-
-        # Get job first
-        endpoint = JobNimbusEndpoints.JOB_BY_ID.format(jnid=project_id)
+        logger.info("Getting JobNimbus project", project_id=project_id)
 
         try:
-            response = await self._make_request("GET", endpoint)
-            response.raise_for_status()
-
-            data = response.json()
-            jn_job = JobNimbusJobResponse(**data)
-
-            # Transform to universal Project
-            project = await self._transform_jn_job_to_universal_project_async(jn_job)
-            
-            # Fetch and attach notes
-            project.notes = await self._get_job_notes(project_id)
-            
-            return project
-
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 404:
-                raise CRMError(f"Project with JNID {project_id} not found", "NOT_FOUND")
-            raise CRMError(f"Failed to fetch project: {e}", "HTTP_ERROR")
-        except Exception as e:
-            raise CRMError(f"Failed to fetch project: {str(e)}", "UNKNOWN_ERROR")
+            job = await self.get_job(project_id)
+            return self._job_to_project(job)
+        except CRMError as exc:
+            raise CRMError(exc.message, exc.error_code) from exc
 
     async def get_all_projects(
         self,
@@ -284,38 +365,29 @@ class JobNimbusProvider(CRMProvider):
         Returns:
             ProjectList: Paginated list of projects
         """
-        logger.info(f"Getting all JobNimbus projects (page={page}, size={page_size})")
+        logger.info("Getting all JobNimbus projects", page=page, page_size=page_size)
 
         try:
-            endpoint = JobNimbusEndpoints.JOBS
-            response = await self._make_request("GET", endpoint)
-            response.raise_for_status()
+            jobs, total_count, has_more = await self._get_jobs_internal(
+                filters=filters,
+                page=page,
+                page_size=page_size,
+                include_contact_details=True,
+            )
 
-            data = response.json()
-            jn_jobs_list = JobNimbusJobsListResponse(**data)
-
-            # Transform to universal Project schemas (using async to fetch contact details)
-            projects = await asyncio.gather(*[
-                self._transform_jn_job_to_universal_project_async(jn_job)
-                for jn_job in jn_jobs_list.results
-            ])
-
-            # Apply pagination
-            start_idx = (page - 1) * page_size
-            end_idx = start_idx + page_size
-            paginated_projects = projects[start_idx:end_idx]
+            projects = [self._job_to_project(job) for job in jobs]
 
             return ProjectList(
-                projects=paginated_projects,
-                total_count=len(projects),
+                projects=projects,
+                total_count=total_count,
                 provider=CRMProviderEnum.JOB_NIMBUS,
                 page=page,
                 page_size=page_size,
-                has_more=end_idx < len(projects),
+                has_more=has_more,
             )
 
         except Exception as e:
-            logger.error(f"Error fetching all projects: {e}")
+            logger.error("Error fetching all projects", error=str(e))
             raise CRMError(f"Failed to fetch projects: {str(e)}", "UNKNOWN_ERROR")
 
     async def get_contact(self, contact_id: str) -> Contact:
@@ -334,7 +406,7 @@ class JobNimbusProvider(CRMProvider):
         try:
             endpoint = JobNimbusEndpoints.CONTACT_BY_ID.format(jnid=contact_id)
 
-            logger.debug(f"Fetching contact for JNID: {contact_id}")
+            logger.debug("Fetching contact for JNID", contact_id=contact_id)
 
             response = await self._make_request("GET", endpoint)
             response.raise_for_status()
@@ -348,10 +420,10 @@ class JobNimbusProvider(CRMProvider):
             if e.response.status_code == 404:
                 raise CRMError(f"Contact with JNID {contact_id} not found", "NOT_FOUND")
             else:
-                logger.error(f"HTTP error fetching contact {contact_id}: {e}")
+                logger.error("HTTP error fetching contact", contact_id=contact_id, error=str(e))
                 raise CRMError(f"Failed to fetch contact: {e}", "HTTP_ERROR")
         except Exception as e:
-            logger.error(f"Unexpected error fetching contact {contact_id}: {e}")
+            logger.error("Unexpected error fetching contact", contact_id=contact_id, error=str(e))
             raise CRMError(f"Failed to fetch contact: {str(e)}", "UNKNOWN_ERROR")
 
     async def get_all_contacts(
@@ -372,10 +444,18 @@ class JobNimbusProvider(CRMProvider):
             ContactList: Paginated list of contacts
         """
         try:
-            logger.debug(f"Fetching all contacts (page={page}, size={page_size})")
+            logger.debug("Fetching all contacts", page=page, page_size=page_size)
 
             endpoint = JobNimbusEndpoints.CONTACTS
-            response = await self._make_request("GET", endpoint)
+            
+            # Convert page/page_size to JobNimbus from/size params
+            from_offset = (page - 1) * page_size
+            params = {
+                "size": page_size,
+                "from": from_offset,
+            }
+            
+            response = await self._make_request("GET", endpoint, params=params)
             response.raise_for_status()
 
             data = response.json()
@@ -387,22 +467,21 @@ class JobNimbusProvider(CRMProvider):
                 for jn_contact in jn_contacts_list.results
             ]
 
-            # Apply pagination
-            start_idx = (page - 1) * page_size
-            end_idx = start_idx + page_size
-            paginated_contacts = contacts[start_idx:end_idx]
+            # Use API total count for accurate pagination metadata
+            total_count = jn_contacts_list.count
+            has_more = len(jn_contacts_list.results) == page_size and (from_offset + page_size) < total_count
 
             return ContactList(
-                contacts=paginated_contacts,
-                total_count=len(contacts),
+                contacts=contacts,
+                total_count=total_count,
                 provider=CRMProviderEnum.JOB_NIMBUS,
                 page=page,
                 page_size=page_size,
-                has_more=end_idx < len(contacts),
+                has_more=has_more,
             )
 
         except Exception as e:
-            logger.error(f"Error fetching all contacts: {e}")
+            logger.error("Error fetching all contacts", error=str(e))
             raise CRMError(f"Failed to fetch contacts: {str(e)}", "UNKNOWN_ERROR")
 
     async def add_note(
@@ -428,7 +507,7 @@ class JobNimbusProvider(CRMProvider):
             CRMError: If the entity is not found or note creation fails
         """
         try:
-            logger.info(f"Adding note to {entity_type} {entity_id}")
+            logger.info("Adding note to entity", entity_type=entity_type, entity_id=entity_id)
 
             # Create activity in JobNimbus
             activity_request = JobNimbusCreateActivityRequest(
@@ -467,7 +546,7 @@ class JobNimbusProvider(CRMProvider):
             )
 
         except Exception as e:
-            logger.error(f"Error adding note to {entity_type} {entity_id}: {e}")
+            logger.error("Error adding note to entity", entity_type=entity_type, entity_id=entity_id, error=str(e))
             raise CRMError(f"Failed to add note: {str(e)}", "UNKNOWN_ERROR")
 
     async def update_job_status(
@@ -487,7 +566,7 @@ class JobNimbusProvider(CRMProvider):
         Raises:
             CRMError: If the job is not found or update fails
         """
-        logger.info(f"Updating JobNimbus job {job_id} status to {status}")
+        logger.info("Updating JobNimbus job status", job_id=job_id, status=status)
 
         # JobNimbus requires updating via PATCH with status_name
         try:
@@ -501,7 +580,7 @@ class JobNimbusProvider(CRMProvider):
             response = await self._make_request("PATCH", endpoint, json=update_data)
             response.raise_for_status()
 
-            logger.info(f"Successfully updated job {job_id} status")
+            logger.info("Successfully updated job status", job_id=job_id)
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
@@ -529,7 +608,7 @@ class JobNimbusProvider(CRMProvider):
         Raises:
             CRMError: If the project is not found or update fails
         """
-        logger.info(f"Updating JobNimbus project {project_id} status to {status}")
+        logger.info("Updating JobNimbus project status", project_id=project_id, status=status)
         await self.update_job_status(project_id, status, **kwargs)
 
     # ========================================================================
@@ -547,7 +626,7 @@ class JobNimbusProvider(CRMProvider):
             list[Note]: List of notes for the job (empty list if none or on error)
         """
         try:
-            logger.info(f"Fetching notes for job {job_id}")
+            logger.info("Fetching notes for job", job_id=job_id)
             
             # Build filter to get activities related to this job
             filter_query = json.dumps({
@@ -590,14 +669,14 @@ class JobNimbusProvider(CRMProvider):
                         )
                         notes.append(note)
                 except Exception as e:
-                    logger.warning(f"Failed to parse activity for job {job_id}: {e}")
+                    logger.warning("Failed to parse activity for job", job_id=job_id, error=str(e))
                     continue
             
-            logger.info(f"Fetched {len(notes)} notes for job {job_id}")
+            logger.info("Fetched notes for job", job_id=job_id, note_count=len(notes))
             return notes
             
         except Exception as e:
-            logger.warning(f"Error fetching notes for job {job_id}: {e}")
+            logger.warning("Error fetching notes for job", job_id=job_id, error=str(e))
             return []  # Return empty list on error - don't fail the job fetch
 
     # ========================================================================
@@ -626,7 +705,7 @@ class JobNimbusProvider(CRMProvider):
         all_files = await self.get_job_files(job_id, "all")
         matching_files = [f for f in all_files if f.id == file_id]
         if not matching_files:
-            logger.error(f"File {file_id} not found in job {job_id}")
+            logger.error("File not found in job", file_id=file_id, job_id=job_id)
             return None
         return matching_files[0]
 
@@ -651,7 +730,7 @@ class JobNimbusProvider(CRMProvider):
         try:
             endpoint = JobNimbusEndpoints.FILES
             params = {"related": job_id}
-            logger.info(f"[JobNimbus] Fetching files for job {job_id} with filter: {file_filter}")
+            logger.info("[JobNimbus] Fetching files for job", job_id=job_id, file_filter=file_filter)
             
             response = await self._make_request("GET", endpoint, params=params)
             response.raise_for_status()
@@ -685,17 +764,17 @@ class JobNimbusProvider(CRMProvider):
             else:  # "all"
                 filtered_files = all_files
             
-            logger.info(f"[JobNimbus] Found {len(filtered_files)} {file_filter} file(s) for job {job_id}")
+            logger.info("[JobNimbus] Found files for job", job_id=job_id, file_filter=file_filter, file_count=len(filtered_files))
             return filtered_files
             
         except httpx.HTTPStatusError as e:
-            logger.error(f"HTTP error fetching files for job {job_id}: {e}")
+            logger.error("HTTP error fetching files for job", job_id=job_id, error=str(e))
             raise CRMError(
                 f"Failed to fetch files: {e.response.status_code}",
                 "API_ERROR"
             )
         except Exception as e:
-            logger.error(f"Error fetching files for job {job_id}: {e}")
+            logger.error("Error fetching files for job", job_id=job_id, error=str(e))
             raise CRMError(f"Failed to fetch files: {str(e)}", "UNKNOWN_ERROR")
 
     async def download_file(
@@ -720,7 +799,7 @@ class JobNimbusProvider(CRMProvider):
         """
         try:
             endpoint = JobNimbusEndpoints.FILE_BY_ID.format(jnid=file_id)
-            logger.info(f"[JobNimbus] Downloading file {file_id}")
+            logger.info("[JobNimbus] Downloading file", file_id=file_id)
             
             # JobNimbus returns a 302 redirect to the actual file on CloudFront/S3
             response = await self._make_request("GET", endpoint, follow_redirects=True)
@@ -730,22 +809,96 @@ class JobNimbusProvider(CRMProvider):
             resolved_filename = filename or f"download_{file_id}"
             resolved_content_type = content_type or "application/octet-stream"
             
-            logger.info(f"[JobNimbus] Downloaded {resolved_filename} ({len(response.content)} bytes)")
+            logger.info("[JobNimbus] Downloaded file", filename=resolved_filename, size_bytes=len(response.content))
             return (response.content, resolved_filename, resolved_content_type)
             
         except httpx.HTTPStatusError as e:
-            logger.error(f"[JobNimbus] HTTP error downloading file {file_id}: {e}")
+            logger.error("[JobNimbus] HTTP error downloading file", file_id=file_id, error=str(e))
             raise CRMError(f"Failed to download file: {e.response.status_code}", "API_ERROR")
         except Exception as e:
-            logger.error(f"[JobNimbus] Error downloading file {file_id}: {e}")
+            logger.error("[JobNimbus] Error downloading file", file_id=file_id, error=str(e))
             raise CRMError(f"Failed to download file: {str(e)}", "UNKNOWN_ERROR")
 
     # ========================================================================
     # Transformation Methods
     # ========================================================================
 
-    def _transform_jn_job_to_universal(self, jn_job: JobNimbusJobResponse) -> Job:
-        """Transform JobNimbus job to universal Job schema."""
+    async def _transform_jn_job_to_universal_async(
+        self,
+        jn_job: JobNimbusJobResponse,
+        include_contact_details: bool = False,
+    ) -> Job:
+        """Async transformation to universal Job schema with optional contact enrichment."""
+        # Gather raw data for provider_data enrichment
+        all_data = jn_job.model_dump(mode="json")
+
+        claim_number = jn_job.claim_number
+        insurance_company = jn_job.insurance_company
+        date_of_loss = (
+            self._unix_timestamp_to_datetime(jn_job.filed_storm_date).isoformat()
+            if jn_job.filed_storm_date
+            else None
+        )
+
+        adjuster_name = self._extract_custom_field(all_data, ["adjustername", "adjuster"])
+        adjuster_phone = self._extract_custom_field(
+            all_data, ["adjusterphone", "adjusterphoneno", "adjustercontact"]
+        )
+        adjuster_email = self._extract_custom_field(
+            all_data, ["adjusteremail", "adjusteremailaddress"]
+        )
+
+        customer_phone = None
+        customer_email = None
+
+        if include_contact_details and jn_job.primary and jn_job.primary.id:
+            try:
+                contact = await self.get_contact(jn_job.primary.id)
+                customer_email = contact.email
+                customer_phone = contact.phone or contact.mobile_phone or contact.work_phone
+                logger.debug(
+                    "[JobNimbus] Fetched contact",
+                    contact_id=jn_job.primary.id,
+                    phone=customer_phone,
+                    email=customer_email,
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "[JobNimbus] Failed to fetch contact",
+                    contact_id=jn_job.primary.id,
+                    error=str(exc),
+                )
+
+        provider_data: dict[str, Any] = {
+            "recid": jn_job.recid,
+            "jnid": jn_job.jnid,
+            "record_type": jn_job.record_type,
+            "source": jn_job.source,
+            "source_name": jn_job.source_name,
+            "location": jn_job.location.model_dump() if jn_job.location else None,
+            "owners": [owner.model_dump() for owner in jn_job.owners],
+            "related": [r.model_dump() for r in jn_job.related] if jn_job.related else None,
+            "is_active": jn_job.is_active,
+            "is_archived": jn_job.is_archived,
+            "geo": jn_job.geo.model_dump() if jn_job.geo else None,
+        }
+
+        provider_data.update(
+            {
+                "claim_number": claim_number,
+                "insurance_company": insurance_company,
+                "insuranceAgency": insurance_company,
+                "date_of_loss": date_of_loss,
+                "customer_phone": customer_phone,
+                "customer_email": customer_email,
+                "adjusterContact": {
+                    "name": adjuster_name,
+                    "phone": adjuster_phone,
+                    "email": adjuster_email,
+                },
+            }
+        )
+
         return Job(
             id=jn_job.jnid,
             name=jn_job.name,
@@ -768,19 +921,7 @@ class JobNimbusProvider(CRMProvider):
             sales_rep_id=jn_job.sales_rep,
             sales_rep_name=jn_job.sales_rep_name,
             provider=CRMProviderEnum.JOB_NIMBUS,
-            provider_data={
-                "recid": jn_job.recid,
-                "jnid": jn_job.jnid,
-                "record_type": jn_job.record_type,
-                "source": jn_job.source,
-                "source_name": jn_job.source_name,
-                "location": jn_job.location.model_dump() if jn_job.location else None,
-                "owners": [owner.model_dump() for owner in jn_job.owners],
-                "related": [r.model_dump() for r in jn_job.related] if jn_job.related else None,
-                "is_active": jn_job.is_active,
-                "is_archived": jn_job.is_archived,
-                "geo": jn_job.geo.model_dump() if jn_job.geo else None,
-            },
+            provider_data=provider_data,
         )
 
     def _extract_custom_field(
@@ -802,90 +943,51 @@ class JobNimbusProvider(CRMProvider):
                 return value
         return None
 
-    async def _transform_jn_job_to_universal_project_async(self, jn_job: JobNimbusJobResponse) -> Project:
-        """Async version that fetches primary contact details for email."""
-        # Get all fields from the JobNimbus job, including custom fields
-        all_data = jn_job.model_dump(mode="json")
+    def _job_to_project(self, job: Job) -> Project:
+        """Convert a universal Job into a universal Project representation."""
+        provider_data = job.provider_data or {}
+        adjuster_contact = provider_data.get("adjusterContact") or {}
+        location = provider_data.get("location") or {}
 
-        # Extract typed custom fields directly from schema
-        claim_number = jn_job.claim_number
-        insurance_company = jn_job.insurance_company
-        
-        # Convert filed storm date to ISO format for date_of_loss
-        date_of_loss = None
-        if jn_job.filed_storm_date:
-            date_of_loss = self._unix_timestamp_to_datetime(jn_job.filed_storm_date).isoformat()
-
-        # Extract primary contact info
-        customer_name = jn_job.primary.name if jn_job.primary else None
-        customer_phone = None
-        customer_email = None
-
-        # Fetch primary contact details to get email and phone
-        if jn_job.primary and jn_job.primary.id:
-            try:
-                contact = await self.get_contact(jn_job.primary.id)
-                customer_email = contact.email
-                customer_phone = contact.phone or contact.mobile_phone or contact.work_phone
-                logger.debug(f"[JobNimbus] Fetched contact {jn_job.primary.id} - phone: {customer_phone}, email: {customer_email}")
-            except Exception as e:
-                logger.warning(f"[JobNimbus] Failed to fetch contact {jn_job.primary.id}: {e}")
-
-        # Extract adjuster information (fallback to _extract_custom_field for fields not in typed schema)
-        adjuster_name = self._extract_custom_field(
-            all_data, ["adjustername", "adjuster"]
-        )
-        adjuster_phone = self._extract_custom_field(
-            all_data, ["adjusterphone", "adjusterphoneno", "adjustercontact"]
-        )
-        adjuster_email = self._extract_custom_field(
-            all_data, ["adjusteremail", "adjusteremailaddress"]
-        )
-
-        # Store contact info in provider_data for frontend access
-        all_data["customer_phone"] = customer_phone
-        all_data["customer_email"] = customer_email
-        all_data["insuranceAgency"] = insurance_company
-        all_data["adjusterContact"] = {
-            "name": adjuster_name,
-            "phone": adjuster_phone,
-            "email": adjuster_email,
-        }
+        location_id = location.get("id") if isinstance(location, dict) else None
+        if location_id is not None:
+            location_id = str(location_id)
 
         return Project(
-            id=jn_job.jnid,
-            name=jn_job.name,
-            number=jn_job.number,
-            status=jn_job.status_name or "Unknown",
-            status_id=str(jn_job.status) if jn_job.status else None,
-            sub_status=None,  # JobNimbus doesn't have sub-statuses
+            id=job.id,
+            name=job.name,
+            number=job.number,
+            status=job.status,
+            status_id=job.status_id,
+            sub_status=None,
             sub_status_id=None,
-            workflow_type=jn_job.record_type_name,
-            description=jn_job.description,
-            customer_id=jn_job.primary.id if jn_job.primary else None,
-            customer_name=customer_name,
-            location_id=str(jn_job.location.id) if jn_job.location else None,
-            address_line1=jn_job.address_line1,
-            address_line2=jn_job.address_line2,
-            city=jn_job.city,
-            state=jn_job.state_text,
-            postal_code=jn_job.zip,
-            country=jn_job.country_name,
-            created_at=self._unix_timestamp_to_datetime(jn_job.date_created).isoformat(),
-            updated_at=self._unix_timestamp_to_datetime(jn_job.date_updated).isoformat(),
-            start_date=None,  # Not tracked in JobNimbus
+            workflow_type=job.workflow_type,
+            description=job.description,
+            customer_id=job.customer_id,
+            customer_name=job.customer_name,
+            location_id=location_id,
+            address_line1=job.address_line1,
+            address_line2=job.address_line2,
+            city=job.city,
+            state=job.state,
+            postal_code=job.postal_code,
+            country=job.country,
+            created_at=job.created_at,
+            updated_at=job.updated_at,
+            start_date=None,
             target_completion_date=None,
             actual_completion_date=None,
-            claim_number=claim_number,
-            date_of_loss=date_of_loss,
-            insurance_company=insurance_company,
-            adjuster_name=adjuster_name,
-            adjuster_phone=adjuster_phone,
-            adjuster_email=adjuster_email,
-            sales_rep_id=jn_job.sales_rep,
-            sales_rep_name=jn_job.sales_rep_name,
-            provider=CRMProviderEnum.JOB_NIMBUS,
-            provider_data=all_data,  # Includes all fields including custom fields
+            claim_number=provider_data.get("claim_number"),
+            date_of_loss=provider_data.get("date_of_loss"),
+            insurance_company=provider_data.get("insurance_company") or provider_data.get("insuranceAgency"),
+            adjuster_name=adjuster_contact.get("name"),
+            adjuster_phone=adjuster_contact.get("phone"),
+            adjuster_email=adjuster_contact.get("email"),
+            sales_rep_id=job.sales_rep_id,
+            sales_rep_name=job.sales_rep_name,
+            provider=job.provider,
+            provider_data=provider_data,
+            notes=job.notes,
         )
 
     def _transform_jn_contact_to_universal(self, jn_contact: JobNimbusContactResponse) -> Contact:
@@ -950,7 +1052,7 @@ class JobNimbusProvider(CRMProvider):
         try:
             endpoint = JobNimbusEndpoints.JOB_BY_ID.format(jnid=project_id)
 
-            logger.debug(f"Fetching job status for JNID: {project_id}")
+            logger.debug("Fetching job status for JNID", project_id=project_id)
 
             response = await self._make_request("GET", endpoint)
             response.raise_for_status()
@@ -989,10 +1091,10 @@ class JobNimbusProvider(CRMProvider):
             if e.response.status_code == 404:
                 raise CRMError(f"Job with JNID {project_id} not found", "NOT_FOUND")
             else:
-                logger.error(f"HTTP error fetching job status {project_id}: {e}")
+                logger.error("HTTP error fetching job status", project_id=project_id, error=str(e))
                 raise CRMError(f"Failed to fetch job status: {e}", "HTTP_ERROR")
         except Exception as e:
-            logger.error(f"Unexpected error fetching job status {project_id}: {e}")
+            logger.error("Unexpected error fetching job status", project_id=project_id, error=str(e))
             raise CRMError(f"Failed to fetch job status: {str(e)}", "UNKNOWN_ERROR")
 
     async def get_all_project_statuses(self) -> ProjectStatusListResponse:
@@ -1052,10 +1154,10 @@ class JobNimbusProvider(CRMProvider):
             )
 
         except httpx.HTTPStatusError as e:
-            logger.error(f"HTTP error fetching all jobs: {e}")
+            logger.error("HTTP error fetching all jobs", error=str(e))
             raise CRMError(f"Failed to fetch job statuses: {e}", "HTTP_ERROR")
         except Exception as e:
-            logger.error(f"Unexpected error fetching all jobs: {e}")
+            logger.error("Unexpected error fetching all jobs", error=str(e))
             raise CRMError(f"Failed to fetch job statuses: {str(e)}", "UNKNOWN_ERROR")
 
     async def get_appointment_status(
@@ -1128,7 +1230,7 @@ class JobNimbusProvider(CRMProvider):
                 dateCreated=int(datetime.now(UTC).timestamp()),
             )
 
-            logger.debug(f"Adding note to job {jnid}")
+            logger.debug("Adding note to job", job_id=jnid)
 
             response = await self._make_request(
                 "POST", endpoint, json=request_body.model_dump(by_alias=True, exclude_none=True)
@@ -1153,10 +1255,10 @@ class JobNimbusProvider(CRMProvider):
             if e.response.status_code == 404:
                 raise CRMError(f"Job with JNID {job_id} not found", "NOT_FOUND")
             else:
-                logger.error(f"HTTP error adding note to job {job_id}: {e}")
+                logger.error("HTTP error adding note to job", job_id=job_id, error=str(e))
                 raise CRMError(f"Failed to add note to job: {e}", "HTTP_ERROR")
         except Exception as e:
-            logger.error(f"Unexpected error adding note to job {job_id}: {e}")
+            logger.error("Unexpected error adding note to job", job_id=job_id, error=str(e))
             raise CRMError(f"Failed to add note to job: {str(e)}", "UNKNOWN_ERROR")
 
     # Unsupported Service Titan-specific methods

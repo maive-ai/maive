@@ -39,7 +39,7 @@ def create_ai_provider(
     if isinstance(provider_type, str):
         provider_type = AIProviderType(provider_type.lower())
 
-    logger.info(f"Creating AI provider: {provider_type.value}")
+    logger.info("Creating AI provider", provider_type=provider_type.value)
 
     if provider_type == AIProviderType.OPENAI:
         from src.ai.providers.openai import OpenAIProvider

@@ -29,6 +29,61 @@ s3_cfg = pulumi.Config("s3")
 stack_name = pulumi.get_stack()
 environment = config.require("environment")
 
+# Get environment variables from ESC using the SDK
+# The ESC SDK is the ONLY way to programmatically access the environmentVariables section
+def get_esc_env_vars():
+    """
+    Fetch environment variables from ESC using the SDK.
+    
+    Why SDK is needed:
+    - ESC has two sections: environmentVariables (for containers) and pulumiConfig (for IaC)
+    - pulumi.Config() only exposes pulumiConfig values
+    - The SDK is required to access environmentVariables programmatically
+    
+    Authentication:
+    - Set PULUMI_ACCESS_TOKEN env var (useful for CI/CD)
+    - Get token from: https://app.pulumi.com/account/tokens
+    """
+    try:
+        import pulumi_esc_sdk as esc
+        
+        # Initialize ESC client (uses CLI credentials or PULUMI_ACCESS_TOKEN)
+        client = esc.esc_client.default_client()
+        
+        # Get the ESC environment path
+        org_name = pulumi.get_organization()  # "maive"
+        project_name = pulumi.get_project()    # "maive-infra"
+        env_name = environment                  # "staging", "dev", etc.
+        
+        # Open environment - returns tuple of (env, values, yaml)
+        _, values, _ = client.open_and_read_environment(
+            org_name, project_name, env_name
+        )
+        
+        # Extract the environmentVariables section
+        env_vars_dict = values.get("environmentVariables", {})
+        
+        # Convert to ECS format
+        env_vars = [
+            {"name": key, "value": str(value)} 
+            for key, value in env_vars_dict.items()
+        ]
+        
+        pulumi.log.info(
+            f"✅ Loaded {len(env_vars)} environment variables from ESC: {org_name}/{project_name}/{env_name}"
+        )
+        return env_vars
+        
+    except Exception as e:
+        pulumi.log.warn(
+            f"⚠️  Failed to load ESC environment variables: {e}\n"
+            f"   Set PULUMI_ACCESS_TOKEN to enable ESC integration.\n"
+            f"   Get token from: https://app.pulumi.com/account/tokens"
+        )
+        return []
+
+base_env_vars = get_esc_env_vars()
+
 certificate_domain = config.require("certificate_domain")
 deploy_containers = config.require_bool("deploy_containers")
 force_destroy_buckets = s3_cfg.get_bool("force_destroy") or False
@@ -1058,87 +1113,32 @@ if deploy_containers:
             [
                 {
                     "name": f"{server_app_name}-container",
-                    "image": server_image.ref,  # Use the built image
+                    "image": server_image.ref,
                     "portMappings": [{"containerPort": 8080, "protocol": "tcp"}],
-                    "environment": [
-                        {"name": "ENVIRONMENT", "value": environment},
-                        {"name": "CLIENT_BASE_URL", "value": app_domain_url},
-                        {"name": "SERVER_BASE_URL", "value": app_domain_url},
-                        {
-                            "name": "AWS_REGION",
-                            "value": aws_cfg.require("region"),
-                        },
-                        {
-                            "name": "DYNAMODB_ACTIVE_CALLS",
-                            "value": active_calls_table.name,
-                        },
-                        {
-                            "name": "COGNITO_USER_POOL_ID",
-                            "value": user_pool.id,
-                        },
-                        {
-                            "name": "COGNITO_CLIENT_ID",
-                            "value": pool_client.id,
-                        },
-                        {
-                            "name": "COGNITO_CLIENT_SECRET",
-                            "value": pool_client.client_secret,
-                        },
-                        {
-                            "name": "COGNITO_DOMAIN",
-                            "value": cognito_domain_url,
-                        },
-                        {
-                            "name": "OAUTH_REDIRECT_URI",
-                            "value": oauth_redirect_uri,
-                        },
-                        {"name": "OAUTH_SCOPE", "value": config.require("oauth_scope")},
-                        {
-                            "name": "COOKIE_DOMAIN",
-                            "value": certificate_domain,
-                        },
-                        {
-                            "name": "AUTH_SESSION_TIMEOUT_HOURS",
-                            "value": config.require("auth_session_timeout_hours"),
-                        },
-                        {
-                            "name": "AUTH_REFRESH_TOKEN_TIMEOUT_DAYS",
-                            "value": config.require("auth_session_token_timeout_days"),
-                        },
-                        {
-                            "name": "COOKIE_SECURE",
-                            "value": config.require("cookie_secure"),
-                        },
-                        {
-                            "name": "COOKIE_SAMESITE",
-                            "value": config.require("cookie_samesite"),
-                        },
-                        {
-                            "name": "COOKIE_HTTPONLY",
-                            "value": config.require("cookie_httponly"),
-                        },
-                        # Database configuration
-                        {
-                            "name": "DB_HOST",
-                            "value": db_instance.address,
-                        },
-                        {
-                            "name": "DB_PORT",
-                            "value": str(db_instance.port),
-                        },
-                        {
-                            "name": "DB_NAME",
-                            "value": db_name,
-                        },
-                        {
-                            "name": "DB_USERNAME",
-                            "value": db_config.require("username"),
-                        },
-                        {
-                            "name": "DB_PASSWORD",
-                            "value": db_config.require_secret("password"),
-                        },
-                    ],
+                    # Start with all ESC environment variables, then override with Pulumi-managed resource values
+                    "environment": pulumi.Output.all(
+                        user_pool.id,
+                        pool_client.id,
+                        pool_client.client_secret,
+                        cognito_domain_url,
+                        db_instance.address,
+                        db_instance.port,
+                        active_calls_table.name,
+                    ).apply(
+                        lambda args: base_env_vars + [
+                            # Override with Pulumi-created resource values
+                            {"name": "COGNITO_USER_POOL_ID", "value": args[0]},
+                            {"name": "COGNITO_CLIENT_ID", "value": args[1]},
+                            {"name": "COGNITO_CLIENT_SECRET", "value": args[2]},
+                            {"name": "COGNITO_DOMAIN", "value": args[3]},
+                            {"name": "DB_HOST", "value": args[4]},
+                            {"name": "DB_PORT", "value": str(args[5])},
+                            {"name": "DB_NAME", "value": db_name},
+                            {"name": "DB_USERNAME", "value": db_config.require("username")},
+                            {"name": "DB_PASSWORD", "value": db_config.require_secret("password")},
+                            {"name": "DYNAMODB_TABLE_NAME", "value": args[6]},
+                        ]
+                    ),
                     "logConfiguration": {
                         "logDriver": "awslogs",
                         "options": {
@@ -1210,6 +1210,56 @@ if deploy_containers:
         },
     )
 
+# Migration Task Definition (conditional) - for running database migrations
+migration_task_definition = None
+if deploy_containers:
+    migration_task_definition = ecs.TaskDefinition(
+        f"{server_app_name}-migration-task-{stack_name}",
+        family=f"{server_app_name}-migration",
+        network_mode="awsvpc",
+        requires_compatibilities=["FARGATE"],
+        cpu="256",
+        memory="512",
+        execution_role_arn=task_execution_role.arn,
+        task_role_arn=task_role.arn,
+        container_definitions=pulumi.Output.json_dumps(
+            [
+                {
+                    "name": f"{server_app_name}-migration-container",
+                    "image": server_image.ref,
+                    "command": ["uv", "run", "alembic", "upgrade", "heads"],
+                    # Start with all ESC environment variables, then override with Pulumi-managed resource values
+                    "environment": pulumi.Output.all(
+                        db_instance.address,
+                        db_instance.port,
+                    ).apply(
+                        lambda args: base_env_vars + [
+                            # Override with Pulumi-created resource values
+                            {"name": "DB_HOST", "value": args[0]},
+                            {"name": "DB_PORT", "value": str(args[1])},
+                            {"name": "DB_NAME", "value": db_name},
+                            {"name": "DB_USERNAME", "value": db_config.require("username")},
+                            {"name": "DB_PASSWORD", "value": db_config.require_secret("password")},
+                        ]
+                    ),
+                    "logConfiguration": {
+                        "logDriver": "awslogs",
+                        "options": {
+                            "awslogs-group": log_group.name,
+                            "awslogs-region": aws_cfg.require("region"),
+                            "awslogs-stream-prefix": "migration",
+                        },
+                    },
+                }
+            ]
+        ),
+        tags={
+            "Name": f"{server_app_name}-migration-task",
+            "Environment": environment,
+            "Stack": stack_name,
+        },
+    )
+
 # ECS Service (conditional)
 service = None
 if deploy_containers:
@@ -1225,6 +1275,7 @@ if deploy_containers:
         },
         deployment_maximum_percent=200,
         deployment_minimum_healthy_percent=100,
+        health_check_grace_period_seconds=120,
         launch_type="FARGATE",
         network_configuration=ecs.ServiceNetworkConfigurationArgs(
             assign_public_ip=True,
@@ -1291,6 +1342,7 @@ pulumi.export("log_group_name", log_group.name)
 pulumi.export("cognito_user_pool_id", user_pool.id)
 pulumi.export("cognito_user_pool_client_id", pool_client.id)
 pulumi.export("cognito_user_pool_client_secret", pool_client.client_secret)
+pulumi.export("cognito_domain_url", cognito_domain_url)
 pulumi.export("uploadBucketName", upload_bucket.bucket)
 pulumi.export("uploadApiEndpoint", upload_api.api_endpoint)
 pulumi.export("dynamodb_table_name", active_calls_table.name)
@@ -1303,6 +1355,7 @@ pulumi.export("db_username", db_instance.username)
 if deploy_containers:
     pulumi.export("service_name", service.name)
     pulumi.export("task_definition_arn", task_definition.arn)
+    pulumi.export("migration_task_definition_arn", migration_task_definition.arn)
     pulumi.export("ecr_repository_url", ecr_repository.repository_url)
     pulumi.export("alb_dns_name", alb.dns_name)
     pulumi.export("web_ecr_repository_url", web_ecr_repository.repository_url)

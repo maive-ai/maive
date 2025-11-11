@@ -167,7 +167,7 @@ class DiscrepancyDetectionV2Workflow:
             notes_to_production = {"message": "No Notes to Production found"}
 
         # Load and process transcript
-        logger.info(f"   Loading transcript from: {transcript_path}")
+        logger.info("[WORKFLOW] Loading transcript", transcript_path=transcript_path)
         with open(transcript_path, "r") as f:
             transcript_data = json.load(f)
 
@@ -183,31 +183,32 @@ class DiscrepancyDetectionV2Workflow:
                 first_entry = transcript_data[0]
                 if "speaker" in first_entry and "words" in first_entry:
                     logger.info(
-                        "   Detected original Rilla format, attempting simplification..."
+                        "[WORKFLOW] Detected original Rilla format, attempting simplification"
                     )
                     simplified = simplify_rilla_transcript(transcript_data)
                     simplified_size = len(json.dumps(simplified))
                     savings_pct = 100 - (simplified_size / original_size * 100)
                     logger.info(
-                        f"   ✅ Simplified: {original_size // 4} → {simplified_size // 4} tokens (~{savings_pct:.1f}% reduction)"
+                        "[WORKFLOW] Simplified transcript",
+                        original_tokens=original_size // 4,
+                        simplified_tokens=simplified_size // 4,
+                        savings_pct=round(savings_pct, 1),
                     )
                     transcript_data = simplified
                 else:
-                    logger.info(
-                        "   Transcript already in compact format or unknown format, using as-is"
-                    )
+                    logger.info("[WORKFLOW] Transcript already in compact format")
             else:
-                logger.info(
-                    "   Transcript already in compact format or unknown format, using as-is"
-                )
+                logger.info("[WORKFLOW] Transcript already in compact format")
         except Exception as e:
-            logger.warning(f"   ⚠️ Failed to simplify transcript: {e}")
-            logger.info("   Using original transcript format")
+            logger.warning("[WORKFLOW] Failed to simplify transcript", error=str(e))
+            logger.info("[WORKFLOW] Using original transcript format")
             # transcript_data remains unchanged
 
         # Convert to JSON string for passing to LLM
         transcript_json = json.dumps(transcript_data, indent=2)
-        logger.info(f"   ✅ Final transcript size: ~{len(transcript_json) // 4} tokens")
+        logger.info(
+            "[WORKFLOW] Final transcript size", tokens=len(transcript_json) // 4
+        )
 
         # Load deviation classes from JSON file (always use classes.json)
         classes_path = (

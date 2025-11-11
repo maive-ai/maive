@@ -45,7 +45,7 @@ async def _analyze_job_files_with_mini_agent(
         OpenAIError: If file analysis fails
     """
     try:
-        logger.info(f"[Mini-Agent] Analyzing {file_filter} files for job {job_id}, specific_file_id={specific_file_id}")
+        logger.info("[Mini-Agent] Analyzing files", file_filter=file_filter, job_id=job_id, specific_file_id=specific_file_id)
         
         # Get files - either specific file or filtered list
         if specific_file_id:
@@ -60,7 +60,7 @@ async def _analyze_job_files_with_mini_agent(
             if not files:
                 return f"No {file_filter} files found for job {job_id}"
         
-        logger.info(f"[Mini-Agent] Found {len(files)} files to analyze")
+        logger.info("[Mini-Agent] Found files to analyze", count=len(files))
         
         # Upload each file to OpenAI with appropriate purpose
         file_attachments = []  # List of (file_id, filename, is_image) tuples
@@ -83,10 +83,10 @@ async def _analyze_job_files_with_mini_agent(
                     file_handle, filename, purpose=purpose
                 )
                 file_attachments.append((openai_file_id, filename, is_image))
-                logger.info(f"[Mini-Agent] Uploaded {filename} as {openai_file_id} (purpose={purpose})")
+                logger.info("[Mini-Agent] Uploaded file", filename=filename, openai_file_id=openai_file_id, purpose=purpose)
                 
             except Exception as e:
-                logger.warning(f"[Mini-Agent] Failed to upload file {file_meta.filename}: {e}")
+                logger.warning("[Mini-Agent] Failed to upload file", filename=file_meta.filename, error=str(e))
                 continue
         
         if not file_attachments:
@@ -108,7 +108,7 @@ async def _analyze_job_files_with_mini_agent(
             Provide comprehensive detail about each file to help answer the question.
         """).strip()
         
-        logger.info(f"[Mini-Agent] Making analysis call with {len(file_attachments)} files")
+        logger.info("[Mini-Agent] Making analysis call", file_count=len(file_attachments))
         
         # Make mini-agent API call with reasoning for faster analysis
         # Pass file attachments with type information (input_image vs input_file)
@@ -119,12 +119,12 @@ async def _analyze_job_files_with_mini_agent(
             reasoning_effort="minimal"  # Use minimal reasoning for speed
         )
         
-        logger.info(f"[Mini-Agent] Analysis complete ({len(result.text)} chars)")
-        logger.info(f"[Mini-Agent] Analysis result: {result.text[:500]}...")
+        logger.info("[Mini-Agent] Analysis complete", char_count=len(result.text))
+        logger.info("[Mini-Agent] Analysis result", preview=result.text[:500])
         return result.text
         
     except Exception as e:
-        logger.error(f"[Mini-Agent] File analysis failed: {e}")
+        logger.error("[Mini-Agent] File analysis failed", error=str(e))
         raise OpenAIError(f"File analysis failed: {e}")
 
 # Create MCP server instance with optional auth
@@ -178,23 +178,23 @@ async def get_job(job_id: str) -> dict[str, Any]:
         Exception: If the job is not found or an error occurs
     """
     try:
-        logger.info(f"[MCP JobNimbus] Getting job: {job_id}")
+        logger.info("[MCP JobNimbus] Getting job", job_id=job_id)
         job = await _provider.get_job(job_id)
         
         result = job.model_dump()
-        logger.info(f"[MCP JobNimbus] Successfully retrieved job {job_id}")
+        logger.info("[MCP JobNimbus] Successfully retrieved job", job_id=job_id)
         return result
         
     except CRMError as e:
-        logger.error(f"[MCP JobNimbus] CRM error getting job {job_id}: {e.message}")
+        logger.error("[MCP JobNimbus] CRM error getting job", job_id=job_id, message=e.message)
         raise Exception(f"Failed to get job: {e.message}")
     except Exception as e:
-        logger.error(f"[MCP JobNimbus] Unexpected error getting job {job_id}: {e}")
+        logger.error("[MCP JobNimbus] Unexpected error getting job", job_id=job_id, error=str(e))
         raise Exception(f"Failed to get job: {str(e)}")
 
 
 @mcp.tool
-async def search_jobs(
+async def get_all_jobs(
     customer_name: str | None = None,
     job_id: str | None = None,
     address: str | None = None,
@@ -233,9 +233,7 @@ async def search_jobs(
         - Combine filters: search_jobs(customer_name="Smith", status="Completed")
     """
     try:
-        logger.info(f"[MCP JobNimbus] Searching jobs with filters: customer_name={customer_name}, "
-                   f"job_id={job_id}, address={address}, claim_number={claim_number}, "
-                   f"status={status}")
+        logger.info("[MCP JobNimbus] Searching jobs with filters", customer_name=customer_name, job_id=job_id, address=address, claim_number=claim_number, status=status)
         
         # Build filters dict for provider
         filters = {}
@@ -266,14 +264,14 @@ async def search_jobs(
             "has_more": job_list.has_more,
         }
         
-        logger.info(f"[MCP JobNimbus] Search returned {len(job_list.jobs)} of {job_list.total_count} total jobs")
+        logger.info("[MCP JobNimbus] Search returned jobs", returned_count=len(job_list.jobs), total_count=job_list.total_count)
         return result
         
     except CRMError as e:
-        logger.error(f"[MCP JobNimbus] CRM error searching jobs: {e.message}")
+        logger.error("[MCP JobNimbus] CRM error searching jobs", message=e.message)
         raise Exception(f"Failed to search jobs: {e.message}")
     except Exception as e:
-        logger.error(f"[MCP JobNimbus] Unexpected error searching jobs: {e}")
+        logger.error("[MCP JobNimbus] Unexpected error searching jobs", error=str(e))
         raise Exception(f"Failed to search jobs: {str(e)}")
 
 
@@ -313,7 +311,7 @@ async def list_job_files(job_id: str) -> dict[str, Any]:
         list_job_files(job_id="mhdn17a1ssizgvz8fo0h66r")
     """
     try:
-        logger.info(f"[MCP JobNimbus] Listing files for job: {job_id}")
+        logger.info("[MCP JobNimbus] Listing files for job", job_id=job_id)
         files = await _provider.get_job_files(job_id)
         
         result = {
@@ -334,14 +332,14 @@ async def list_job_files(job_id: str) -> dict[str, Any]:
             ]
         }
         
-        logger.info(f"[MCP JobNimbus] Found {len(files)} files for job {job_id}")
+        logger.info("[MCP JobNimbus] Found files for job", count=len(files), job_id=job_id)
         return result
         
     except CRMError as e:
-        logger.error(f"[MCP JobNimbus] CRM error listing files for job {job_id}: {e.message}")
+        logger.error("[MCP JobNimbus] CRM error listing files for job", job_id=job_id, message=e.message)
         raise Exception(f"Failed to list files: {e.message}")
     except Exception as e:
-        logger.error(f"[MCP JobNimbus] Unexpected error listing files for job {job_id}: {e}")
+        logger.error("[MCP JobNimbus] Unexpected error listing files for job", job_id=job_id, error=str(e))
         raise Exception(f"Failed to list files: {str(e)}")
 
 
@@ -379,9 +377,9 @@ async def analyze_job_files(
     """
     try:
         if specific_file_id:
-            logger.info(f"[MCP JobNimbus] Analyzing specific file {specific_file_id} for job {job_id}")
+            logger.info("[MCP JobNimbus] Analyzing specific file for job", specific_file_id=specific_file_id, job_id=job_id)
         else:
-            logger.info(f"[MCP JobNimbus] Analyzing {file_filter} files for job {job_id} with prompt: {analysis_prompt}")
+            logger.info("[MCP JobNimbus] Analyzing files for job", file_filter=file_filter, job_id=job_id, analysis_prompt=analysis_prompt)
         
         # Call local mini-agent handler
         result = await _analyze_job_files_with_mini_agent(
@@ -391,10 +389,10 @@ async def analyze_job_files(
             specific_file_id=specific_file_id
         )
         
-        logger.info(f"[MCP JobNimbus] Analysis complete: {len(result)} chars")
+        logger.info("[MCP JobNimbus] Analysis complete", char_count=len(result))
         return result
         
     except Exception as e:
-        logger.error(f"[MCP JobNimbus] Error analyzing files: {e}")
+        logger.error("[MCP JobNimbus] Error analyzing files", error=str(e))
         raise Exception(f"Failed to analyze files: {str(e)}")
 

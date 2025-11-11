@@ -34,7 +34,8 @@ class MockProvider(CRMProvider):
         """Initialize the Mock CRM provider with in-memory data."""
         self._projects: list[Project] = get_mock_projects()
         logger.info(
-            f"MockProvider initialized with {len(self._projects)} mock projects"
+            "MockProvider initialized with mock projects",
+            project_count=len(self._projects),
         )
 
     # ========================================================================
@@ -54,7 +55,7 @@ class MockProvider(CRMProvider):
         Raises:
             CRMError: If the job is not found
         """
-        logger.info(f"Getting mock job: {job_id}")
+        logger.info("Getting mock job", job_id=job_id)
 
         # Find project by ID
         project = next(
@@ -62,13 +63,13 @@ class MockProvider(CRMProvider):
         )
 
         if not project:
-            logger.warning(f"Mock job not found: {job_id}")
+            logger.warning("Mock job not found", job_id=job_id)
             raise CRMError(
                 error_code="NOT_FOUND",
                 message=f"Job with ID {job_id} not found",
             )
 
-        logger.info(f"[Mock] Returning job {job_id} - Status: {project.status}")
+        logger.info("[Mock] Returning job", job_id=job_id, status=project.status)
 
         return self._transform_project_to_job(project)
 
@@ -94,7 +95,11 @@ class MockProvider(CRMProvider):
         Returns:
             JobList: Paginated list of jobs
         """
-        logger.info(f"Getting all mock jobs ({len(self._projects)} total, filters={filters})")
+        logger.info(
+            "Getting all mock jobs",
+            total_projects=len(self._projects),
+            filters=filters,
+        )
 
         # Convert all projects to Job schema
         jobs = [self._transform_project_to_job(project) for project in self._projects]
@@ -163,7 +168,7 @@ class MockProvider(CRMProvider):
         Raises:
             CRMError: If the contact is not found
         """
-        logger.info(f"Getting mock contact: {contact_id}")
+        logger.info("Getting mock contact", contact_id=contact_id)
 
         # Find project where customer name contains this ID (simplified logic)
         project = next(
@@ -197,7 +202,10 @@ class MockProvider(CRMProvider):
         Returns:
             ContactList: Paginated list of contacts
         """
-        logger.info(f"Getting all mock contacts from {len(self._projects)} projects")
+        logger.info(
+            "Getting all mock contacts from projects",
+            project_count=len(self._projects),
+        )
 
         # Extract unique contacts from projects
         contacts = [
@@ -240,7 +248,11 @@ class MockProvider(CRMProvider):
         Raises:
             CRMError: If the entity is not found
         """
-        logger.info(f"[MockProvider] Adding note to {entity_type} {entity_id}")
+        logger.info(
+            "[MockProvider] Adding note to entity",
+            entity_type=entity_type,
+            entity_id=entity_id,
+        )
 
         now = datetime.now(UTC)
         text = text.strip('"')
@@ -285,7 +297,11 @@ class MockProvider(CRMProvider):
             project.notes = []
         project.notes.insert(0, note)  # Insert at beginning for newest-first order
 
-        logger.info(f"[MockProvider] Added note to {entity_type}: {text}")
+        logger.info(
+            "[MockProvider] Added note to entity",
+            entity_type=entity_type,
+            text=text,
+        )
 
         return note
 
@@ -306,7 +322,11 @@ class MockProvider(CRMProvider):
         Raises:
             CRMError: If the job is not found
         """
-        logger.info(f"[MockProvider] Updating status for job {job_id} to {status}")
+        logger.info(
+            "[MockProvider] Updating status for job",
+            job_id=job_id,
+            status=status,
+        )
 
         # Find job
         job: Project | None = next(
@@ -314,7 +334,7 @@ class MockProvider(CRMProvider):
         )
 
         if not job:
-            logger.warning(f"[MockProvider] Job not found: {job_id}")
+            logger.warning("[MockProvider] Job not found", job_id=job_id)
             raise CRMError(
                 error_code="NOT_FOUND",
                 message=f"Job with ID {job_id} not found",
@@ -328,12 +348,19 @@ class MockProvider(CRMProvider):
             old_claim_status = job.provider_data.get("claim_status")
             job.provider_data["claim_status"] = kwargs["claim_status"]
             logger.info(
-                f"[MockProvider] Updated job {job_id} status from {old_status} to {status}, "
-                f"claim status from {old_claim_status} to {kwargs['claim_status']}"
+                "[MockProvider] Updated job status with claim status",
+                job_id=job_id,
+                old_status=old_status,
+                new_status=status,
+                old_claim_status=old_claim_status,
+                new_claim_status=kwargs["claim_status"],
             )
         else:
             logger.info(
-                f"[MockProvider] Updated job {job_id} status from {old_status} to {status}"
+                "[MockProvider] Updated job status",
+                job_id=job_id,
+                old_status=old_status,
+                new_status=status,
             )
 
     async def get_project(self, project_id: str) -> Project:
@@ -351,7 +378,7 @@ class MockProvider(CRMProvider):
         Raises:
             CRMError: If the project is not found
         """
-        logger.info(f"Getting mock project: {project_id}")
+        logger.info("Getting mock project", project_id=project_id)
 
         # Find project by ID
         project = next(
@@ -359,7 +386,7 @@ class MockProvider(CRMProvider):
         )
 
         if not project:
-            logger.warning(f"Mock project not found: {project_id}")
+            logger.warning("Mock project not found", project_id=project_id)
             raise CRMError(
                 error_code="NOT_FOUND",
                 message=f"Project with ID {project_id} not found",
@@ -386,7 +413,7 @@ class MockProvider(CRMProvider):
         Returns:
             ProjectList: Paginated list of projects
         """
-        logger.info(f"Getting all mock projects ({len(self._projects)} total)")
+        logger.info("Getting all mock projects", total_count=len(self._projects))
 
         # Projects are already universal Project objects
         # Apply pagination
@@ -423,7 +450,9 @@ class MockProvider(CRMProvider):
             CRMError: If the project is not found
         """
         logger.info(
-            f"[MockProvider] Updating status for project {project_id} to {status}"
+            "[MockProvider] Updating status for project",
+            project_id=project_id,
+            status=status,
         )
 
         # Find project
@@ -432,7 +461,7 @@ class MockProvider(CRMProvider):
         )
 
         if not project:
-            logger.warning(f"[MockProvider] Project not found: {project_id}")
+            logger.warning("[MockProvider] Project not found", project_id=project_id)
             raise CRMError(
                 error_code="NOT_FOUND",
                 message=f"Project with ID {project_id} not found",
@@ -446,12 +475,19 @@ class MockProvider(CRMProvider):
             old_claim_status = project.provider_data.get("claim_status")
             project.provider_data["claim_status"] = kwargs["claim_status"]
             logger.info(
-                f"[MockProvider] Updated project {project_id} status from {old_status} to {status}, "
-                f"claim status from {old_claim_status} to {kwargs['claim_status']}"
+                "[MockProvider] Updated project status with claim status",
+                project_id=project_id,
+                old_status=old_status,
+                new_status=status,
+                old_claim_status=old_claim_status,
+                new_claim_status=kwargs["claim_status"],
             )
         else:
             logger.info(
-                f"[MockProvider] Updated project {project_id} status from {old_status} to {status}"
+                "[MockProvider] Updated project status",
+                project_id=project_id,
+                old_status=old_status,
+                new_status=status,
             )
 
     # ========================================================================
@@ -560,7 +596,7 @@ class MockProvider(CRMProvider):
         )
 
         if not project:
-            logger.warning(f"Mock project not found: {project_id}")
+            logger.warning("Mock project not found", project_id=project_id)
             raise CRMError(
                 error_code="NOT_FOUND",
                 message=f"Project with ID {project_id} not found",
@@ -569,7 +605,11 @@ class MockProvider(CRMProvider):
         # Convert to ProjectStatusResponse with providerData excluding 'id'
         provider_data = {k: v for k, v in project.provider_data.items() if k != "id"}
 
-        logger.info(f"[Mock] Returning project {project_id} - Status: {project.status}")
+        logger.info(
+            "[Mock] Returning project",
+            project_id=project_id,
+            status=project.status,
+        )
 
         return ProjectStatusResponse(
             project_id=project.provider_data.get("id"),
@@ -627,7 +667,7 @@ class MockProvider(CRMProvider):
         """
         # Generate random project ID and override the provided one
         project_id = uuid.uuid4()
-        logger.info(f"Creating mock project with ID: {project_id}")
+        logger.info("Creating mock project with ID", project_id=project_id)
 
         # Override id, tenant, and job_id with generated values
         provider_data = project_data.copy()
@@ -645,4 +685,4 @@ class MockProvider(CRMProvider):
 
         # Add to in-memory projects list
         self._projects.append(mock_project)
-        logger.info(f"Successfully created mock project {project_id}")
+        logger.info("Successfully created mock project", project_id=project_id)
