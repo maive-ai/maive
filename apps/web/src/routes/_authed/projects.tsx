@@ -224,7 +224,8 @@ function Projects() {
         </div>
         {searchQuery && (
           <p className="text-sm text-gray-600 mt-2">
-            {filteredProjects.length} {filteredProjects.length === 1 ? 'result' : 'results'} found
+            {filteredProjects.length} {filteredProjects.length === 1 ? 'result' : 'results'} found on this page
+            {data && ` (${data.total_count} total projects)`}
           </p>
         )}
       </div>
@@ -258,10 +259,18 @@ function Projects() {
         </div>
 
           {/* Pagination Controls */}
-          {!searchQuery && data && (
+          {data && (
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="text-sm text-gray-600">
-                Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, data.total_count)} of {data.total_count} projects
+                {searchQuery ? (
+                  <>
+                    Showing {filteredProjects.length} {filteredProjects.length === 1 ? 'result' : 'results'} on page {page} of {Math.ceil(data.total_count / pageSize) || 1}
+                  </>
+                ) : (
+                  <>
+                    Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, data.total_count)} of {data.total_count} projects
+                  </>
+                )}
               </div>
               
               <div className="flex items-center gap-4">
