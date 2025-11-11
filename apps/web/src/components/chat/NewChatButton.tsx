@@ -17,11 +17,11 @@ export function NewChatButton() {
 
   return (
     <Button
-      variant="outline"
+      variant="default"
       size="sm"
       onClick={handleNewChat}
       aria-label="New Chat"
-      className="absolute top-4 left-4"
+      className="absolute top-4 left-4 z-10"
     >
       <PencilIcon className="h-4 w-4" />
       <span>New Chat</span>
