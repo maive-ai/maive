@@ -11,6 +11,7 @@ Usage:
 """
 
 import argparse
+from pathlib import Path
 
 import braintrust
 from braintrust import Eval
@@ -55,21 +56,40 @@ async def task(input, hooks):
 
     # Get first transcript (we only use one)
     rilla_transcripts = input.get("rilla_transcripts", [])
-    transcript_data = (
-        extract_json(rilla_transcripts[0]) if rilla_transcripts else None
-    )
+    transcript_data = extract_json(rilla_transcripts[0]) if rilla_transcripts else None
 
     if not estimate_data or not transcript_data:
         raise ValueError("Missing required data: estimate and transcript are required")
 
     # Create workflow and run with parsed data (no S3 fetching!)
-    workflow = DiscrepancyDetectionV2Workflow(prelabel=False, experiment=None)
+    workflow = DiscrepancyDetectionV2Workflow()
 
-    deviations = await workflow.execute_with_parsed_data(
-        estimate_data=estimate_data,
-        form_data=form_data,
-        transcript_data=transcript_data,
-    )
+    # Handle bytes if JSONAttachment returned bytes instead of parsed JSON
+    if isinstance(transcript_data, bytes):
+        transcript_dict = json_module.loads(transcript_data.decode("utf-8"))
+    else:
+        transcript_dict = transcript_data
+
+    # Write transcript to temp file (required by _analyze_content)
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".json", delete=False
+    ) as temp_transcript:
+        json_module.dump(transcript_dict, temp_transcript)
+        temp_transcript_path = temp_transcript.name
+
+    try:
+        # Call _analyze_content directly
+        deviations = await workflow._analyze_content(
+            estimate_data=estimate_data,
+            form_data=form_data,
+            audio_path=None,  # No audio in eval
+            transcript_path=temp_transcript_path,
+        )
+    finally:
+        # Clean up temp file
+        Path(temp_transcript_path).unlink(missing_ok=True)
 
     # Return simplified output for scoring
     return {
@@ -84,6 +104,7 @@ def main():
     )
     parser.add_argument(
         "--dataset-name",
+        "-d",
         type=str,
         default="ground-truth-labels",
         help="Name of Braintrust dataset to evaluate against",
@@ -122,10 +143,6 @@ def main():
             detection_binary_scorer_bt,
         ],
         experiment_name=args.experiment_name,
-        metadata={
-            "workflow_version": "v2",
-            "eval_type": "full",
-        },
     )
 
     logger.info("")

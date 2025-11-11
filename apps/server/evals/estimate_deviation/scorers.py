@@ -6,21 +6,76 @@ to measure classification accuracy, precision, recall, and other metrics.
 
 from collections import defaultdict
 
-from evals.estimate_deviation.schemas import (
-    ClassificationScores,
-    ConfusionMatrixScores,
-    DetectionScores,
-    DiscrepancyDetectionOutput,
-    ExpectedOutput,
-    FalseNegativeScores,
-    FalsePositiveScores,
-    OccurrenceScores,
-    TimestampError,
-)
+from pydantic import BaseModel, Field
+
+from evals.estimate_deviation.schemas import Deviation
+
+
+class ClassificationScores(BaseModel):
+    """Classification accuracy metrics."""
+
+    overall_precision: float
+    overall_recall: float
+    overall_f1: float
+    # Per-class metrics stored as extra fields
+    model_config = {"extra": "allow"}
+
+
+class ConfusionMatrixScores(BaseModel):
+    """Confusion matrix for classification."""
+
+    confusion_matrix: dict[str, dict[str, int]]
+    all_classes: list[str]
+    total_ground_truth: int
+    total_predicted: int
+
+
+class FalsePositiveScores(BaseModel):
+    """False positive analysis."""
+
+    false_positive_count: int
+    false_positive_rate: float
+    false_positive_classes: list[str]
+
+
+class FalseNegativeScores(BaseModel):
+    """False negative analysis."""
+
+    false_negative_count: int
+    false_negative_rate: float
+    false_negative_classes: list[str]
+
+
+class TimestampError(BaseModel):
+    """Timestamp mismatch details."""
+
+    deviation_class: str = Field(alias="class")
+    expected: str
+    closest_predicted: str | None
+    error_seconds: float | None
+
+    model_config = {"populate_by_name": True}
+
+
+class OccurrenceScores(BaseModel):
+    """Occurrence timestamp accuracy metrics."""
+
+    occurrence_accuracy: float
+    matched_occurrences: int
+    total_occurrences: int
+    timestamp_errors: list[TimestampError]
+
+
+class DetectionScores(BaseModel):
+    """Binary detection metrics."""
+
+    binary_detection_accuracy: float
+    predicted_has_deviations: bool
+    ground_truth_has_deviations: bool
 
 
 def classification_accuracy_scorer(
-    output: ExpectedOutput, expected: ExpectedOutput
+    output: list[Deviation], expected: list[Deviation]
 ) -> ClassificationScores:
     """Score classification accuracy with per-class precision, recall, and F1.
 
@@ -34,8 +89,8 @@ def classification_accuracy_scorer(
         ClassificationScores with per-class and overall metrics
     """
     # Extract deviation classes
-    predicted_classes = [d.deviation_class for d in output.deviations]
-    ground_truth_classes = [d.deviation_class for d in expected.deviations]
+    predicted_classes = [d.deviation_class for d in output]
+    ground_truth_classes = [d.deviation_class for d in expected]
 
     # Calculate per-class metrics
     all_classes = set(predicted_classes + ground_truth_classes)
@@ -91,7 +146,7 @@ def classification_accuracy_scorer(
 
 
 def confusion_matrix_scorer(
-    output: ExpectedOutput, expected: ExpectedOutput
+    output: list[Deviation], expected: list[Deviation]
 ) -> ConfusionMatrixScores:
     """Generate confusion matrix for deviation classification.
 
@@ -103,8 +158,8 @@ def confusion_matrix_scorer(
         ConfusionMatrixScores with confusion matrix and class counts
     """
     # Extract deviation classes
-    predicted_classes = [d.deviation_class for d in output.deviations]
-    ground_truth_classes = [d.deviation_class for d in expected.deviations]
+    predicted_classes = [d.deviation_class for d in output]
+    ground_truth_classes = [d.deviation_class for d in expected]
 
     # Build confusion matrix
     all_classes = sorted(set(predicted_classes + ground_truth_classes))
@@ -129,12 +184,12 @@ def confusion_matrix_scorer(
         confusion_matrix=dict(confusion_matrix),
         all_classes=all_classes,
         total_ground_truth=len(ground_truth_classes),
-        total_predicted=len(output.deviations),
+        total_predicted=len(output),
     )
 
 
 def false_positive_scorer(
-    output: ExpectedOutput, expected: ExpectedOutput
+    output: list[Deviation], expected: list[Deviation]
 ) -> FalsePositiveScores:
     """Count false positive deviations (hallucinations).
 
@@ -145,14 +200,14 @@ def false_positive_scorer(
     Returns:
         FalsePositiveScores with count and rate
     """
-    predicted_classes = [d.deviation_class for d in output.deviations]
-    ground_truth_classes = [d.deviation_class for d in expected.deviations]
+    predicted_classes = [d.deviation_class for d in output]
+    ground_truth_classes = [d.deviation_class for d in expected]
 
     # False positives: predicted classes not in ground truth
     false_positives = [c for c in predicted_classes if c not in ground_truth_classes]
 
     fp_count = len(false_positives)
-    total_predicted = len(output.deviations)
+    total_predicted = len(output)
 
     fp_rate = fp_count / total_predicted if total_predicted > 0 else 0.0
 
@@ -164,7 +219,7 @@ def false_positive_scorer(
 
 
 def false_negative_scorer(
-    output: ExpectedOutput, expected: ExpectedOutput
+    output: list[Deviation], expected: list[Deviation]
 ) -> FalseNegativeScores:
     """Count false negative deviations (missed detections).
 
@@ -175,14 +230,14 @@ def false_negative_scorer(
     Returns:
         FalseNegativeScores with count and rate
     """
-    predicted_classes = [d.deviation_class for d in output.deviations]
-    ground_truth_classes = [d.deviation_class for d in expected.deviations]
+    predicted_classes = [d.deviation_class for d in output]
+    ground_truth_classes = [d.deviation_class for d in expected]
 
     # False negatives: ground truth classes not in predicted
     false_negatives = [c for c in ground_truth_classes if c not in predicted_classes]
 
     fn_count = len(false_negatives)
-    total_ground_truth = len(expected.deviations)
+    total_ground_truth = len(expected)
 
     fn_rate = fn_count / total_ground_truth if total_ground_truth > 0 else 0.0
 
@@ -194,7 +249,7 @@ def false_negative_scorer(
 
 
 def occurrence_accuracy_scorer(
-    output: ExpectedOutput, expected: ExpectedOutput, tolerance_seconds: int = 30
+    output: list[Deviation], expected: list[Deviation], tolerance_seconds: int = 30
 ) -> OccurrenceScores:
     """Score timestamp accuracy for deviation occurrences.
 
@@ -226,13 +281,13 @@ def occurrence_accuracy_scorer(
             return 0
 
     # Match deviations by class
-    for gt_dev in expected.deviations:
+    for gt_dev in expected:
         gt_class = gt_dev.deviation_class
         gt_occurrences = gt_dev.occurrences or []
 
         # Find matching predicted deviation
         pred_dev = next(
-            (d for d in output.deviations if d.deviation_class == gt_class), None
+            (d for d in output if d.deviation_class == gt_class), None
         )
 
         if pred_dev and gt_occurrences:
@@ -283,7 +338,7 @@ def occurrence_accuracy_scorer(
 
 
 def detection_binary_scorer(
-    output: ExpectedOutput, expected: ExpectedOutput
+    output: list[Deviation], expected: list[Deviation]
 ) -> DetectionScores:
     """Binary detection scorer: did we detect any deviations when we should have?
 
@@ -294,8 +349,8 @@ def detection_binary_scorer(
     Returns:
         DetectionScores with binary detection accuracy
     """
-    has_deviations_predicted = len(output.deviations) > 0
-    has_deviations_ground_truth = len(expected.deviations) > 0
+    has_deviations_predicted = len(output) > 0
+    has_deviations_ground_truth = len(expected) > 0
 
     # Binary accuracy: did we get it right?
     correct = has_deviations_predicted == has_deviations_ground_truth
@@ -330,20 +385,27 @@ def classification_accuracy_scorer_bt(input, output, expected=None, **kwargs):
         # Debug: log what we received
         from src.utils.logger import logger as debug_logger
 
-        debug_logger.info(f"Scorer received output deviations: {len(output.get('deviations', []))}")
-        debug_logger.info(f"Scorer received expected deviations: {len(expected.get('deviations', []))}")
+        debug_logger.info(
+            f"Scorer received output deviations: {len(output.get('deviations', []))}"
+        )
+        debug_logger.info(
+            f"Scorer received expected deviations: {len(expected.get('deviations', []))}"
+        )
         if output.get("deviations"):
-            debug_logger.info(f"First output deviation keys: {output['deviations'][0].keys() if output['deviations'] else 'empty'}")
+            debug_logger.info(
+                f"First output deviation keys: {output['deviations'][0].keys() if output['deviations'] else 'empty'}"
+            )
         if expected.get("deviations"):
-            debug_logger.info(f"First expected deviation keys: {expected['deviations'][0].keys() if expected['deviations'] else 'empty'}")
+            debug_logger.info(
+                f"First expected deviation keys: {expected['deviations'][0].keys() if expected['deviations'] else 'empty'}"
+            )
 
-        # Convert deviation dicts to Pydantic models for validation
-        # Both output and expected now use the same Deviation model structure
-        output_obj = ExpectedOutput(deviations=output["deviations"])
-        expected_obj = ExpectedOutput(deviations=expected["deviations"])
+        # Convert deviation dicts to Pydantic Deviation objects
+        output_deviations = [Deviation(**d) for d in output["deviations"]]
+        expected_deviations = [Deviation(**d) for d in expected["deviations"]]
 
-        # Run scorer logic directly on ExpectedOutput objects
-        scores = classification_accuracy_scorer(output_obj, expected_obj)
+        # Run scorer logic with lists of Deviation objects
+        scores = classification_accuracy_scorer(output_deviations, expected_deviations)
 
         # Return Braintrust format
         return {
@@ -375,10 +437,10 @@ def false_positive_scorer_bt(input, output, expected=None, **kwargs):
         return None
 
     try:
-        output_obj = ExpectedOutput(deviations=output["deviations"])
-        expected_obj = ExpectedOutput(deviations=expected["deviations"])
+        output_deviations = [Deviation(**d) for d in output["deviations"]]
+        expected_deviations = [Deviation(**d) for d in expected["deviations"]]
 
-        scores = false_positive_scorer(output_obj, expected_obj)
+        scores = false_positive_scorer(output_deviations, expected_deviations)
 
         # Score is inverted - fewer false positives = better score
         fp_rate = scores.false_positive_rate
@@ -394,7 +456,11 @@ def false_positive_scorer_bt(input, output, expected=None, **kwargs):
             },
         }
     except Exception as e:
-        return {"name": "false_positive_rate", "score": 0.0, "metadata": {"error": str(e)}}
+        return {
+            "name": "false_positive_rate",
+            "score": 0.0,
+            "metadata": {"error": str(e)},
+        }
 
 
 def false_negative_scorer_bt(input, output, expected=None, **kwargs):
@@ -403,10 +469,10 @@ def false_negative_scorer_bt(input, output, expected=None, **kwargs):
         return None
 
     try:
-        output_obj = ExpectedOutput(deviations=output["deviations"])
-        expected_obj = ExpectedOutput(deviations=expected["deviations"])
+        output_deviations = [Deviation(**d) for d in output["deviations"]]
+        expected_deviations = [Deviation(**d) for d in expected["deviations"]]
 
-        scores = false_negative_scorer(output_obj, expected_obj)
+        scores = false_negative_scorer(output_deviations, expected_deviations)
 
         # Score is inverted - fewer false negatives = better score
         fn_rate = scores.false_negative_rate
@@ -422,7 +488,11 @@ def false_negative_scorer_bt(input, output, expected=None, **kwargs):
             },
         }
     except Exception as e:
-        return {"name": "false_negative_rate", "score": 0.0, "metadata": {"error": str(e)}}
+        return {
+            "name": "false_negative_rate",
+            "score": 0.0,
+            "metadata": {"error": str(e)},
+        }
 
 
 def occurrence_accuracy_scorer_bt(input, output, expected=None, **kwargs):
@@ -431,10 +501,10 @@ def occurrence_accuracy_scorer_bt(input, output, expected=None, **kwargs):
         return None
 
     try:
-        output_obj = ExpectedOutput(deviations=output["deviations"])
-        expected_obj = ExpectedOutput(deviations=expected["deviations"])
+        output_deviations = [Deviation(**d) for d in output["deviations"]]
+        expected_deviations = [Deviation(**d) for d in expected["deviations"]]
 
-        scores = occurrence_accuracy_scorer(output_obj, expected_obj)
+        scores = occurrence_accuracy_scorer(output_deviations, expected_deviations)
 
         return {
             "name": "occurrence_accuracy",
@@ -446,7 +516,11 @@ def occurrence_accuracy_scorer_bt(input, output, expected=None, **kwargs):
             },
         }
     except Exception as e:
-        return {"name": "occurrence_accuracy", "score": 0.0, "metadata": {"error": str(e)}}
+        return {
+            "name": "occurrence_accuracy",
+            "score": 0.0,
+            "metadata": {"error": str(e)},
+        }
 
 
 def detection_binary_scorer_bt(input, output, expected=None, **kwargs):
@@ -455,10 +529,10 @@ def detection_binary_scorer_bt(input, output, expected=None, **kwargs):
         return None
 
     try:
-        output_obj = ExpectedOutput(deviations=output["deviations"])
-        expected_obj = ExpectedOutput(deviations=expected["deviations"])
+        output_deviations = [Deviation(**d) for d in output["deviations"]]
+        expected_deviations = [Deviation(**d) for d in expected["deviations"]]
 
-        scores = detection_binary_scorer(output_obj, expected_obj)
+        scores = detection_binary_scorer(output_deviations, expected_deviations)
 
         return {
             "name": "binary_detection_accuracy",
@@ -469,4 +543,8 @@ def detection_binary_scorer_bt(input, output, expected=None, **kwargs):
             },
         }
     except Exception as e:
-        return {"name": "binary_detection_accuracy", "score": 0.0, "metadata": {"error": str(e)}}
+        return {
+            "name": "binary_detection_accuracy",
+            "score": 0.0,
+            "metadata": {"error": str(e)},
+        }
