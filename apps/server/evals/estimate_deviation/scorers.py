@@ -195,7 +195,7 @@ Return:
 (A) Yes, same product type
 (B) No, different product types""",
     choice_scores={"A": 1.0, "B": 0.0},
-    model="gpt-4o-mini",
+    model="gpt-4o",
 )
 
 
@@ -238,398 +238,378 @@ def comprehensive_deviation_scorer(
         List of 8 Score objects with detailed metrics
     """
     if not expected or "deviations" not in expected:
-        return None
+        raise ValueError("No expected deviations")
 
     if not output or "deviations" not in output:
-        return {
-            "name": "comprehensive_score",
-            "score": 0.0,
-            "metadata": {"error": "No output deviations"},
-        }
+        raise ValueError("No output deviations")
 
-    try:
-        # Parse deviations into Pydantic objects
-        output_devs = [Deviation(**d) for d in output["deviations"]]
-        expected_devs = [Deviation(**d) for d in expected["deviations"]]
+    # Parse deviations into Pydantic objects
+    output_devs = [Deviation(**d) for d in output["deviations"]]
+    expected_devs = [Deviation(**d) for d in expected["deviations"]]
 
-        # Step 1: Match deviations using LLM semantic similarity
-        matches = []  # (expected_dev, predicted_dev, similarity_score)
-        matched_predicted_indices = set()
+    # Step 1: Match deviations using LLM semantic similarity
+    matches = []  # (expected_dev, predicted_dev, similarity_score)
+    matched_predicted_indices = set()
 
-        from src.utils.logger import logger as debug_logger
+    from src.utils.logger import logger
 
-        debug_logger.info(
-            f"Starting comprehensive scorer: {len(output_devs)} predicted, {len(expected_devs)} expected"
-        )
+    logger.info(
+        f"Starting comprehensive scorer: {len(output_devs)} predicted, {len(expected_devs)} expected"
+    )
 
-        for exp_dev in expected_devs:
-            # Find candidates with same class
-            candidates = [
-                (i, pred)
-                for i, pred in enumerate(output_devs)
-                if pred.deviation_class == exp_dev.deviation_class
-                and i not in matched_predicted_indices
-            ]
-
-            if not candidates:
-                # No candidates for this class - will be counted as FN
-                debug_logger.info(
-                    f"No candidates for expected: {exp_dev.explanation[:50]}"
-                )
-                continue
-
-            debug_logger.info(
-                f"Found {len(candidates)} candidates for expected: {exp_dev.explanation[:50]}"
-            )
-
-            # Score each candidate using LLM
-            best_match = None
-            best_score = 0.0
-            best_matched_occs = []
-
-            for idx, candidate in candidates:
-                # Use the deviation_semantic_match LLM classifier
-                result = deviation_semantic_match(
-                    output={
-                        "deviation_class": candidate.deviation_class,
-                        "explanation": candidate.explanation,
-                    },
-                    expected={
-                        "deviation_class": exp_dev.deviation_class,
-                        "explanation": exp_dev.explanation,
-                    },
-                )
-
-                # Extract score from result (autoevals returns Score object with .score attribute)
-                match_score = _extract_score(result)
-
-                debug_logger.info(f"  Candidate {idx}: score={match_score}")
-
-                # Validate occurrences if semantic match is promising
-                if match_score > 0:
-                    # Case 1: Expected has occurrences - validate predicted has matching ones
-                    if exp_dev.occurrences and len(exp_dev.occurrences) > 0:
-                        if not candidate.occurrences or len(candidate.occurrences) == 0:
-                            debug_logger.info(
-                                f"  Candidate {idx}: NO occurrences but expected has them - REJECT"
-                            )
-                            continue  # Skip this candidate
-
-                        # Match occurrences
-                        matched_occs, _, _ = match_occurrences(
-                            candidate.occurrences,
-                            exp_dev.occurrences,
-                            tolerance_seconds=10,
-                        )
-
-                        if len(matched_occs) == 0:
-                            debug_logger.info(
-                                f"  Candidate {idx}: NO matching occurrences - REJECT"
-                            )
-                            continue  # Skip - must have ≥1 matching occurrence
-
-                        debug_logger.info(
-                            f"  Candidate {idx}: {len(matched_occs)} matching occurrences"
-                        )
-
-                    # Case 2: Expected has no occurrences, but predicted does - spurious FP
-                    elif candidate.occurrences and len(candidate.occurrences) > 0:
-                        debug_logger.info(
-                            f"  Candidate {idx}: SPURIOUS occurrences - REJECT"
-                        )
-                        continue
-
-                    # Case 3: Neither has occurrences - OK
-                    else:
-                        matched_occs = []
-                        debug_logger.info(f"  Candidate {idx}: no occurrences needed")
-                else:
-                    matched_occs = []
-
-                if match_score > best_score:
-                    best_score = match_score
-                    best_match = (idx, candidate)
-                    best_matched_occs = matched_occs
-
-            # Accept match if above threshold
-            MATCH_THRESHOLD = 0.7
-            if best_match and best_score >= MATCH_THRESHOLD:
-                matched_predicted_indices.add(best_match[0])
-                matches.append((exp_dev, best_match[1], best_score, best_matched_occs))
-                debug_logger.info(f"  ✓ Matched with score {best_score}")
-            else:
-                debug_logger.info(f"  ✗ No match above threshold (best: {best_score})")
-
-        # Step 2: Compute TP/FP/FN
-        tp = len(matches)
-        fn = len(expected_devs) - tp  # Expected deviations not matched
-        fp = len(output_devs) - tp  # Predicted deviations not matched
-
-        # Step 3: Calculate precision and recall
-        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-
-        # Aggregate occurrence statistics
-        total_matched_occs = sum(len(occs) for (_, _, _, occs) in matches)
-        total_predicted_occs = sum(len(d.occurrences or []) for d in output_devs)
-        total_expected_occs = sum(len(d.occurrences or []) for d in expected_devs)
-
-        occurrence_precision = (
-            total_matched_occs / total_predicted_occs
-            if total_predicted_occs > 0
-            else 1.0  # No predicted occurrences = perfect (didn't hallucinate)
-        )
-
-        occurrence_recall = (
-            total_matched_occs / total_expected_occs
-            if total_expected_occs > 0
-            else 1.0  # No expected occurrences = perfect (nothing to find)
-        )
-
-        debug_logger.info(
-            f"Occurrence metrics: Precision={occurrence_precision:.2f}, Recall={occurrence_recall:.2f}"
-        )
-        debug_logger.info(
-            f"Matched={total_matched_occs}, Predicted={total_predicted_occs}, Expected={total_expected_occs}"
-        )
-
-        # Step 4: Score explanation quality on matched pairs
-        quality_scores = []
-        for exp_dev, pred_dev, _, _ in matches:
-            quality_result = explanation_quality(
-                output={"explanation": pred_dev.explanation},
-                expected={"explanation": exp_dev.explanation},
-            )
-            quality_score = _extract_score(quality_result)
-            quality_scores.append(quality_score)
-
-        avg_quality = (
-            sum(quality_scores) / len(quality_scores) if quality_scores else 0.0
-        )
-
-        # Step 5: Score line item predictions on matched pairs
-        line_item_metrics = {
-            "tp": 0,
-            "fp": 0,
-            "fn": 0,
-            "quantity_accuracies": [],
-            "unit_cost_accuracies": [],
-            "values": [],
-        }
-
-        for exp_dev, pred_dev, _, _ in matches:
-            # Check if both have line items
-            if exp_dev.predicted_line_item and pred_dev.predicted_line_item:
-                exp_item = exp_dev.predicted_line_item
-                pred_item = pred_dev.predicted_line_item
-
-                # Semantic match check
-                if (
-                    exp_item.matched_pricebook_item_display_name
-                    and pred_item.matched_pricebook_item_display_name
-                ):
-                    match_result = line_item_semantic_match(
-                        output={
-                            "display_name": pred_item.matched_pricebook_item_display_name
-                        },
-                        expected={
-                            "display_name": exp_item.matched_pricebook_item_display_name
-                        },
-                    )
-                    match_score = _extract_score(match_result)
-
-                    if match_score >= 0.7:  # TP
-                        line_item_metrics["tp"] += 1
-
-                        # Calculate quantity accuracy
-                        if exp_item.quantity and pred_item.quantity:
-                            pct_error = (
-                                abs(pred_item.quantity - exp_item.quantity)
-                                / exp_item.quantity
-                            )
-                            quantity_accuracy = max(0.0, 1.0 - pct_error)
-                            line_item_metrics["quantity_accuracies"].append(
-                                quantity_accuracy
-                            )
-
-                        # Calculate unit_cost accuracy
-                        if exp_item.unit_cost and pred_item.unit_cost:
-                            pct_error = (
-                                abs(pred_item.unit_cost - exp_item.unit_cost)
-                                / exp_item.unit_cost
-                            )
-                            unit_cost_accuracy = max(0.0, 1.0 - pct_error)
-                            line_item_metrics["unit_cost_accuracies"].append(
-                                unit_cost_accuracy
-                            )
-
-                        # Calculate value for this deviation (only for TP line items)
-                        if pred_item.quantity and pred_item.unit_cost:
-                            value = pred_item.quantity * pred_item.unit_cost
-                            line_item_metrics["values"].append(value)
-                    else:  # FP - wrong line item
-                        line_item_metrics["fp"] += 1
-                else:  # FP - no display name
-                    line_item_metrics["fp"] += 1
-            elif exp_dev.predicted_line_item and not pred_dev.predicted_line_item:
-                # FN - expected had line item, predicted didn't
-                line_item_metrics["fn"] += 1
-            elif not exp_dev.predicted_line_item and pred_dev.predicted_line_item:
-                # FP - predicted line item when not expected
-                line_item_metrics["fp"] += 1
-
-        # Calculate line item precision
-        line_item_precision = (
-            line_item_metrics["tp"]
-            / (line_item_metrics["tp"] + line_item_metrics["fp"])
-            if (line_item_metrics["tp"] + line_item_metrics["fp"]) > 0
-            else 0.0
-        )
-
-        # Calculate average quantity and unit cost accuracies
-        avg_quantity_accuracy = (
-            sum(line_item_metrics["quantity_accuracies"])
-            / len(line_item_metrics["quantity_accuracies"])
-            if line_item_metrics["quantity_accuracies"]
-            else 0.0
-        )
-
-        avg_unit_cost_accuracy = (
-            sum(line_item_metrics["unit_cost_accuracies"])
-            / len(line_item_metrics["unit_cost_accuracies"])
-            if line_item_metrics["unit_cost_accuracies"]
-            else 0.0
-        )
-
-        # Calculate value_created (zero if ANY deviation FPs exist)
-        total_value = sum(line_item_metrics["values"])
-        value_created_dollars = 0.0 if fp > 0 else total_value
-
-        # Log raw dollar amount as a metric (not constrained to 0-1)
-        from braintrust import current_span
-        current_span().log(metrics={"value_created_dollars": value_created_dollars})
-
-        # Normalize to 0-1 for the score (using $10k as max reasonable value per task)
-        MAX_VALUE_PER_TASK = 10000.0
-        value_created_normalized = min(1.0, value_created_dollars / MAX_VALUE_PER_TASK)
-
-        debug_logger.info(
-            f"Line item metrics: TP={line_item_metrics['tp']}, FP={line_item_metrics['fp']}, FN={line_item_metrics['fn']}"
-        )
-        debug_logger.info(
-            f"Quantity accuracy: {avg_quantity_accuracy:.2f}, Unit cost accuracy: {avg_unit_cost_accuracy:.2f}"
-        )
-        debug_logger.info(
-            f"Total value: ${total_value:.2f}, Value created: ${value_created_dollars:.2f} (Deviation FPs: {fp})"
-        )
-        debug_logger.info(
-            f"Value created normalized: {value_created_normalized:.4f} (logged ${value_created_dollars:.2f} as metric)"
-        )
-
-        debug_logger.info(
-            f"Final metrics: Precision={precision:.2f}, Recall={recall:.2f}, Quality={avg_quality:.2f}"
-        )
-        debug_logger.info(f"TP={tp}, FP={fp}, FN={fn}")
-
-        # Return EIGHT separate scores as Score objects
-        return [
-            Score(
-                name="precision",
-                score=precision,
-                metadata={
-                    "tp": tp,
-                    "fp": fp,
-                    "fn": fn,
-                    "recall": recall,
-                    "num_matches": len(matches),
-                    "match_threshold": MATCH_THRESHOLD,
-                    "matches": [
-                        {
-                            "expected_explanation": exp.explanation[:100],
-                            "predicted_explanation": pred.explanation[:100],
-                            "similarity_score": score,
-                            "matched_occurrences": len(occs),
-                        }
-                        for (exp, pred, score, occs) in matches
-                    ],
-                },
-            ),
-            Score(
-                name="explanation_quality",
-                score=avg_quality,
-                metadata={
-                    "num_evaluated": len(quality_scores),
-                    "individual_scores": quality_scores,
-                },
-            ),
-            Score(
-                name="occurrence_precision",
-                score=occurrence_precision,
-                metadata={
-                    "total_matched": total_matched_occs,
-                    "total_predicted": total_predicted_occs,
-                    "occurrence_recall": occurrence_recall,
-                },
-            ),
-            Score(
-                name="occurrence_recall",
-                score=occurrence_recall,
-                metadata={
-                    "total_matched": total_matched_occs,
-                    "total_expected": total_expected_occs,
-                },
-            ),
-            Score(
-                name="line_item_precision",
-                score=line_item_precision,
-                metadata={
-                    "tp": line_item_metrics["tp"],
-                    "fp": line_item_metrics["fp"],
-                    "fn": line_item_metrics["fn"],
-                    "recall": (
-                        line_item_metrics["tp"]
-                        / (line_item_metrics["tp"] + line_item_metrics["fn"])
-                        if (line_item_metrics["tp"] + line_item_metrics["fn"]) > 0
-                        else 0.0
-                    ),
-                },
-            ),
-            Score(
-                name="quantity_accuracy",
-                score=avg_quantity_accuracy,
-                metadata={
-                    "num_evaluated": len(line_item_metrics["quantity_accuracies"]),
-                    "individual_accuracies": line_item_metrics["quantity_accuracies"],
-                },
-            ),
-            Score(
-                name="unit_cost_accuracy",
-                score=avg_unit_cost_accuracy,
-                metadata={
-                    "num_evaluated": len(line_item_metrics["unit_cost_accuracies"]),
-                    "individual_accuracies": line_item_metrics["unit_cost_accuracies"],
-                },
-            ),
-            Score(
-                name="value_created",
-                score=value_created_normalized,
-                metadata={
-                    "value_created_dollars": value_created_dollars,
-                    "max_value_per_task": MAX_VALUE_PER_TASK,
-                    "total_value": total_value,
-                    "deviation_fps": fp,
-                    "num_line_items_with_value": len(line_item_metrics["values"]),
-                    "individual_values": line_item_metrics["values"],
-                    "penalized": fp > 0,
-                },
-            ),
+    for exp_dev in expected_devs:
+        # Find candidates with same class
+        candidates = [
+            (i, pred)
+            for i, pred in enumerate(output_devs)
+            if pred.deviation_class == exp_dev.deviation_class
+            and i not in matched_predicted_indices
         ]
 
-    except Exception as e:
-        import traceback
+        if not candidates:
+            # No candidates for this class - will be counted as FN
+            logger.info(f"No candidates for expected: {exp_dev.explanation[:50]}")
+            continue
 
-        return {
-            "name": "comprehensive_score",
-            "score": 0.0,
-            "metadata": {"error": str(e), "traceback": traceback.format_exc()},
-        }
+        logger.info(
+            f"Found {len(candidates)} candidates for expected: {exp_dev.explanation[:50]}"
+        )
+
+        # Score each candidate using LLM
+        best_match = None
+        best_score = 0.0
+        best_matched_occs = []
+
+        for idx, candidate in candidates:
+            # Use the deviation_semantic_match LLM classifier
+            result = deviation_semantic_match(
+                output={
+                    "deviation_class": candidate.deviation_class,
+                    "explanation": candidate.explanation,
+                },
+                expected={
+                    "deviation_class": exp_dev.deviation_class,
+                    "explanation": exp_dev.explanation,
+                },
+            )
+
+            # Extract score from result (autoevals returns Score object with .score attribute)
+            match_score = _extract_score(result)
+
+            logger.info(f"  Candidate {idx}: score={match_score}")
+
+            # Validate occurrences if semantic match is promising
+            if match_score > 0:
+                # Case 1: Expected has occurrences - validate predicted has matching ones
+                if exp_dev.occurrences and len(exp_dev.occurrences) > 0:
+                    if not candidate.occurrences or len(candidate.occurrences) == 0:
+                        logger.info(
+                            f"  Candidate {idx}: NO occurrences but expected has them - REJECT"
+                        )
+                        continue  # Skip this candidate
+
+                    # Match occurrences
+                    matched_occs, _, _ = match_occurrences(
+                        candidate.occurrences,
+                        exp_dev.occurrences,
+                        tolerance_seconds=10,
+                    )
+
+                    if len(matched_occs) == 0:
+                        logger.info(
+                            f"  Candidate {idx}: NO matching occurrences - REJECT"
+                        )
+                        continue  # Skip - must have ≥1 matching occurrence
+
+                    logger.info(
+                        f"  Candidate {idx}: {len(matched_occs)} matching occurrences"
+                    )
+
+                # Case 2: Expected has no occurrences, but predicted does - spurious FP
+                elif candidate.occurrences and len(candidate.occurrences) > 0:
+                    logger.info(f"  Candidate {idx}: SPURIOUS occurrences - REJECT")
+                    continue
+
+                # Case 3: Neither has occurrences - OK
+                else:
+                    matched_occs = []
+                    logger.info(f"  Candidate {idx}: no occurrences needed")
+            else:
+                matched_occs = []
+
+            if match_score > best_score:
+                best_score = match_score
+                best_match = (idx, candidate)
+                best_matched_occs = matched_occs
+
+        # Accept match if above threshold
+        MATCH_THRESHOLD = 0.7
+        if best_match and best_score >= MATCH_THRESHOLD:
+            matched_predicted_indices.add(best_match[0])
+            matches.append((exp_dev, best_match[1], best_score, best_matched_occs))
+            logger.info(f"  ✓ Matched with score {best_score}")
+        else:
+            logger.info(f"  ✗ No match above threshold (best: {best_score})")
+
+    # Step 2: Compute TP/FP/FN
+    tp = len(matches)
+    fn = len(expected_devs) - tp  # Expected deviations not matched
+    fp = len(output_devs) - tp  # Predicted deviations not matched
+
+    # Step 3: Calculate precision and recall
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+
+    # Aggregate occurrence statistics
+    total_matched_occs = sum(len(occs) for (_, _, _, occs) in matches)
+    total_predicted_occs = sum(len(d.occurrences or []) for d in output_devs)
+    total_expected_occs = sum(len(d.occurrences or []) for d in expected_devs)
+
+    occurrence_precision = (
+        total_matched_occs / total_predicted_occs
+        if total_predicted_occs > 0
+        else 1.0  # No predicted occurrences = perfect (didn't hallucinate)
+    )
+
+    occurrence_recall = (
+        total_matched_occs / total_expected_occs
+        if total_expected_occs > 0
+        else 1.0  # No expected occurrences = perfect (nothing to find)
+    )
+
+    logger.info(
+        f"Occurrence metrics: Precision={occurrence_precision:.2f}, Recall={occurrence_recall:.2f}"
+    )
+    logger.info(
+        f"Matched={total_matched_occs}, Predicted={total_predicted_occs}, Expected={total_expected_occs}"
+    )
+
+    # Step 4: Score explanation quality on matched pairs
+    quality_scores = []
+    for exp_dev, pred_dev, _, _ in matches:
+        quality_result = explanation_quality(
+            output={"explanation": pred_dev.explanation},
+            expected={"explanation": exp_dev.explanation},
+        )
+        quality_score = _extract_score(quality_result)
+        quality_scores.append(quality_score)
+
+    avg_quality = sum(quality_scores) / len(quality_scores) if quality_scores else 0.0
+
+    # Step 5: Score line item predictions on matched pairs
+    line_item_metrics = {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "quantity_accuracies": [],
+        "unit_cost_accuracies": [],
+        "values": [],
+    }
+
+    for exp_dev, pred_dev, _, _ in matches:
+        # Check if both have line items
+        if exp_dev.predicted_line_item and pred_dev.predicted_line_item:
+            exp_item = exp_dev.predicted_line_item
+            pred_item = pred_dev.predicted_line_item
+
+            # Semantic match check
+            if (
+                exp_item.matched_pricebook_item_display_name
+                and pred_item.matched_pricebook_item_display_name
+            ):
+                match_result = line_item_semantic_match(
+                    output={
+                        "display_name": pred_item.matched_pricebook_item_display_name
+                    },
+                    expected={
+                        "display_name": exp_item.matched_pricebook_item_display_name
+                    },
+                )
+                match_score = _extract_score(match_result)
+
+                if match_score >= 0.7:  # TP
+                    line_item_metrics["tp"] += 1
+
+                    # Calculate quantity accuracy
+                    if exp_item.quantity and pred_item.quantity:
+                        pct_error = (
+                            abs(pred_item.quantity - exp_item.quantity)
+                            / exp_item.quantity
+                        )
+                        quantity_accuracy = max(0.0, 1.0 - pct_error)
+                        line_item_metrics["quantity_accuracies"].append(
+                            quantity_accuracy
+                        )
+
+                    # Calculate unit_cost accuracy
+                    if exp_item.unit_cost and pred_item.unit_cost:
+                        pct_error = (
+                            abs(pred_item.unit_cost - exp_item.unit_cost)
+                            / exp_item.unit_cost
+                        )
+                        unit_cost_accuracy = max(0.0, 1.0 - pct_error)
+                        line_item_metrics["unit_cost_accuracies"].append(
+                            unit_cost_accuracy
+                        )
+
+                    # Calculate value for this deviation (only for TP line items)
+                    if pred_item.quantity and pred_item.unit_cost:
+                        value = pred_item.quantity * pred_item.unit_cost
+                        line_item_metrics["values"].append(value)
+                else:  # FP - wrong line item
+                    line_item_metrics["fp"] += 1
+            else:  # FP - no display name
+                line_item_metrics["fp"] += 1
+        elif exp_dev.predicted_line_item and not pred_dev.predicted_line_item:
+            # FN - expected had line item, predicted didn't
+            line_item_metrics["fn"] += 1
+        elif not exp_dev.predicted_line_item and pred_dev.predicted_line_item:
+            # FP - predicted line item when not expected
+            line_item_metrics["fp"] += 1
+
+    # Calculate line item precision
+    line_item_precision = (
+        line_item_metrics["tp"] / (line_item_metrics["tp"] + line_item_metrics["fp"])
+        if (line_item_metrics["tp"] + line_item_metrics["fp"]) > 0
+        else 0.0
+    )
+
+    # Calculate average quantity and unit cost accuracies
+    avg_quantity_accuracy = (
+        sum(line_item_metrics["quantity_accuracies"])
+        / len(line_item_metrics["quantity_accuracies"])
+        if line_item_metrics["quantity_accuracies"]
+        else 0.0
+    )
+
+    avg_unit_cost_accuracy = (
+        sum(line_item_metrics["unit_cost_accuracies"])
+        / len(line_item_metrics["unit_cost_accuracies"])
+        if line_item_metrics["unit_cost_accuracies"]
+        else 0.0
+    )
+
+    # Calculate value_created (zero if ANY deviation FPs exist)
+    total_value = sum(line_item_metrics["values"])
+    value_created_dollars = 0.0 if fp > 0 else total_value
+
+    # Log raw dollar amount as a metric (not constrained to 0-1)
+    from braintrust import current_span
+
+    current_span().log(metrics={"value_created_dollars": value_created_dollars})
+
+    # Normalize to 0-1 for the score (using $10k as max reasonable value per task)
+    MAX_VALUE_PER_TASK = 10000.0
+    value_created_normalized = min(1.0, value_created_dollars / MAX_VALUE_PER_TASK)
+
+    logger.info(
+        f"Line item metrics: TP={line_item_metrics['tp']}, FP={line_item_metrics['fp']}, FN={line_item_metrics['fn']}"
+    )
+    logger.info(
+        f"Quantity accuracy: {avg_quantity_accuracy:.2f}, Unit cost accuracy: {avg_unit_cost_accuracy:.2f}"
+    )
+    logger.info(
+        f"Total value: ${total_value:.2f}, Value created: ${value_created_dollars:.2f} (Deviation FPs: {fp})"
+    )
+    logger.info(
+        f"Value created normalized: {value_created_normalized:.4f} (logged ${value_created_dollars:.2f} as metric)"
+    )
+
+    logger.info(
+        f"Final metrics: Precision={precision:.2f}, Recall={recall:.2f}, Quality={avg_quality:.2f}"
+    )
+    logger.info(f"TP={tp}, FP={fp}, FN={fn}")
+
+    # Return EIGHT separate scores as Score objects
+    return [
+        Score(
+            name="precision",
+            score=precision,
+            metadata={
+                "tp": tp,
+                "fp": fp,
+                "fn": fn,
+                "recall": recall,
+                "num_matches": len(matches),
+                "match_threshold": MATCH_THRESHOLD,
+                "matches": [
+                    {
+                        "expected_explanation": exp.explanation[:100],
+                        "predicted_explanation": pred.explanation[:100],
+                        "similarity_score": score,
+                        "matched_occurrences": len(occs),
+                    }
+                    for (exp, pred, score, occs) in matches
+                ],
+            },
+        ),
+        Score(
+            name="explanation_quality",
+            score=avg_quality,
+            metadata={
+                "num_evaluated": len(quality_scores),
+                "individual_scores": quality_scores,
+            },
+        ),
+        Score(
+            name="occurrence_precision",
+            score=occurrence_precision,
+            metadata={
+                "total_matched": total_matched_occs,
+                "total_predicted": total_predicted_occs,
+                "occurrence_recall": occurrence_recall,
+            },
+        ),
+        Score(
+            name="occurrence_recall",
+            score=occurrence_recall,
+            metadata={
+                "total_matched": total_matched_occs,
+                "total_expected": total_expected_occs,
+            },
+        ),
+        Score(
+            name="line_item_precision",
+            score=line_item_precision,
+            metadata={
+                "tp": line_item_metrics["tp"],
+                "fp": line_item_metrics["fp"],
+                "fn": line_item_metrics["fn"],
+                "recall": (
+                    line_item_metrics["tp"]
+                    / (line_item_metrics["tp"] + line_item_metrics["fn"])
+                    if (line_item_metrics["tp"] + line_item_metrics["fn"]) > 0
+                    else 0.0
+                ),
+            },
+        ),
+        Score(
+            name="quantity_accuracy",
+            score=avg_quantity_accuracy,
+            metadata={
+                "num_evaluated": len(line_item_metrics["quantity_accuracies"]),
+                "individual_accuracies": line_item_metrics["quantity_accuracies"],
+            },
+        ),
+        Score(
+            name="unit_cost_accuracy",
+            score=avg_unit_cost_accuracy,
+            metadata={
+                "num_evaluated": len(line_item_metrics["unit_cost_accuracies"]),
+                "individual_accuracies": line_item_metrics["unit_cost_accuracies"],
+            },
+        ),
+        Score(
+            name="value_created",
+            score=value_created_normalized,
+            metadata={
+                "value_created_dollars": value_created_dollars,
+                "max_value_per_task": MAX_VALUE_PER_TASK,
+                "total_value": total_value,
+                "deviation_fps": fp,
+                "num_line_items_with_value": len(line_item_metrics["values"]),
+                "individual_values": line_item_metrics["values"],
+                "penalized": fp > 0,
+            },
+        ),
+    ]

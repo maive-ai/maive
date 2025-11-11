@@ -700,7 +700,7 @@ class OpenAIProvider(AIProvider):
                 max_tokens=self.settings.max_tokens,
             )
 
-            logger.info(f"Using Responses API parse() with Pydantic model: {model}")
+            logger.info(f"Using Responses API parse() with model: {model}")
 
             # Build tools list
             tools: list[Any] = []
