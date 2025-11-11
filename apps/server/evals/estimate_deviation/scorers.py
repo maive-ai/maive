@@ -15,7 +15,107 @@ from autoevals import LLMClassifier
 from braintrust import Score
 from braintrust.framework import EvalScorer
 
-from evals.estimate_deviation.schemas import Deviation
+from evals.estimate_deviation.schemas import Deviation, DeviationOccurrence
+
+
+def parse_timestamp_to_seconds(timestamp: str) -> int:
+    """Convert HH:MM:SS or MM:SS timestamp to total seconds.
+
+    Args:
+        timestamp: Timestamp string in format "HH:MM:SS" or "MM:SS"
+
+    Returns:
+        Total seconds as integer
+    """
+    parts = timestamp.split(":")
+    if len(parts) == 3:  # HH:MM:SS
+        hours, minutes, seconds = parts
+        return int(hours) * 3600 + int(minutes) * 60 + int(seconds)
+    elif len(parts) == 2:  # MM:SS
+        minutes, seconds = parts
+        return int(minutes) * 60 + int(seconds)
+    else:
+        raise ValueError(f"Invalid timestamp format: {timestamp}")
+
+
+def match_occurrences(
+    predicted_occs: list[DeviationOccurrence] | None,
+    expected_occs: list[DeviationOccurrence] | None,
+    tolerance_seconds: int = 10,
+) -> tuple[
+    list[tuple[DeviationOccurrence, DeviationOccurrence]],
+    list[DeviationOccurrence],
+    list[DeviationOccurrence],
+]:
+    """Match predicted occurrences to expected occurrences optimally.
+
+    Matching criteria:
+    1. Same conversation_idx (exact match required)
+    2. Timestamp within tolerance (±10 seconds)
+    3. Optimal assignment: match to closest timestamp
+
+    Args:
+        predicted_occs: List of predicted occurrences (or None)
+        expected_occs: List of expected occurrences (or None)
+        tolerance_seconds: Maximum allowed time difference in seconds
+
+    Returns:
+        tuple: (
+            matched_pairs: list[(predicted_occ, expected_occ)],
+            unmatched_predicted: list[predicted_occ],
+            unmatched_expected: list[expected_occ]
+        )
+    """
+    if not predicted_occs and not expected_occs:
+        # Both None or empty - perfect match
+        return ([], [], [])
+
+    if not predicted_occs:
+        # No predictions but has expected - all unmatched
+        return ([], [], expected_occs or [])
+
+    if not expected_occs:
+        # Has predictions but no expected - all unmatched
+        return ([], predicted_occs or [], [])
+
+    matched_pairs = []
+    unmatched_predicted = list(predicted_occs)
+    unmatched_expected = list(expected_occs)
+
+    # For each expected occurrence, find best match
+    for exp_occ in expected_occs:
+        # Find candidates with same conversation_idx
+        candidates = [
+            (i, pred)
+            for i, pred in enumerate(unmatched_predicted)
+            if pred.conversation_idx == exp_occ.conversation_idx
+        ]
+
+        if not candidates:
+            # No candidates for this conversation - stays unmatched
+            continue
+
+        # Find closest timestamp among candidates
+        exp_seconds = parse_timestamp_to_seconds(exp_occ.timestamp)
+        best_match = None
+        best_distance = float("inf")
+
+        for idx, pred in candidates:
+            pred_seconds = parse_timestamp_to_seconds(pred.timestamp)
+            distance = abs(exp_seconds - pred_seconds)
+
+            if distance < best_distance:
+                best_distance = distance
+                best_match = (idx, pred)
+
+        # Accept if within tolerance
+        if best_match and best_distance <= tolerance_seconds:
+            matched_pairs.append((best_match[1], exp_occ))
+            unmatched_predicted.remove(best_match[1])
+            unmatched_expected.remove(exp_occ)
+
+    return (matched_pairs, unmatched_predicted, unmatched_expected)
+
 
 # Semantic matching scorer: Are output and expected describing the same deviation?
 deviation_semantic_match = LLMClassifier(
@@ -41,7 +141,7 @@ Return:
 (A) Yes, same deviation
 (B) No, different deviations""",
     choice_scores={"A": 1.0, "B": 0.0},
-    model="gpt-4o-mini",
+    model="gpt-4o",
 )
 
 
@@ -72,15 +172,19 @@ Return:
 )
 
 
-def comprehensive_deviation_scorer(input, output, expected=None, **kwargs) -> EvalScorer:
-    """Comprehensive scorer with LLM-based semantic matching + deterministic metrics.
+def comprehensive_deviation_scorer(
+    input, output, expected=None, **kwargs
+) -> EvalScorer:
+    """Comprehensive scorer with LLM-based semantic matching + occurrence validation.
 
     Workflow:
     1. Match predicted deviations to expected using LLM semantic similarity
-    2. Compute TP/FP/FN counts from matches
-    3. Calculate precision, recall, F1
-    4. Score explanation quality on matched pairs
-    5. Return combined score + detailed breakdown
+    2. Validate occurrences: must match timestamps within ±10 seconds
+    3. Compute TP/FP/FN counts from matches
+    4. Calculate deviation-level precision and recall
+    5. Calculate occurrence-level precision and recall
+    6. Score explanation quality on matched pairs
+    7. Return 4 scores: precision, explanation_quality, occurrence_precision, occurrence_recall
 
     Args:
         input: Input data (not used, deviations are in output/expected)
@@ -89,7 +193,7 @@ def comprehensive_deviation_scorer(input, output, expected=None, **kwargs) -> Ev
         **kwargs: Additional metadata
 
     Returns:
-        Dict with score and detailed metrics
+        List of Score objects with detailed metrics
     """
     if not expected or "deviations" not in expected:
         return None
@@ -139,6 +243,7 @@ def comprehensive_deviation_scorer(input, output, expected=None, **kwargs) -> Ev
             # Score each candidate using LLM
             best_match = None
             best_score = 0.0
+            best_matched_occs = []
 
             for idx, candidate in candidates:
                 # Use the deviation_semantic_match LLM classifier
@@ -163,15 +268,57 @@ def comprehensive_deviation_scorer(input, output, expected=None, **kwargs) -> Ev
 
                 debug_logger.info(f"  Candidate {idx}: score={match_score}")
 
+                # Validate occurrences if semantic match is promising
+                if match_score > 0:
+                    # Case 1: Expected has occurrences - validate predicted has matching ones
+                    if exp_dev.occurrences and len(exp_dev.occurrences) > 0:
+                        if not candidate.occurrences or len(candidate.occurrences) == 0:
+                            debug_logger.info(
+                                f"  Candidate {idx}: NO occurrences but expected has them - REJECT"
+                            )
+                            continue  # Skip this candidate
+
+                        # Match occurrences
+                        matched_occs, _, _ = match_occurrences(
+                            candidate.occurrences,
+                            exp_dev.occurrences,
+                            tolerance_seconds=10,
+                        )
+
+                        if len(matched_occs) == 0:
+                            debug_logger.info(
+                                f"  Candidate {idx}: NO matching occurrences - REJECT"
+                            )
+                            continue  # Skip - must have ≥1 matching occurrence
+
+                        debug_logger.info(
+                            f"  Candidate {idx}: {len(matched_occs)} matching occurrences"
+                        )
+
+                    # Case 2: Expected has no occurrences, but predicted does - spurious FP
+                    elif candidate.occurrences and len(candidate.occurrences) > 0:
+                        debug_logger.info(
+                            f"  Candidate {idx}: SPURIOUS occurrences - REJECT"
+                        )
+                        continue
+
+                    # Case 3: Neither has occurrences - OK
+                    else:
+                        matched_occs = []
+                        debug_logger.info(f"  Candidate {idx}: no occurrences needed")
+                else:
+                    matched_occs = []
+
                 if match_score > best_score:
                     best_score = match_score
                     best_match = (idx, candidate)
+                    best_matched_occs = matched_occs
 
             # Accept match if above threshold
             MATCH_THRESHOLD = 0.7
             if best_match and best_score >= MATCH_THRESHOLD:
                 matched_predicted_indices.add(best_match[0])
-                matches.append((exp_dev, best_match[1], best_score))
+                matches.append((exp_dev, best_match[1], best_score, best_matched_occs))
                 debug_logger.info(f"  ✓ Matched with score {best_score}")
             else:
                 debug_logger.info(f"  ✗ No match above threshold (best: {best_score})")
@@ -185,9 +332,33 @@ def comprehensive_deviation_scorer(input, output, expected=None, **kwargs) -> Ev
         precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
         recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
 
+        # Aggregate occurrence statistics
+        total_matched_occs = sum(len(occs) for (_, _, _, occs) in matches)
+        total_predicted_occs = sum(len(d.occurrences or []) for d in output_devs)
+        total_expected_occs = sum(len(d.occurrences or []) for d in expected_devs)
+
+        occurrence_precision = (
+            total_matched_occs / total_predicted_occs
+            if total_predicted_occs > 0
+            else 1.0  # No predicted occurrences = perfect (didn't hallucinate)
+        )
+
+        occurrence_recall = (
+            total_matched_occs / total_expected_occs
+            if total_expected_occs > 0
+            else 1.0  # No expected occurrences = perfect (nothing to find)
+        )
+
+        debug_logger.info(
+            f"Occurrence metrics: Precision={occurrence_precision:.2f}, Recall={occurrence_recall:.2f}"
+        )
+        debug_logger.info(
+            f"Matched={total_matched_occs}, Predicted={total_predicted_occs}, Expected={total_expected_occs}"
+        )
+
         # Step 4: Score explanation quality on matched pairs
         quality_scores = []
-        for exp_dev, pred_dev, _ in matches:
+        for exp_dev, pred_dev, _, _ in matches:
             quality_result = explanation_quality(
                 output={"explanation": pred_dev.explanation},
                 expected={"explanation": exp_dev.explanation},
@@ -212,7 +383,7 @@ def comprehensive_deviation_scorer(input, output, expected=None, **kwargs) -> Ev
         )
         debug_logger.info(f"TP={tp}, FP={fp}, FN={fn}")
 
-        # Return TWO separate scores as Score objects: precision and explanation quality
+        # Return FOUR separate scores as Score objects: precision, explanation quality, occurrence precision, and occurrence recall
         return [
             Score(
                 name="precision",
@@ -229,8 +400,9 @@ def comprehensive_deviation_scorer(input, output, expected=None, **kwargs) -> Ev
                             "expected_explanation": exp.explanation[:100],
                             "predicted_explanation": pred.explanation[:100],
                             "similarity_score": score,
+                            "matched_occurrences": len(occs),
                         }
-                        for (exp, pred, score) in matches
+                        for (exp, pred, score, occs) in matches
                     ],
                 },
             ),
@@ -240,6 +412,23 @@ def comprehensive_deviation_scorer(input, output, expected=None, **kwargs) -> Ev
                 metadata={
                     "num_evaluated": len(quality_scores),
                     "individual_scores": quality_scores,
+                },
+            ),
+            Score(
+                name="occurrence_precision",
+                score=occurrence_precision,
+                metadata={
+                    "total_matched": total_matched_occs,
+                    "total_predicted": total_predicted_occs,
+                    "occurrence_recall": occurrence_recall,
+                },
+            ),
+            Score(
+                name="occurrence_recall",
+                score=occurrence_recall,
+                metadata={
+                    "total_matched": total_matched_occs,
+                    "total_expected": total_expected_occs,
                 },
             ),
         ]
