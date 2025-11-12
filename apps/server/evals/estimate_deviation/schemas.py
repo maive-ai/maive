@@ -6,9 +6,6 @@ from pydantic import BaseModel, Field
 class PredictedLineItem(BaseModel):
     """Predicted estimate line item for a deviation."""
 
-    description: str = Field(
-        description="Description of the line item (e.g., 'Ridge Vent', 'Attic Fan')"
-    )
     quantity: float | None = Field(
         default=None, description="Predicted quantity for the line item"
     )

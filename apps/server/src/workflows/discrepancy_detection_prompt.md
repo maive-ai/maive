@@ -72,7 +72,6 @@ For each predicted line item in your output, you MUST search the pricebook vecto
 
 5. **Populate Fields**: Include ALL of the following fields in your predicted_line_item:
    - `matched_pricebook_item_id`: The pricebook item ID
-   - `matched_pricebook_item_code`: The pricebook item code
    - `matched_pricebook_item_display_name`: The pricebook display name
    - `unit_cost`: The unit cost from primaryVendor.cost
    - `total_cost`: The calculated total cost

@@ -169,12 +169,9 @@ Note: JSON files are uploaded to Braintrust as `JSONAttachment` objects during p
         }
       ],
       "predicted_line_item": {
-        "description": "Install Gutters",
         "quantity": 351.0,
-        "unit": "LF",
-        "notes": "From production notes",
         "matched_pricebook_item_id": "...",
-        "matched_pricebook_item_code": "...",
+        "matched_pricebook_item_display_name": "...",
         "unit_cost": 12.50,
         "total_cost": 4387.50
       }

@@ -237,6 +237,10 @@ def comprehensive_deviation_scorer(
     Returns:
         List of 8 Score objects with detailed metrics
     """
+    # Constants
+    MATCH_THRESHOLD = 0.7
+    MAX_VALUE_PER_TASK = 10000.0
+
     if not expected or "deviations" not in expected:
         raise ValueError("No expected deviations")
 
@@ -343,7 +347,6 @@ def comprehensive_deviation_scorer(
                 best_matched_occs = matched_occs
 
         # Accept match if above threshold
-        MATCH_THRESHOLD = 0.7
         if best_match and best_score >= MATCH_THRESHOLD:
             matched_predicted_indices.add(best_match[0])
             matches.append((exp_dev, best_match[1], best_score, best_matched_occs))
@@ -499,7 +502,6 @@ def comprehensive_deviation_scorer(
     current_span().log(metrics={"value_created_dollars": value_created_dollars})
 
     # Normalize to 0-1 for the score (using $10k as max reasonable value per task)
-    MAX_VALUE_PER_TASK = 10000.0
     value_created_normalized = min(1.0, value_created_dollars / MAX_VALUE_PER_TASK)
 
     logger.info(
