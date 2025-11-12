@@ -1,5 +1,6 @@
 import json
 import os
+import tempfile
 from pathlib import Path
 
 import braintrust
@@ -191,11 +192,27 @@ class DiscrepancyDetectionV2Workflow:
         # Process transcript
         transcript_data = self._process_transcript(transcript_path)
 
-        # TEMPORARY TEST: Skip file uploads, embed JSON in prompt instead
+        # Upload transcript as file (too large for prompt)
         file_ids = []
-        logger.info(
-            "[WORKFLOW] Skipping file uploads - embedding JSON directly in prompt"
-        )
+        logger.info("[WORKFLOW] Uploading transcript file")
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False, encoding="utf-8"
+        ) as transcript_file:
+            json.dump(transcript_data, transcript_file, indent=2)
+            transcript_temp_path = transcript_file.name
+
+        try:
+            transcript_metadata = await self.ai_provider.upload_file(
+                file_path=transcript_temp_path,
+                purpose="user_data",
+            )
+            file_ids.append(transcript_metadata.id)
+            logger.info(
+                "[WORKFLOW] Transcript uploaded", file_id=transcript_metadata.id
+            )
+        finally:
+            # Clean up temporary file
+            os.unlink(transcript_temp_path)
 
         # Load deviation classes from JSON file (always use classes.json)
         classes_path = (
@@ -271,12 +288,11 @@ class DiscrepancyDetectionV2Workflow:
         }
 
         # Use the module-level prompt (loaded once at import time)
-        # Build prompt with all variables
+        # Build prompt with variables (transcript uploaded as file, not embedded)
         prompt_params = DISCREPANCY_DETECTION_PROMPT.build(
             deviation_classes=deviation_classes_formatted,
             notes_to_production=json.dumps(notes_to_production, indent=2),
             estimate_data=json.dumps(formatted_estimate, indent=2),
-            transcript_data=json.dumps(transcript_data, indent=2),
         )
 
         # Extract the user message content from the built prompt
