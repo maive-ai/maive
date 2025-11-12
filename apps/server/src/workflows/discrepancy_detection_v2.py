@@ -22,10 +22,12 @@ from src.workflows.config import (
 )
 
 # Force OpenAI provider for this workflow
-os.environ["AI_PROVIDER"] = "openai"
+os.environ["AI_PROVIDER"] = "gemini"
 
 # Pricebook vector store ID (created via scripts/ingest_pricebook.py)
 PRICEBOOK_VECTOR_STORE_ID = "vs_690e9d9523a8819192c6f111227b90a5"
+
+PRICEBOOK_VECTOR_STORE_GEMINI_NAME = "fileSearchStores/pricebookitems-i4r9rndw43mu"
 
 
 class DiscrepancyDetectionV2Workflow:
@@ -335,7 +337,8 @@ class DiscrepancyDetectionV2Workflow:
             prompt=user_message,
             response_schema=DynamicDiscrepancyResult,
             # file_ids=file_ids,
-            vector_store_ids=[PRICEBOOK_VECTOR_STORE_ID],
+            # vector_store_ids=[PRICEBOOK_VECTOR_STORE_ID],
+            file_search_store_names=[PRICEBOOK_VECTOR_STORE_GEMINI_NAME],
         )
 
         logger.info("[WORKFLOW] Generated deviations", deviations=result.deviations)

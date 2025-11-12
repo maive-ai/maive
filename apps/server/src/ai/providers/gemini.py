@@ -1,8 +1,10 @@
 """Gemini provider implementation."""
 
-from pathlib import Path
 from typing import AsyncGenerator, TypeVar
 
+from braintrust.wrappers.google_genai import setup_genai
+from google import genai
+from google.genai.types import FileSearch, GenerateContentConfig, Tool
 from pydantic import BaseModel
 
 from src.ai.base import (
@@ -13,10 +15,12 @@ from src.ai.base import (
     FileMetadata,
 )
 from src.ai.gemini import get_gemini_client
+from src.ai.gemini.config import get_gemini_settings
+from src.ai.gemini.exceptions import GeminiError
 from src.ai.gemini.schemas import (
     FileUploadRequest,
     GenerateContentRequest,
-    GenerateStructuredContentRequest,
+    GenerateContentResponse,
 )
 from src.utils.logger import logger
 
@@ -45,6 +49,31 @@ class GeminiProvider(AIProvider):
             enable_braintrust=enable_braintrust,
             braintrust_project_name=braintrust_project_name,
         )
+        self._client: genai.Client | None = None
+        self.enable_braintrust = enable_braintrust
+        self.braintrust_project_name = braintrust_project_name
+        self.settings = get_gemini_settings()
+
+    def _get_client(self) -> genai.Client:
+        """Get or create the Gemini client.
+
+        Automatically sets up Braintrust tracing if enabled.
+        """
+        if self._client is None:
+            try:
+                # Setup Braintrust tracing if enabled for this instance
+                if self.enable_braintrust and self.braintrust_project_name:
+                    logger.info(
+                        f"Setting up Gemini with Braintrust tracing enabled (project: {self.braintrust_project_name})"
+                    )
+                    setup_genai(project_name=self.braintrust_project_name)
+
+                self._client = genai.Client(api_key=self.settings.api_key)
+                logger.info("Gemini client initialized")
+            except Exception as e:
+                logger.error("Failed to initialize Gemini client", error=str(e))
+                raise GeminiError(f"Failed to authenticate: {e}")
+        return self._client
 
     async def upload_file(self, file_path: str, **kwargs) -> FileMetadata:
         """Upload a file to Gemini Files API.
@@ -62,15 +91,7 @@ class GeminiProvider(AIProvider):
                 display_name=kwargs.get("display_name"),
                 mime_type=kwargs.get("mime_type"),
             )
-            result = await self.client.upload_file(request)
-
-            # Convert Gemini's FileMetadata to our generic format
-            return FileMetadata(
-                id=result.name,
-                name=result.display_name or Path(file_path).name,
-                mime_type=result.mime_type,
-                size_bytes=result.size_bytes,
-            )
+            return await self.client.upload_file(request)
         except Exception as e:
             logger.error("File upload failed", error=str(e))
             raise
@@ -156,7 +177,7 @@ class GeminiProvider(AIProvider):
         Args:
             prompt: Text prompt
             response_schema: Pydantic model for structured output
-            file_ids: Optional list of file IDs
+            file_ids: Optional list of file names
             vector_store_ids: Optional vector store IDs (deprecated, use file_search_store_names)
             file_search_store_names: Optional list of File Search store names to search
             **kwargs: Additional options
@@ -175,23 +196,65 @@ class GeminiProvider(AIProvider):
             )
 
         try:
-            logger.info(
-                "Generating structured content with Gemini",
-                schema=response_schema.__name__,
-            )
-            request = GenerateStructuredContentRequest(
-                prompt=prompt,
-                response_model=response_schema,
-                files=file_ids or [],
-                file_search_store_names=file_search_store_names,
-                temperature=kwargs.get("temperature"),
-                model_name=kwargs.get("model"),
+            client = self._get_client()
+
+            # Prepare content list
+            contents = [prompt]
+
+            # Add files if provided
+            if file_ids:
+                for file_name in file_ids:
+                    file_obj = client.files.get(name=file_name)
+                    contents.append(file_obj)
+                    logger.info("Added file to content", file_name=file_name)
+
+            # Prepare generation config
+            model_name = kwargs.get("model") or self.settings.model_name
+            temperature = kwargs.get("temperature") or self.settings.temperature
+            tools = None
+            if file_search_store_names:
+                tools = [
+                    Tool(file_search=FileSearch(file_search_store_names=[store_name]))
+                    for store_name in file_search_store_names
+                ]
+
+            generation_config = GenerateContentConfig(
+                temperature=temperature,
+                response_schema=response_schema,
+                # response_mime_type="application/json",
+                tools=tools,
             )
 
-            result = await self.client.generate_structured_content(request)
-            return result
+            logger.info("Generating content with model", model_name=model_name)
+
+            # Generate content
+            response: GenerateContentResponse = client.models.generate_content(
+                model=model_name, contents=contents, config=generation_config
+            )
+
+            logger.info("Content generation response", response=response)
+            logger.info("Content parsed response", parsed_response=response.parsed)
+            # Check if response has text
+            if not response.text:
+                logger.error(
+                    "Response text is empty",
+                    finish_reason=getattr(response, "finish_reason", None),
+                    candidates=getattr(response, "candidates", None),
+                )
+                raise ValueError(
+                    f"Empty response from Gemini API. "
+                    f"Finish reason: {getattr(response, 'finish_reason', 'unknown')}"
+                )
+
+            logger.info(
+                "Content generation response text", response_text=response.text[:500]
+            )
+
+            # Parse JSON response into the Pydantic model instance
+            return response_schema.model_validate_json(response.text)
+
         except Exception as e:
-            logger.error("Structured content generation failed", error=str(e))
+            logger.error("Content generation failed", error=str(e))
             raise
 
     async def stream_chat(

@@ -19,7 +19,6 @@ from src.ai.gemini.schemas import (
     GenerateContentResponse,
     GenerateStructuredContentRequest,
 )
-from src.config import get_app_settings
 from src.utils.logger import logger
 
 T = TypeVar("T", bound=BaseModel)
@@ -157,7 +156,9 @@ class GeminiClient:
                         contents.append(file_obj)
                         logger.info("Added file to content", file_name=file_name)
                     except Exception as e:
-                        logger.warning("Failed to retrieve file", file_name=file_name, error=str(e))
+                        logger.warning(
+                            "Failed to retrieve file", file_name=file_name, error=str(e)
+                        )
                         # Continue without this file rather than failing completely
 
             # Prepare generation config
@@ -209,7 +210,7 @@ class GeminiClient:
                 finish_reason=getattr(response, "finish_reason", None),
             )
 
-        except Exception as e:  
+        except Exception as e:
             logger.error("Content generation failed", error=str(e))
             if isinstance(e, GeminiError):
                 raise
@@ -257,7 +258,9 @@ class GeminiClient:
                 if not response.text:
                     logger.error("Response text is empty!")
                     logger.error("Response usage", usage=response.usage)
-                    logger.error("Response finish_reason", finish_reason=response.finish_reason)
+                    logger.error(
+                        "Response finish_reason", finish_reason=response.finish_reason
+                    )
                     raise GeminiError("Empty response from Gemini API")
 
                 json_data = json.loads(response.text)
@@ -346,7 +349,9 @@ class GeminiClient:
             client = self._get_client()
             logger.info("Creating File Search store", display_name=display_name)
 
-            store = client.file_search_stores.create(config={"display_name": display_name})
+            store = client.file_search_stores.create(
+                config={"display_name": display_name}
+            )
             store_name = store.name
 
             logger.info("File Search store created", store_name=store_name)
@@ -373,7 +378,10 @@ class GeminiClient:
 
             stores = client.file_search_stores.list()
             store_list = [
-                {"name": store.name, "display_name": getattr(store, "display_name", None)}
+                {
+                    "name": store.name,
+                    "display_name": getattr(store, "display_name", None),
+                }
                 for store in stores
             ]
 
@@ -388,7 +396,7 @@ class GeminiClient:
 
     async def upload_to_file_search_store(
         self, file_path: str, store_name: str, display_name: str | None = None
-    ) -> str:
+    ) -> types.UploadToFileSearchStoreOperation:
         """Upload a file directly to a File Search store.
 
         Args:
@@ -397,7 +405,7 @@ class GeminiClient:
             display_name: Optional display name for the file
 
         Returns:
-            str: Operation name for polling completion
+            UploadToFileSearchStoreOperation object for polling completion
 
         Raises:
             GeminiError: If upload fails
@@ -426,7 +434,7 @@ class GeminiClient:
             )
 
             logger.info("File upload operation started", operation_name=operation.name)
-            return operation.name
+            return operation
 
         except Exception as e:
             logger.error("Failed to upload file to File Search store", error=str(e))
@@ -434,25 +442,30 @@ class GeminiClient:
                 raise
             self._handle_api_error(e, "Upload to File Search store")
 
-    async def get_operation(self, operation_name: str):
+    async def get_operation(
+        self, operation: types.UploadToFileSearchStoreOperation
+    ) -> types.UploadToFileSearchStoreOperation:
         """Get the status of an operation.
 
         Args:
-            operation_name: Name of the operation (format: operations/xxxxx)
+            operation: Operation object from upload or previous get_operation call
 
         Returns:
-            Operation object with .done attribute
+            Updated operation object with .done attribute
 
         Raises:
             GeminiError: If getting operation fails
         """
         try:
             client = self._get_client()
-            operation = client.operations.get(operation_name)
-            return operation
+            updated_operation = client.operations.get(operation)
+            return updated_operation
 
         except Exception as e:
-            logger.error("Failed to get operation", operation_name=operation_name, error=str(e))
+            operation_name = getattr(operation, "name", str(operation))
+            logger.error(
+                "Failed to get operation", operation_name=operation_name, error=str(e)
+            )
             if isinstance(e, GeminiError):
                 raise
             self._handle_api_error(e, "Get operation")

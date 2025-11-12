@@ -71,22 +71,22 @@ async def ingest_pricebook():
 
         # Upload file to store
         logger.info("[PRICEBOOK] Uploading file to store", store_name=store_name)
-        operation_name = await client.upload_to_file_search_store(
+        operation = await client.upload_to_file_search_store(
             file_path=str(pricebook_path),
             store_name=store_name,
             display_name="pricebook_items.json",
         )
 
         # Poll operation until complete
-        logger.info("[PRICEBOOK] Polling operation", operation_name=operation_name)
+        logger.info("[PRICEBOOK] Polling operation", operation_name=operation.name)
         start_time = time.time()
         poll_interval = 5  # seconds
 
         while True:
-            operation = await client.get_operation(operation_name)
+            operation = await client.get_operation(operation)
 
             if operation.done:
-                logger.info("[PRICEBOOK] Upload operation completed", operation_name=operation_name)
+                logger.info("[PRICEBOOK] Upload operation completed", operation_name=operation.name)
                 break
 
             elapsed = time.time() - start_time
@@ -102,7 +102,7 @@ async def ingest_pricebook():
             logger.info(
                 "[PRICEBOOK] Operation in progress",
                 elapsed_seconds=round(elapsed),
-                operation_name=operation_name,
+                operation_name=operation.name,
             )
             await asyncio.sleep(poll_interval)
 
