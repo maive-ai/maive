@@ -164,7 +164,7 @@ Note: JSON files are uploaded to Braintrust as `JSONAttachment` objects during p
       "explanation": "The production notes specify that 351 units of gutters are included, but no line item exists in the estimate.",
       "occurrences": [
         {
-          "rilla_conversation_index": 0,
+          "conversation_idx": 0,
           "timestamp": "00:15:30"
         }
       ],

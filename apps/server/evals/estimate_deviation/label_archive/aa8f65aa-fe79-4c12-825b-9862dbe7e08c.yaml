@@ -21,25 +21,25 @@ deviations:
   # - deviation_class: product_or_component_undocumented
   #   explanation: The sales rep stated that they would "put some more baffels in" to improve attic ventilation. This item was not included in the production notes or the estimate.
   #   occurrences:
-  #     - rilla_conversation_index: 0
+  #     - conversation_idx: 0
   #       timestamp: "01:15:37"
-  #     - rilla_conversation_index: 0
+  #     - conversation_idx: 0
   #       timestamp: "01:15:46"
 
   # - deviation_class: discount_applied_not_tracked
   #   explanation: The sales representative offered a 5% monthly promotion discount, valued at $2,801, which is not reflected on the final estimate.
   #   occurrences:
-  #     - rilla_conversation_index: 0
+  #     - conversation_idx: 0
   #       timestamp: "01:49:03"
 
   # - deviation_class: discount_applied_not_tracked
   #   explanation: The sales representative offered an additional 5% same-day savings discount, valued at approximately $2,800, which is not documented on the estimate.
   #   occurrences:
-  #     - rilla_conversation_index: 0
+  #     - conversation_idx: 0
   #       timestamp: "01:49:13"
 
   # - deviation_class: untracked_or_incorrect_customer_preference
   #   explanation: The customer expressed a preference for 'Pewter Gray' shingles, but the corresponding line item on the estimate is marked as 'Color Selection Needed'.
   #   occurrences:
-  #     - rilla_conversation_index: 0
+  #     - conversation_idx: 0
   #       timestamp: "02:02:21"
