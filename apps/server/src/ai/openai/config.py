@@ -34,7 +34,7 @@ class OpenAISettings(BaseSettings):
         description="OpenAI API key",
     )
     model_name: str = Field(
-        default="gpt-5",
+        default="gpt-5-nano",
         description="Default OpenAI model to use (supports gpt-4o, gpt-5, o1, etc.)",
     )
     temperature: float = Field(

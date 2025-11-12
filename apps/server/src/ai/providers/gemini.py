@@ -11,7 +11,6 @@ from src.ai.base import (
     ChatStreamChunk,
     ContentGenerationResult,
     FileMetadata,
-    TranscriptionResult,
 )
 from src.ai.gemini import get_gemini_client
 from src.ai.gemini.schemas import (
@@ -92,69 +91,73 @@ class GeminiProvider(AIProvider):
             logger.error("Failed to delete file", file_id=file_id, error=str(e))
             return False
 
-    async def transcribe_audio(self, audio_path: str, **kwargs) -> TranscriptionResult:
-        """Transcribe audio using Gemini.
-
-        Note: Gemini doesn't have a dedicated transcription API like Whisper.
-        This method processes the audio and extracts text via content generation.
-
-        Args:
-            audio_path: Path to the audio file
-            **kwargs: Additional options (language, prompt, etc.)
-
-        Returns:
-            TranscriptionResult: Transcription result
-        """
-        try:
-            logger.info("Transcribing audio with Gemini", audio_path=audio_path)
-
-            # Upload audio file
-            file_metadata = await self.upload_file(audio_path)
-
-            # Use content generation to transcribe
-            prompt = kwargs.get(
-                "prompt",
-                "Please transcribe the audio. Provide only the transcription text, no additional commentary.",
-            )
-
-            request = GenerateContentRequest(
-                prompt=prompt,
-                files=[file_metadata.id],
-                temperature=kwargs.get("temperature", 0.0),
-            )
-
-            response = await self.client.generate_content(request)
-
-            # Clean up uploaded file
-            await self.delete_file(file_metadata.id)
-
-            return TranscriptionResult(
-                text=response.text,
-                language=kwargs.get("language"),
-            )
-        except Exception as e:
-            logger.error("Transcription failed", error=str(e))
-            raise
-
     async def generate_content(
         self,
         prompt: str,
         file_ids: list[str] | None = None,
-        response_schema: type[T] | None = None,
-        vector_store_ids: list[str] | None = None,
+        file_attachments: list[tuple[str, str, bool]] | None = None,
         **kwargs,
-    ) -> ContentGenerationResult | T:
-        """Generate text or structured content using Gemini.
+    ) -> ContentGenerationResult:
+        """Generate text content using Gemini.
 
         Args:
             prompt: Text prompt
             file_ids: Optional list of file IDs (names) to include
-            response_schema: Optional Pydantic model for structured output
-            vector_store_ids: Optional vector store IDs (not supported by Gemini)
+            file_attachments: Optional list of (file_id, filename, is_image) tuples (not supported)
             **kwargs: Additional options (temperature, max_tokens, model, etc.)
 
         Returns:
-            ContentGenerationResult for text, or instance of response_schema for structured output
+            ContentGenerationResult: Generated content
+
+        Raises:
+            NotImplementedError: If file_attachments is provided
+        """
+        # Check for unsupported features
+        if file_attachments:
+            raise NotImplementedError(
+                "File attachments are not supported for Gemini provider. "
+                "Use file_ids parameter instead."
+            )
+
+        try:
+            logger.info("Generating content with Gemini")
+            request = GenerateContentRequest(
+                prompt=prompt,
+                files=file_ids or [],
+                temperature=kwargs.get("temperature"),
+                model_name=kwargs.get("model"),
+            )
+
+            response = await self.client.generate_content(request)
+
+            return ContentGenerationResult(
+                text=response.text,
+                usage=response.usage,
+                finish_reason=response.finish_reason,
+            )
+        except Exception as e:
+            logger.error("Content generation failed", error=str(e))
+            raise
+
+    async def generate_structured_content(
+        self,
+        prompt: str,
+        response_schema: type[T],
+        file_ids: list[str] | None = None,
+        vector_store_ids: list[str] | None = None,
+        **kwargs,
+    ) -> T:
+        """Generate structured content using a Pydantic model.
+
+        Args:
+            prompt: Text prompt
+            response_schema: Pydantic model for structured output
+            file_ids: Optional list of file IDs
+            vector_store_ids: Optional vector store IDs (not supported by Gemini)
+            **kwargs: Additional options
+
+        Returns:
+            Instance of response_schema with generated data
 
         Raises:
             NotImplementedError: If vector_store_ids is provided
@@ -167,40 +170,22 @@ class GeminiProvider(AIProvider):
             )
 
         try:
-            # Structured output
-            if response_schema:
-                logger.info(
-                    "Generating structured content with Gemini",
-                    schema=response_schema.__name__,
-                )
-                request = GenerateStructuredContentRequest(
-                    prompt=prompt,
-                    response_model=response_schema,
-                    files=file_ids or [],
-                    temperature=kwargs.get("temperature"),
-                    model_name=kwargs.get("model"),
-                )
-                result = await self.client.generate_structured_content(request)
-                return result
+            logger.info(
+                "Generating structured content with Gemini",
+                schema=response_schema.__name__,
+            )
+            request = GenerateStructuredContentRequest(
+                prompt=prompt,
+                response_model=response_schema,
+                files=file_ids or [],
+                temperature=kwargs.get("temperature"),
+                model_name=kwargs.get("model"),
+            )
 
-            # Plain text generation
-            else:
-                logger.info("Generating content with Gemini")
-                request = GenerateContentRequest(
-                    prompt=prompt,
-                    files=file_ids or [],
-                    temperature=kwargs.get("temperature"),
-                    model_name=kwargs.get("model"),
-                )
-                response = await self.client.generate_content(request)
-                return ContentGenerationResult(
-                    text=response.text,
-                    usage=response.usage,
-                    finish_reason=response.finish_reason,
-                )
-
+            result = await self.client.generate_structured_content(request)
+            return result
         except Exception as e:
-            logger.error("Content generation failed", error=str(e))
+            logger.error("Structured content generation failed", error=str(e))
             raise
 
     async def stream_chat(

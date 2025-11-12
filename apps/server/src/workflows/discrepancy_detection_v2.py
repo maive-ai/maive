@@ -1,5 +1,6 @@
 import json
 import os
+import tempfile
 from pathlib import Path
 
 from braintrust import JSONAttachment, init_logger
@@ -10,7 +11,6 @@ from evals.estimate_deviation.schemas import (
     DeviationOccurrence,
     PredictedLineItem,
 )
-from src.ai.base import ContentAnalysisRequest
 from src.ai.providers import get_ai_provider
 from src.utils.logger import logger
 from src.utils.rilla import simplify_rilla_transcript
@@ -111,7 +111,50 @@ class DiscrepancyDetectionV2Workflow:
 
         return DynamicDiscrepancyResult
 
-    async def _analyze_content(
+    def _process_transcript(self, transcript_path: str) -> dict:
+        """Load and simplify transcript if needed.
+
+        Args:
+            transcript_path: Path to the transcript JSON file
+
+        Returns:
+            Processed transcript data (simplified if Rilla format)
+
+        Raises:
+            ValueError: If transcript is empty or invalid
+        """
+        logger.info("[WORKFLOW] Loading transcript", transcript_path=transcript_path)
+        with open(transcript_path, "r") as f:
+            transcript_data = json.load(f)
+
+        if not transcript_data:
+            raise ValueError("Transcript file is empty - no conversation data found.")
+
+        # Simplify if Rilla format detected
+        if isinstance(transcript_data, list) and len(transcript_data) > 0:
+            first_entry = transcript_data[0]
+            if "speaker" in first_entry and "words" in first_entry:
+                logger.info("[WORKFLOW] Simplifying Rilla format transcript")
+                try:
+                    original_size = len(json.dumps(transcript_data))
+                    transcript_data = simplify_rilla_transcript(transcript_data)
+                    simplified_size = len(json.dumps(transcript_data))
+                    savings_pct = 100 - (simplified_size / original_size * 100)
+                    logger.info(
+                        "[WORKFLOW] Transcript simplified",
+                        original_tokens=original_size // 4,
+                        simplified_tokens=simplified_size // 4,
+                        savings_pct=round(savings_pct, 1),
+                    )
+                except Exception as e:
+                    logger.warning(
+                        "[WORKFLOW] Failed to simplify transcript, using original",
+                        error=str(e),
+                    )
+
+        return transcript_data
+
+    async def run(
         self,
         estimate_data: dict,
         form_data: dict | None,
@@ -135,80 +178,66 @@ class DiscrepancyDetectionV2Workflow:
         if not transcript_path:
             raise ValueError("transcript_path is required")
 
-        # Extract estimate items for the prompt
-        estimate_items = estimate_data.get("items", [])
-        formatted_estimate = {
-            "estimate_id": estimate_data.get("id"),
-            "name": estimate_data.get("name"),
-            "subtotal": estimate_data.get("subtotal"),
-            "tax": estimate_data.get("tax"),
-            "items": [
-                {
-                    "description": item.get("description"),
-                    "quantity": item.get("qty"),
-                    "unit_rate": item.get("unitRate"),
-                    "total": item.get("total"),
-                    "sku_name": item.get("sku", {}).get("name", ""),
-                }
-                for item in estimate_items
-            ],
-        }
+        # Process transcript
+        transcript_data = self._process_transcript(transcript_path)
 
-        # Extract notes to production from form
-        notes_to_production = None
-        if form_data:
-            units = form_data.get("units", [])
-            for unit in units:
-                if unit.get("name") == "Notes to Production":
-                    notes_to_production = unit
-                    break
+        # Upload files to AI provider
+        file_ids = []
 
-        if not notes_to_production:
-            notes_to_production = {"message": "No Notes to Production found"}
+        # Upload processed transcript as temporary JSON file
+        logger.info("[WORKFLOW] Uploading transcript file")
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False, encoding="utf-8"
+        ) as transcript_file:
+            json.dump(transcript_data, transcript_file, indent=2)
+            transcript_temp_path = transcript_file.name
 
-        # Load and process transcript
-        logger.info("[WORKFLOW] Loading transcript", transcript_path=transcript_path)
-        with open(transcript_path, "r") as f:
-            transcript_data = json.load(f)
-
-        # Validate transcript is not empty
-        if not transcript_data:
-            raise ValueError("Transcript file is empty - no conversation data found.")
-
-        # Try to simplify transcript if it's in original Rilla format
-        original_size = len(json.dumps(transcript_data))
         try:
-            # Check if it's a list (Rilla format) with expected structure
-            if isinstance(transcript_data, list) and len(transcript_data) > 0:
-                first_entry = transcript_data[0]
-                if "speaker" in first_entry and "words" in first_entry:
-                    logger.info(
-                        "[WORKFLOW] Detected original Rilla format, attempting simplification"
-                    )
-                    simplified = simplify_rilla_transcript(transcript_data)
-                    simplified_size = len(json.dumps(simplified))
-                    savings_pct = 100 - (simplified_size / original_size * 100)
-                    logger.info(
-                        "[WORKFLOW] Simplified transcript",
-                        original_tokens=original_size // 4,
-                        simplified_tokens=simplified_size // 4,
-                        savings_pct=round(savings_pct, 1),
-                    )
-                    transcript_data = simplified
-                else:
-                    logger.info("[WORKFLOW] Transcript already in compact format")
-            else:
-                logger.info("[WORKFLOW] Transcript already in compact format")
-        except Exception as e:
-            logger.warning("[WORKFLOW] Failed to simplify transcript", error=str(e))
-            logger.info("[WORKFLOW] Using original transcript format")
-            # transcript_data remains unchanged
+            transcript_metadata = await self.ai_provider.upload_file(
+                file_path=transcript_temp_path,
+                purpose="user_data",
+            )
+            file_ids.append(transcript_metadata.id)
+        finally:
+            # Clean up temporary file
+            os.unlink(transcript_temp_path)
 
-        # Convert to JSON string for passing to LLM
-        transcript_json = json.dumps(transcript_data, indent=2)
-        logger.info(
-            "[WORKFLOW] Final transcript size", tokens=len(transcript_json) // 4
-        )
+        # Upload estimate as temporary JSON file
+        logger.info("[WORKFLOW] Uploading estimate file")
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False, encoding="utf-8"
+        ) as estimate_file:
+            json.dump(estimate_data, estimate_file, indent=2)
+            estimate_temp_path = estimate_file.name
+
+        try:
+            estimate_metadata = await self.ai_provider.upload_file(
+                file_path=estimate_temp_path,
+                purpose="user_data",
+            )
+            file_ids.append(estimate_metadata.id)
+        finally:
+            # Clean up temporary file
+            os.unlink(estimate_temp_path)
+
+        # Upload form if provided
+        if form_data:
+            logger.info("[WORKFLOW] Uploading form file")
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".json", delete=False, encoding="utf-8"
+            ) as form_file:
+                json.dump(form_data, form_file, indent=2)
+                form_temp_path = form_file.name
+
+            try:
+                form_metadata = await self.ai_provider.upload_file(
+                    file_path=form_temp_path,
+                    purpose="user_data",
+                )
+                file_ids.append(form_metadata.id)
+            finally:
+                # Clean up temporary file
+                os.unlink(form_temp_path)
 
         # Load deviation classes from JSON file (always use classes.json)
         classes_path = (
@@ -260,27 +289,22 @@ class DiscrepancyDetectionV2Workflow:
         # Format the template with all data
         prompt = prompt_template.format(
             deviation_classes=deviation_classes_formatted,
-            estimate_data=json.dumps(formatted_estimate, indent=2),
-            notes_to_production=json.dumps(notes_to_production, indent=2),
         )
 
         # Use AI provider to analyze with structured output
-        logger.info("Initiating AI analysis...")
-
-        request = ContentAnalysisRequest(
-            audio_path=None,  # No audio for now
-            transcript_text=transcript_json,  # Pass compact JSON as text
+        logger.info("[WORKFLOW] Initiating AI analysis")
+        result: (
+            DynamicDiscrepancyResult | None
+        ) = await self.ai_provider.generate_structured_content(
             prompt=prompt,
-            temperature=0.7,
+            response_schema=DynamicDiscrepancyResult,
+            file_ids=file_ids,
             vector_store_ids=[PRICEBOOK_VECTOR_STORE_ID],
         )
-
-        result = await self.ai_provider.analyze_content_with_structured_output(
-            request=request,
-            response_model=DynamicDiscrepancyResult,
-        )
-
-        return result.deviations
+        if result:
+            return result.deviations
+        else:
+            return []
 
     def log_workflow_execution(
         self,

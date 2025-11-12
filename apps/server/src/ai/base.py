@@ -47,7 +47,7 @@ class TranscriptionResult(BaseModel):
 class ContentGenerationResult(BaseModel):
     """Result from content generation."""
 
-    text: str
+    text: str | T
     usage: dict[str, Any] | None = None
     finish_reason: str | None = None
 
@@ -212,38 +212,46 @@ class AIProvider(ABC):
         pass
 
     @abstractmethod
-    async def transcribe_audio(self, audio_path: str, **kwargs) -> TranscriptionResult:
-        """Transcribe audio to text.
-
-        Args:
-            audio_path: Path to the audio file
-            **kwargs: Provider-specific options (language, prompt, etc.)
-
-        Returns:
-            TranscriptionResult: Transcription result with text and metadata
-        """
-        pass
-
-    @abstractmethod
     async def generate_content(
         self,
         prompt: str,
         file_ids: list[str] | None = None,
-        response_schema: type[T] | None = None,
-        vector_store_ids: list[str] | None = None,
+        file_attachments: list[tuple[str, str, bool]] | None = None,
         **kwargs,
-    ) -> ContentGenerationResult | T:
-        """Generate text or structured content.
+    ) -> ContentGenerationResult:
+        """Generate text content.
 
         Args:
             prompt: Text prompt for generation
             file_ids: Optional list of file IDs to include as context
-            response_schema: Optional Pydantic model for structured output
-            vector_store_ids: Optional vector store IDs for file search (RAG)
+            file_attachments: Optional list of (file_id, filename, is_image) tuples
             **kwargs: Provider-specific options (temperature, max_tokens, etc.)
 
         Returns:
-            ContentGenerationResult for text, or instance of response_schema for structured output
+            ContentGenerationResult: Generated content with metadata
+        """
+        pass
+
+    @abstractmethod
+    async def generate_structured_content(
+        self,
+        prompt: str,
+        response_schema: type[T],
+        file_ids: list[str] | None = None,
+        vector_store_ids: list[str] | None = None,
+        **kwargs,
+    ) -> T:
+        """Generate structured content using a Pydantic model.
+
+        Args:
+            prompt: Text prompt for generation
+            response_model: Pydantic model class for structured output
+            file_ids: Optional list of file IDs to include as context
+            vector_store_ids: Optional vector store IDs for file search (RAG)
+            **kwargs: Provider-specific options
+
+        Returns:
+            Instance of response_model with generated data
         """
         pass
 

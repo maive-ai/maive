@@ -64,7 +64,7 @@ async def task(input, hooks):
     else:
         transcript_dict = transcript_data
 
-    # Write transcript to temp file (required by _analyze_content)
+    # Write transcript to temp file (required by run)
     import tempfile
 
     with tempfile.NamedTemporaryFile(
@@ -74,8 +74,8 @@ async def task(input, hooks):
         temp_transcript_path = temp_transcript.name
 
     try:
-        # Call _analyze_content directly
-        deviations = await workflow._analyze_content(
+        # Call run directly
+        deviations = await workflow.run(
             estimate_data=estimate_data,
             form_data=form_data,
             audio_path=None,  # No audio in eval

@@ -37,11 +37,12 @@ The transcript is provided in compact JSON format with this structure:
 
 ## Data to Review
 
-**Notes to Production:**
-{notes_to_production}
+The following files have been uploaded for your review:
+- **Transcript**: Contains the conversation between the sales rep and customer in compact JSON format
+- **Estimate**: Contains the estimate data with line items, quantities, and pricing
+- **Form** (if provided): Contains form submission data including Notes to Production
 
-**Estimate Contents:**
-{estimate_data}
+Please review these uploaded files to identify discrepancies between what was discussed in the conversation and what was documented in the estimate and form.
 
 ## Output Format
 - There can be different instances of the same class of deviation. These should be treated as separate instances rather than the same instance with multiple occurrences. For example, if two different discounts are given and neither are tracked, then each should be its own instance in your response.

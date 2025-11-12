@@ -170,7 +170,7 @@ async def prelabel_entry(
         temp_transcript_path = temp_transcript.name
 
     try:
-        deviations = await workflow._analyze_content(
+        deviations = await workflow.run(
             estimate_data=estimate_data,
             form_data=form_data,
             audio_path=None,

@@ -1,6 +1,5 @@
 """OpenAI provider implementation."""
 
-import json
 from pathlib import Path
 from typing import Any, AsyncGenerator, BinaryIO, TypeVar
 
@@ -63,7 +62,6 @@ from src.ai.openai.config import get_openai_settings
 from src.ai.openai.exceptions import (
     OpenAIAuthenticationError,
     OpenAIContentGenerationError,
-    OpenAIError,
     OpenAIFileUploadError,
 )
 from src.config import get_app_settings
@@ -236,47 +234,6 @@ class OpenAIProvider(AIProvider):
         """
         return any(model.startswith(prefix) for prefix in ["gpt-5", "o1", "o3"])
 
-    def _extract_parsed_model(
-        self, parsed_response: Any, response_schema: type[T]
-    ) -> T:
-        """Extract parsed Pydantic model from Responses API parse response.
-
-        Args:
-            parsed_response: Response from client.responses.parse()
-            response_schema: Expected Pydantic model type
-
-        Returns:
-            Instance of response_schema with parsed data
-
-        Raises:
-            OpenAIError: If no output or unable to extract parsed model
-        """
-        if not parsed_response.output:
-            raise OpenAIError("No output in parsed response")
-
-        for output_item in parsed_response.output:
-            if output_item.type == "message":
-                # Try to get directly parsed model
-                if hasattr(output_item, "parsed") and output_item.parsed:
-                    logger.debug("[OPENAI] Successfully parsed structured output")
-                    return output_item.parsed
-
-                # Fallback: extract text and parse JSON
-                if hasattr(output_item, "content") and output_item.content:
-                    for content_part in output_item.content:
-                        if (
-                            hasattr(content_part, "type")
-                            and content_part.type == "output_text"
-                        ):
-                            logger.debug(
-                                "[OPENAI] Fallback to JSON parsing",
-                                content_preview=content_part.text[:200],
-                            )
-                            data = json.loads(content_part.text)
-                            return response_schema(**data)
-
-        raise OpenAIError("Could not extract parsed data from response")
-
     def _build_model_params(
         self,
         model: str | None = None,
@@ -345,31 +302,21 @@ class OpenAIProvider(AIProvider):
         prompt: str,
         file_ids: list[str] | None = None,
         file_attachments: list[tuple[str, str, bool]] | None = None,
-        response_schema: type[T] | None = None,
-        vector_store_ids: list[str] | None = None,
         **kwargs,
-    ) -> ContentGenerationResult | T:
-        """Generate text or structured content.
+    ) -> ContentGenerationResult:
+        """Generate text content.
 
         Args:
             prompt: Text prompt
             file_ids: Optional file IDs (unused, kept for base class compatibility)
             file_attachments: Optional list of (file_id, filename, is_image) tuples
-            response_schema: Optional Pydantic model for structured output
-            vector_store_ids: Optional vector store IDs for file search (RAG)
-            **kwargs: Additional options:
-                - model: Model name (default from settings)
-                - temperature: Temperature for standard models
-                - max_tokens: Max tokens for standard models
-                - max_output_tokens: Max output tokens (reasoning models) or overrides max_tokens
-                - reasoning_effort: Reasoning effort for reasoning models ("minimal", "low", "medium", "high")
+            **kwargs: Additional options (temperature, max_tokens, model, reasoning_effort, etc.)
 
         Returns:
-            ContentGenerationResult for text generation, or instance of response_schema for structured output
+            ContentGenerationResult: Generated content
         """
         try:
             client = self._get_client()
-
             # Build input for Responses API
             if file_attachments:
                 # Build content as array with file references and text (Responses API format)
@@ -394,9 +341,72 @@ class OpenAIProvider(AIProvider):
                 )
             else:
                 # No files, just text
-                input_items = [{"type": "message", "role": "user", "content": prompt}]
+                input_items = [{"role": "user", "content": prompt}]
 
             # Build params for Responses API (includes model + model-specific params)
+            response_params = self._build_model_params(
+                model=kwargs.get("model"),
+                temperature=kwargs.get("temperature"),
+                max_tokens=kwargs.get("max_tokens"),
+                max_output_tokens=kwargs.get("max_output_tokens"),
+                reasoning_effort=kwargs.get("reasoning_effort"),
+            )
+            response_params["input"] = input_items
+
+            logger.info("[OpenAI] Generating content", model=response_params["model"])
+
+            # Use Responses API (not streaming)
+            response: Response = await client.responses.create(**response_params)
+
+            # Extract text and usage from response
+            result = ContentGenerationResult(
+                text=response.output_text or "",
+                usage=response.usage.model_dump() if response.usage else None,
+                finish_reason=response.status,
+            )
+
+            logger.info(
+                "[OPENAI] Content generation complete",
+                finish_reason=result.finish_reason,
+            )
+            return result
+
+        except Exception as e:
+            logger.error("[OPENAI] Content generation failed", error=str(e))
+            raise OpenAIContentGenerationError(f"Failed to generate content: {e}", e)
+
+    async def generate_structured_content(
+        self,
+        prompt: str,
+        response_schema: type[T],
+        file_ids: list[str] | None = None,
+        vector_store_ids: list[str] | None = None,
+        **kwargs,
+    ) -> T | None:
+        """Generate structured content using a Pydantic model.
+
+        Uses OpenAI's Responses API with parse() method for better support of
+        reasoning models and cleaner structured output handling.
+
+        Args:
+            prompt: Text prompt
+            response_model: Pydantic model for structured output
+            file_ids: Optional file IDs (not currently supported)
+            vector_store_ids: Optional vector store IDs for file search (RAG)
+            **kwargs: Additional options:
+                - model: Model name (default from settings)
+                - temperature: Temperature for standard models
+                - max_tokens: Max tokens for standard models
+                - max_output_tokens: Max output tokens (reasoning models) or overrides max_tokens
+                - reasoning_effort: Reasoning effort for reasoning models ("minimal", "low", "medium", "high")
+
+        Returns:
+            Instance of response_model with generated data
+        """
+        try:
+            client = self._get_client()
+
+            # Build model params (handles reasoning vs standard models)
             model_params = self._build_model_params(
                 model=kwargs.get("model"),
                 temperature=kwargs.get("temperature"),
@@ -404,6 +414,15 @@ class OpenAIProvider(AIProvider):
                 max_output_tokens=kwargs.get("max_output_tokens"),
                 reasoning_effort=kwargs.get("reasoning_effort"),
             )
+
+            logger.info(
+                "[OPENAI] Generating structured content",
+                model=model_params["model"],
+                schema=response_schema.__name__,
+            )
+
+            # Build input items in Responses API format
+            input_items = [{"type": "message", "role": "user", "content": prompt}]
 
             # Build tools list
             tools: list[Any] = []
@@ -420,54 +439,25 @@ class OpenAIProvider(AIProvider):
                     )
                 )
 
-            # Structured output vs plain text
-            if response_schema:
-                logger.info(
-                    "[OPENAI] Generating structured content",
-                    model=model_params["model"],
-                    schema=response_schema.__name__,
-                )
+            # Use Responses API parse() method which directly accepts Pydantic models
+            parse_params: dict[str, Any] = {
+                **model_params,
+                "input": input_items,
+                "text_format": response_schema,  # Pydantic model directly
+            }
 
-                # Use Responses API parse() for structured output
-                parse_params: dict[str, Any] = {
-                    **model_params,
-                    "input": input_items,
-                    "text_format": response_schema,  # Pydantic model directly
-                }
+            if tools:
+                parse_params["tools"] = tools
 
-                if tools:
-                    parse_params["tools"] = tools
+            parsed_response = await client.responses.parse(**parse_params)
 
-                parsed_response = await client.responses.parse(**parse_params)
-                return self._extract_parsed_model(parsed_response, response_schema)
-
-            else:
-                logger.info("[OPENAI] Generating content", model=model_params["model"])
-
-                # Plain text generation
-                response_params = {**model_params, "input": input_items}
-
-                if tools:
-                    response_params["tools"] = tools
-
-                response: Response = await client.responses.create(**response_params)
-
-                # Extract text and usage from response
-                result = ContentGenerationResult(
-                    text=response.output_text or "",
-                    usage=response.usage.model_dump() if response.usage else None,
-                    finish_reason=response.status,
-                )
-
-                logger.info(
-                    "[OPENAI] Content generation complete",
-                    finish_reason=result.finish_reason,
-                )
-                return result
+            return parsed_response.output_parsed
 
         except Exception as e:
-            logger.error("[OPENAI] Content generation failed", error=str(e))
-            raise OpenAIContentGenerationError(f"Failed to generate content: {e}", e)
+            logger.error("[OPENAI] Structured content generation failed", error=str(e))
+            raise OpenAIContentGenerationError(
+                f"Failed to generate structured content: {e}", e
+            )
 
     async def _parse_annotation_to_citation(
         self,
