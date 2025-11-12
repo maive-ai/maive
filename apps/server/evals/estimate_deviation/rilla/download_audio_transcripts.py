@@ -73,7 +73,7 @@ def upload_to_s3(local_file_path, s3_bucket, s3_key):
 
 
 def process_transcript_json(downloaded_file_path, output_json_path):
-    """Process downloaded transcript file, simplify it, and save as properly formatted JSON."""
+    """Process downloaded transcript file, and save as properly formatted JSON."""
     try:
         # Try to read as JSON first (in case it's already JSON)
         with open(downloaded_file_path, "r", encoding="utf-8") as f:
