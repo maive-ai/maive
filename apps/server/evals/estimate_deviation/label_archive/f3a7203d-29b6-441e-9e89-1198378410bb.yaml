@@ -3,16 +3,16 @@ deviations:
   - deviation_class: product_or_component_not_in_estimate
     explanation: The production notes specify that 351 units of gutters are included in the scope of work, but there is no corresponding line item in the estimate.
     predicted_line_item:
-      matched_pricebook_item_display_name: Install 5\" Gutter Runs & Downspouts - Gray
+      matched_pricebook_item_display_name: 'Install 5" Gutter Runs & Downspouts - Gray'
       matched_pricebook_item_id: 268346846
       quantity: 351.0
       total_cost: 5865.17
       unit_cost: 16.67
 
   - deviation_class: product_or_component_not_in_estimate
-    explanation: The production notes indicate that gutter guards are included in the project ('Gutter Guards: Yes'), but they are not listed as a line item on the estimate.
+    explanation: "The production notes indicate that gutter guards are included in the project ('Gutter Guards: Yes'), but they are not listed as a line item on the estimate."
     predicted_line_item:
-      matched_pricebook_item_display_name: IN 5\" Titan Gutters Guards-BOH
+      matched_pricebook_item_display_name: 'IN 5" Titan Gutters Guards-BOH'
       matched_pricebook_item_id: 268346605
       quantity: 351.0
       total_cost: 7020.00

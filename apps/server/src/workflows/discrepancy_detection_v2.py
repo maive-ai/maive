@@ -350,13 +350,16 @@ class DiscrepancyDetectionV2Workflow:
 
         try:
             # Use JSONAttachment for large inputs
+            # Use "transcripts" as array to match eval script expectations
             input_data = {
                 "estimate": JSONAttachment(
                     data=estimate_data, filename="estimate.json"
                 ),
-                "transcript": JSONAttachment(
-                    data=transcript_data, filename="transcript.json"
-                ),
+                "transcripts": [
+                    JSONAttachment(
+                        data=transcript_data, filename="transcript.json"
+                    )
+                ],
             }
 
             if form_data:

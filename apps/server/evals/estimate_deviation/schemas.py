@@ -12,22 +12,10 @@ class PredictedLineItem(BaseModel):
     quantity: float | None = Field(
         default=None, description="Predicted quantity for the line item"
     )
-    unit: str | None = Field(
-        default=None, description="Unit of measurement (e.g., 'LF', 'EA', 'SQ', '%')"
-    )
-    notes: str | None = Field(
-        default=None,
-        description="Additional notes or context for the line item prediction",
-    )
-
     # Pricebook matching fields
     matched_pricebook_item_id: int | None = Field(
         default=None,
-        description="ID of the matched pricebook item from the vector store (if found)",
-    )
-    matched_pricebook_item_code: str | None = Field(
-        default=None,
-        description="Item code of the matched pricebook item (e.g., 'MAT-001')",
+        description="ID of the pricebook item from the vector store (if found)",
     )
     matched_pricebook_item_display_name: str | None = Field(
         default=None,
@@ -39,7 +27,7 @@ class PredictedLineItem(BaseModel):
     )
     total_cost: float | None = Field(
         default=None,
-        description="Total cost calculated as unit_cost × quantity",
+        description="Total cost calculated as unit_cost × quantity, or amount saved if a line item is a discount",
     )
 
 

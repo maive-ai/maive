@@ -25,7 +25,7 @@ async def task(input, hooks):
     """Run workflow on a single dataset entry.
 
     Args:
-        input: Dict with JSONAttachment objects (estimate, form, rilla_transcripts)
+        input: Dict with JSONAttachment objects (estimate, form, transcripts)
         hooks: Braintrust hooks
 
     Returns:
@@ -49,8 +49,16 @@ async def task(input, hooks):
     form_data = extract_json(input.get("form"))
 
     # Get first transcript (we only use one)
-    rilla_transcripts = input.get("rilla_transcripts", [])
-    transcript_data = extract_json(rilla_transcripts[0]) if rilla_transcripts else None
+    transcript = input.get("transcript")
+    if transcript:
+        transcript_data = extract_json(transcript)
+    else:
+        transcripts = input.get("transcripts", [])
+        if isinstance(transcripts, list) and transcripts:
+            for transcript in transcripts:
+                transcript_data += extract_json(transcript)
+                if transcript_data:
+                    break
 
     if not estimate_data or not transcript_data:
         raise ValueError("Missing required data: estimate and transcript are required")
