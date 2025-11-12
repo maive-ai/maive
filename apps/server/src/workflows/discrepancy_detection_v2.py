@@ -1,6 +1,5 @@
 import json
 import os
-import tempfile
 from pathlib import Path
 
 import braintrust
@@ -15,6 +14,8 @@ from evals.estimate_deviation.schemas import (
 from src.ai.providers import get_ai_provider
 from src.utils.logger import logger
 from src.utils.rilla import simplify_rilla_transcript
+
+# Import the prompt from the config module so braintrust isn't in the request path
 from src.workflows.config import (
     DISCREPANCY_DETECTION_PROMPT,
     get_discrepancy_detection_settings,
@@ -190,63 +191,11 @@ class DiscrepancyDetectionV2Workflow:
         # Process transcript
         transcript_data = self._process_transcript(transcript_path)
 
-        # Upload files to AI provider
+        # TEMPORARY TEST: Skip file uploads, embed JSON in prompt instead
         file_ids = []
-
-        # Upload processed transcript as temporary JSON file
-        logger.info("[WORKFLOW] Uploading transcript file")
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False, encoding="utf-8"
-        ) as transcript_file:
-            json.dump(transcript_data, transcript_file, indent=2)
-            transcript_temp_path = transcript_file.name
-
-        try:
-            transcript_metadata = await self.ai_provider.upload_file(
-                file_path=transcript_temp_path,
-                purpose="user_data",
-            )
-            file_ids.append(transcript_metadata.id)
-        finally:
-            # Clean up temporary file
-            os.unlink(transcript_temp_path)
-
-        # Upload estimate as temporary JSON file
-        logger.info("[WORKFLOW] Uploading estimate file")
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False, encoding="utf-8"
-        ) as estimate_file:
-            json.dump(estimate_data, estimate_file, indent=2)
-            estimate_temp_path = estimate_file.name
-
-        try:
-            estimate_metadata = await self.ai_provider.upload_file(
-                file_path=estimate_temp_path,
-                purpose="user_data",
-            )
-            file_ids.append(estimate_metadata.id)
-        finally:
-            # Clean up temporary file
-            os.unlink(estimate_temp_path)
-
-        # Upload form if provided
-        if form_data:
-            logger.info("[WORKFLOW] Uploading form file")
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".json", delete=False, encoding="utf-8"
-            ) as form_file:
-                json.dump(form_data, form_file, indent=2)
-                form_temp_path = form_file.name
-
-            try:
-                form_metadata = await self.ai_provider.upload_file(
-                    file_path=form_temp_path,
-                    purpose="user_data",
-                )
-                file_ids.append(form_metadata.id)
-            finally:
-                # Clean up temporary file
-                os.unlink(form_temp_path)
+        logger.info(
+            "[WORKFLOW] Skipping file uploads - embedding JSON directly in prompt"
+        )
 
         # Load deviation classes from JSON file (always use classes.json)
         classes_path = (
@@ -290,10 +239,44 @@ class DiscrepancyDetectionV2Workflow:
             filtered_class_labels
         )
 
+        # Extract notes to production from form
+        notes_to_production = None
+        if form_data:
+            units = form_data.get("units", [])
+            for unit in units:
+                if unit.get("name") == "Notes to Production":
+                    notes_to_production = unit
+                    break
+
+        if not notes_to_production:
+            notes_to_production = {"message": "No Notes to Production found"}
+
+        # Format estimate for prompt
+        estimate_items = estimate_data.get("items", [])
+        formatted_estimate = {
+            "estimate_id": estimate_data.get("id"),
+            "name": estimate_data.get("name"),
+            "subtotal": estimate_data.get("subtotal"),
+            "tax": estimate_data.get("tax"),
+            "items": [
+                {
+                    "description": item.get("description"),
+                    "quantity": item.get("qty"),
+                    "unit_rate": item.get("unitRate"),
+                    "total": item.get("total"),
+                    "sku_name": item.get("sku", {}).get("name", ""),
+                }
+                for item in estimate_items
+            ],
+        }
+
         # Use the module-level prompt (loaded once at import time)
-        # Build prompt with deviation classes variable
+        # Build prompt with all variables
         prompt_params = DISCREPANCY_DETECTION_PROMPT.build(
-            deviation_classes=deviation_classes_formatted
+            deviation_classes=deviation_classes_formatted,
+            notes_to_production=json.dumps(notes_to_production, indent=2),
+            estimate_data=json.dumps(formatted_estimate, indent=2),
+            transcript_data=json.dumps(transcript_data, indent=2),
         )
 
         # Extract the user message content from the built prompt
@@ -307,6 +290,13 @@ class DiscrepancyDetectionV2Workflow:
         if not user_message:
             raise ValueError("No user message found in Braintrust prompt")
 
+        # Log the prompt for debugging
+        logger.info(
+            "[WORKFLOW] Built prompt from Braintrust",
+            prompt_preview=user_message,
+            prompt_length=len(user_message),
+        )
+
         # Use AI provider to analyze with structured output
         logger.info("[WORKFLOW] Initiating AI analysis")
         result = await self.ai_provider.generate_structured_content(
@@ -316,6 +306,7 @@ class DiscrepancyDetectionV2Workflow:
             vector_store_ids=[PRICEBOOK_VECTOR_STORE_ID],
         )
 
+        logger.info("[WORKFLOW] Generated deviations", deviations=result.deviations)
         return result.deviations
 
     def log_workflow_execution(
