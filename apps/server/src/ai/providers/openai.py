@@ -1,6 +1,5 @@
 """OpenAI provider implementation."""
 
-import base64
 import json
 from pathlib import Path
 from typing import Any, AsyncGenerator, BinaryIO, TypeVar
@@ -8,7 +7,6 @@ from typing import Any, AsyncGenerator, BinaryIO, TypeVar
 import httpx
 from braintrust import wrap_openai
 from openai import AsyncOpenAI
-from openai.types.chat import ChatCompletion
 from openai.types.responses import (
     EasyInputMessageParam,
     FileSearchToolParam,
@@ -51,10 +49,8 @@ from pydantic import BaseModel
 
 from src.ai.base import (
     AIProvider,
-    AudioAnalysisRequest,
     ChatMessage,
     ChatStreamChunk,
-    ContentAnalysisRequest,
     ContentGenerationResult,
     FileMetadata,
     ReasoningSummary,
@@ -62,7 +58,6 @@ from src.ai.base import (
     ToolCall,
     ToolName,
     ToolStatus,
-    TranscriptionResult,
 )
 from src.ai.openai.config import get_openai_settings
 from src.ai.openai.exceptions import (
@@ -241,6 +236,47 @@ class OpenAIProvider(AIProvider):
         """
         return any(model.startswith(prefix) for prefix in ["gpt-5", "o1", "o3"])
 
+    def _extract_parsed_model(
+        self, parsed_response: Any, response_schema: type[T]
+    ) -> T:
+        """Extract parsed Pydantic model from Responses API parse response.
+
+        Args:
+            parsed_response: Response from client.responses.parse()
+            response_schema: Expected Pydantic model type
+
+        Returns:
+            Instance of response_schema with parsed data
+
+        Raises:
+            OpenAIError: If no output or unable to extract parsed model
+        """
+        if not parsed_response.output:
+            raise OpenAIError("No output in parsed response")
+
+        for output_item in parsed_response.output:
+            if output_item.type == "message":
+                # Try to get directly parsed model
+                if hasattr(output_item, "parsed") and output_item.parsed:
+                    logger.debug("[OPENAI] Successfully parsed structured output")
+                    return output_item.parsed
+
+                # Fallback: extract text and parse JSON
+                if hasattr(output_item, "content") and output_item.content:
+                    for content_part in output_item.content:
+                        if (
+                            hasattr(content_part, "type")
+                            and content_part.type == "output_text"
+                        ):
+                            logger.debug(
+                                "[OPENAI] Fallback to JSON parsing",
+                                content_preview=content_part.text[:200],
+                            )
+                            data = json.loads(content_part.text)
+                            return response_schema(**data)
+
+        raise OpenAIError("Could not extract parsed data from response")
+
     def _build_model_params(
         self,
         model: str | None = None,
@@ -304,86 +340,36 @@ class OpenAIProvider(AIProvider):
             )
             return False
 
-    async def transcribe_audio(self, audio_path: str, **kwargs) -> TranscriptionResult:
-        """Transcribe audio using Whisper.
-
-        Args:
-            audio_path: Path to the audio file
-            **kwargs: Additional options (model, language, prompt, etc.)
-
-        Returns:
-            TranscriptionResult: Transcription result
-        """
-        try:
-            client = self._get_client()
-            path = Path(audio_path)
-
-            if not path.exists():
-                raise OpenAIContentGenerationError(
-                    f"Audio file not found: {audio_path}"
-                )
-
-            logger.info("[OPENAI] Transcribing audio", audio_path=str(path))
-
-            model = kwargs.get("model", "whisper-1")
-            language = kwargs.get("language")
-            prompt = kwargs.get("prompt")
-            response_format = kwargs.get("response_format", "verbose_json")
-            temperature = kwargs.get("temperature", 0.0)
-
-            with open(path, "rb") as audio_file:
-                transcript = await client.audio.transcriptions.create(
-                    model=model,
-                    file=audio_file,
-                    language=language,
-                    prompt=prompt,
-                    response_format=response_format,
-                    temperature=temperature,
-                )
-
-            # Handle different response formats
-            if response_format == "verbose_json":
-                result = TranscriptionResult(
-                    text=transcript.text,
-                    language=getattr(transcript, "language", None),
-                    duration=getattr(transcript, "duration", None),
-                    segments=getattr(transcript, "segments", None),
-                )
-            elif response_format == "json":
-                result = TranscriptionResult(text=transcript.text)
-            else:
-                # For text, srt, vtt formats
-                result = TranscriptionResult(text=str(transcript))
-
-            logger.info("[OPENAI] Transcription complete", char_count=len(result.text))
-            return result
-
-        except OpenAIContentGenerationError:
-            raise
-        except Exception as e:
-            logger.error("[OPENAI] Transcription failed", error=str(e))
-            raise OpenAIContentGenerationError(f"Failed to transcribe audio: {e}", e)
-
     async def generate_content(
         self,
         prompt: str,
         file_ids: list[str] | None = None,
         file_attachments: list[tuple[str, str, bool]] | None = None,
+        response_schema: type[T] | None = None,
+        vector_store_ids: list[str] | None = None,
         **kwargs,
-    ) -> ContentGenerationResult:
-        """Generate text content.
+    ) -> ContentGenerationResult | T:
+        """Generate text or structured content.
 
         Args:
             prompt: Text prompt
             file_ids: Optional file IDs (unused, kept for base class compatibility)
             file_attachments: Optional list of (file_id, filename, is_image) tuples
-            **kwargs: Additional options (temperature, max_tokens, model, reasoning_effort, etc.)
+            response_schema: Optional Pydantic model for structured output
+            vector_store_ids: Optional vector store IDs for file search (RAG)
+            **kwargs: Additional options:
+                - model: Model name (default from settings)
+                - temperature: Temperature for standard models
+                - max_tokens: Max tokens for standard models
+                - max_output_tokens: Max output tokens (reasoning models) or overrides max_tokens
+                - reasoning_effort: Reasoning effort for reasoning models ("minimal", "low", "medium", "high")
 
         Returns:
-            ContentGenerationResult: Generated content
+            ContentGenerationResult for text generation, or instance of response_schema for structured output
         """
         try:
             client = self._get_client()
+
             # Build input for Responses API
             if file_attachments:
                 # Build content as array with file references and text (Responses API format)
@@ -408,340 +394,80 @@ class OpenAIProvider(AIProvider):
                 )
             else:
                 # No files, just text
-                input_items = [{"role": "user", "content": prompt}]
+                input_items = [{"type": "message", "role": "user", "content": prompt}]
 
             # Build params for Responses API (includes model + model-specific params)
-            response_params = self._build_model_params(
+            model_params = self._build_model_params(
                 model=kwargs.get("model"),
                 temperature=kwargs.get("temperature"),
                 max_tokens=kwargs.get("max_tokens"),
                 max_output_tokens=kwargs.get("max_output_tokens"),
                 reasoning_effort=kwargs.get("reasoning_effort"),
             )
-            response_params["input"] = input_items
-
-            logger.info("[OpenAI] Generating content", model=response_params["model"])
-
-            # Use Responses API (not streaming)
-            response: Response = await client.responses.create(**response_params)
-
-            # Extract text and usage from response
-            result = ContentGenerationResult(
-                text=response.output_text or "",
-                usage=response.usage.model_dump() if response.usage else None,
-                finish_reason=response.status,
-            )
-
-            logger.info(
-                "[OPENAI] Content generation complete",
-                finish_reason=result.finish_reason,
-            )
-            return result
-
-        except Exception as e:
-            logger.error("[OPENAI] Content generation failed", error=str(e))
-            raise OpenAIContentGenerationError(f"Failed to generate content: {e}", e)
-
-    async def generate_structured_content(
-        self,
-        prompt: str,
-        response_model: type[T],
-        file_ids: list[str] | None = None,
-        **kwargs,
-    ) -> T:
-        """Generate structured content using a Pydantic model.
-
-        Args:
-            prompt: Text prompt
-            response_model: Pydantic model for structured output
-            file_ids: Optional file IDs
-            **kwargs: Additional options
-
-        Returns:
-            Instance of response_model with generated data
-        """
-        try:
-            client = self._get_client()
-
-            model = kwargs.get("model", self.settings.model_name)
-            temperature = kwargs.get("temperature", self.settings.temperature)
-            max_tokens = kwargs.get("max_tokens", self.settings.max_tokens)
-
-            logger.info("[OPENAI] Generating structured content", model=model)
-
-            # Convert Pydantic model to JSON schema
-            schema = response_model.model_json_schema()
-
-            messages = [{"role": "user", "content": prompt}]
-
-            completion = await client.chat.completions.create(
-                model=model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": response_model.__name__,
-                        "schema": schema,
-                        "strict": True,
-                    },
-                },
-            )
-
-            message = completion.choices[0].message
-            content = message.content or "{}"
-
-            logger.debug("[OPENAI] Structured response", response_preview=content[:500])
-
-            # Parse and validate
-            data = json.loads(content)
-            return response_model(**data)
-
-        except Exception as e:
-            logger.error("[OPENAI] Structured content generation failed", error=str(e))
-            raise OpenAIContentGenerationError(
-                f"Failed to generate structured content: {e}", e
-            )
-
-    async def analyze_audio_with_context(
-        self,
-        request: AudioAnalysisRequest,
-    ) -> ContentGenerationResult:
-        """Analyze audio directly with contextual information.
-
-        Uses OpenAI's audio-capable models to process audio directly.
-
-        Args:
-            request: Audio analysis request
-
-        Returns:
-            ContentGenerationResult: Analysis result
-        """
-        try:
-            client = self._get_client()
-            path = Path(request.audio_path)
-
-            if not path.exists():
-                raise OpenAIError(f"Audio file not found: {request.audio_path}")
-
-            logger.info("[OPENAI] Analyzing audio with context", audio_path=str(path))
-
-            # Read and encode audio as base64
-            with open(path, "rb") as audio_file:
-                audio_data = base64.b64encode(audio_file.read()).decode("utf-8")
-
-            # Determine audio format from extension
-            audio_format = path.suffix.lstrip(".")  # e.g., 'mp3', 'wav'
-
-            # Build message with audio input
-            messages = [
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "input_audio",
-                            "input_audio": {
-                                "data": audio_data,
-                                "format": audio_format,
-                            },
-                        },
-                        {"type": "text", "text": request.prompt},
-                    ],
-                }
-            ]
-
-            # If context data is provided, include it in the prompt
-            if request.context_data:
-                context_text = (
-                    f"\n\nContext Data:\n{json.dumps(request.context_data, indent=2)}"
-                )
-                messages[0]["content"].append({"type": "text", "text": context_text})
-
-            model = self.settings.audio_model_name
-            temperature = request.temperature or self.settings.temperature
-
-            logger.info("[OPENAI] Using audio model", model=model)
-
-            completion: ChatCompletion = await client.chat.completions.create(
-                model=model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=self.settings.max_tokens,
-            )
-
-            message = completion.choices[0].message
-
-            result = ContentGenerationResult(
-                text=message.content or "",
-                usage=completion.usage.model_dump() if completion.usage else None,
-                finish_reason=completion.choices[0].finish_reason,
-            )
-
-            logger.info(
-                "[OPENAI] Audio analysis complete", finish_reason=result.finish_reason
-            )
-            return result
-
-        except Exception as e:
-            logger.error("[OPENAI] Audio analysis failed", error=str(e))
-            raise OpenAIContentGenerationError(f"Failed to analyze audio: {e}", e)
-
-    async def analyze_content_with_structured_output(
-        self,
-        request: ContentAnalysisRequest,
-        response_model: type[T],
-    ) -> T:
-        """Analyze content (audio, transcript, or both) and return structured output.
-
-        Args:
-            request: Content analysis request
-            response_model: Pydantic model for structured output
-
-        Returns:
-            Instance of response_model with analysis results
-        """
-        try:
-            client = self._get_client()
-
-            logger.info("[OPENAI] Analyzing content with structured output")
-
-            # Build input items for Responses API
-            input_items: list[dict[str, Any]] = []
-
-            # If audio is provided, add it as input
-            if request.audio_path:
-                path = Path(request.audio_path)
-                if not path.exists():
-                    raise OpenAIError(f"Audio file not found: {request.audio_path}")
-
-                logger.info("[OPENAI] Including audio file", audio_path=str(path))
-
-                # Read and encode audio as base64
-                with open(path, "rb") as audio_file:
-                    audio_data = base64.b64encode(audio_file.read()).decode("utf-8")
-
-                audio_format = path.suffix.lstrip(".")
-
-                input_items.append(
-                    {
-                        "type": "input_audio",
-                        "audio": audio_data,
-                        "format": audio_format,
-                    }
-                )
-
-            # Build the prompt text
-            prompt_text = request.prompt
-
-            # Add transcript if provided
-            if request.transcript_text:
-                prompt_text = f"{request.prompt}\n\n**Conversation Transcript:**\n{request.transcript_text}"
-
-            # Add context data if provided
-            if request.context_data:
-                context_text = (
-                    f"\n\nContext Data:\n{json.dumps(request.context_data, indent=2)}"
-                )
-                prompt_text += context_text
-
-            # Add message item
-            input_items.append(
-                {"type": "message", "role": "user", "content": prompt_text}
-            )
-
-            # Choose appropriate model
-            model = (
-                self.settings.audio_model_name
-                if request.audio_path
-                else self.settings.model_name
-            )
-
-            # Build model params using existing helper
-            model_params = self._build_model_params(
-                model=model,
-                temperature=request.temperature,
-                max_tokens=self.settings.max_tokens,
-            )
-
-            logger.info(
-                "[OPENAI] Using Responses API parse() with Pydantic model", model=model
-            )
 
             # Build tools list
             tools: list[Any] = []
 
             # Add file search if vector store IDs provided
-            if request.vector_store_ids:
+            if vector_store_ids:
                 logger.info(
                     "[OPENAI] Adding FileSearchTool",
-                    vector_store_count=len(request.vector_store_ids),
+                    vector_store_count=len(vector_store_ids),
                 )
                 tools.append(
                     FileSearchToolParam(
-                        type="file_search", vector_store_ids=request.vector_store_ids
+                        type="file_search", vector_store_ids=vector_store_ids
                     )
                 )
 
-            # Use Responses API parse() method which directly accepts Pydantic models
-            # This is cleaner than manually constructing JSON schema
-            parse_params: dict[str, Any] = {
-                **model_params,
-                "input": input_items,
-                "text_format": response_model,
-            }
+            # Structured output vs plain text
+            if response_schema:
+                logger.info(
+                    "[OPENAI] Generating structured content",
+                    model=model_params["model"],
+                    schema=response_schema.__name__,
+                )
 
-            if tools:
-                parse_params["tools"] = tools
+                # Use Responses API parse() for structured output
+                parse_params: dict[str, Any] = {
+                    **model_params,
+                    "input": input_items,
+                    "text_format": response_schema,  # Pydantic model directly
+                }
 
-            logger.info("Issuing request to Responses API:")
-            parsed_response = await client.responses.parse(**parse_params)
+                if tools:
+                    parse_params["tools"] = tools
 
-            # The parse() method returns a ParsedResponse with the parsed data
-            # Extract the parsed Pydantic model from the response
-            if not parsed_response.output:
-                raise OpenAIError("No output in parsed response")
+                parsed_response = await client.responses.parse(**parse_params)
+                return self._extract_parsed_model(parsed_response, response_schema)
 
-            logger.debug(
-                "[OPENAI] Parsed response status", status=parsed_response.status
-            )
-            logger.debug(
-                "[OPENAI] Parsed response has output items",
-                output_count=len(parsed_response.output),
-            )
+            else:
+                logger.info("[OPENAI] Generating content", model=model_params["model"])
 
-            # Find the message output item with parsed content
-            for output_item in parsed_response.output:
-                logger.debug("[OPENAI] Output item type", type=output_item.type)
+                # Plain text generation
+                response_params = {**model_params, "input": input_items}
 
-                if output_item.type == "message":
-                    # The content should be the parsed Pydantic model
-                    if hasattr(output_item, "parsed") and output_item.parsed:
-                        logger.debug("[OPENAI] Successfully parsed structured output")
-                        return output_item.parsed
-                    # Fallback: content is a list of content parts, extract text
-                    elif hasattr(output_item, "content") and output_item.content:
-                        # Content is a list of content parts (output_text, etc.)
-                        text_content = ""
-                        for content_part in output_item.content:
-                            if (
-                                hasattr(content_part, "type")
-                                and content_part.type == "output_text"
-                            ):
-                                text_content = content_part.text
-                                break
+                if tools:
+                    response_params["tools"] = tools
 
-                        if text_content:
-                            data = json.loads(text_content)
-                            return response_model(**data)
+                response: Response = await client.responses.create(**response_params)
 
-            raise OpenAIError("Could not extract parsed data from response")
+                # Extract text and usage from response
+                result = ContentGenerationResult(
+                    text=response.output_text or "",
+                    usage=response.usage.model_dump() if response.usage else None,
+                    finish_reason=response.status,
+                )
+
+                logger.info(
+                    "[OPENAI] Content generation complete",
+                    finish_reason=result.finish_reason,
+                )
+                return result
 
         except Exception as e:
-            logger.error("[OPENAI] Structured content analysis failed", error=str(e))
-            raise OpenAIContentGenerationError(
-                f"Failed to analyze content with structured output: {e}", e
-            )
+            logger.error("[OPENAI] Content generation failed", error=str(e))
+            raise OpenAIContentGenerationError(f"Failed to generate content: {e}", e)
 
     async def _parse_annotation_to_citation(
         self,

@@ -74,7 +74,7 @@ class ChatMessage(BaseModel):
 
 class ResponseStreamParams(BaseModel):
     """Parameters for OpenAI Responses API streaming requests.
-    
+
     Mirrors the structure of ResponseCreateParams from the OpenAI SDK.
     """
 
@@ -132,9 +132,12 @@ class SSEEvent(BaseModel):
     """
 
     data: str
-    event: Literal[
-        "citation", "done", "error", "tool_call", "reasoning_summary", "heartbeat"
-    ] | None = None
+    event: (
+        Literal[
+            "citation", "done", "error", "tool_call", "reasoning_summary", "heartbeat"
+        ]
+        | None
+    ) = None
     id: str | None = None
     retry: int | None = None
 
@@ -226,75 +229,21 @@ class AIProvider(ABC):
         self,
         prompt: str,
         file_ids: list[str] | None = None,
+        response_schema: type[T] | None = None,
+        vector_store_ids: list[str] | None = None,
         **kwargs,
-    ) -> ContentGenerationResult:
-        """Generate text content.
+    ) -> ContentGenerationResult | T:
+        """Generate text or structured content.
 
         Args:
             prompt: Text prompt for generation
             file_ids: Optional list of file IDs to include as context
+            response_schema: Optional Pydantic model for structured output
+            vector_store_ids: Optional vector store IDs for file search (RAG)
             **kwargs: Provider-specific options (temperature, max_tokens, etc.)
 
         Returns:
-            ContentGenerationResult: Generated content with metadata
-        """
-        pass
-
-    @abstractmethod
-    async def generate_structured_content(
-        self,
-        prompt: str,
-        response_model: type[T],
-        file_ids: list[str] | None = None,
-        **kwargs,
-    ) -> T:
-        """Generate structured content using a Pydantic model.
-
-        Args:
-            prompt: Text prompt for generation
-            response_model: Pydantic model class for structured output
-            file_ids: Optional list of file IDs to include as context
-            **kwargs: Provider-specific options
-
-        Returns:
-            Instance of response_model with generated data
-        """
-        pass
-
-    @abstractmethod
-    async def analyze_audio_with_context(
-        self,
-        request: AudioAnalysisRequest,
-    ) -> ContentGenerationResult:
-        """Analyze audio directly with contextual information.
-
-        This method allows the AI to process audio directly (not just transcription)
-        along with additional context like documents, forms, etc.
-
-        Args:
-            request: Audio analysis request with audio path, prompt, and context
-
-        Returns:
-            ContentGenerationResult: Analysis result
-        """
-        pass
-
-    @abstractmethod
-    async def analyze_content_with_structured_output(
-        self,
-        request: ContentAnalysisRequest,
-        response_model: type[T],
-    ) -> T:
-        """Analyze content (audio, transcript, or both) and return structured output.
-
-        More generic version that can handle audio files, transcripts, or both.
-
-        Args:
-            request: Content analysis request
-            response_model: Pydantic model for structured output
-
-        Returns:
-            Instance of response_model with analysis results
+            ContentGenerationResult for text, or instance of response_schema for structured output
         """
         pass
 
