@@ -1,6 +1,5 @@
 import json
 import os
-import tempfile
 from pathlib import Path
 
 import braintrust
@@ -122,6 +121,26 @@ class DiscrepancyDetectionV2Workflow:
 
         return DynamicDiscrepancyResult
 
+    def _remove_confidence_fields(self, data: dict | list) -> dict | list:
+        """Recursively remove all 'confidence' fields from JSON data.
+
+        Args:
+            data: Dictionary or list containing nested data structures
+
+        Returns:
+            Data structure with all 'confidence' fields removed
+        """
+        if isinstance(data, dict):
+            return {
+                key: self._remove_confidence_fields(value)
+                for key, value in data.items()
+                if key != "confidence"
+            }
+        elif isinstance(data, list):
+            return [self._remove_confidence_fields(item) for item in data]
+        else:
+            return data
+
     def _process_transcript(self, transcript_path: str) -> dict:
         """Load and simplify transcript if needed.
 
@@ -163,6 +182,18 @@ class DiscrepancyDetectionV2Workflow:
                         error=str(e),
                     )
 
+        # Remove confidence fields from transcript data
+        original_size = len(json.dumps(transcript_data))
+        transcript_data = self._remove_confidence_fields(transcript_data)
+        removed_size = len(json.dumps(transcript_data))
+        savings_pct = 100 - (removed_size / original_size * 100)
+        logger.info(
+            "[WORKFLOW] Removed confidence fields from transcript",
+            original_tokens=original_size // 4,
+            removed_tokens=removed_size // 4,
+            savings_pct=round(savings_pct, 1),
+        )
+
         return transcript_data
 
     async def run(
@@ -193,26 +224,17 @@ class DiscrepancyDetectionV2Workflow:
         transcript_data = self._process_transcript(transcript_path)
 
         # Upload transcript as file (too large for prompt)
-        file_ids = []
-        logger.info("[WORKFLOW] Uploading transcript file")
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False, encoding="utf-8"
-        ) as transcript_file:
-            json.dump(transcript_data, transcript_file, indent=2)
-            transcript_temp_path = transcript_file.name
-
-        try:
-            transcript_metadata = await self.ai_provider.upload_file(
-                file_path=transcript_temp_path,
-                purpose="user_data",
-            )
-            file_ids.append(transcript_metadata.id)
-            logger.info(
-                "[WORKFLOW] Transcript uploaded", file_id=transcript_metadata.id
-            )
-        finally:
-            # Clean up temporary file
-            os.unlink(transcript_temp_path)
+        # file_ids = []
+        # logger.info("[WORKFLOW] Uploading transcript file")
+        # transcript_json_bytes = json.dumps(transcript_data, indent=2).encode("utf-8")
+        # transcript_file = io.BytesIO(transcript_json_bytes)
+        # transcript_file_id = await self.ai_provider.upload_file_from_handle(
+        #     file=transcript_file,
+        #     filename="transcript.json",
+        #     purpose="user_data",
+        # )
+        # file_ids.append(transcript_file_id)
+        # logger.info("[WORKFLOW] Transcript uploaded", file_id=transcript_file_id)
 
         # Load deviation classes from JSON file (always use classes.json)
         classes_path = (
@@ -293,6 +315,7 @@ class DiscrepancyDetectionV2Workflow:
             deviation_classes=deviation_classes_formatted,
             notes_to_production=json.dumps(notes_to_production, indent=2),
             estimate_data=json.dumps(formatted_estimate, indent=2),
+            conversation_transcript=transcript_data,
         )
 
         # Extract the user message content from the built prompt
@@ -306,19 +329,12 @@ class DiscrepancyDetectionV2Workflow:
         if not user_message:
             raise ValueError("No user message found in Braintrust prompt")
 
-        # Log the prompt for debugging
-        logger.info(
-            "[WORKFLOW] Built prompt from Braintrust",
-            prompt_preview=user_message,
-            prompt_length=len(user_message),
-        )
-
         # Use AI provider to analyze with structured output
         logger.info("[WORKFLOW] Initiating AI analysis")
         result = await self.ai_provider.generate_structured_content(
             prompt=user_message,
             response_schema=DynamicDiscrepancyResult,
-            file_ids=file_ids,
+            # file_ids=file_ids,
             vector_store_ids=[PRICEBOOK_VECTOR_STORE_ID],
         )
 
@@ -356,9 +372,7 @@ class DiscrepancyDetectionV2Workflow:
                     data=estimate_data, filename="estimate.json"
                 ),
                 "transcripts": [
-                    JSONAttachment(
-                        data=transcript_data, filename="transcript.json"
-                    )
+                    JSONAttachment(data=transcript_data, filename="transcript.json")
                 ],
             }
 
