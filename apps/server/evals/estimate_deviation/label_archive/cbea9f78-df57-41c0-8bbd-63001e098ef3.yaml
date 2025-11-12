@@ -1,80 +1,82 @@
-input:
-  uuid: cbea9f78-df57-41c0-8bbd-63001e098ef3
-  project_id: "320775720"
-  job_id: "320755586"
-  estimate_id: "320769721"
 
-expected:
-  deviations:
-    - deviation_class: product_or_component_not_in_estimate
-      explanation: The production notes and conversation confirm that a pipe boot for the second-floor bathroom will be replaced, but this item is missing from the estimate.
-      occurrences:
-        - rilla_conversation_index: 0
-          timestamp: "01:26:37"
-        - rilla_conversation_index: 0
-          timestamp: "02:00:21"
+deviations:
+  - deviation_class: product_or_component_not_in_estimate
+    explanation: The production notes and conversation confirm that a pipe boot for the second-floor bathroom will be replaced, but this item is missing from the estimate.
+    occurrences:
+      - rilla_conversation_index: 0
+        timestamp: "01:26:37"
+      - rilla_conversation_index: 0
+        timestamp: "02:00:21"
+    predicted_line_item:
+      matched_pricebook_item_display_name: ELEVT TPO UNIV PIPE BOOT 1-6\" WHITE
+      matched_pricebook_item_id: 268340072
+      quantity: 1
+      total_cost: 60.99
+      unit_cost: 60.99
 
-    - deviation_class: product_or_component_not_in_estimate
-      explanation: The production notes state that plywood is needed for the sunroom/terrace area, and the rep estimated 10 sheets would be required, but there is no line item for plywood on the estimate.
-      occurrences:
-        - rilla_conversation_index: 0
-          timestamp: "00:58:10"
-        - rilla_conversation_index: 0
-          timestamp: "01:26:51"
-        - rilla_conversation_index: 0
-          timestamp: "01:56:00"
-        - rilla_conversation_index: 0
-          timestamp: "02:00:09"
-        - rilla_conversation_index: 0
-          timestamp: "02:03:26"
+  - deviation_class: product_or_component_not_in_estimate
+    explanation: The production notes state that plywood is needed for the sunroom/terrace area, and the rep estimated 10 sheets would be required, but there is no line item for plywood on the estimate.
+    occurrences:
+      - rilla_conversation_index: 0
+        timestamp: "00:58:10"
+      - rilla_conversation_index: 0
+        timestamp: "01:26:51"
+      - rilla_conversation_index: 0
+        timestamp: "01:56:00"
+      - rilla_conversation_index: 0
+        timestamp: "02:00:09"
+      - rilla_conversation_index: 0
+        timestamp: "02:03:26"
+    predicted_line_item:
+      matched_pricebook_item_display_name: CDX Plywood 4-PLY 3/4 4'x8
+      matched_pricebook_item_id: 268332392
+      quantity: 10
+      total_cost: 432.20
+      unit_cost: 43.22
 
-    - deviation_class: product_or_component_not_in_estimate
-      explanation: The sales rep agreed to reinforce the sunroom rafters with brackets and collar ties. This was documented in the notes to production but was not included as a line item in the estimate.
-      occurrences:
-        - rilla_conversation_index: 0
-          timestamp: "01:05:17"
-        - rilla_conversation_index: 0
-          timestamp: "01:59:53"
-        - rilla_conversation_index: 0
-          timestamp: "02:00:32"
+  # No pricebook match for this deviation
+  # - deviation_class: product_or_component_not_in_estimate
+  #   explanation: The sales rep agreed to reinforce the sunroom rafters with brackets and collar ties. This was documented in the notes to production but was not included as a line item in the estimate.
+  #   occurrences:
+  #     - rilla_conversation_index: 0
+  #       timestamp: "01:05:17"
+  #     - rilla_conversation_index: 0
+  #       timestamp: "01:59:53"
+  #     - rilla_conversation_index: 0
+  #       timestamp: "02:00:32"
 
-    - deviation_class: untracked_or_incorrect_customer_preference
-      explanation: The customer's shingle color choice, 'Fox Hollow Gray', was documented in the production notes but several estimate line items, including shingles and ridge caps, are incorrectly marked as 'Color Selection Needed'.
-      occurrences:
-        - rilla_conversation_index: 0
-          timestamp: "02:20:52"
+  # Other classes from comprehensive labeling of audio
+  # - deviation_class: untracked_or_incorrect_customer_preference
+  #   explanation: The customer's shingle color choice, 'Fox Hollow Gray', was documented in the production notes but several estimate line items, including shingles and ridge caps, are incorrectly marked as 'Color Selection Needed'.
+  #   occurrences:
+  #     - rilla_conversation_index: 0
+  #       timestamp: "02:20:52"
 
-    - deviation_class: untracked_or_incorrect_customer_preference
-      explanation: The production notes specify 'White' for the flashing color, but the corresponding 'Install Berger Aluminum Drip Edge' line item in the estimate states 'Color Selection Needed'.
+  # - deviation_class: untracked_or_incorrect_customer_preference
+  #   explanation: The production notes specify 'White' for the flashing color, but the corresponding 'Install Berger Aluminum Drip Edge' line item in the estimate states 'Color Selection Needed'.
 
-    - deviation_class: untracked_or_incorrect_customer_preference
-      explanation: The customer stated that he wants 'marine-grade plywood' to be used. The rep states 'we can do that'.
-      occurrences:
-        - rilla_conversation_index: 0
-          timestamp: "00:59:02"
+  # - deviation_class: untracked_or_incorrect_customer_preference
+  #   explanation: The customer stated that he wants 'marine-grade plywood' to be used. The rep states 'we can do that'.
+  #   occurrences:
+  #     - rilla_conversation_index: 0
+  #       timestamp: "00:59:02"
 
-    - deviation_class: discount_applied_not_tracked
-      explanation: The sales rep explicitly offered and applied a $2,000 military discount, but it is not itemized on the estimate.
-      occurrences:
-        - rilla_conversation_index: 0
-          timestamp: "01:27:29"
+  # - deviation_class: discount_applied_not_tracked
+  #   explanation: The sales rep explicitly offered and applied a $2,000 military discount, but it is not itemized on the estimate.
+  #   occurrences:
+  #     - rilla_conversation_index: 0
+  #       timestamp: "01:27:29"
 
-    - deviation_class: discount_applied_not_tracked
-      explanation: The rep offered a 5% 'summer savings' promotion and an additional 5% 'same day savings' discount, neither of which are itemized on the estimate.
-      occurrences:
-        - rilla_conversation_index: 0
-          timestamp: "01:13:52"
-        - rilla_conversation_index: 0
-          timestamp: "01:14:04"
+  # - deviation_class: discount_applied_not_tracked
+  #   explanation: The rep offered a 5% 'summer savings' promotion and an additional 5% 'same day savings' discount, neither of which are itemized on the estimate.
+  #   occurrences:
+  #     - rilla_conversation_index: 0
+  #       timestamp: "01:13:52"
+  #     - rilla_conversation_index: 0
+  #       timestamp: "01:14:04"
 
-    - deviation_class: discount_applied_not_tracked
-      explanation: The rep stated that he called his manager and his manager approved a discount to lower the price to $28,000
-      occurrences:
-        - rilla_conversation_index: 0
-          timestamp: "01:37:35"
-
-metadata:
-  verified_by: will
-  verified_at: "2025-01-09T12:00:00Z"
-  notes: Migrated from labels.md
-  total_deviations: 9
+  # - deviation_class: discount_applied_not_tracked
+  #   explanation: The rep stated that he called his manager and his manager approved a discount to lower the price to $28,000
+  #   occurrences:
+  #     - rilla_conversation_index: 0
+  #       timestamp: "01:37:35"

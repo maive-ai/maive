@@ -8,14 +8,10 @@ deviations:
       - conversation_idx: 0
         timestamp: 01:48:07
     predicted_line_item:
-      description: Velux fixed skylight replacement
-      matched_pricebook_item_code: KQ Skylight Velux Fixed S/M-BOH
       matched_pricebook_item_display_name: KQ Skylight Velux Fixed S/M-BOH
       matched_pricebook_item_id: 103062487
-      notes: Customer discussed replacing three skylights; rep later said skylights were not added to the package pricing.
       quantity: 3
       total_cost: 1434
-      unit: EA
       unit_cost: 478
 
   # OTHER LABELS FROM COMPREHENSIVE LABELING OF AUDIO
