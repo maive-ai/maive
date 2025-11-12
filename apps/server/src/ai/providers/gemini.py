@@ -96,6 +96,7 @@ class GeminiProvider(AIProvider):
         prompt: str,
         file_ids: list[str] | None = None,
         file_attachments: list[tuple[str, str, bool]] | None = None,
+        file_search_store_names: list[str] | None = None,
         **kwargs,
     ) -> ContentGenerationResult:
         """Generate text content using Gemini.
@@ -104,6 +105,7 @@ class GeminiProvider(AIProvider):
             prompt: Text prompt
             file_ids: Optional list of file IDs (names) to include
             file_attachments: Optional list of (file_id, filename, is_image) tuples (not supported)
+            file_search_store_names: Optional list of File Search store names to search
             **kwargs: Additional options (temperature, max_tokens, model, etc.)
 
         Returns:
@@ -124,6 +126,7 @@ class GeminiProvider(AIProvider):
             request = GenerateContentRequest(
                 prompt=prompt,
                 files=file_ids or [],
+                file_search_store_names=file_search_store_names,
                 temperature=kwargs.get("temperature"),
                 model_name=kwargs.get("model"),
             )
@@ -145,6 +148,7 @@ class GeminiProvider(AIProvider):
         response_schema: type[T],
         file_ids: list[str] | None = None,
         vector_store_ids: list[str] | None = None,
+        file_search_store_names: list[str] | None = None,
         **kwargs,
     ) -> T:
         """Generate structured content using a Pydantic model.
@@ -153,20 +157,21 @@ class GeminiProvider(AIProvider):
             prompt: Text prompt
             response_schema: Pydantic model for structured output
             file_ids: Optional list of file IDs
-            vector_store_ids: Optional vector store IDs (not supported by Gemini)
+            vector_store_ids: Optional vector store IDs (deprecated, use file_search_store_names)
+            file_search_store_names: Optional list of File Search store names to search
             **kwargs: Additional options
 
         Returns:
             Instance of response_schema with generated data
 
         Raises:
-            NotImplementedError: If vector_store_ids is provided
+            NotImplementedError: If vector_store_ids is provided (use file_search_store_names instead)
         """
-        # Check for unsupported features
+        # Check for deprecated parameter
         if vector_store_ids:
             raise NotImplementedError(
                 "Vector store search is not supported for Gemini provider. "
-                "Please use OpenAI provider for RAG capabilities."
+                "Please use file_search_store_names parameter for Gemini File Search."
             )
 
         try:
@@ -178,6 +183,7 @@ class GeminiProvider(AIProvider):
                 prompt=prompt,
                 response_model=response_schema,
                 files=file_ids or [],
+                file_search_store_names=file_search_store_names,
                 temperature=kwargs.get("temperature"),
                 model_name=kwargs.get("model"),
             )
