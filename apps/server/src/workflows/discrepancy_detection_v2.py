@@ -3,6 +3,7 @@ import os
 import tempfile
 from pathlib import Path
 
+import braintrust
 from braintrust import JSONAttachment, init_logger
 from pydantic import BaseModel, Field
 
@@ -14,7 +15,10 @@ from evals.estimate_deviation.schemas import (
 from src.ai.providers import get_ai_provider
 from src.utils.logger import logger
 from src.utils.rilla import simplify_rilla_transcript
-from src.workflows.config import get_discrepancy_detection_settings
+from src.workflows.config import (
+    DISCREPANCY_DETECTION_PROMPT,
+    get_discrepancy_detection_settings,
+)
 
 # Force OpenAI provider for this workflow
 os.environ["AI_PROVIDER"] = "openai"
@@ -30,7 +34,11 @@ class DiscrepancyDetectionV2Workflow:
     Pure workflow logic with no S3 or dataset dependencies.
     """
 
-    def __init__(self, level: int = 1, enable_braintrust: bool | None = None):
+    def __init__(
+        self,
+        level: int = 1,
+        enable_braintrust: bool | None = None,
+    ):
         """Initialize the workflow.
 
         Args:
@@ -50,6 +58,7 @@ class DiscrepancyDetectionV2Workflow:
             else workflow_settings.enable_braintrust_logging
         )
         self.project_name = workflow_settings.braintrust_project_name
+        self.project = braintrust.Project(name=self.project_name)
 
         # Create AI provider with Braintrust config
         self.ai_provider = get_ai_provider(
@@ -281,30 +290,33 @@ class DiscrepancyDetectionV2Workflow:
             filtered_class_labels
         )
 
-        # Load and build the prompt from template
-        prompt_template_path = Path(__file__).parent / "discrepancy_detection_prompt.md"
-        with open(prompt_template_path, "r") as f:
-            prompt_template = f.read()
-
-        # Format the template with all data
-        prompt = prompt_template.format(
-            deviation_classes=deviation_classes_formatted,
+        # Use the module-level prompt (loaded once at import time)
+        # Build prompt with deviation classes variable
+        prompt_params = DISCREPANCY_DETECTION_PROMPT.build(
+            deviation_classes=deviation_classes_formatted
         )
+
+        # Extract the user message content from the built prompt
+        # Braintrust prompts return messages array, we need just the text for our API
+        user_message = None
+        for msg in prompt_params.get("messages", []):
+            if msg.get("role") == "user":
+                user_message = msg.get("content")
+                break
+
+        if not user_message:
+            raise ValueError("No user message found in Braintrust prompt")
 
         # Use AI provider to analyze with structured output
         logger.info("[WORKFLOW] Initiating AI analysis")
-        result: (
-            DynamicDiscrepancyResult | None
-        ) = await self.ai_provider.generate_structured_content(
-            prompt=prompt,
+        result = await self.ai_provider.generate_structured_content(
+            prompt=user_message,
             response_schema=DynamicDiscrepancyResult,
             file_ids=file_ids,
             vector_store_ids=[PRICEBOOK_VECTOR_STORE_ID],
         )
-        if result:
-            return result.deviations
-        else:
-            return []
+
+        return result.deviations
 
     def log_workflow_execution(
         self,

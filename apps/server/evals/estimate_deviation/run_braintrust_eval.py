@@ -55,7 +55,7 @@ async def task(input, hooks):
     if not estimate_data or not transcript_data:
         raise ValueError("Missing required data: estimate and transcript are required")
 
-    # Create workflow and run with parsed data (no S3 fetching!)
+    # Create workflow (prompt is loaded at module level in config)
     workflow = DiscrepancyDetectionV2Workflow()
 
     # Handle bytes if JSONAttachment returned bytes instead of parsed JSON
