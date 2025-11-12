@@ -18,10 +18,12 @@ from openai.types.responses import (
     ResponseFileSearchCallCompletedEvent,
     ResponseFileSearchCallInProgressEvent,
     ResponseFileSearchCallSearchingEvent,
+    ResponseFileSearchToolCall,
     ResponseInProgressEvent,
     ResponseOutputItemAddedEvent,
     ResponseOutputItemDoneEvent,
     ResponseOutputTextAnnotationAddedEvent,
+    ResponseReasoningItem,
     ResponseReasoningSummaryPartAddedEvent,
     ResponseReasoningSummaryPartDoneEvent,
     ResponseReasoningSummaryTextDeltaEvent,
@@ -35,15 +37,14 @@ from openai.types.responses import (
     WebSearchToolParam,
 )
 from openai.types.responses.response_create_params import (
-    Reasoning as ReasoningParam,
-)
-from openai.types.responses.response_create_params import (
     ResponseCreateParams,
     ResponseCreateParamsStreaming,
     ResponseTextConfigParam,
 )
 from openai.types.responses.response_output_text import AnnotationURLCitation
+from openai.types.responses.response_reasoning_item import Summary
 from openai.types.shared import ReasoningEffort
+from openai.types.shared.reasoning import Reasoning
 from pydantic import BaseModel
 
 from src.ai.base import (
@@ -266,8 +267,11 @@ class OpenAIProvider(AIProvider):
             params["max_output_tokens"] = output_tokens
 
             # Add reasoning effort if provided
-            if reasoning_effort:
-                params["reasoning"] = {"effort": reasoning_effort, "summary": "auto"}
+            # if reasoning_effort:
+            #     reasoning_effort = reasoning_effort or self.settings.reasoning_effort
+            #     params["reasoning"] = Reasoning(
+            #         effort=reasoning_effort, summary="detailed"
+            #     )
         else:
             # Standard models use temperature and max_output_tokens
             temp = temperature if temperature is not None else self.settings.temperature
@@ -391,7 +395,7 @@ class OpenAIProvider(AIProvider):
         Args:
             prompt: Text prompt
             response_model: Pydantic model for structured output
-            file_ids: Optional file IDs (not currently supported)
+            file_ids: Optional file IDs
             vector_store_ids: Optional vector store IDs for file search (RAG)
             **kwargs: Additional options:
                 - model: Model name (default from settings)
@@ -424,6 +428,16 @@ class OpenAIProvider(AIProvider):
             # Build input items in Responses API format
             input_items = [{"type": "message", "role": "user", "content": prompt}]
 
+            if file_ids:
+                file_inputs = [
+                    {"type": "input_file", "file_id": file_id} for file_id in file_ids
+                ]
+                file_inputs: EasyInputMessageParam = EasyInputMessageParam(
+                    role="user", content=file_inputs
+                )
+
+                input_items.append(file_inputs)
+
             # Build tools list
             tools: list[Any] = []
 
@@ -449,7 +463,32 @@ class OpenAIProvider(AIProvider):
             if tools:
                 parse_params["tools"] = tools
 
-            parsed_response = await client.responses.parse(**parse_params)
+            reasoning: Reasoning = Reasoning(
+                effort=self.settings.reasoning_effort, summary="detailed"
+            )
+            parsed_response = await client.responses.parse(
+                reasoning=reasoning, **parse_params
+            )
+
+            # Extract reasoning summaries if they exist
+            for item in parsed_response.output:
+                if isinstance(item, ResponseReasoningItem):
+                    for summary in item.summary:
+                        if isinstance(summary, Summary):
+                            logger.debug(
+                                "[OPENAI] REASONING SUMMARY", summary=summary.text
+                            )
+                elif isinstance(item, ResponseFileSearchToolCall):
+                    logger.debug(
+                        "[OPENAI] FILE SEARCH TOOL CALL",
+                        queries=item.queries,
+                        status=item.status,
+                        results=item.results,
+                    )
+                else:
+                    logger.debug(
+                        "[OPENAI] UNHANDLED ITEM", item=item, type=type(item).__name__
+                    )
 
             return parsed_response.output_parsed
 
@@ -647,7 +686,7 @@ class OpenAIProvider(AIProvider):
                 "reasoning_effort", self.settings.reasoning_effort
             )
             if reasoning_effort:
-                stream_params["reasoning"] = ReasoningParam(
+                stream_params["reasoning"] = Reasoning(
                     effort=reasoning_effort,
                     summary="auto",  # Request reasoning summaries
                 )
