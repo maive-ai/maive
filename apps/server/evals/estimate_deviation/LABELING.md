@@ -186,6 +186,9 @@ Note: JSON files are uploaded to Braintrust as `JSONAttachment` objects during p
 - **Occurrences**: Include all mentions in the conversation
 - **Predicted line items**: Include pricebook matches when available
 - **Notes**: Use metadata field for edge cases or ambiguities
+- When in doubt, leave it out
+- When in doubt about an occurence, leave it out
+- If a pricebook item value isn't available, then leave it as null
 
 ## Step 3: Run Evaluation
 

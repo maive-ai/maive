@@ -54,11 +54,11 @@ async def task(input, hooks):
         transcript_data = extract_json(transcript)
     else:
         transcripts = input.get("transcripts", [])
-        if isinstance(transcripts, list) and transcripts:
-            for transcript in transcripts:
-                transcript_data += extract_json(transcript)
-                if transcript_data:
-                    break
+        transcript_data = None
+        for transcript in transcripts:
+            transcript_data += extract_json(transcript)
+            if transcript_data:
+                break
 
     if not estimate_data or not transcript_data:
         raise ValueError("Missing required data: estimate and transcript are required")

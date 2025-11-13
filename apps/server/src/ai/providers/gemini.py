@@ -235,11 +235,11 @@ class GeminiProvider(AIProvider):
             response: GenerateContentResponse = client.models.generate_content(
                 model=model_name, contents=contents, config=generation_config
             )
-            logger.info("First pass response", response=response)
-            if not response.text:
-                logger.error("Response text is empty", response=response)
-                raise ValueError("Response text is empty")
-            logger.info("First pass response text", text=response.text)
+            # logger.info("First pass response", response=response)
+            # if not response.text:
+            #     logger.error("Response text is empty", response=response)
+            #     raise ValueError("Response text is empty")
+            # logger.info("First pass response text", text=response.text)
 
             structured_config = GenerateContentConfig(
                 temperature=temperature,
@@ -248,7 +248,7 @@ class GeminiProvider(AIProvider):
             )
             structured_response: GenerateContentResponse = (
                 client.models.generate_content(
-                    model="gemini-2.5-flash-lite",
+                    model="gemini-2.5-flash",
                     contents=[
                         "Please parse the following text into a JSON object: ",
                         response.text,
@@ -257,7 +257,7 @@ class GeminiProvider(AIProvider):
                 )
             )
             if structured_response.parsed:
-                logger.info("Have parsed response", parsed=structured_response.parsed)
+                # logger.info("Have parsed response", parsed=structured_response.parsed)
                 return response_schema.model_validate(structured_response.parsed)
 
             if not structured_response.text:
