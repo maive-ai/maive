@@ -16,6 +16,7 @@ import {
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
@@ -66,6 +67,9 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
               <Info className="size-4 text-gray-500" />
             </button>
           </div>
+          <SheetDescription>
+            Projects queued for batch calling
+          </SheetDescription>
         </SheetHeader>
 
         <div className="mt-6 flex flex-col h-[calc(100vh-140px)]">

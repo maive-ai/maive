@@ -125,3 +125,32 @@ export function formatPhoneNumber(phone: string | null | undefined): string {
   return phone;
 }
 
+/**
+ * Extract adjuster information from a project with fallbacks for different data structures.
+ * Handles both direct fields and nested provider_data structures.
+ *
+ * @param project - The project object containing adjuster data
+ * @returns Object with adjuster name and phone, or default values if not found
+ */
+export function getAdjusterInfo(project: {
+  adjuster_name?: string | null;
+  adjuster_phone?: string | null;
+  provider_data?: any;
+}): { name: string; phone: string } {
+  const providerData = project.provider_data;
+
+  const name =
+    project.adjuster_name ||
+    providerData?.adjusterName ||
+    providerData?.adjusterContact?.name ||
+    'No adjuster';
+
+  const phone =
+    project.adjuster_phone ||
+    providerData?.adjusterPhone ||
+    providerData?.adjusterContact?.phone ||
+    'No phone';
+
+  return { name, phone };
+}
+

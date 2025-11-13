@@ -267,8 +267,8 @@ class VapiProvider(VoiceAIProvider):
                 },
                 "claim_status": {
                     "type": "string",
-                    "enum": [status.value for status in Status],
-                    "description": f"Current status of the job/project. Options: {', '.join([s.value for s in Status])}",
+                    # "enum": [status.value for status in Status],
+                    "description": "Current status of the job/project",
                 },
                 "payment_details": {
                     "type": "object",

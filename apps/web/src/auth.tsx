@@ -59,19 +59,3 @@ export function useAuth() {
   if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 }
-
-// Helper to get a fresh JWT access token from the backend
-export async function getIdToken(): Promise<string | null> {
-  const config = new AuthConfiguration({
-    basePath: env.PUBLIC_SERVER_URL,
-    baseOptions: { withCredentials: true },
-  });
-  const authApi = new AuthenticationApi(config);
-  try {
-    const response = await authApi.refreshTokenApiAuthRefreshPost();
-    const token = response.data.session?.id_token;
-    return token ?? null;
-  } catch {
-    return null;
-  }
-}

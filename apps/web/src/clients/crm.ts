@@ -3,30 +3,29 @@
 import {
   CRMApi,
   Configuration,
+  type MockNote,
+  type MockProject,
   type Project,
   type ProjectList,
 } from '@maive/api/client';
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query';
 
-import { getIdToken } from '@/auth';
 import { env } from '@/env';
+import { apiClient } from '@/lib/apiClient';
 
 // Re-export types from the generated client
-export type { Project, ProjectList };
+export type { MockNote, MockProject, Project, ProjectList };
 
 /**
- * Create a configured CRM API instance
+ * Create a configured CRM API instance using the shared axios client
  */
-const createCRMApi = async (): Promise<CRMApi> => {
-  const token = await getIdToken();
-  if (!token) throw new Error('Not authenticated');
-
+const createCRMApi = (): CRMApi => {
   return new CRMApi(
     new Configuration({
-      accessToken: token,
       basePath: env.PUBLIC_SERVER_URL,
-      baseOptions: { withCredentials: true },
     }),
+    undefined,
+    apiClient
   );
 };
 
@@ -34,7 +33,7 @@ const createCRMApi = async (): Promise<CRMApi> => {
  * Fetch all projects from CRM using universal interface
  */
 export async function fetchAllProjects(page: number = 1, pageSize: number = 50): Promise<ProjectList> {
-  const api = await createCRMApi();
+  const api = createCRMApi();
 
   const response = await api.getAllProjectsApiCrmProjectsGet(page, pageSize);
   console.log(
@@ -47,7 +46,7 @@ export async function fetchAllProjects(page: number = 1, pageSize: number = 50):
  * Fetch a single project by ID using universal interface
  */
 export async function fetchProject(projectId: string): Promise<Project> {
-  const api = await createCRMApi();
+  const api = createCRMApi();
   const response = await api.getProjectApiCrmProjectsProjectIdGet(projectId);
   console.log(
     `[CRM Client] Fetched project ${projectId} - Status: ${response.data.status}`
@@ -103,7 +102,7 @@ export interface FileMetadata {
  * Fetch all files for a specific job/project
  */
 export async function fetchJobFiles(jobId: string): Promise<FileMetadata[]> {
-  const api = await createCRMApi();
+  const api = createCRMApi();
   const response = await api.getJobFilesApiCrmJobsJobIdFilesGet(jobId);
   return response.data as FileMetadata[];
 }
@@ -112,7 +111,7 @@ export async function fetchJobFiles(jobId: string): Promise<FileMetadata[]> {
  * Download a specific file with authentication
  */
 export async function downloadFile(fileId: string, filename?: string, contentType?: string): Promise<void> {
-  const api = await createCRMApi();
+  const api = createCRMApi();
   
   const response = await api.downloadFileApiCrmFilesFileIdDownloadGet(
     fileId,
@@ -142,5 +141,69 @@ export function useFetchJobFiles(jobId: string): UseQueryResult<FileMetadata[], 
     queryFn: () => fetchJobFiles(jobId),
     staleTime: 60 * 1000, // Data is fresh for 60 seconds
     enabled: !!jobId, // Only run if jobId is provided
+  });
+}
+
+/**
+ * Create a mock project (Mock CRM only)
+ */
+export async function createMockProject(
+  projectData: MockProject
+): Promise<Project> {
+  const api = createCRMApi();
+  const response = await api.createMockProjectApiCrmProjectsPost(projectData);
+  console.log(`[CRM Client] Created mock project: ${response.data.customer_name}`);
+  return response.data;
+}
+
+/**
+ * React Query mutation for creating a mock project
+ */
+export function useCreateMockProject(): UseMutationResult<
+  Project,
+  Error,
+  MockProject
+> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: createMockProject,
+    onSuccess: () => {
+      // Invalidate projects query to refetch
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
+  });
+}
+
+/**
+ * Update a mock project (Mock CRM only)
+ */
+export async function updateMockProject(
+  projectId: string,
+  projectData: MockProject
+): Promise<Project> {
+  const api = createCRMApi();
+  const response = await api.updateMockProjectApiCrmProjectsProjectIdPatch(projectId, projectData);
+  console.log(`[CRM Client] Updated mock project: ${response.data.customer_name}`);
+  return response.data;
+}
+
+/**
+ * React Query mutation for updating a mock project
+ */
+export function useUpdateMockProject(): UseMutationResult<
+  Project,
+  Error,
+  { projectId: string; projectData: MockProject }
+> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, projectData }) => updateMockProject(projectId, projectData),
+    onSuccess: (_data, variables) => {
+      // Invalidate both the projects list and the specific project
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['project', variables.projectId] });
+    },
   });
 }

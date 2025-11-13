@@ -26,6 +26,14 @@ alwaysApply: false
 - Use barrel exports (index.ts) for organizing exports
 - Place shared types in a `types` directory
 - Co-locate component props with their components
+
+## Imports
+- All imports must be at the top of the file
+- Never place imports inside functions, methods, or conditional blocks
+- Group imports in this order: external packages, then local `@/` imports (alphabetically)
+- Use inline type imports (e.g., `type Foo` in the import statement) rather than separate type import lines
+- Exception: Dynamic imports for code splitting should use `const module = await import('...')`
+
 ## Functions
 - Use explicit return types for public functions
 - Use arrow functions for callbacks and methods

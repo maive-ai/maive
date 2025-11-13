@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.db.call_list.repository import CallListRepository
 from src.db.calls.repository import CallRepository
 from src.db.database import get_db
+from src.db.scheduled_groups.repository import ScheduledGroupsRepository
 
 
 def get_call_repository(
@@ -40,3 +41,18 @@ def get_call_list_repository(
         CallListRepository: Repository instance with injected session
     """
     return CallListRepository(session)
+
+
+def get_scheduled_groups_repository(
+    session: AsyncSession = Depends(get_db),
+) -> ScheduledGroupsRepository:
+    """
+    FastAPI dependency for getting the scheduled groups repository.
+
+    Args:
+        session: Database session from get_db dependency
+
+    Returns:
+        ScheduledGroupsRepository: Repository instance with injected session
+    """
+    return ScheduledGroupsRepository(session)
