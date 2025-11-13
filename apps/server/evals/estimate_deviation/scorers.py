@@ -248,8 +248,8 @@ def comprehensive_deviation_scorer(
         raise ValueError("No output deviations")
 
     # Parse deviations into Pydantic objects
-    output_devs = [Deviation(**d) for d in output["deviations"]]
-    expected_devs = [Deviation(**d) for d in expected["deviations"]]
+    output_devs = [Deviation(**d) for d in (output.get("deviations") or [])]
+    expected_devs = [Deviation(**d) for d in (expected.get("deviations") or [])]
 
     # Step 1: Match deviations using LLM semantic similarity
     matches = []  # (expected_dev, predicted_dev, similarity_score)
