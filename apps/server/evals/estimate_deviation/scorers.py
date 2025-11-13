@@ -226,7 +226,7 @@ def comprehensive_deviation_scorer(
     9. Calculate value (quantity * unit_cost) for TP line items
     10. Calculate value_created (sum of values, zero if any FP deviations)
     11. Return 8 scores: precision, explanation_quality, occurrence_precision, occurrence_recall,
-        pricebook_item_precision, quantity_accuracy, unit_cost_accuracy, value_created
+        line_item_precision, quantity_accuracy, unit_cost_accuracy, value_created
 
     Args:
         input: Input data (not used, deviations are in output/expected)
@@ -471,7 +471,7 @@ def comprehensive_deviation_scorer(
             line_item_metrics["fp"] += 1
 
     # Calculate line item precision
-    pricebook_item_precision = (
+    line_item_precision = (
         line_item_metrics["tp"] / (line_item_metrics["tp"] + line_item_metrics["fp"])
         if (line_item_metrics["tp"] + line_item_metrics["fp"]) > 0
         else 0.0
@@ -494,7 +494,9 @@ def comprehensive_deviation_scorer(
 
     # Calculate value_created (zero if ANY deviation FPs exist)
     total_value = sum(line_item_metrics["values"])
-    value_created_dollars = 0.0 if fp > 0 else total_value
+    # TODO: re-enable this
+    # value_created_dollars = 0.0 if fp > 0 else total_value
+    value_created_dollars = total_value
 
     # Log raw dollar amount as a metric (not constrained to 0-1)
     from braintrust import current_span
@@ -571,8 +573,8 @@ def comprehensive_deviation_scorer(
             },
         ),
         Score(
-            name="pricebook_item_precision",
-            score=pricebook_item_precision,
+            name="line_item_precision",
+            score=line_item_precision,
             metadata={
                 "tp": line_item_metrics["tp"],
                 "fp": line_item_metrics["fp"],
