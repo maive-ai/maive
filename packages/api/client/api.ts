@@ -93,6 +93,19 @@ export interface ActiveCallResponse {
 
 
 /**
+ * Request model for adding projects to a group.
+ * @export
+ * @interface AddProjectsToGroupRequest
+ */
+export interface AddProjectsToGroupRequest {
+    /**
+     * List of project/job IDs to add to group
+     * @type {Array<string>}
+     * @memberof AddProjectsToGroupRequest
+     */
+    'project_ids': Array<string>;
+}
+/**
  * Request model for adding projects to call list.
  * @export
  * @interface AddToCallListRequest
@@ -719,6 +732,67 @@ export interface ContactList {
      */
     'has_more'?: boolean | null;
 }
+
+
+/**
+ * Request model for creating a scheduled group.
+ * @export
+ * @interface CreateScheduledGroupRequest
+ */
+export interface CreateScheduledGroupRequest {
+    /**
+     * Group display name
+     * @type {string}
+     * @memberof CreateScheduledGroupRequest
+     */
+    'name': string;
+    /**
+     * Days of week: [\'monday\', \'tuesday\', etc.]
+     * @type {Array<string>}
+     * @memberof CreateScheduledGroupRequest
+     */
+    'frequency': Array<string>;
+    /**
+     * Time of day to make calls
+     * @type {string}
+     * @memberof CreateScheduledGroupRequest
+     */
+    'time_of_day': string;
+    /**
+     * Type of goal for this group
+     * @type {GoalType}
+     * @memberof CreateScheduledGroupRequest
+     */
+    'goal_type': GoalType;
+    /**
+     * 
+     * @type {string}
+     * @memberof CreateScheduledGroupRequest
+     */
+    'goal_description'?: string | null;
+    /**
+     * Who to call for this group
+     * @type {WhoToCall}
+     * @memberof CreateScheduledGroupRequest
+     */
+    'who_to_call': WhoToCall;
+}
+
+
+/**
+ * Goal type enum for scheduled groups.
+ * @export
+ * @enum {string}
+ */
+
+export const GoalType = {
+    StatusCheck: 'status_check',
+    LocateCheck: 'locate_check',
+    UserSpecified: 'user_specified',
+    AiDetermined: 'ai_determined'
+} as const;
+
+export type GoalType = typeof GoalType[keyof typeof GoalType];
 
 
 /**
@@ -1351,6 +1425,226 @@ export type Role = typeof Role[keyof typeof Role];
 
 
 /**
+ * Response model for a scheduled group with members.
+ * @export
+ * @interface ScheduledGroupDetailResponse
+ */
+export interface ScheduledGroupDetailResponse {
+    /**
+     * Database ID of the group
+     * @type {number}
+     * @memberof ScheduledGroupDetailResponse
+     */
+    'id': number;
+    /**
+     * Cognito user ID
+     * @type {string}
+     * @memberof ScheduledGroupDetailResponse
+     */
+    'user_id': string;
+    /**
+     * Group display name
+     * @type {string}
+     * @memberof ScheduledGroupDetailResponse
+     */
+    'name': string;
+    /**
+     * Days of week
+     * @type {Array<string>}
+     * @memberof ScheduledGroupDetailResponse
+     */
+    'frequency': Array<string>;
+    /**
+     * Time of day (HH:MM:SS format)
+     * @type {string}
+     * @memberof ScheduledGroupDetailResponse
+     */
+    'time_of_day': string;
+    /**
+     * Goal type
+     * @type {string}
+     * @memberof ScheduledGroupDetailResponse
+     */
+    'goal_type': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ScheduledGroupDetailResponse
+     */
+    'goal_description'?: string | null;
+    /**
+     * Who to call
+     * @type {string}
+     * @memberof ScheduledGroupDetailResponse
+     */
+    'who_to_call': string;
+    /**
+     * Whether the group is active
+     * @type {boolean}
+     * @memberof ScheduledGroupDetailResponse
+     */
+    'is_active': boolean;
+    /**
+     * List of group members
+     * @type {Array<ScheduledGroupMemberResponse>}
+     * @memberof ScheduledGroupDetailResponse
+     */
+    'members': Array<ScheduledGroupMemberResponse>;
+    /**
+     * When the group was created
+     * @type {string}
+     * @memberof ScheduledGroupDetailResponse
+     */
+    'created_at': string;
+    /**
+     * When the group was last updated
+     * @type {string}
+     * @memberof ScheduledGroupDetailResponse
+     */
+    'updated_at': string;
+}
+/**
+ * Response model for a single scheduled group member.
+ * @export
+ * @interface ScheduledGroupMemberResponse
+ */
+export interface ScheduledGroupMemberResponse {
+    /**
+     * Database ID of the member
+     * @type {number}
+     * @memberof ScheduledGroupMemberResponse
+     */
+    'id': number;
+    /**
+     * Group ID
+     * @type {number}
+     * @memberof ScheduledGroupMemberResponse
+     */
+    'group_id': number;
+    /**
+     * Project/Job ID from CRM
+     * @type {string}
+     * @memberof ScheduledGroupMemberResponse
+     */
+    'project_id': string;
+    /**
+     * Whether the goal has been completed
+     * @type {boolean}
+     * @memberof ScheduledGroupMemberResponse
+     */
+    'goal_completed': boolean;
+    /**
+     * 
+     * @type {string}
+     * @memberof ScheduledGroupMemberResponse
+     */
+    'goal_completed_at'?: string | null;
+    /**
+     * When the project was added to the group
+     * @type {string}
+     * @memberof ScheduledGroupMemberResponse
+     */
+    'added_at': string;
+}
+/**
+ * Response model for a scheduled group.
+ * @export
+ * @interface ScheduledGroupResponse
+ */
+export interface ScheduledGroupResponse {
+    /**
+     * Database ID of the group
+     * @type {number}
+     * @memberof ScheduledGroupResponse
+     */
+    'id': number;
+    /**
+     * Cognito user ID
+     * @type {string}
+     * @memberof ScheduledGroupResponse
+     */
+    'user_id': string;
+    /**
+     * Group display name
+     * @type {string}
+     * @memberof ScheduledGroupResponse
+     */
+    'name': string;
+    /**
+     * Days of week
+     * @type {Array<string>}
+     * @memberof ScheduledGroupResponse
+     */
+    'frequency': Array<string>;
+    /**
+     * Time of day (HH:MM:SS format)
+     * @type {string}
+     * @memberof ScheduledGroupResponse
+     */
+    'time_of_day': string;
+    /**
+     * Goal type
+     * @type {string}
+     * @memberof ScheduledGroupResponse
+     */
+    'goal_type': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ScheduledGroupResponse
+     */
+    'goal_description'?: string | null;
+    /**
+     * Who to call
+     * @type {string}
+     * @memberof ScheduledGroupResponse
+     */
+    'who_to_call': string;
+    /**
+     * Whether the group is active
+     * @type {boolean}
+     * @memberof ScheduledGroupResponse
+     */
+    'is_active': boolean;
+    /**
+     * Number of projects in the group
+     * @type {number}
+     * @memberof ScheduledGroupResponse
+     */
+    'member_count': number;
+    /**
+     * When the group was created
+     * @type {string}
+     * @memberof ScheduledGroupResponse
+     */
+    'created_at': string;
+    /**
+     * When the group was last updated
+     * @type {string}
+     * @memberof ScheduledGroupResponse
+     */
+    'updated_at': string;
+}
+/**
+ * Response model for listing scheduled groups.
+ * @export
+ * @interface ScheduledGroupsListResponse
+ */
+export interface ScheduledGroupsListResponse {
+    /**
+     * List of scheduled groups
+     * @type {Array<ScheduledGroupResponse>}
+     * @memberof ScheduledGroupsListResponse
+     */
+    'groups': Array<ScheduledGroupResponse>;
+    /**
+     * Total number of groups
+     * @type {number}
+     * @memberof ScheduledGroupsListResponse
+     */
+    'total': number;
+}
+/**
  * Status identifier
  * @export
  * @interface StatusId
@@ -1395,6 +1689,64 @@ export interface TranscriptMessage {
      */
     'duration_seconds'?: number | null;
 }
+/**
+ * Request model for updating group active status.
+ * @export
+ * @interface UpdateGroupStatusRequest
+ */
+export interface UpdateGroupStatusRequest {
+    /**
+     * Whether the group should be active
+     * @type {boolean}
+     * @memberof UpdateGroupStatusRequest
+     */
+    'is_active': boolean;
+}
+/**
+ * Request model for updating a scheduled group.
+ * @export
+ * @interface UpdateScheduledGroupRequest
+ */
+export interface UpdateScheduledGroupRequest {
+    /**
+     * 
+     * @type {string}
+     * @memberof UpdateScheduledGroupRequest
+     */
+    'name'?: string | null;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof UpdateScheduledGroupRequest
+     */
+    'frequency'?: Array<string> | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof UpdateScheduledGroupRequest
+     */
+    'time_of_day'?: string | null;
+    /**
+     * 
+     * @type {GoalType}
+     * @memberof UpdateScheduledGroupRequest
+     */
+    'goal_type'?: GoalType | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof UpdateScheduledGroupRequest
+     */
+    'goal_description'?: string | null;
+    /**
+     * 
+     * @type {WhoToCall}
+     * @memberof UpdateScheduledGroupRequest
+     */
+    'who_to_call'?: WhoToCall | null;
+}
+
+
 /**
  * User information.
  * @export
@@ -1507,6 +1859,21 @@ export const VoiceAIProvider = {
 } as const;
 
 export type VoiceAIProvider = typeof VoiceAIProvider[keyof typeof VoiceAIProvider];
+
+
+/**
+ * Who to call enum for scheduled groups.
+ * @export
+ * @enum {string}
+ */
+
+export const WhoToCall = {
+    Adjuster: 'adjuster',
+    InsuranceCarrier: 'insurance_carrier',
+    AiDetermines: 'ai_determines'
+} as const;
+
+export type WhoToCall = typeof WhoToCall[keyof typeof WhoToCall];
 
 
 
@@ -3496,6 +3863,746 @@ export class DefaultApi extends BaseAPI {
      */
     public rootGet(options?: RawAxiosRequestConfig) {
         return DefaultApiFp(this.configuration).rootGet(options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+
+/**
+ * ScheduledGroupsApi - axios parameter creator
+ * @export
+ */
+export const ScheduledGroupsApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * Add projects to a scheduled group.  Args:     group_id: The group ID     request: Request containing list of project IDs     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupDetailResponse: Updated group with members  Raises:     HTTPException: If the group is not found or an error occurs
+         * @summary Add Projects To Group
+         * @param {number} groupId 
+         * @param {AddProjectsToGroupRequest} addProjectsToGroupRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        addProjectsToGroupApiScheduledGroupsGroupIdMembersPost: async (groupId: number, addProjectsToGroupRequest: AddProjectsToGroupRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'groupId' is not null or undefined
+            assertParamExists('addProjectsToGroupApiScheduledGroupsGroupIdMembersPost', 'groupId', groupId)
+            // verify required parameter 'addProjectsToGroupRequest' is not null or undefined
+            assertParamExists('addProjectsToGroupApiScheduledGroupsGroupIdMembersPost', 'addProjectsToGroupRequest', addProjectsToGroupRequest)
+            const localVarPath = `/api/scheduled-groups/{group_id}/members`
+                .replace(`{${"group_id"}}`, encodeURIComponent(String(groupId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(addProjectsToGroupRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Create a new scheduled group.  Args:     request: Request containing group configuration     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupResponse: The created group  Raises:     HTTPException: If an error occurs creating the group
+         * @summary Create Scheduled Group
+         * @param {CreateScheduledGroupRequest} createScheduledGroupRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createScheduledGroupApiScheduledGroupsPost: async (createScheduledGroupRequest: CreateScheduledGroupRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'createScheduledGroupRequest' is not null or undefined
+            assertParamExists('createScheduledGroupApiScheduledGroupsPost', 'createScheduledGroupRequest', createScheduledGroupRequest)
+            const localVarPath = `/api/scheduled-groups`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(createScheduledGroupRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Delete a scheduled group.  Args:     group_id: The group ID     current_user: The authenticated user     repository: The scheduled groups repository instance  Raises:     HTTPException: If the group is not found or an error occurs
+         * @summary Delete Scheduled Group
+         * @param {number} groupId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        deleteScheduledGroupApiScheduledGroupsGroupIdDelete: async (groupId: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'groupId' is not null or undefined
+            assertParamExists('deleteScheduledGroupApiScheduledGroupsGroupIdDelete', 'groupId', groupId)
+            const localVarPath = `/api/scheduled-groups/{group_id}`
+                .replace(`{${"group_id"}}`, encodeURIComponent(String(groupId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Get a scheduled group with its members.  Args:     group_id: The group ID     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupDetailResponse: Group details with members  Raises:     HTTPException: If the group is not found or an error occurs
+         * @summary Get Scheduled Group
+         * @param {number} groupId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getScheduledGroupApiScheduledGroupsGroupIdGet: async (groupId: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'groupId' is not null or undefined
+            assertParamExists('getScheduledGroupApiScheduledGroupsGroupIdGet', 'groupId', groupId)
+            const localVarPath = `/api/scheduled-groups/{group_id}`
+                .replace(`{${"group_id"}}`, encodeURIComponent(String(groupId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * List all scheduled groups for the user.  Args:     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupsListResponse: List of groups  Raises:     HTTPException: If an error occurs retrieving groups
+         * @summary List Scheduled Groups
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        listScheduledGroupsApiScheduledGroupsGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/scheduled-groups`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Mark goal as completed for a project in a group.  Args:     group_id: The group ID     project_id: The project ID     completed: Whether goal is completed (default: True)     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupMemberResponse: Updated member  Raises:     HTTPException: If the project is not found or an error occurs
+         * @summary Mark Goal Completed
+         * @param {number} groupId 
+         * @param {string} projectId 
+         * @param {boolean} [completed] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        markGoalCompletedApiScheduledGroupsGroupIdMembersProjectIdCompletedPatch: async (groupId: number, projectId: string, completed?: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'groupId' is not null or undefined
+            assertParamExists('markGoalCompletedApiScheduledGroupsGroupIdMembersProjectIdCompletedPatch', 'groupId', groupId)
+            // verify required parameter 'projectId' is not null or undefined
+            assertParamExists('markGoalCompletedApiScheduledGroupsGroupIdMembersProjectIdCompletedPatch', 'projectId', projectId)
+            const localVarPath = `/api/scheduled-groups/{group_id}/members/{project_id}/completed`
+                .replace(`{${"group_id"}}`, encodeURIComponent(String(groupId)))
+                .replace(`{${"project_id"}}`, encodeURIComponent(String(projectId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'PATCH', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            if (completed !== undefined) {
+                localVarQueryParameter['completed'] = completed;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Remove a project from a scheduled group.  Args:     group_id: The group ID     project_id: The project ID to remove     current_user: The authenticated user     repository: The scheduled groups repository instance  Raises:     HTTPException: If the project is not found or an error occurs
+         * @summary Remove Project From Group
+         * @param {number} groupId 
+         * @param {string} projectId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        removeProjectFromGroupApiScheduledGroupsGroupIdMembersProjectIdDelete: async (groupId: number, projectId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'groupId' is not null or undefined
+            assertParamExists('removeProjectFromGroupApiScheduledGroupsGroupIdMembersProjectIdDelete', 'groupId', groupId)
+            // verify required parameter 'projectId' is not null or undefined
+            assertParamExists('removeProjectFromGroupApiScheduledGroupsGroupIdMembersProjectIdDelete', 'projectId', projectId)
+            const localVarPath = `/api/scheduled-groups/{group_id}/members/{project_id}`
+                .replace(`{${"group_id"}}`, encodeURIComponent(String(groupId)))
+                .replace(`{${"project_id"}}`, encodeURIComponent(String(projectId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Start or stop a scheduled group.  Args:     group_id: The group ID     request: Request containing active status     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupResponse: Updated group  Raises:     HTTPException: If the group is not found or an error occurs
+         * @summary Toggle Group Active
+         * @param {number} groupId 
+         * @param {UpdateGroupStatusRequest} updateGroupStatusRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        toggleGroupActiveApiScheduledGroupsGroupIdActivePatch: async (groupId: number, updateGroupStatusRequest: UpdateGroupStatusRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'groupId' is not null or undefined
+            assertParamExists('toggleGroupActiveApiScheduledGroupsGroupIdActivePatch', 'groupId', groupId)
+            // verify required parameter 'updateGroupStatusRequest' is not null or undefined
+            assertParamExists('toggleGroupActiveApiScheduledGroupsGroupIdActivePatch', 'updateGroupStatusRequest', updateGroupStatusRequest)
+            const localVarPath = `/api/scheduled-groups/{group_id}/active`
+                .replace(`{${"group_id"}}`, encodeURIComponent(String(groupId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'PATCH', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(updateGroupStatusRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Update a scheduled group.  Args:     group_id: The group ID     request: Request containing updates     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupResponse: Updated group  Raises:     HTTPException: If the group is not found or an error occurs
+         * @summary Update Scheduled Group
+         * @param {number} groupId 
+         * @param {UpdateScheduledGroupRequest} updateScheduledGroupRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateScheduledGroupApiScheduledGroupsGroupIdPut: async (groupId: number, updateScheduledGroupRequest: UpdateScheduledGroupRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'groupId' is not null or undefined
+            assertParamExists('updateScheduledGroupApiScheduledGroupsGroupIdPut', 'groupId', groupId)
+            // verify required parameter 'updateScheduledGroupRequest' is not null or undefined
+            assertParamExists('updateScheduledGroupApiScheduledGroupsGroupIdPut', 'updateScheduledGroupRequest', updateScheduledGroupRequest)
+            const localVarPath = `/api/scheduled-groups/{group_id}`
+                .replace(`{${"group_id"}}`, encodeURIComponent(String(groupId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'PUT', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(updateScheduledGroupRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * ScheduledGroupsApi - functional programming interface
+ * @export
+ */
+export const ScheduledGroupsApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = ScheduledGroupsApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * Add projects to a scheduled group.  Args:     group_id: The group ID     request: Request containing list of project IDs     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupDetailResponse: Updated group with members  Raises:     HTTPException: If the group is not found or an error occurs
+         * @summary Add Projects To Group
+         * @param {number} groupId 
+         * @param {AddProjectsToGroupRequest} addProjectsToGroupRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async addProjectsToGroupApiScheduledGroupsGroupIdMembersPost(groupId: number, addProjectsToGroupRequest: AddProjectsToGroupRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ScheduledGroupDetailResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.addProjectsToGroupApiScheduledGroupsGroupIdMembersPost(groupId, addProjectsToGroupRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ScheduledGroupsApi.addProjectsToGroupApiScheduledGroupsGroupIdMembersPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Create a new scheduled group.  Args:     request: Request containing group configuration     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupResponse: The created group  Raises:     HTTPException: If an error occurs creating the group
+         * @summary Create Scheduled Group
+         * @param {CreateScheduledGroupRequest} createScheduledGroupRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async createScheduledGroupApiScheduledGroupsPost(createScheduledGroupRequest: CreateScheduledGroupRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ScheduledGroupResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.createScheduledGroupApiScheduledGroupsPost(createScheduledGroupRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ScheduledGroupsApi.createScheduledGroupApiScheduledGroupsPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Delete a scheduled group.  Args:     group_id: The group ID     current_user: The authenticated user     repository: The scheduled groups repository instance  Raises:     HTTPException: If the group is not found or an error occurs
+         * @summary Delete Scheduled Group
+         * @param {number} groupId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async deleteScheduledGroupApiScheduledGroupsGroupIdDelete(groupId: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.deleteScheduledGroupApiScheduledGroupsGroupIdDelete(groupId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ScheduledGroupsApi.deleteScheduledGroupApiScheduledGroupsGroupIdDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Get a scheduled group with its members.  Args:     group_id: The group ID     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupDetailResponse: Group details with members  Raises:     HTTPException: If the group is not found or an error occurs
+         * @summary Get Scheduled Group
+         * @param {number} groupId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getScheduledGroupApiScheduledGroupsGroupIdGet(groupId: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ScheduledGroupDetailResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getScheduledGroupApiScheduledGroupsGroupIdGet(groupId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ScheduledGroupsApi.getScheduledGroupApiScheduledGroupsGroupIdGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * List all scheduled groups for the user.  Args:     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupsListResponse: List of groups  Raises:     HTTPException: If an error occurs retrieving groups
+         * @summary List Scheduled Groups
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async listScheduledGroupsApiScheduledGroupsGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ScheduledGroupsListResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.listScheduledGroupsApiScheduledGroupsGet(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ScheduledGroupsApi.listScheduledGroupsApiScheduledGroupsGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Mark goal as completed for a project in a group.  Args:     group_id: The group ID     project_id: The project ID     completed: Whether goal is completed (default: True)     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupMemberResponse: Updated member  Raises:     HTTPException: If the project is not found or an error occurs
+         * @summary Mark Goal Completed
+         * @param {number} groupId 
+         * @param {string} projectId 
+         * @param {boolean} [completed] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async markGoalCompletedApiScheduledGroupsGroupIdMembersProjectIdCompletedPatch(groupId: number, projectId: string, completed?: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ScheduledGroupMemberResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.markGoalCompletedApiScheduledGroupsGroupIdMembersProjectIdCompletedPatch(groupId, projectId, completed, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ScheduledGroupsApi.markGoalCompletedApiScheduledGroupsGroupIdMembersProjectIdCompletedPatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Remove a project from a scheduled group.  Args:     group_id: The group ID     project_id: The project ID to remove     current_user: The authenticated user     repository: The scheduled groups repository instance  Raises:     HTTPException: If the project is not found or an error occurs
+         * @summary Remove Project From Group
+         * @param {number} groupId 
+         * @param {string} projectId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async removeProjectFromGroupApiScheduledGroupsGroupIdMembersProjectIdDelete(groupId: number, projectId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.removeProjectFromGroupApiScheduledGroupsGroupIdMembersProjectIdDelete(groupId, projectId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ScheduledGroupsApi.removeProjectFromGroupApiScheduledGroupsGroupIdMembersProjectIdDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Start or stop a scheduled group.  Args:     group_id: The group ID     request: Request containing active status     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupResponse: Updated group  Raises:     HTTPException: If the group is not found or an error occurs
+         * @summary Toggle Group Active
+         * @param {number} groupId 
+         * @param {UpdateGroupStatusRequest} updateGroupStatusRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async toggleGroupActiveApiScheduledGroupsGroupIdActivePatch(groupId: number, updateGroupStatusRequest: UpdateGroupStatusRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ScheduledGroupResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.toggleGroupActiveApiScheduledGroupsGroupIdActivePatch(groupId, updateGroupStatusRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ScheduledGroupsApi.toggleGroupActiveApiScheduledGroupsGroupIdActivePatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Update a scheduled group.  Args:     group_id: The group ID     request: Request containing updates     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupResponse: Updated group  Raises:     HTTPException: If the group is not found or an error occurs
+         * @summary Update Scheduled Group
+         * @param {number} groupId 
+         * @param {UpdateScheduledGroupRequest} updateScheduledGroupRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async updateScheduledGroupApiScheduledGroupsGroupIdPut(groupId: number, updateScheduledGroupRequest: UpdateScheduledGroupRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ScheduledGroupResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.updateScheduledGroupApiScheduledGroupsGroupIdPut(groupId, updateScheduledGroupRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ScheduledGroupsApi.updateScheduledGroupApiScheduledGroupsGroupIdPut']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+    }
+};
+
+/**
+ * ScheduledGroupsApi - factory interface
+ * @export
+ */
+export const ScheduledGroupsApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = ScheduledGroupsApiFp(configuration)
+    return {
+        /**
+         * Add projects to a scheduled group.  Args:     group_id: The group ID     request: Request containing list of project IDs     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupDetailResponse: Updated group with members  Raises:     HTTPException: If the group is not found or an error occurs
+         * @summary Add Projects To Group
+         * @param {number} groupId 
+         * @param {AddProjectsToGroupRequest} addProjectsToGroupRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        addProjectsToGroupApiScheduledGroupsGroupIdMembersPost(groupId: number, addProjectsToGroupRequest: AddProjectsToGroupRequest, options?: RawAxiosRequestConfig): AxiosPromise<ScheduledGroupDetailResponse> {
+            return localVarFp.addProjectsToGroupApiScheduledGroupsGroupIdMembersPost(groupId, addProjectsToGroupRequest, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Create a new scheduled group.  Args:     request: Request containing group configuration     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupResponse: The created group  Raises:     HTTPException: If an error occurs creating the group
+         * @summary Create Scheduled Group
+         * @param {CreateScheduledGroupRequest} createScheduledGroupRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createScheduledGroupApiScheduledGroupsPost(createScheduledGroupRequest: CreateScheduledGroupRequest, options?: RawAxiosRequestConfig): AxiosPromise<ScheduledGroupResponse> {
+            return localVarFp.createScheduledGroupApiScheduledGroupsPost(createScheduledGroupRequest, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Delete a scheduled group.  Args:     group_id: The group ID     current_user: The authenticated user     repository: The scheduled groups repository instance  Raises:     HTTPException: If the group is not found or an error occurs
+         * @summary Delete Scheduled Group
+         * @param {number} groupId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        deleteScheduledGroupApiScheduledGroupsGroupIdDelete(groupId: number, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.deleteScheduledGroupApiScheduledGroupsGroupIdDelete(groupId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Get a scheduled group with its members.  Args:     group_id: The group ID     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupDetailResponse: Group details with members  Raises:     HTTPException: If the group is not found or an error occurs
+         * @summary Get Scheduled Group
+         * @param {number} groupId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getScheduledGroupApiScheduledGroupsGroupIdGet(groupId: number, options?: RawAxiosRequestConfig): AxiosPromise<ScheduledGroupDetailResponse> {
+            return localVarFp.getScheduledGroupApiScheduledGroupsGroupIdGet(groupId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * List all scheduled groups for the user.  Args:     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupsListResponse: List of groups  Raises:     HTTPException: If an error occurs retrieving groups
+         * @summary List Scheduled Groups
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        listScheduledGroupsApiScheduledGroupsGet(options?: RawAxiosRequestConfig): AxiosPromise<ScheduledGroupsListResponse> {
+            return localVarFp.listScheduledGroupsApiScheduledGroupsGet(options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Mark goal as completed for a project in a group.  Args:     group_id: The group ID     project_id: The project ID     completed: Whether goal is completed (default: True)     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupMemberResponse: Updated member  Raises:     HTTPException: If the project is not found or an error occurs
+         * @summary Mark Goal Completed
+         * @param {number} groupId 
+         * @param {string} projectId 
+         * @param {boolean} [completed] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        markGoalCompletedApiScheduledGroupsGroupIdMembersProjectIdCompletedPatch(groupId: number, projectId: string, completed?: boolean, options?: RawAxiosRequestConfig): AxiosPromise<ScheduledGroupMemberResponse> {
+            return localVarFp.markGoalCompletedApiScheduledGroupsGroupIdMembersProjectIdCompletedPatch(groupId, projectId, completed, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Remove a project from a scheduled group.  Args:     group_id: The group ID     project_id: The project ID to remove     current_user: The authenticated user     repository: The scheduled groups repository instance  Raises:     HTTPException: If the project is not found or an error occurs
+         * @summary Remove Project From Group
+         * @param {number} groupId 
+         * @param {string} projectId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        removeProjectFromGroupApiScheduledGroupsGroupIdMembersProjectIdDelete(groupId: number, projectId: string, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.removeProjectFromGroupApiScheduledGroupsGroupIdMembersProjectIdDelete(groupId, projectId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Start or stop a scheduled group.  Args:     group_id: The group ID     request: Request containing active status     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupResponse: Updated group  Raises:     HTTPException: If the group is not found or an error occurs
+         * @summary Toggle Group Active
+         * @param {number} groupId 
+         * @param {UpdateGroupStatusRequest} updateGroupStatusRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        toggleGroupActiveApiScheduledGroupsGroupIdActivePatch(groupId: number, updateGroupStatusRequest: UpdateGroupStatusRequest, options?: RawAxiosRequestConfig): AxiosPromise<ScheduledGroupResponse> {
+            return localVarFp.toggleGroupActiveApiScheduledGroupsGroupIdActivePatch(groupId, updateGroupStatusRequest, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Update a scheduled group.  Args:     group_id: The group ID     request: Request containing updates     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupResponse: Updated group  Raises:     HTTPException: If the group is not found or an error occurs
+         * @summary Update Scheduled Group
+         * @param {number} groupId 
+         * @param {UpdateScheduledGroupRequest} updateScheduledGroupRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateScheduledGroupApiScheduledGroupsGroupIdPut(groupId: number, updateScheduledGroupRequest: UpdateScheduledGroupRequest, options?: RawAxiosRequestConfig): AxiosPromise<ScheduledGroupResponse> {
+            return localVarFp.updateScheduledGroupApiScheduledGroupsGroupIdPut(groupId, updateScheduledGroupRequest, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * ScheduledGroupsApi - object-oriented interface
+ * @export
+ * @class ScheduledGroupsApi
+ * @extends {BaseAPI}
+ */
+export class ScheduledGroupsApi extends BaseAPI {
+    /**
+     * Add projects to a scheduled group.  Args:     group_id: The group ID     request: Request containing list of project IDs     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupDetailResponse: Updated group with members  Raises:     HTTPException: If the group is not found or an error occurs
+     * @summary Add Projects To Group
+     * @param {number} groupId 
+     * @param {AddProjectsToGroupRequest} addProjectsToGroupRequest 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ScheduledGroupsApi
+     */
+    public addProjectsToGroupApiScheduledGroupsGroupIdMembersPost(groupId: number, addProjectsToGroupRequest: AddProjectsToGroupRequest, options?: RawAxiosRequestConfig) {
+        return ScheduledGroupsApiFp(this.configuration).addProjectsToGroupApiScheduledGroupsGroupIdMembersPost(groupId, addProjectsToGroupRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Create a new scheduled group.  Args:     request: Request containing group configuration     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupResponse: The created group  Raises:     HTTPException: If an error occurs creating the group
+     * @summary Create Scheduled Group
+     * @param {CreateScheduledGroupRequest} createScheduledGroupRequest 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ScheduledGroupsApi
+     */
+    public createScheduledGroupApiScheduledGroupsPost(createScheduledGroupRequest: CreateScheduledGroupRequest, options?: RawAxiosRequestConfig) {
+        return ScheduledGroupsApiFp(this.configuration).createScheduledGroupApiScheduledGroupsPost(createScheduledGroupRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Delete a scheduled group.  Args:     group_id: The group ID     current_user: The authenticated user     repository: The scheduled groups repository instance  Raises:     HTTPException: If the group is not found or an error occurs
+     * @summary Delete Scheduled Group
+     * @param {number} groupId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ScheduledGroupsApi
+     */
+    public deleteScheduledGroupApiScheduledGroupsGroupIdDelete(groupId: number, options?: RawAxiosRequestConfig) {
+        return ScheduledGroupsApiFp(this.configuration).deleteScheduledGroupApiScheduledGroupsGroupIdDelete(groupId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Get a scheduled group with its members.  Args:     group_id: The group ID     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupDetailResponse: Group details with members  Raises:     HTTPException: If the group is not found or an error occurs
+     * @summary Get Scheduled Group
+     * @param {number} groupId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ScheduledGroupsApi
+     */
+    public getScheduledGroupApiScheduledGroupsGroupIdGet(groupId: number, options?: RawAxiosRequestConfig) {
+        return ScheduledGroupsApiFp(this.configuration).getScheduledGroupApiScheduledGroupsGroupIdGet(groupId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * List all scheduled groups for the user.  Args:     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupsListResponse: List of groups  Raises:     HTTPException: If an error occurs retrieving groups
+     * @summary List Scheduled Groups
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ScheduledGroupsApi
+     */
+    public listScheduledGroupsApiScheduledGroupsGet(options?: RawAxiosRequestConfig) {
+        return ScheduledGroupsApiFp(this.configuration).listScheduledGroupsApiScheduledGroupsGet(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Mark goal as completed for a project in a group.  Args:     group_id: The group ID     project_id: The project ID     completed: Whether goal is completed (default: True)     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupMemberResponse: Updated member  Raises:     HTTPException: If the project is not found or an error occurs
+     * @summary Mark Goal Completed
+     * @param {number} groupId 
+     * @param {string} projectId 
+     * @param {boolean} [completed] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ScheduledGroupsApi
+     */
+    public markGoalCompletedApiScheduledGroupsGroupIdMembersProjectIdCompletedPatch(groupId: number, projectId: string, completed?: boolean, options?: RawAxiosRequestConfig) {
+        return ScheduledGroupsApiFp(this.configuration).markGoalCompletedApiScheduledGroupsGroupIdMembersProjectIdCompletedPatch(groupId, projectId, completed, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Remove a project from a scheduled group.  Args:     group_id: The group ID     project_id: The project ID to remove     current_user: The authenticated user     repository: The scheduled groups repository instance  Raises:     HTTPException: If the project is not found or an error occurs
+     * @summary Remove Project From Group
+     * @param {number} groupId 
+     * @param {string} projectId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ScheduledGroupsApi
+     */
+    public removeProjectFromGroupApiScheduledGroupsGroupIdMembersProjectIdDelete(groupId: number, projectId: string, options?: RawAxiosRequestConfig) {
+        return ScheduledGroupsApiFp(this.configuration).removeProjectFromGroupApiScheduledGroupsGroupIdMembersProjectIdDelete(groupId, projectId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Start or stop a scheduled group.  Args:     group_id: The group ID     request: Request containing active status     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupResponse: Updated group  Raises:     HTTPException: If the group is not found or an error occurs
+     * @summary Toggle Group Active
+     * @param {number} groupId 
+     * @param {UpdateGroupStatusRequest} updateGroupStatusRequest 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ScheduledGroupsApi
+     */
+    public toggleGroupActiveApiScheduledGroupsGroupIdActivePatch(groupId: number, updateGroupStatusRequest: UpdateGroupStatusRequest, options?: RawAxiosRequestConfig) {
+        return ScheduledGroupsApiFp(this.configuration).toggleGroupActiveApiScheduledGroupsGroupIdActivePatch(groupId, updateGroupStatusRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Update a scheduled group.  Args:     group_id: The group ID     request: Request containing updates     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupResponse: Updated group  Raises:     HTTPException: If the group is not found or an error occurs
+     * @summary Update Scheduled Group
+     * @param {number} groupId 
+     * @param {UpdateScheduledGroupRequest} updateScheduledGroupRequest 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ScheduledGroupsApi
+     */
+    public updateScheduledGroupApiScheduledGroupsGroupIdPut(groupId: number, updateScheduledGroupRequest: UpdateScheduledGroupRequest, options?: RawAxiosRequestConfig) {
+        return ScheduledGroupsApiFp(this.configuration).updateScheduledGroupApiScheduledGroupsGroupIdPut(groupId, updateScheduledGroupRequest, options).then((request) => request(this.axios, this.basePath));
     }
 }
 

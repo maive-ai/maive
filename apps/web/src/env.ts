@@ -67,6 +67,17 @@ export const envSchema = v.object({
     ),
     'false',
   ),
+
+  /**
+   * Feature flag to enable/disable call list functionality
+   */
+  PUBLIC_ENABLE_CALL_LIST: v.optional(
+    v.pipe(
+      v.string(),
+      v.transform((s) => s.toLowerCase() === 'true'),
+    ),
+    'false',
+  ),
 });
 
 export const env = v.parse(envSchema, import.meta.env);

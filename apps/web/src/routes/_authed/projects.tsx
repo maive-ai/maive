@@ -4,12 +4,15 @@ import { useMemo, useState } from 'react';
 
 import { useAddToCallList, useCallList } from '@/clients/callList';
 import { useFetchProjects } from '@/clients/crm';
+import { useAddProjectsToGroup, useScheduledGroups } from '@/clients/scheduledGroups';
 import { CallListSheet } from '@/components/CallListSheet';
 import { ProjectCard } from '@/components/ProjectCard';
+import { ScheduledGroupModal } from '@/components/ScheduledGroupModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { env } from '@/env';
 
 export const Route = createFileRoute('/_authed/projects')({
   component: Projects,
@@ -20,11 +23,15 @@ function Projects() {
   const [pageSize, setPageSize] = useState<number>(50);
   const { data, isLoading, isError, error } = useFetchProjects(page, pageSize);
   const { data: callListData } = useCallList();
+  const { data: scheduledGroupsData } = useScheduledGroups();
   const addToCallList = useAddToCallList();
+  const addProjectsToGroup = useAddProjectsToGroup();
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSelectMode, setIsSelectMode] = useState<boolean>(false);
   const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
   const [isCallListOpen, setIsCallListOpen] = useState<boolean>(false);
+  const [isScheduleGroupModalOpen, setIsScheduleGroupModalOpen] = useState<boolean>(false);
+  const [scheduleGroupSelectValue, setScheduleGroupSelectValue] = useState<string>('');
   const navigate = useNavigate();
 
   const handleProjectClick = (projectId: string): void => {
@@ -63,6 +70,34 @@ function Projects() {
         setSelectedProjectIds(new Set());
       },
     });
+  };
+
+  const handleAddToScheduleGroup = async (groupId: number | 'new'): Promise<void> => {
+    const projectIds = Array.from(selectedProjectIds);
+    
+    if (groupId === 'new') {
+      // Open create modal, and after creation, add projects
+      setIsScheduleGroupModalOpen(true);
+      // Store projectIds to add after group creation
+      // We'll handle this in the modal's onSuccess callback
+    } else {
+      // Add to existing group
+      await addProjectsToGroup.mutateAsync({ groupId, projectIds });
+      // Exit select mode and clear selections
+      setIsSelectMode(false);
+      setSelectedProjectIds(new Set());
+    }
+  };
+
+  const handleGroupCreated = async (groupId: number): Promise<void> => {
+    // After group is created, add the selected projects
+    const projectIds = Array.from(selectedProjectIds);
+    if (projectIds.length > 0) {
+      await addProjectsToGroup.mutateAsync({ groupId, projectIds });
+    }
+    setIsScheduleGroupModalOpen(false);
+    setIsSelectMode(false);
+    setSelectedProjectIds(new Set());
   };
 
   // Filter projects based on search query
@@ -182,7 +217,7 @@ function Projects() {
       {/* Action Buttons - Above Search Bar */}
       <div className="mb-4 flex justify-end gap-2">
         {/* View Call List button - shown when call list has items */}
-        {!isSelectMode && callListData && callListData.total > 0 && (
+        {env.PUBLIC_ENABLE_CALL_LIST && !isSelectMode && callListData && callListData.total > 0 && (
           <Button
             onClick={() => setIsCallListOpen(true)}
           >
@@ -192,13 +227,48 @@ function Projects() {
         )}
 
         {/* Add to Call List button - shown in select mode when items are selected */}
-        {isSelectMode && selectedProjectIds.size > 0 && (
+        {env.PUBLIC_ENABLE_CALL_LIST && isSelectMode && selectedProjectIds.size > 0 && (
           <Button
             onClick={handleAddToCallList}
             disabled={addToCallList.isPending}
           >
             {addToCallList.isPending ? 'Adding...' : `Add to Call List (${selectedProjectIds.size})`}
           </Button>
+        )}
+
+        {/* Add to Schedule Group dropdown - shown in select mode when items are selected */}
+        {isSelectMode && selectedProjectIds.size > 0 && (
+          <Select
+            value={scheduleGroupSelectValue}
+            onValueChange={(value) => {
+              setScheduleGroupSelectValue('');
+              if (value === 'new') {
+                handleAddToScheduleGroup('new');
+              } else if (value) {
+                handleAddToScheduleGroup(parseInt(value, 10));
+              }
+            }}
+          >
+            <SelectTrigger className="w-[200px] bg-primary text-primary-foreground hover:bg-primary/90 border-0 data-[placeholder]:text-primary-foreground [&_svg]:text-primary-foreground [&_svg]:opacity-100 [&_svg:not([class*='text-'])]:text-primary-foreground *:data-[slot=select-value]:text-primary-foreground cursor-pointer">
+              <SelectValue placeholder="Add to Schedule Group" />
+            </SelectTrigger>
+            <SelectContent>
+              {scheduledGroupsData?.groups.length === 0 ? (
+                <SelectItem value="new" className="cursor-pointer">
+                  Create New Group...
+                </SelectItem>
+              ) : (
+                <>
+                  {scheduledGroupsData?.groups.map((group) => (
+                    <SelectItem key={group.id} value={group.id.toString()} className="cursor-pointer">
+                      {group.name} ({group.member_count})
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="new" className="cursor-pointer">Create New Group...</SelectItem>
+                </>
+              )}
+            </SelectContent>
+          </Select>
         )}
 
         {/* Select / Cancel button */}
@@ -331,7 +401,20 @@ function Projects() {
       )}
 
       {/* Call List Sheet */}
-      <CallListSheet open={isCallListOpen} onOpenChange={setIsCallListOpen} />
+      {env.PUBLIC_ENABLE_CALL_LIST && (
+        <CallListSheet open={isCallListOpen} onOpenChange={setIsCallListOpen} />
+      )}
+
+      {/* Schedule Group Modal */}
+      {isScheduleGroupModalOpen && (
+        <ScheduledGroupModal
+          open={isScheduleGroupModalOpen}
+          onOpenChange={(open) => {
+            setIsScheduleGroupModalOpen(open);
+          }}
+          onSuccess={handleGroupCreated}
+        />
+      )}
     </div>
   );
 }
