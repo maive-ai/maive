@@ -248,7 +248,7 @@ class GeminiProvider(AIProvider):
             )
             structured_response: GenerateContentResponse = (
                 client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model="gemini-2.5-flash-lite",
                     contents=[
                         "Please parse the following text into a JSON object: ",
                         response.text,

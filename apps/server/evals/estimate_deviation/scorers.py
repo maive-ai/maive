@@ -226,7 +226,7 @@ def comprehensive_deviation_scorer(
     9. Calculate value (quantity * unit_cost) for TP line items
     10. Calculate value_created (sum of values, zero if any FP deviations)
     11. Return 8 scores: precision, explanation_quality, occurrence_precision, occurrence_recall,
-        line_item_precision, quantity_accuracy, unit_cost_accuracy, value_created
+        pricebook_item_precision, quantity_accuracy, unit_cost_accuracy, value_created
 
     Args:
         input: Input data (not used, deviations are in output/expected)
@@ -471,7 +471,7 @@ def comprehensive_deviation_scorer(
             line_item_metrics["fp"] += 1
 
     # Calculate line item precision
-    line_item_precision = (
+    pricebook_item_precision = (
         line_item_metrics["tp"] / (line_item_metrics["tp"] + line_item_metrics["fp"])
         if (line_item_metrics["tp"] + line_item_metrics["fp"]) > 0
         else 0.0
@@ -571,8 +571,8 @@ def comprehensive_deviation_scorer(
             },
         ),
         Score(
-            name="line_item_precision",
-            score=line_item_precision,
+            name="pricebook_item_precision",
+            score=pricebook_item_precision,
             metadata={
                 "tp": line_item_metrics["tp"],
                 "fp": line_item_metrics["fp"],
