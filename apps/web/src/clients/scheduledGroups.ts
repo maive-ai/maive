@@ -22,7 +22,7 @@ import {
   type UseMutationResult,
 } from '@tanstack/react-query';
 
-import { getIdToken } from '@/auth';
+import { apiClient } from '@/lib/apiClient';
 import { env } from '@/env';
 
 // Re-export types from the generated client
@@ -40,18 +40,15 @@ export type {
 };
 
 /**
- * Create a configured Scheduled Groups API instance
+ * Create a configured Scheduled Groups API instance using the shared axios client
  */
-const createScheduledGroupsApi = async (): Promise<ScheduledGroupsApi> => {
-  const token = await getIdToken();
-  if (!token) throw new Error('Not authenticated');
-
+const createScheduledGroupsApi = (): ScheduledGroupsApi => {
   return new ScheduledGroupsApi(
     new Configuration({
-      accessToken: token,
       basePath: env.PUBLIC_SERVER_URL,
-      baseOptions: { withCredentials: true },
     }),
+    undefined,
+    apiClient
   );
 };
 
@@ -61,7 +58,7 @@ const createScheduledGroupsApi = async (): Promise<ScheduledGroupsApi> => {
 export async function createScheduledGroup(
   request: CreateScheduledGroupRequest
 ): Promise<ScheduledGroupResponse> {
-  const api = await createScheduledGroupsApi();
+  const api = createScheduledGroupsApi();
   const response = await api.createScheduledGroupApiScheduledGroupsPost(request);
   console.log(`[Scheduled Groups Client] Created group: ${response.data.name}`);
   return response.data;
@@ -71,7 +68,7 @@ export async function createScheduledGroup(
  * List all scheduled groups for the user
  */
 export async function fetchScheduledGroups(): Promise<ScheduledGroupsListResponse> {
-  const api = await createScheduledGroupsApi();
+  const api = createScheduledGroupsApi();
   const response = await api.listScheduledGroupsApiScheduledGroupsGet();
   console.log(`[Scheduled Groups Client] Fetched ${response.data.total} groups`);
   return response.data;
@@ -83,7 +80,7 @@ export async function fetchScheduledGroups(): Promise<ScheduledGroupsListRespons
 export async function fetchScheduledGroupDetail(
   groupId: number
 ): Promise<ScheduledGroupDetailResponse> {
-  const api = await createScheduledGroupsApi();
+  const api = createScheduledGroupsApi();
   const response = await api.getScheduledGroupApiScheduledGroupsGroupIdGet(groupId);
   console.log(
     `[Scheduled Groups Client] Fetched group ${groupId} with ${response.data.members.length} members`
@@ -98,7 +95,7 @@ export async function updateScheduledGroup(
   groupId: number,
   request: UpdateScheduledGroupRequest
 ): Promise<ScheduledGroupResponse> {
-  const api = await createScheduledGroupsApi();
+  const api = createScheduledGroupsApi();
   const response = await api.updateScheduledGroupApiScheduledGroupsGroupIdPut(
     groupId,
     request
@@ -111,7 +108,7 @@ export async function updateScheduledGroup(
  * Delete a scheduled group
  */
 export async function deleteScheduledGroup(groupId: number): Promise<void> {
-  const api = await createScheduledGroupsApi();
+  const api = createScheduledGroupsApi();
   await api.deleteScheduledGroupApiScheduledGroupsGroupIdDelete(groupId);
   console.log(`[Scheduled Groups Client] Deleted group ${groupId}`);
 }
@@ -123,7 +120,7 @@ export async function toggleGroupActive(
   groupId: number,
   isActive: boolean
 ): Promise<ScheduledGroupResponse> {
-  const api = await createScheduledGroupsApi();
+  const api = createScheduledGroupsApi();
   const request: UpdateGroupStatusRequest = { is_active: isActive };
   const response = await api.toggleGroupActiveApiScheduledGroupsGroupIdActivePatch(
     groupId,
@@ -140,7 +137,7 @@ export async function addProjectsToGroup(
   groupId: number,
   projectIds: string[]
 ): Promise<ScheduledGroupDetailResponse> {
-  const api = await createScheduledGroupsApi();
+  const api = createScheduledGroupsApi();
   const request: AddProjectsToGroupRequest = { project_ids: projectIds };
   const response = await api.addProjectsToGroupApiScheduledGroupsGroupIdMembersPost(
     groupId,
@@ -159,7 +156,7 @@ export async function removeProjectFromGroup(
   groupId: number,
   projectId: string
 ): Promise<void> {
-  const api = await createScheduledGroupsApi();
+  const api = createScheduledGroupsApi();
   await api.removeProjectFromGroupApiScheduledGroupsGroupIdMembersProjectIdDelete(
     groupId,
     projectId
@@ -175,7 +172,7 @@ export async function markGoalCompleted(
   projectId: string,
   completed: boolean = true
 ): Promise<ScheduledGroupMemberResponse> {
-  const api = await createScheduledGroupsApi();
+  const api = createScheduledGroupsApi();
   const response =
     await api.markGoalCompletedApiScheduledGroupsGroupIdMembersProjectIdCompletedPatch(
       groupId,

@@ -25,6 +25,16 @@ Python
 - Use enums instead of string comparisons
 - Minimize indentation where possible through the early-return idiom
 
+Imports
+- All imports must be at the top of the file, immediately after the module docstring
+- Never place imports inside functions, methods, or conditional blocks
+- Group imports in this order:
+  1. Standard library imports (e.g., `import asyncio`, `from datetime import datetime`)
+  2. Third-party imports (e.g., `from fastapi import APIRouter`, `from pydantic import BaseModel`)
+  3. Local imports (e.g., `from src.auth import ...`, `from src.db import ...`)
+- Within each group, sort alphabetically
+- Separate each group with a blank line
+
 Error Handling and Validation
 - Prioritize error handling and edge cases:
   - Handle errors and edge cases at the beginning of functions.

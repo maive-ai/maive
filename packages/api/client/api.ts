@@ -690,6 +690,31 @@ export interface Contact {
 
 
 /**
+ * Simple contact information (name, phone, email).
+ * @export
+ * @interface ContactInfo
+ */
+export interface ContactInfo {
+    /**
+     * 
+     * @type {string}
+     * @memberof ContactInfo
+     */
+    'name'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ContactInfo
+     */
+    'phone'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ContactInfo
+     */
+    'email'?: string | null;
+}
+/**
  * Universal contact list response with pagination.
  * @export
  * @interface ContactList
@@ -1019,6 +1044,152 @@ export interface MarkCallCompletedRequest {
      * @memberof MarkCallCompletedRequest
      */
     'completed'?: boolean;
+}
+/**
+ * Simple note for mock projects.
+ * @export
+ * @interface MockNote
+ */
+export interface MockNote {
+    /**
+     * 
+     * @type {string}
+     * @memberof MockNote
+     */
+    'id'?: string | null;
+    /**
+     * Note text
+     * @type {string}
+     * @memberof MockNote
+     */
+    'text': string;
+}
+/**
+ * Mock project data model (Mock CRM only).
+ * @export
+ * @interface MockProject
+ */
+export interface MockProject {
+    /**
+     * 
+     * @type {string}
+     * @memberof MockProject
+     */
+    'id'?: string | null;
+    /**
+     * Customer name
+     * @type {string}
+     * @memberof MockProject
+     */
+    'customerName': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof MockProject
+     */
+    'address'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof MockProject
+     */
+    'phone'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof MockProject
+     */
+    'email'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof MockProject
+     */
+    'claimNumber'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof MockProject
+     */
+    'dateOfLoss'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof MockProject
+     */
+    'insuranceCompany'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof MockProject
+     */
+    'insuranceAgency'?: string | null;
+    /**
+     * 
+     * @type {ContactInfo}
+     * @memberof MockProject
+     */
+    'insuranceAgencyContact'?: ContactInfo | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof MockProject
+     */
+    'insuranceContactName'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof MockProject
+     */
+    'insuranceContactPhone'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof MockProject
+     */
+    'insuranceContactEmail'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof MockProject
+     */
+    'adjusterName'?: string | null;
+    /**
+     * 
+     * @type {ContactInfo}
+     * @memberof MockProject
+     */
+    'adjusterContact'?: ContactInfo | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof MockProject
+     */
+    'adjusterContactName'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof MockProject
+     */
+    'adjusterContactPhone'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof MockProject
+     */
+    'adjusterContactEmail'?: string | null;
+    /**
+     * 
+     * @type {Array<MockNote>}
+     * @memberof MockProject
+     */
+    'notes'?: Array<MockNote> | null;
+    /**
+     * Project status
+     * @type {string}
+     * @memberof MockProject
+     */
+    'status'?: string;
 }
 /**
  * Universal note/activity model that works across all CRM providers.
@@ -2283,6 +2454,46 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
             };
         },
         /**
+         * Create a new demo project (Mock CRM only).  This endpoint is only available when using the Mock CRM provider. It allows creating demo projects for testing and demonstrations.  Args:     request: The project data to create     current_user: The authenticated user     crm_service: The CRM service instance  Returns:     Project: The created project  Raises:     HTTPException: If not using Mock CRM or an error occurs
+         * @summary Create Mock Project
+         * @param {MockProject} mockProject 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createMockProjectApiCrmProjectsPost: async (mockProject: MockProject, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'mockProject' is not null or undefined
+            assertParamExists('createMockProjectApiCrmProjectsPost', 'mockProject', mockProject)
+            const localVarPath = `/api/crm/projects`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(mockProject, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
          * Download a specific file\'s content.  This endpoint streams the file content to the client with proper headers for browser download.  Args:     file_id: The unique identifier for the file     filename: Optional filename (recommended to provide from file list)     content_type: Optional content type (recommended to provide from file list)     crm_service: The CRM service instance from dependency injection  Returns:     StreamingResponse with file content  Raises:     HTTPException: If the file is not found or an error occurs
          * @summary Download File
          * @param {string} fileId 
@@ -2664,6 +2875,50 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
             };
         },
         /**
+         * Update an existing demo project (Mock CRM only).  This endpoint is only available when using the Mock CRM provider. It allows updating demo projects for testing and demonstrations.  Args:     project_id: The unique identifier for the project     request: The updated project data     current_user: The authenticated user     crm_service: The CRM service instance  Returns:     Project: The updated project  Raises:     HTTPException: If not using Mock CRM or an error occurs
+         * @summary Update Mock Project
+         * @param {string} projectId 
+         * @param {MockProject} mockProject 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateMockProjectApiCrmProjectsProjectIdPatch: async (projectId: string, mockProject: MockProject, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'projectId' is not null or undefined
+            assertParamExists('updateMockProjectApiCrmProjectsProjectIdPatch', 'projectId', projectId)
+            // verify required parameter 'mockProject' is not null or undefined
+            assertParamExists('updateMockProjectApiCrmProjectsProjectIdPatch', 'mockProject', mockProject)
+            const localVarPath = `/api/crm/projects/{project_id}`
+                .replace(`{${"project_id"}}`, encodeURIComponent(String(projectId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'PATCH', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(mockProject, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
          * Update the status of a project.  This endpoint works across all CRM providers.  Args:     project_id: The unique identifier for the project     status_value: The new status value (provider-specific format)     crm_service: The CRM service instance from dependency injection  Raises:     HTTPException: If the project is not found or an error occurs
          * @summary Update Project Status
          * @param {string} projectId 
@@ -2743,6 +2998,19 @@ export const CRMApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await localVarAxiosParamCreator.addJobNoteApiCrmJobsJobIdNotesPost(jobId, bodyAddJobNoteApiCrmJobsJobIdNotesPost, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['CRMApi.addJobNoteApiCrmJobsJobIdNotesPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Create a new demo project (Mock CRM only).  This endpoint is only available when using the Mock CRM provider. It allows creating demo projects for testing and demonstrations.  Args:     request: The project data to create     current_user: The authenticated user     crm_service: The CRM service instance  Returns:     Project: The created project  Raises:     HTTPException: If not using Mock CRM or an error occurs
+         * @summary Create Mock Project
+         * @param {MockProject} mockProject 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async createMockProjectApiCrmProjectsPost(mockProject: MockProject, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Project>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.createMockProjectApiCrmProjectsPost(mockProject, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.createMockProjectApiCrmProjectsPost']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
@@ -2870,6 +3138,20 @@ export const CRMApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
+         * Update an existing demo project (Mock CRM only).  This endpoint is only available when using the Mock CRM provider. It allows updating demo projects for testing and demonstrations.  Args:     project_id: The unique identifier for the project     request: The updated project data     current_user: The authenticated user     crm_service: The CRM service instance  Returns:     Project: The updated project  Raises:     HTTPException: If not using Mock CRM or an error occurs
+         * @summary Update Mock Project
+         * @param {string} projectId 
+         * @param {MockProject} mockProject 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async updateMockProjectApiCrmProjectsProjectIdPatch(projectId: string, mockProject: MockProject, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Project>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.updateMockProjectApiCrmProjectsProjectIdPatch(projectId, mockProject, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.updateMockProjectApiCrmProjectsProjectIdPatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
          * Update the status of a project.  This endpoint works across all CRM providers.  Args:     project_id: The unique identifier for the project     status_value: The new status value (provider-specific format)     crm_service: The CRM service instance from dependency injection  Raises:     HTTPException: If the project is not found or an error occurs
          * @summary Update Project Status
          * @param {string} projectId 
@@ -2914,6 +3196,16 @@ export const CRMApiFactory = function (configuration?: Configuration, basePath?:
          */
         addJobNoteApiCrmJobsJobIdNotesPost(jobId: string, bodyAddJobNoteApiCrmJobsJobIdNotesPost: BodyAddJobNoteApiCrmJobsJobIdNotesPost, options?: RawAxiosRequestConfig): AxiosPromise<Note> {
             return localVarFp.addJobNoteApiCrmJobsJobIdNotesPost(jobId, bodyAddJobNoteApiCrmJobsJobIdNotesPost, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Create a new demo project (Mock CRM only).  This endpoint is only available when using the Mock CRM provider. It allows creating demo projects for testing and demonstrations.  Args:     request: The project data to create     current_user: The authenticated user     crm_service: The CRM service instance  Returns:     Project: The created project  Raises:     HTTPException: If not using Mock CRM or an error occurs
+         * @summary Create Mock Project
+         * @param {MockProject} mockProject 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createMockProjectApiCrmProjectsPost(mockProject: MockProject, options?: RawAxiosRequestConfig): AxiosPromise<Project> {
+            return localVarFp.createMockProjectApiCrmProjectsPost(mockProject, options).then((request) => request(axios, basePath));
         },
         /**
          * Download a specific file\'s content.  This endpoint streams the file content to the client with proper headers for browser download.  Args:     file_id: The unique identifier for the file     filename: Optional filename (recommended to provide from file list)     content_type: Optional content type (recommended to provide from file list)     crm_service: The CRM service instance from dependency injection  Returns:     StreamingResponse with file content  Raises:     HTTPException: If the file is not found or an error occurs
@@ -3013,6 +3305,17 @@ export const CRMApiFactory = function (configuration?: Configuration, basePath?:
             return localVarFp.updateJobStatusApiCrmJobsJobIdStatusPatch(jobId, bodyUpdateJobStatusApiCrmJobsJobIdStatusPatch, options).then((request) => request(axios, basePath));
         },
         /**
+         * Update an existing demo project (Mock CRM only).  This endpoint is only available when using the Mock CRM provider. It allows updating demo projects for testing and demonstrations.  Args:     project_id: The unique identifier for the project     request: The updated project data     current_user: The authenticated user     crm_service: The CRM service instance  Returns:     Project: The updated project  Raises:     HTTPException: If not using Mock CRM or an error occurs
+         * @summary Update Mock Project
+         * @param {string} projectId 
+         * @param {MockProject} mockProject 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateMockProjectApiCrmProjectsProjectIdPatch(projectId: string, mockProject: MockProject, options?: RawAxiosRequestConfig): AxiosPromise<Project> {
+            return localVarFp.updateMockProjectApiCrmProjectsProjectIdPatch(projectId, mockProject, options).then((request) => request(axios, basePath));
+        },
+        /**
          * Update the status of a project.  This endpoint works across all CRM providers.  Args:     project_id: The unique identifier for the project     status_value: The new status value (provider-specific format)     crm_service: The CRM service instance from dependency injection  Raises:     HTTPException: If the project is not found or an error occurs
          * @summary Update Project Status
          * @param {string} projectId 
@@ -3057,6 +3360,18 @@ export class CRMApi extends BaseAPI {
      */
     public addJobNoteApiCrmJobsJobIdNotesPost(jobId: string, bodyAddJobNoteApiCrmJobsJobIdNotesPost: BodyAddJobNoteApiCrmJobsJobIdNotesPost, options?: RawAxiosRequestConfig) {
         return CRMApiFp(this.configuration).addJobNoteApiCrmJobsJobIdNotesPost(jobId, bodyAddJobNoteApiCrmJobsJobIdNotesPost, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Create a new demo project (Mock CRM only).  This endpoint is only available when using the Mock CRM provider. It allows creating demo projects for testing and demonstrations.  Args:     request: The project data to create     current_user: The authenticated user     crm_service: The CRM service instance  Returns:     Project: The created project  Raises:     HTTPException: If not using Mock CRM or an error occurs
+     * @summary Create Mock Project
+     * @param {MockProject} mockProject 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CRMApi
+     */
+    public createMockProjectApiCrmProjectsPost(mockProject: MockProject, options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).createMockProjectApiCrmProjectsPost(mockProject, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -3172,6 +3487,19 @@ export class CRMApi extends BaseAPI {
      */
     public updateJobStatusApiCrmJobsJobIdStatusPatch(jobId: string, bodyUpdateJobStatusApiCrmJobsJobIdStatusPatch: BodyUpdateJobStatusApiCrmJobsJobIdStatusPatch, options?: RawAxiosRequestConfig) {
         return CRMApiFp(this.configuration).updateJobStatusApiCrmJobsJobIdStatusPatch(jobId, bodyUpdateJobStatusApiCrmJobsJobIdStatusPatch, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Update an existing demo project (Mock CRM only).  This endpoint is only available when using the Mock CRM provider. It allows updating demo projects for testing and demonstrations.  Args:     project_id: The unique identifier for the project     request: The updated project data     current_user: The authenticated user     crm_service: The CRM service instance  Returns:     Project: The updated project  Raises:     HTTPException: If not using Mock CRM or an error occurs
+     * @summary Update Mock Project
+     * @param {string} projectId 
+     * @param {MockProject} mockProject 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CRMApi
+     */
+    public updateMockProjectApiCrmProjectsProjectIdPatch(projectId: string, mockProject: MockProject, options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).updateMockProjectApiCrmProjectsProjectIdPatch(projectId, mockProject, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**

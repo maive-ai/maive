@@ -598,6 +598,62 @@
             }
           }
         }
+      },
+      "patch": {
+        "tags": [
+          "CRM"
+        ],
+        "summary": "Update Mock Project",
+        "description": "Update an existing demo project (Mock CRM only).\n\nThis endpoint is only available when using the Mock CRM provider.\nIt allows updating demo projects for testing and demonstrations.\n\nArgs:\n    project_id: The unique identifier for the project\n    request: The updated project data\n    current_user: The authenticated user\n    crm_service: The CRM service instance\n\nReturns:\n    Project: The updated project\n\nRaises:\n    HTTPException: If not using Mock CRM or an error occurs",
+        "operationId": "update_mock_project_api_crm_projects__project_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MockProject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/crm/projects": {
@@ -649,6 +705,51 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProjectList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "CRM"
+        ],
+        "summary": "Create Mock Project",
+        "description": "Create a new demo project (Mock CRM only).\n\nThis endpoint is only available when using the Mock CRM provider.\nIt allows creating demo projects for testing and demonstrations.\n\nArgs:\n    request: The project data to create\n    current_user: The authenticated user\n    crm_service: The CRM service instance\n\nReturns:\n    Project: The created project\n\nRaises:\n    HTTPException: If not using Mock CRM or an error occurs",
+        "operationId": "create_mock_project_api_crm_projects_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MockProject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
                 }
               }
             }
@@ -2658,6 +2759,49 @@
         "title": "Contact",
         "description": "Universal contact/customer model that works across all CRM providers."
       },
+      "ContactInfo": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Contact name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone",
+            "description": "Contact phone"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email",
+            "description": "Contact email"
+          }
+        },
+        "type": "object",
+        "title": "ContactInfo",
+        "description": "Simple contact information (name, phone, email)."
+      },
       "ContactList": {
         "properties": {
           "contacts": {
@@ -3146,6 +3290,272 @@
         "type": "object",
         "title": "MarkCallCompletedRequest",
         "description": "Request model for marking a call as completed."
+      },
+      "MockNote": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id",
+            "description": "Note ID"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "Note text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "MockNote",
+        "description": "Simple note for mock projects."
+      },
+      "MockProject": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id",
+            "description": "Project ID"
+          },
+          "customerName": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Customername",
+            "description": "Customer name"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address",
+            "description": "Project address"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone",
+            "description": "Customer phone"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email",
+            "description": "Customer email"
+          },
+          "claimNumber": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimnumber",
+            "description": "Insurance claim number"
+          },
+          "dateOfLoss": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dateofloss",
+            "description": "Date of loss (ISO format)"
+          },
+          "insuranceCompany": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Insurancecompany",
+            "description": "Insurance company name"
+          },
+          "insuranceAgency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Insuranceagency",
+            "description": "Insurance agency name"
+          },
+          "insuranceAgencyContact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContactInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Insurance agency contact"
+          },
+          "insuranceContactName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Insurancecontactname",
+            "description": "Insurance contact name"
+          },
+          "insuranceContactPhone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Insurancecontactphone",
+            "description": "Insurance contact phone"
+          },
+          "insuranceContactEmail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Insurancecontactemail",
+            "description": "Insurance contact email"
+          },
+          "adjusterName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjustername",
+            "description": "Adjuster name"
+          },
+          "adjusterContact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContactInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Adjuster contact"
+          },
+          "adjusterContactName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjustercontactname",
+            "description": "Adjuster contact name"
+          },
+          "adjusterContactPhone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjustercontactphone",
+            "description": "Adjuster contact phone"
+          },
+          "adjusterContactEmail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjustercontactemail",
+            "description": "Adjuster contact email"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/MockNote"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "Project notes"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Project status",
+            "default": "In Progress"
+          }
+        },
+        "type": "object",
+        "required": [
+          "customerName"
+        ],
+        "title": "MockProject",
+        "description": "Mock project data model (Mock CRM only)."
       },
       "Note": {
         "properties": {

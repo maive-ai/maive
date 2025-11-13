@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { AlertCircle, ChevronLeft, ChevronRight, Eye, FileSearch, Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 import { useAddToCallList, useCallList } from '@/clients/callList';
 import { useFetchProjects } from '@/clients/crm';
@@ -13,6 +13,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { env } from '@/env';
+import { useProjectSearch } from '@/hooks/useProjectSearch';
 
 export const Route = createFileRoute('/_authed/projects')({
   component: Projects,
@@ -101,38 +102,7 @@ function Projects() {
   };
 
   // Filter projects based on search query
-  const filteredProjects = useMemo(() => {
-    if (!data?.projects || !searchQuery.trim()) {
-      return data?.projects || [];
-    }
-
-    const query = searchQuery.toLowerCase().trim();
-
-    return data.projects.filter((project) => {
-      const providerData = project.provider_data as any;
-
-      // Search across multiple fields
-      const searchableFields = [
-        project.id,
-        project.status,
-        project.customer_name,
-        project.claim_number,
-        project.number,
-        providerData?.customerName,
-        providerData?.address,
-        providerData?.phone,
-        providerData?.email,
-        providerData?.insuranceAgency,
-        providerData?.insuranceAgencyContact?.name,
-        providerData?.adjusterName,
-        providerData?.adjusterContact?.name,
-      ];
-
-      return searchableFields.some((field) =>
-        field?.toString().toLowerCase().includes(query)
-      );
-    });
-  }, [data?.projects, searchQuery]);
+  const filteredProjects = useProjectSearch(data?.projects, searchQuery);
 
   // Loading State
   if (isLoading) {
