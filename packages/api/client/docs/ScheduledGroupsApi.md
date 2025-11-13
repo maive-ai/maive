@@ -5,10 +5,10 @@ All URIs are relative to *http://localhost*
 |Method | HTTP request | Description|
 |------------- | ------------- | -------------|
 |[**addProjectsToGroupApiScheduledGroupsGroupIdMembersPost**](#addprojectstogroupapischeduledgroupsgroupidmemberspost) | **POST** /api/scheduled-groups/{group_id}/members | Add Projects To Group|
-|[**createScheduledGroupApiScheduledGroupsPost**](#createscheduledgroupapischeduledgroupspost) | **POST** /api/scheduled-groups | Create Scheduled Group|
+|[**createScheduledGroupApiScheduledGroupsPost**](#createscheduledgroupapischeduledgroupspost) | **POST** /api/scheduled-groups/ | Create Scheduled Group|
 |[**deleteScheduledGroupApiScheduledGroupsGroupIdDelete**](#deletescheduledgroupapischeduledgroupsgroupiddelete) | **DELETE** /api/scheduled-groups/{group_id} | Delete Scheduled Group|
 |[**getScheduledGroupApiScheduledGroupsGroupIdGet**](#getscheduledgroupapischeduledgroupsgroupidget) | **GET** /api/scheduled-groups/{group_id} | Get Scheduled Group|
-|[**listScheduledGroupsApiScheduledGroupsGet**](#listscheduledgroupsapischeduledgroupsget) | **GET** /api/scheduled-groups | List Scheduled Groups|
+|[**listScheduledGroupsApiScheduledGroupsGet**](#listscheduledgroupsapischeduledgroupsget) | **GET** /api/scheduled-groups/ | List Scheduled Groups|
 |[**markGoalCompletedApiScheduledGroupsGroupIdMembersProjectIdCompletedPatch**](#markgoalcompletedapischeduledgroupsgroupidmembersprojectidcompletedpatch) | **PATCH** /api/scheduled-groups/{group_id}/members/{project_id}/completed | Mark Goal Completed|
 |[**removeProjectFromGroupApiScheduledGroupsGroupIdMembersProjectIdDelete**](#removeprojectfromgroupapischeduledgroupsgroupidmembersprojectiddelete) | **DELETE** /api/scheduled-groups/{group_id}/members/{project_id} | Remove Project From Group|
 |[**toggleGroupActiveApiScheduledGroupsGroupIdActivePatch**](#togglegroupactiveapischeduledgroupsgroupidactivepatch) | **PATCH** /api/scheduled-groups/{group_id}/active | Toggle Group Active|
@@ -17,7 +17,7 @@ All URIs are relative to *http://localhost*
 # **addProjectsToGroupApiScheduledGroupsGroupIdMembersPost**
 > ScheduledGroupDetailResponse addProjectsToGroupApiScheduledGroupsGroupIdMembersPost(addProjectsToGroupRequest)
 
-Add projects to a scheduled group.  Args:     group_id: The group ID     request: Request containing list of project IDs     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupDetailResponse: Updated group with members  Raises:     HTTPException: If the group is not found or an error occurs
+Add projects to a scheduled group.
 
 ### Example
 
@@ -73,7 +73,7 @@ const { status, data } = await apiInstance.addProjectsToGroupApiScheduledGroupsG
 # **createScheduledGroupApiScheduledGroupsPost**
 > ScheduledGroupResponse createScheduledGroupApiScheduledGroupsPost(createScheduledGroupRequest)
 
-Create a new scheduled group.  Args:     request: Request containing group configuration     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupResponse: The created group  Raises:     HTTPException: If an error occurs creating the group
+Create a new scheduled group.
 
 ### Example
 
@@ -126,7 +126,7 @@ const { status, data } = await apiInstance.createScheduledGroupApiScheduledGroup
 # **deleteScheduledGroupApiScheduledGroupsGroupIdDelete**
 > deleteScheduledGroupApiScheduledGroupsGroupIdDelete()
 
-Delete a scheduled group.  Args:     group_id: The group ID     current_user: The authenticated user     repository: The scheduled groups repository instance  Raises:     HTTPException: If the group is not found or an error occurs
+Delete a scheduled group.
 
 ### Example
 
@@ -178,7 +178,7 @@ void (empty response body)
 # **getScheduledGroupApiScheduledGroupsGroupIdGet**
 > ScheduledGroupDetailResponse getScheduledGroupApiScheduledGroupsGroupIdGet()
 
-Get a scheduled group with its members.  Args:     group_id: The group ID     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupDetailResponse: Group details with members  Raises:     HTTPException: If the group is not found or an error occurs
+Get a scheduled group with its members.
 
 ### Example
 
@@ -230,7 +230,7 @@ const { status, data } = await apiInstance.getScheduledGroupApiScheduledGroupsGr
 # **listScheduledGroupsApiScheduledGroupsGet**
 > ScheduledGroupsListResponse listScheduledGroupsApiScheduledGroupsGet()
 
-List all scheduled groups for the user.  Args:     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupsListResponse: List of groups  Raises:     HTTPException: If an error occurs retrieving groups
+List all scheduled groups for the user.
 
 ### Example
 
@@ -274,7 +274,7 @@ This endpoint does not have any parameters.
 # **markGoalCompletedApiScheduledGroupsGroupIdMembersProjectIdCompletedPatch**
 > ScheduledGroupMemberResponse markGoalCompletedApiScheduledGroupsGroupIdMembersProjectIdCompletedPatch()
 
-Mark goal as completed for a project in a group.  Args:     group_id: The group ID     project_id: The project ID     completed: Whether goal is completed (default: True)     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupMemberResponse: Updated member  Raises:     HTTPException: If the project is not found or an error occurs
+Mark goal as completed for a project in a group.
 
 ### Example
 
@@ -332,7 +332,7 @@ const { status, data } = await apiInstance.markGoalCompletedApiScheduledGroupsGr
 # **removeProjectFromGroupApiScheduledGroupsGroupIdMembersProjectIdDelete**
 > removeProjectFromGroupApiScheduledGroupsGroupIdMembersProjectIdDelete()
 
-Remove a project from a scheduled group.  Args:     group_id: The group ID     project_id: The project ID to remove     current_user: The authenticated user     repository: The scheduled groups repository instance  Raises:     HTTPException: If the project is not found or an error occurs
+Remove a project from a scheduled group.
 
 ### Example
 
@@ -387,7 +387,7 @@ void (empty response body)
 # **toggleGroupActiveApiScheduledGroupsGroupIdActivePatch**
 > ScheduledGroupResponse toggleGroupActiveApiScheduledGroupsGroupIdActivePatch(updateGroupStatusRequest)
 
-Start or stop a scheduled group.  Args:     group_id: The group ID     request: Request containing active status     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupResponse: Updated group  Raises:     HTTPException: If the group is not found or an error occurs
+Start or stop a scheduled group.
 
 ### Example
 
@@ -443,7 +443,7 @@ const { status, data } = await apiInstance.toggleGroupActiveApiScheduledGroupsGr
 # **updateScheduledGroupApiScheduledGroupsGroupIdPut**
 > ScheduledGroupResponse updateScheduledGroupApiScheduledGroupsGroupIdPut(updateScheduledGroupRequest)
 
-Update a scheduled group.  Args:     group_id: The group ID     request: Request containing updates     current_user: The authenticated user     repository: The scheduled groups repository instance  Returns:     ScheduledGroupResponse: Updated group  Raises:     HTTPException: If the group is not found or an error occurs
+Update a scheduled group.
 
 ### Example
 
