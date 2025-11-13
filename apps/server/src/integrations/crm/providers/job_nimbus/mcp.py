@@ -83,10 +83,10 @@ async def _analyze_job_files_with_mini_agent(
                     file_handle, filename, purpose=purpose
                 )
                 file_attachments.append((openai_file_id, filename, is_image))
-                logger.info("[Mini-Agent] Uploaded file", filename=filename, openai_file_id=openai_file_id, purpose=purpose)
+                logger.info("[Mini-Agent] Uploaded file", file_name=filename, openai_file_id=openai_file_id, purpose=purpose)
                 
             except Exception as e:
-                logger.warning("[Mini-Agent] Failed to upload file", filename=file_meta.filename, error=str(e))
+                logger.warning("[Mini-Agent] Failed to upload file", file_name=file_meta.filename, error=str(e))
                 continue
         
         if not file_attachments:
@@ -116,7 +116,6 @@ async def _analyze_job_files_with_mini_agent(
             prompt=detailed_prompt,
             file_attachments=file_attachments,  # List of (file_id, filename, is_image)
             model=_openai_provider.settings.model_name,
-            reasoning_effort="minimal"  # Use minimal reasoning for speed
         )
         
         logger.info("[Mini-Agent] Analysis complete", char_count=len(result.text))
@@ -186,7 +185,7 @@ async def get_job(job_id: str) -> dict[str, Any]:
         return result
         
     except CRMError as e:
-        logger.error("[MCP JobNimbus] CRM error getting job", job_id=job_id, message=e.message)
+        logger.error("[MCP JobNimbus] CRM error getting job", job_id=job_id, error_message=e.message)
         raise Exception(f"Failed to get job: {e.message}")
     except Exception as e:
         logger.error("[MCP JobNimbus] Unexpected error getting job", job_id=job_id, error=str(e))
@@ -268,7 +267,7 @@ async def get_all_jobs(
         return result
         
     except CRMError as e:
-        logger.error("[MCP JobNimbus] CRM error searching jobs", message=e.message)
+        logger.error("[MCP JobNimbus] CRM error searching jobs", error_message=e.message)
         raise Exception(f"Failed to search jobs: {e.message}")
     except Exception as e:
         logger.error("[MCP JobNimbus] Unexpected error searching jobs", error=str(e))
@@ -336,7 +335,7 @@ async def list_job_files(job_id: str) -> dict[str, Any]:
         return result
         
     except CRMError as e:
-        logger.error("[MCP JobNimbus] CRM error listing files for job", job_id=job_id, message=e.message)
+        logger.error("[MCP JobNimbus] CRM error listing files for job", job_id=job_id, error_message=e.message)
         raise Exception(f"Failed to list files: {e.message}")
     except Exception as e:
         logger.error("[MCP JobNimbus] Unexpected error listing files for job", job_id=job_id, error=str(e))
