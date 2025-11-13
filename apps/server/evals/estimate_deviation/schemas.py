@@ -37,7 +37,7 @@ class DeviationOccurrence(BaseModel):
     )
     timestamp: str = Field(
         description="Timestamp in HH:MM:SS or MM:SS format when this deviation was mentioned in the conversation",
-        pattern=r"^(([01]?[0-9]|2[0-3]):)?([0-5][0-9]):([0-5][0-9])$",
+        pattern=r"^[0-9]{1,2}:[0-5][0-9]:[0-5][0-9]$",
     )
 
 
