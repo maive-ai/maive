@@ -13,6 +13,7 @@ from src.auth.schemas import User
 from src.db.dependencies import get_scheduled_groups_repository
 from src.db.scheduled_groups.decorators import handle_db_errors
 from src.db.scheduled_groups.repository import ScheduledGroupsRepository
+from src.db.scheduled_groups.response_builders import build_detail_response
 from src.db.scheduled_groups.schemas import (
     AddProjectsToGroupRequest,
     ScheduledGroupDetailResponse,
@@ -20,34 +21,6 @@ from src.db.scheduled_groups.schemas import (
 )
 
 router = APIRouter()
-
-
-async def _build_detail_response(group, members) -> ScheduledGroupDetailResponse:
-    """Build a ScheduledGroupDetailResponse from a ScheduledGroup model and its members."""
-    return ScheduledGroupDetailResponse(
-        id=group.id,
-        user_id=group.user_id,
-        name=group.name,
-        frequency=group.frequency,
-        time_of_day=group.time_of_day.strftime("%H:%M:%S"),
-        goal_type=group.goal_type,
-        goal_description=group.goal_description,
-        who_to_call=group.who_to_call,
-        is_active=group.is_active,
-        members=[
-            ScheduledGroupMemberResponse(
-                id=member.id,
-                group_id=member.group_id,
-                project_id=member.project_id,
-                goal_completed=member.goal_completed,
-                goal_completed_at=member.goal_completed_at,
-                added_at=member.added_at,
-            )
-            for member in members
-        ],
-        created_at=group.created_at,
-        updated_at=group.updated_at,
-    )
 
 
 @router.post(
@@ -80,7 +53,7 @@ async def add_projects_to_group(
     # Get updated group with members
     members = await repository.get_group_members(group_id, current_user.id)
 
-    return await _build_detail_response(group, members)
+    return await build_detail_response(group, members)
 
 
 @router.delete("/{group_id}/members/{project_id}", status_code=HTTPStatus.NO_CONTENT)

@@ -13,6 +13,10 @@ from src.auth.schemas import User
 from src.db.dependencies import get_scheduled_groups_repository
 from src.db.scheduled_groups.decorators import handle_db_errors
 from src.db.scheduled_groups.repository import ScheduledGroupsRepository
+from src.db.scheduled_groups.response_builders import (
+    build_detail_response,
+    build_group_response,
+)
 from src.db.scheduled_groups.schemas import (
     CreateScheduledGroupRequest,
     ScheduledGroupDetailResponse,
@@ -23,28 +27,6 @@ from src.db.scheduled_groups.schemas import (
 )
 
 router = APIRouter()
-
-
-async def _build_group_response(
-    group, repository: ScheduledGroupsRepository
-) -> ScheduledGroupResponse:
-    """Build a ScheduledGroupResponse from a ScheduledGroup model."""
-    member_count = await repository.get_member_count(group.id)
-
-    return ScheduledGroupResponse(
-        id=group.id,
-        user_id=group.user_id,
-        name=group.name,
-        frequency=group.frequency,
-        time_of_day=group.time_of_day.strftime("%H:%M:%S"),
-        goal_type=group.goal_type,
-        goal_description=group.goal_description,
-        who_to_call=group.who_to_call,
-        is_active=group.is_active,
-        member_count=member_count,
-        created_at=group.created_at,
-        updated_at=group.updated_at,
-    )
 
 
 @router.post("/", response_model=ScheduledGroupResponse, status_code=HTTPStatus.CREATED)
@@ -74,7 +56,7 @@ async def create_scheduled_group(
 
     await repository.session.commit()
 
-    return await _build_group_response(group, repository)
+    return await build_group_response(group, repository)
 
 
 @router.get("/", response_model=ScheduledGroupsListResponse)
@@ -87,7 +69,7 @@ async def list_scheduled_groups(
     groups = await repository.list_user_groups(current_user.id)
 
     group_responses = [
-        await _build_group_response(group, repository) for group in groups
+        await build_group_response(group, repository) for group in groups
     ]
 
     return ScheduledGroupsListResponse(groups=group_responses, total=len(group_responses))
@@ -111,9 +93,7 @@ async def get_scheduled_group(
 
     members = await repository.get_group_members(group_id, current_user.id)
 
-    from src.db.scheduled_groups.router import _build_detail_response
-
-    return await _build_detail_response(group, members)
+    return await build_detail_response(group, members)
 
 
 @router.put("/{group_id}", response_model=ScheduledGroupResponse)
@@ -153,7 +133,7 @@ async def update_scheduled_group(
 
     await repository.session.commit()
 
-    return await _build_group_response(group, repository)
+    return await build_group_response(group, repository)
 
 
 @router.delete("/{group_id}", status_code=HTTPStatus.NO_CONTENT)
@@ -198,4 +178,4 @@ async def toggle_group_active(
 
     await repository.session.commit()
 
-    return await _build_group_response(group, repository)
+    return await build_group_response(group, repository)
