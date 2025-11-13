@@ -275,6 +275,35 @@ async def task(input, hooks):
         # Clean up temp file
         Path(temp_transcript_path).unlink(missing_ok=True)
 
+    # Log task-level metric so Braintrust surfaces it in the metrics table.
+    # This logs the raw predicted value sum; scorer will still compute the
+    # ground-truth-aware normalization and penalties.
+    try:
+        total_value = 0.0
+        num_line_items_with_value = 0
+        for dev in deviations:
+            item = getattr(dev, "predicted_line_item", None)
+            if not item:
+                continue
+            quantity = getattr(item, "quantity", None)
+            unit_cost = getattr(item, "unit_cost", None)
+            if quantity and unit_cost:
+                total_value += quantity * unit_cost
+                num_line_items_with_value += 1
+
+        # Emit as task-span metric
+        from braintrust import current_span
+
+        current_span().log(metrics={"value_created_dollars": total_value})
+        logger.info(
+            "[EVAL] Logged value_created_dollars",
+            value_created_dollars=total_value,
+            num_line_items=num_line_items_with_value,
+        )
+    except Exception as e:
+        # Do not fail the task if logging fails
+        logger.error("[EVAL] Failed logging value_created_dollars", error=str(e))
+
     # Return simplified output for scoring
     return {
         "deviations": [d.model_dump() for d in deviations],
