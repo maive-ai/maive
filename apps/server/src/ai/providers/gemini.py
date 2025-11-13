@@ -4,7 +4,12 @@ from typing import AsyncGenerator, TypeVar
 
 from braintrust.wrappers.google_genai import setup_genai
 from google import genai
-from google.genai.types import FileSearch, GenerateContentConfig, Tool
+from google.genai.types import (
+    FileSearch,
+    GenerateContentConfig,
+    GenerateContentResponse,
+    Tool,
+)
 from pydantic import BaseModel
 
 from src.ai.base import (
@@ -20,7 +25,6 @@ from src.ai.gemini.exceptions import GeminiError
 from src.ai.gemini.schemas import (
     FileUploadRequest,
     GenerateContentRequest,
-    GenerateContentResponse,
 )
 from src.utils.logger import logger
 
@@ -220,8 +224,8 @@ class GeminiProvider(AIProvider):
 
             generation_config = GenerateContentConfig(
                 temperature=temperature,
+                # response_schema=response_schema,
                 response_schema=response_schema,
-                # response_mime_type="application/json",
                 tools=tools,
             )
 
@@ -231,27 +235,39 @@ class GeminiProvider(AIProvider):
             response: GenerateContentResponse = client.models.generate_content(
                 model=model_name, contents=contents, config=generation_config
             )
-
-            logger.info("Content generation response", response=response)
-            logger.info("Content parsed response", parsed_response=response.parsed)
-            # Check if response has text
+            logger.info("First pass response", response=response)
             if not response.text:
-                logger.error(
-                    "Response text is empty",
-                    finish_reason=getattr(response, "finish_reason", None),
-                    candidates=getattr(response, "candidates", None),
-                )
-                raise ValueError(
-                    f"Empty response from Gemini API. "
-                    f"Finish reason: {getattr(response, 'finish_reason', 'unknown')}"
-                )
+                logger.error("Response text is empty", response=response)
+                raise ValueError("Response text is empty")
+            logger.info("First pass response text", text=response.text)
 
-            logger.info(
-                "Content generation response text", response_text=response.text[:500]
+            structured_config = GenerateContentConfig(
+                temperature=temperature,
+                response_json_schema=response_schema.model_json_schema(),
+                response_mime_type="application/json",
             )
+            structured_response: GenerateContentResponse = (
+                client.models.generate_content(
+                    model="gemini-2.5-flash-lite",
+                    contents=[
+                        "Please parse the following text into a JSON object: ",
+                        response.text,
+                    ],
+                    config=structured_config,
+                )
+            )
+            if structured_response.parsed:
+                logger.info("Have parsed response", parsed=structured_response.parsed)
+                return response_schema.model_validate(structured_response.parsed)
 
-            # Parse JSON response into the Pydantic model instance
-            return response_schema.model_validate_json(response.text)
+            if not structured_response.text:
+                logger.error(
+                    "Structured response text is empty", response=structured_response
+                )
+                raise ValueError("Structured response text is empty")
+
+            logger.info("Second pass response text", text=structured_response.parsed)
+            return response_schema(**structured_response.parsed)
 
         except Exception as e:
             logger.error("Content generation failed", error=str(e))
