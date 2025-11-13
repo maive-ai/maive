@@ -47,3 +47,4 @@ Logging
   - `logger.info("[USER_INPUT]", user_id=str(user_id), input=message)`
   - `logger.info("[MCP] Tool call started", item_id=item_id)`
   - `logger.error("[AUTH] Login failed", user_id=user_id, error=str(e))`
+- Never use reserved `LogRecord` attributes as keyword arguments: `filename`, `message`, `name`, `pathname`, `lineno`, `levelname`, `funcName`, `module`, `thread`, `process`, `asctime`. Use alternatives like: `file_name`, `error_message`, `store_name` instead

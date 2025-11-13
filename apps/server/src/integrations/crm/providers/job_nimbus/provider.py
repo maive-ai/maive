@@ -809,7 +809,7 @@ class JobNimbusProvider(CRMProvider):
             resolved_filename = filename or f"download_{file_id}"
             resolved_content_type = content_type or "application/octet-stream"
             
-            logger.info("[JobNimbus] Downloaded file", filename=resolved_filename, size_bytes=len(response.content))
+            logger.info("[JobNimbus] Downloaded file", file_name=resolved_filename, size_bytes=len(response.content))
             return (response.content, resolved_filename, resolved_content_type)
             
         except httpx.HTTPStatusError as e:

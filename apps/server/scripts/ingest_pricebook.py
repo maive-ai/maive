@@ -63,7 +63,7 @@ class PricebookVectorStoreService:
 
         # Create new vector store
         try:
-            logger.info("[PRICEBOOK] Creating new vector store", name=PRICEBOOK_VECTOR_STORE_NAME)
+            logger.info("[PRICEBOOK] Creating new vector store", store_name=PRICEBOOK_VECTOR_STORE_NAME)
             vector_store = await self.client.vector_stores.create(
                 name=PRICEBOOK_VECTOR_STORE_NAME,
             )
@@ -103,7 +103,7 @@ class PricebookVectorStoreService:
                     purpose="assistants",
                 )
 
-            logger.info("[PRICEBOOK] Uploaded file", file_id=uploaded_file.id, filename=filename)
+            logger.info("[PRICEBOOK] Uploaded file", file_id=uploaded_file.id, file_name=filename)
 
             # Attach file to vector store
             await self.client.vector_stores.files.create(
