@@ -16,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 
 import braintrust
-from braintrust import Eval
+from braintrust import EvalAsync
 
 from evals.estimate_deviation.scorers import comprehensive_deviation_scorer
 from src.utils.logger import logger
@@ -36,26 +36,35 @@ def log_error_to_file(error_entry: dict):
         f.write(json.dumps(error_entry) + "\n")
 
 
-def logging_scorer_wrapper(input, output, expected=None, **kwargs):
+async def logging_scorer_wrapper(input, output, expected=None, metadata=None, **kwargs):
     """Wrapper around comprehensive_deviation_scorer that logs errors to file.
 
     Priority: Log FALSE POSITIVES (predicted deviations that were wrong)
     Also logs: False negatives, occurrence mismatches, line item errors
     """
+    import asyncio
+    from concurrent.futures import ThreadPoolExecutor
+    from functools import partial
+
     from evals.estimate_deviation.schemas import Deviation
 
-    # Run the original scorer
-    scores = comprehensive_deviation_scorer(input, output, expected, **kwargs)
+    # Run the original scorer in a thread pool to avoid blocking the event loop
+    loop = asyncio.get_event_loop()
+    scorer_func = partial(
+        comprehensive_deviation_scorer, input, output, expected, **kwargs
+    )
+    with ThreadPoolExecutor() as executor:
+        scores = await loop.run_in_executor(executor, scorer_func)
 
     # Extract metrics from the precision score
     precision_score = scores[0]
-    metadata = precision_score.metadata
+    score_metadata = precision_score.metadata
 
     # Get matched and unmatched deviations
-    matches = metadata.get("matches", [])
-    tp = metadata.get("tp", 0)
-    fp = metadata.get("fp", 0)
-    fn = metadata.get("fn", 0)
+    matches = score_metadata.get("matches", [])
+    tp = score_metadata.get("tp", 0)
+    fp = score_metadata.get("fp", 0)
+    fn = score_metadata.get("fn", 0)
 
     # Parse deviations
     output_devs = [Deviation(**d) for d in output.get("deviations", [])]
@@ -64,8 +73,32 @@ def logging_scorer_wrapper(input, output, expected=None, **kwargs):
     # Track which predictions were matched
     matched_predicted_explanations = {m["predicted_explanation"] for m in matches}
 
-    # Get dataset ID from kwargs if available
-    dataset_id = kwargs.get("id", "unknown")
+    # Get dataset ID from metadata (Braintrust passes this)
+    dataset_id = None
+    if metadata:
+        # Primary: Use your internal UUID
+        dataset_id = metadata.get("uuid")
+
+        # Fallback: Try other common keys
+        if not dataset_id:
+            dataset_id = (
+                metadata.get("id")
+                or metadata.get("dataset_id")
+                or metadata.get("_xact_id")
+            )
+
+    # Fallback to input if it has an id field
+    if not dataset_id and isinstance(input, dict):
+        dataset_id = input.get("id") or input.get("uuid")
+
+    # Fallback to kwargs
+    if not dataset_id:
+        dataset_id = kwargs.get("id") or kwargs.get("uuid")
+
+    # Last resort - use a hash
+    if not dataset_id:
+        dataset_id = f"row_{abs(hash(str(input)[:100]))}"
+
     timestamp = datetime.now().isoformat()
 
     # LOG FALSE POSITIVES (TOP PRIORITY)
@@ -173,11 +206,11 @@ async def task(input, hooks):
     Returns:
         Dict with deviations
     """
+    import asyncio
     import json as json_module
-    # import asyncio
 
-    # task_id = id(asyncio.current_task())
-    # logger.info(f"[Task {task_id}] Starting workflow with parsed data from Braintrust")
+    task_id = id(asyncio.current_task())
+    logger.info(f"[Task {task_id}] Starting workflow with parsed data from Braintrust")
 
     # Helper to extract JSON from JSONAttachment (handles bytes)
     def extract_json(attachment):
@@ -228,11 +261,15 @@ async def task(input, hooks):
 
     try:
         # Call run directly
+        logger.info(f"[Task {task_id}] Running workflow...")
         deviations = await workflow.run(
             estimate_data=estimate_data,
             form_data=form_data,
             audio_path=None,  # No audio in eval
             transcript_path=temp_transcript_path,
+        )
+        logger.info(
+            f"[Task {task_id}] Workflow complete, found {len(deviations)} deviations"
         )
     finally:
         # Clean up temp file
@@ -244,7 +281,7 @@ async def task(input, hooks):
     }
 
 
-def main():
+async def main():
     """Main entry point for Braintrust eval."""
     parser = argparse.ArgumentParser(
         description="Run Braintrust-powered eval on discrepancy detection"
@@ -300,7 +337,8 @@ def main():
     )
 
     # Run eval with logging scorer wrapper (logs errors to file)
-    result = Eval(
+    # IMPORTANT: await Eval() to enable async concurrency
+    result = await EvalAsync(
         "discrepancy-detection",
         data=lambda: dataset,
         task=task,
@@ -336,4 +374,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+
+    asyncio.run(main())
