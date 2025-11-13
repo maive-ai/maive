@@ -594,7 +594,7 @@ function CreateProject() {
                           size="icon"
                           onClick={() => {
                             if (newNoteText.trim()) {
-                              setNotes([...notes, { text: newNoteText.trim() }]);
+                              setNotes([{ text: newNoteText.trim() }, ...notes]);
                               setNewNoteText('');
                             }
                           }}
