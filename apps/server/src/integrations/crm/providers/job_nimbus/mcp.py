@@ -12,6 +12,7 @@ from src.ai.providers.openai import OpenAIProvider
 from src.config import get_app_settings
 from src.integrations.crm.base import CRMError
 from src.integrations.crm.providers.job_nimbus.provider import JobNimbusProvider
+from src.integrations.crm.schemas import Job, JobList
 from src.utils.logger import logger
 
 # Initialize JobNimbus provider directly (not through factory)
@@ -166,7 +167,9 @@ async def get_job(job_id: str) -> dict[str, Any]:
     """Get a specific job by ID from JobNimbus.
 
     Args:
-        job_id: The JobNimbus job ID (JNID) to retrieve
+        job_id: The JobNimbus job ID (JNID) to retrieve.
+            Correct example: "mhdn17a1ssizgvz8fo0h66r".
+            Incorrect example: "1636" (job number not JNID).
 
     Returns:
         Dictionary with job details and notes. Key fields include:
@@ -203,9 +206,13 @@ async def get_job(job_id: str) -> dict[str, Any]:
 
     except CRMError as e:
         logger.error(
-            "[MCP JobNimbus] CRM error getting job", job_id=job_id, message=e.message
+            "[MCP JobNimbus] CRM error getting job",
+            job_id=job_id,
+            error_code=e.error_code,
+            error_message=e.message,
         )
-        raise Exception(f"Failed to get job: {e.message}")
+        # Preserve error code in exception message for debugging
+        raise Exception(f"[{e.error_code}] Failed to get job: {e.message}")
     except Exception as e:
         logger.error(
             "[MCP JobNimbus] Unexpected error getting job", job_id=job_id, error=str(e)
@@ -228,6 +235,11 @@ async def get_all_jobs(
     Use this tool to find jobs based on customer information, job details, or status.
     You can combine multiple search criteria to narrow down results.
 
+    IMPORTANT: Notes behavior:
+    - If exactly one job is returned, notes will be automatically fetched and included.
+    - If multiple jobs are returned, notes are NOT included. To get notes for specific jobs,
+      call get_job() for each job ID that needs notes.
+
     Args:
         customer_name: Search by customer name (partial match, case-insensitive)
         job_id: Search by exact job ID
@@ -240,7 +252,8 @@ async def get_all_jobs(
     Returns:
         Dictionary containing:
         - jobs (list[dict]): List of matching jobs, each with same structure as get_job()
-          (includes id, name, number, status, customer info, address, dates, notes, etc.)
+          (includes id, name, number, status, customer info, address, dates, etc.)
+          Notes are included only if exactly one job is returned.
         - total_count (int): Total number of matching jobs
         - page (int): Current page number
         - page_size (int): Number of results per page
@@ -276,11 +289,21 @@ async def get_all_jobs(
             filters["status"] = status
 
         # Delegate to provider (handles all filtering logic)
-        job_list = await _provider.get_all_jobs(
+        job_list: JobList = await _provider.get_all_jobs(
             filters=filters if filters else None,
             page=page,
             page_size=page_size,
         )
+
+        # Special case: if exactly one job is returned, fetch notes for it
+        if len(job_list.jobs) == 1:
+            job: Job = job_list.jobs[0]
+            logger.info(
+                "[MCP JobNimbus] Single job result, fetching notes",
+                job_id=job.id,
+            )
+            job.notes = await _provider._get_job_notes(job.id)
+            job_list.jobs[0] = job
 
         # Convert to dict format for MCP response
         result = {
@@ -300,9 +323,11 @@ async def get_all_jobs(
 
     except CRMError as e:
         logger.error(
-            "[MCP JobNimbus] CRM error searching jobs", error_message=e.message
+            "[MCP JobNimbus] CRM error searching jobs",
+            error_code=e.error_code,
+            error_message=e.message,
         )
-        raise Exception(f"Failed to search jobs: {e.message}")
+        raise Exception(f"[{e.error_code}] Failed to search jobs: {e.message}")
     except Exception as e:
         logger.error("[MCP JobNimbus] Unexpected error searching jobs", error=str(e))
         raise Exception(f"Failed to search jobs: {str(e)}")
@@ -374,9 +399,10 @@ async def list_job_files(job_id: str) -> dict[str, Any]:
         logger.error(
             "[MCP JobNimbus] CRM error listing files for job",
             job_id=job_id,
-            message=e.message,
+            error_code=e.error_code,
+            error_message=e.message,
         )
-        raise Exception(f"Failed to list files: {e.message}")
+        raise Exception(f"[{e.error_code}] Failed to list files: {e.message}")
     except Exception as e:
         logger.error(
             "[MCP JobNimbus] Unexpected error listing files for job",

@@ -1996,6 +1996,7 @@ dependencies = [
     { name = "pypdf" },
     { name = "python-json-logger" },
     { name = "sqlalchemy", extra = ["asyncio"] },
+    { name = "tenacity" },
     { name = "tqdm" },
     { name = "vapi-server-sdk" },
 ]
@@ -2038,6 +2039,7 @@ requires-dist = [
     { name = "pypdf", specifier = ">=5.1.0" },
     { name = "python-json-logger", specifier = ">=4.0.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.44" },
+    { name = "tenacity", specifier = ">=9.1.2" },
     { name = "tqdm", specifier = ">=4.67.1" },
     { name = "vapi-server-sdk", specifier = ">=1.7.2" },
 ]
