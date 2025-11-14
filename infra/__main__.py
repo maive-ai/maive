@@ -3,6 +3,7 @@
 import time
 
 import pulumi
+import pulumi_esc_sdk as esc
 import pulumi_docker_build as docker_build
 from pulumi_aws import (
     acm,
@@ -45,11 +46,9 @@ def get_esc_env_vars():
     - Get token from: https://app.pulumi.com/account/tokens
     """
     try:
-        import pulumi_esc_sdk as esc
-        
         # Initialize ESC client (uses CLI credentials or PULUMI_ACCESS_TOKEN)
         client = esc.esc_client.default_client()
-        
+
         # Get the ESC environment path
         org_name = pulumi.get_organization()  # "maive"
         project_name = pulumi.get_project()    # "maive-infra"
@@ -80,7 +79,7 @@ def get_esc_env_vars():
             f"   Set PULUMI_ACCESS_TOKEN to enable ESC integration.\n"
             f"   Get token from: https://app.pulumi.com/account/tokens"
         )
-        return []
+        raise ValueError(f"Failed to load ESC environment variables: {e}")
 
 base_env_vars = get_esc_env_vars()
 
