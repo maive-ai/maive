@@ -60,20 +60,6 @@ def get_proper_extension(mime_type):
     return ext_map.get(mime_type, ".audio")
 
 
-def convert_to_mp3(input_path, mp3_path, bitrate="64k"):
-    """Convert any audio file to MP3 using ffmpeg with specified bitrate."""
-    try:
-        subprocess.run(
-            ["ffmpeg", "-i", input_path, "-b:a", bitrate, "-y", mp3_path],
-            check=True,
-            capture_output=True,
-        )
-        return True
-    except subprocess.CalledProcessError as e:
-        print(f"Error converting {input_path} to MP3: {e}")
-        return False
-
-
 def upload_to_s3(local_file_path, s3_bucket, s3_key):
     """Upload a file to S3."""
     try:
@@ -87,7 +73,7 @@ def upload_to_s3(local_file_path, s3_bucket, s3_key):
 
 
 def process_transcript_json(downloaded_file_path, output_json_path):
-    """Process downloaded transcript file, simplify it, and save as properly formatted JSON."""
+    """Process downloaded transcript file, and save as properly formatted JSON."""
     try:
         # Try to read as JSON first (in case it's already JSON)
         with open(downloaded_file_path, "r", encoding="utf-8") as f:
