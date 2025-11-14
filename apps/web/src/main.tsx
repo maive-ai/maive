@@ -6,10 +6,12 @@ import {
 } from '@tanstack/react-router';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { PostHogProvider } from 'posthog-js/react';
 
 import { AuthProvider, useAuth } from './auth';
 import { Spinner } from './components/ui/spinner';
 import { routeTree } from './routeTree.gen';
+import { POSTHOG_API_KEY, POSTHOG_API_HOST } from './env';
 import './style.css';
 
 // Create a client
@@ -60,7 +62,17 @@ if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <React.StrictMode>
-      <App />
+      <PostHogProvider
+        apiKey={POSTHOG_API_KEY}
+        options={{
+          api_host: POSTHOG_API_HOST,
+          defaults: '2025-05-24',
+          capture_exceptions: true, // This enables capturing exceptions using Error Tracking
+          debug: import.meta.env.MODE === 'development',
+        }}
+      >
+        <App />
+      </PostHogProvider>
     </React.StrictMode>,
   );
 }
