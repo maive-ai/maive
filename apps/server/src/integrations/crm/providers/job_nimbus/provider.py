@@ -1150,67 +1150,6 @@ class JobNimbusProvider(CRMProvider):
             },
         )
 
-    # ========================================================================
-    # Legacy/JobNimbus-Specific Methods
-    # ========================================================================
-
-    async def get_project_status(self, project_id: str) -> ProjectStatusResponse:
-        """
-        Get the status of a specific job/project by JNID from JobNimbus.
-
-        Note: JobNimbus doesn't have a separate "project" concept - jobs serve this purpose.
-
-        Args:
-            project_id: The JobNimbus JNID
-
-        Returns:
-            ProjectStatusResponse: The job status information
-
-        Raises:
-            CRMError: If the job is not found or an error occurs
-        """
-        try:
-            logger.debug("Fetching job status for JNID", project_id=project_id)
-
-            # Use _get_job_by_id for consistent error handling
-            jn_job = await self._get_job_by_id(project_id)
-
-            # Transform to ProjectStatusResponse
-            # Note: JobNimbus has custom statuses per workflow, so we store the raw status name
-            return ProjectStatusResponse(
-                project_id=jn_job.jnid,
-                status=jn_job.status_name or "Unknown",  # Using raw status name
-                provider=CRMProviderEnum.JOB_NIMBUS,
-                updated_at=self._unix_timestamp_to_datetime(jn_job.date_updated),
-                provider_data={
-                    "jnid": jn_job.jnid,
-                    "number": jn_job.number,
-                    "name": jn_job.name,
-                    "record_type_name": jn_job.record_type_name,
-                    "status_name": jn_job.status_name,
-                    "status_id": jn_job.status,
-                    "sales_rep_name": jn_job.sales_rep_name,
-                    "address": {
-                        "line1": jn_job.address_line1,
-                        "line2": jn_job.address_line2,
-                        "city": jn_job.city,
-                        "state": jn_job.state_text,
-                        "zip": jn_job.zip,
-                    },
-                },
-            )
-
-        except CRMError:
-            # Re-raise CRMError as-is (already properly formatted)
-            raise
-        except Exception as e:
-            logger.error(
-                "Unexpected error fetching job status",
-                project_id=project_id,
-                error=str(e),
-            )
-            raise CRMError(f"Failed to fetch job status: {str(e)}", "UNKNOWN_ERROR")
-
     async def get_all_project_statuses(self) -> ProjectStatusListResponse:
         """
         Get the status of all jobs from JobNimbus.
