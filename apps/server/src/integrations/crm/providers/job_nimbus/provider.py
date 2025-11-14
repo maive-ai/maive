@@ -106,11 +106,18 @@ class JobNimbusProvider(CRMProvider):
         endpoint = JobNimbusEndpoints.JOB_BY_ID.format(jnid=job_id)
         logger.debug("Fetching job for JNID", job_id=job_id)
 
-        response = await self._make_request("GET", endpoint)
-        response.raise_for_status()
+        try:
+            response = await self._make_request("GET", endpoint)
+            response.raise_for_status()
 
-        data = response.json()
-        return JobNimbusJobResponse(**data)
+            data = response.json()
+            return JobNimbusJobResponse(**data)
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise CRMError(f"Job with JNID {job_id} not found", "NOT_FOUND")
+            else:
+                logger.error("HTTP error fetching job", job_id=job_id, error=str(e))
+                raise CRMError(f"Failed to fetch job: {e}", "HTTP_ERROR")
 
     async def get_job(self, job_id: str) -> Job:
         """
@@ -139,12 +146,9 @@ class JobNimbusProvider(CRMProvider):
 
             return job
 
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 404:
-                raise CRMError(f"Job with JNID {job_id} not found", "NOT_FOUND")
-            else:
-                logger.error("HTTP error fetching job", job_id=job_id, error=str(e))
-                raise CRMError(f"Failed to fetch job: {e}", "HTTP_ERROR")
+        except CRMError:
+            # Re-raise CRMError as-is (already properly formatted)
+            raise
         except Exception as e:
             logger.error("Unexpected error fetching job", job_id=job_id, error=str(e))
             raise CRMError(f"Failed to fetch job: {str(e)}", "UNKNOWN_ERROR")
@@ -1166,17 +1170,10 @@ class JobNimbusProvider(CRMProvider):
             CRMError: If the job is not found or an error occurs
         """
         try:
-            endpoint = JobNimbusEndpoints.JOB_BY_ID.format(jnid=project_id)
-
             logger.debug("Fetching job status for JNID", project_id=project_id)
 
-            response = await self._make_request("GET", endpoint)
-            response.raise_for_status()
-
-            data = response.json()
-
-            # Parse as JobNimbus job response
-            jn_job = JobNimbusJobResponse(**data)
+            # Use _get_job_by_id for consistent error handling
+            jn_job = await self._get_job_by_id(project_id)
 
             # Transform to ProjectStatusResponse
             # Note: JobNimbus has custom statuses per workflow, so we store the raw status name
@@ -1203,16 +1200,9 @@ class JobNimbusProvider(CRMProvider):
                 },
             )
 
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 404:
-                raise CRMError(f"Job with JNID {project_id} not found", "NOT_FOUND")
-            else:
-                logger.error(
-                    "HTTP error fetching job status",
-                    project_id=project_id,
-                    error=str(e),
-                )
-                raise CRMError(f"Failed to fetch job status: {e}", "HTTP_ERROR")
+        except CRMError:
+            # Re-raise CRMError as-is (already properly formatted)
+            raise
         except Exception as e:
             logger.error(
                 "Unexpected error fetching job status",
