@@ -299,7 +299,9 @@ async def get_all_jobs(
         return result
 
     except CRMError as e:
-        logger.error("[MCP JobNimbus] CRM error searching jobs", message=e.message)
+        logger.error(
+            "[MCP JobNimbus] CRM error searching jobs", error_message=e.message
+        )
         raise Exception(f"Failed to search jobs: {e.message}")
     except Exception as e:
         logger.error("[MCP JobNimbus] Unexpected error searching jobs", error=str(e))

@@ -20,3 +20,6 @@ evals/estimate_deviation/output/
 evals/output/
 evals/estimate_deviation/rilla/output/
 scripts/output/**/*
+
+# Mock CRM files
+src/integrations/crm/providers/mock/files/
