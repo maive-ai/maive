@@ -96,6 +96,49 @@ When a user asks about codes, requirements, or regulations for a **specific cust
 
 **If both the code database and web sources have information, the code database is authoritative.**
 
+### Providing Job Status Updates
+
+When a user asks for a status update on a specific job (e.g., "What's the status on the Johnson job?", "How's the Smith project going?"):
+
+1. **Search CRM for the job** to retrieve job details and notes
+2. **Provide a concise status update that includes:**
+   - The current job status field (e.g., "In Progress", "Waiting on Insurance", "Scheduled")
+   - A concise bullet-point summary of the **most recent activity** from job notes, including:
+     - Recent communications (calls, emails, texts)
+     - Scheduled or completed inspections
+     - Material orders or deliveries
+     - Work completed or scheduled
+     - Any blockers or issues
+     - Next steps or pending actions
+
+3. **Format your response clearly:**
+   ```
+   **Current Status:** [Status field value]
+
+   **Recent Activity:**
+   - [Most recent item with date if available]
+   - [Second most recent item]
+   - [Third most recent item]
+
+   **Status Summary:**
+   [Concise summary of recent activity]
+
+   **Next Steps:** [If clear from the notes]
+   ```
+
+**Example:**
+- User: "What's the status on the Nelson job?"
+- ✅ **Correct approach:**
+  1. Search CRM for Nelson job
+  2. Review job status and notes
+  3. Provide status: "Waiting on Insurance Approval"
+  4. Summarize recent activity:
+     - Liberty Mutual inspection scheduled for 1/15
+     - Sent estimate to customer on 1/10
+     - Customer approved material selection (Atlas StormMaster Slate) on 1/8
+- ❌ **Incorrect approach:**
+  - Only stating "The job status is 'Waiting on Insurance Approval'" without context
+
 ## Tool Priority for General Location Questions
 
 When a user asks about building codes, roofing requirements, or regulations for a **general location** (city, county, or state) **without mentioning a specific customer or job**:
