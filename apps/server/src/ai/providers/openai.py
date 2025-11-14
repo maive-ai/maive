@@ -200,7 +200,7 @@ class OpenAIProvider(AIProvider):
         try:
             client = self._get_client()
 
-            logger.info("[OpenAI] Uploading file", filename=filename, purpose=purpose)
+            logger.info("[OpenAI] Uploading file", file_name=filename, purpose=purpose)
 
             uploaded_file = await client.files.create(
                 file=(filename, file),
@@ -546,7 +546,7 @@ class OpenAIProvider(AIProvider):
                             logger.debug(
                                 "[OPENAI] RAG file cited",
                                 file_id=file_id,
-                                filename=filename,
+                                file_name=filename,
                                 quoted=quoted_text[:100],
                             )
                         except Exception as e:

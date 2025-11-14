@@ -1,7 +1,8 @@
 import inspect
 import logging
 import os
-from typing import Any
+
+from pythonjsonlogger import jsonlogger
 
 
 class Logger(logging.LoggerAdapter):
@@ -30,13 +31,9 @@ class Logger(logging.LoggerAdapter):
             # Set default level to INFO if invalid level specified
             log_level = log_level_map.get(log_level_str, logging.INFO)
 
-            formatter = logging.Formatter(
-                fmt=(
-                    '{"@timestamp": "%(asctime)s", '
-                    '"log_level": "%(levelname)s", '
-                    '"message": "%(message)s", '
-                    '"data": "%(log_dict)s"}'
-                ),
+            formatter = jsonlogger.JsonFormatter(
+                "%(asctime)s %(levelname)s %(message)s",
+                rename_fields={"asctime": "@timestamp", "levelname": "log_level"},
                 datefmt="%Y-%m-%d %H:%M:%S",
             )
             handler = logging.StreamHandler()
@@ -56,13 +53,9 @@ class Logger(logging.LoggerAdapter):
             file_info = f"{frame.f_back.f_code.co_filename}:{frame.f_back.f_lineno}"
         else:
             file_info = "unknown:0"
-        # Filter out logging-specific kwargs to avoid conflicts
-        log_kwargs: dict[str, Any] = {
-            k: v
-            for k, v in kwargs.items()
-            if k not in ["exc_info", "stack_info", "stacklevel"]
-        }
-        self.log(logging.ERROR, f"{msg} (at {file_info})", *args, **log_kwargs)
+        
+        kwargs["file"] = file_info
+        self.log(logging.ERROR, msg, *args, **kwargs)
 
     def exception(
         self, msg: str, *args: tuple, exc_info: bool = True, **kwargs: dict
@@ -73,23 +66,28 @@ class Logger(logging.LoggerAdapter):
             file_info = f"{frame.f_back.f_code.co_filename}:{frame.f_back.f_lineno}"
         else:
             file_info = "unknown:0"
-        # Filter out logging-specific kwargs to avoid conflicts
-        log_kwargs: dict[str, Any] = {
-            k: v
-            for k, v in kwargs.items()
-            if k not in ["exc_info", "stack_info", "stacklevel"]
-        }
-        self.log(
-            logging.ERROR,
-            f"{msg} (at {file_info})",
-            *args,
-            exc_info=exc_info,
-            **log_kwargs,
-        )
+        
+        kwargs["file"] = file_info
+        self.log(logging.ERROR, msg, *args, exc_info=exc_info, **kwargs)
 
     def process(self, msg: str, kwargs: dict) -> tuple[str, dict]:
-        kwargs = {"extra": {"log_dict": kwargs if kwargs is not None else {}}}
-        return msg, kwargs
+        # pythonjsonlogger automatically picks up 'extra' fields
+        # Extract logging-specific kwargs that shouldn't go into 'extra'
+        exc_info = kwargs.pop("exc_info", None)
+        stack_info = kwargs.pop("stack_info", None)
+        stacklevel = kwargs.pop("stacklevel", None)
+        
+        result_kwargs = {}
+        if kwargs:
+            result_kwargs["extra"] = kwargs
+        if exc_info is not None:
+            result_kwargs["exc_info"] = exc_info
+        if stack_info is not None:
+            result_kwargs["stack_info"] = stack_info
+        if stacklevel is not None:
+            result_kwargs["stacklevel"] = stacklevel
+            
+        return msg, result_kwargs
 
 
 # Create a singleton instance
