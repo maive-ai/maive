@@ -267,11 +267,11 @@ class OpenAIProvider(AIProvider):
             params["max_output_tokens"] = output_tokens
 
             # Add reasoning effort if provided
-            # if reasoning_effort:
-            #     reasoning_effort = reasoning_effort or self.settings.reasoning_effort
-            #     params["reasoning"] = Reasoning(
-            #         effort=reasoning_effort, summary="detailed"
-            #     )
+            if reasoning_effort:
+                reasoning_effort = reasoning_effort or self.settings.reasoning_effort
+                params["reasoning"] = Reasoning(
+                    effort=reasoning_effort, summary="detailed"
+                )
         else:
             # Standard models use temperature and max_output_tokens
             temp = temperature if temperature is not None else self.settings.temperature
