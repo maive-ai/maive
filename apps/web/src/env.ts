@@ -85,7 +85,7 @@ export const env = v.parse(envSchema, import.meta.env);
 export const COGNITO_DOMAIN = env.PUBLIC_COGNITO_DOMAIN;
 export const COGNITO_CLIENT_ID = env.PUBLIC_COGNITO_CLIENT_ID;
 export const COGNITO_SCOPES = env.PUBLIC_COGNITO_SCOPES;
-export const COGNITO_CALLBACK_URL = `${env.PUBLIC_SERVER_URL}/${env.PUBLIC_OAUTH_REDIRECT_ROUTE.replace(/^\/, '')}`;
+export const COGNITO_CALLBACK_URL = `${env.PUBLIC_SERVER_URL}/${env.PUBLIC_OAUTH_REDIRECT_ROUTE.replace(/^\//, '')}`;
 export const COGNITO_SIGN_IN_URL = `${COGNITO_DOMAIN}/login?client_id=${COGNITO_CLIENT_ID}&response_type=code&scope=${COGNITO_SCOPES}&redirect_uri=${encodeURIComponent(
   COGNITO_CALLBACK_URL,
 )}`;
