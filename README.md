@@ -75,6 +75,8 @@ By default the following URLs will be accessible:
 ## Install pulumi
 `brew install pulumi/tap/pulumi`
 `brew update && brew install pulumi/tap/esc`
+`pulumi login`
+Open the browser, create an access token, add it to your shell config as `PULUMI_ACCESS_TOKEN`
 
 ## API Development Guidelines
 
