@@ -203,7 +203,9 @@ async def get_job(job_id: str) -> dict[str, Any]:
 
     except CRMError as e:
         logger.error(
-            "[MCP JobNimbus] CRM error getting job", job_id=job_id, message=e.message
+            "[MCP JobNimbus] CRM error getting job",
+            job_id=job_id,
+            error_message=e.message,
         )
         raise Exception(f"Failed to get job: {e.message}")
     except Exception as e:
@@ -374,7 +376,7 @@ async def list_job_files(job_id: str) -> dict[str, Any]:
         logger.error(
             "[MCP JobNimbus] CRM error listing files for job",
             job_id=job_id,
-            message=e.message,
+            error_message=e.message,
         )
         raise Exception(f"Failed to list files: {e.message}")
     except Exception as e:
