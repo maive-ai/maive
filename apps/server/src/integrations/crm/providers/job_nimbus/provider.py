@@ -11,6 +11,12 @@ from datetime import UTC, datetime
 from typing import Any
 
 import httpx
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from src.integrations.crm.base import CRMError, CRMProvider
 from src.integrations.crm.config import JobNimbusConfig, get_crm_settings
@@ -73,12 +79,70 @@ class JobNimbusProvider(CRMProvider):
 
         logger.info("JobNimbusProvider initialized")
 
+    @retry(
+        retry=retry_if_exception_type(
+            (
+                httpx.ConnectError,
+                httpx.TimeoutException,
+                httpx.NetworkError,
+                httpx.PoolTimeout,
+                httpx.ConnectTimeout,
+                httpx.ReadTimeout,
+                httpx.WriteTimeout,
+            )
+        ),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        reraise=True,
+    )
     async def _make_request(
         self, method: str, endpoint: str, **kwargs
     ) -> httpx.Response:
-        """Make an authenticated request to JobNimbus API."""
+        """Make an authenticated request to JobNimbus API with retry logic.
+
+        Only retries connection/network errors (timeouts, connection errors, etc.).
+        Does NOT retry HTTP status errors (4xx, 5xx) - those fail immediately.
+        """
         url = f"{self.base_api_url}{endpoint}"
-        return await self.client.request(method, url, **kwargs)
+        logger.debug(
+            "Making JobNimbus API request",
+            method=method,
+            url=url,
+            timeout=self.config.request_timeout,
+        )
+
+        try:
+            response = await self.client.request(method, url, **kwargs)
+            response.raise_for_status()
+            return response
+        except httpx.HTTPStatusError as e:
+            # HTTP status errors (4xx, 5xx) - don't retry, fail immediately
+            logger.warning(
+                "JobNimbus API returned error status",
+                method=method,
+                url=url,
+                status_code=e.response.status_code,
+                response_text=e.response.text[:500] if e.response.text else None,
+            )
+            raise  # Don't retry HTTP errors
+        except (
+            httpx.ConnectError,
+            httpx.TimeoutException,
+            httpx.NetworkError,
+            httpx.PoolTimeout,
+            httpx.ConnectTimeout,
+            httpx.ReadTimeout,
+            httpx.WriteTimeout,
+        ) as e:
+            # Connection/network errors - will be retried by decorator
+            logger.warning(
+                "JobNimbus API connection error (will retry)",
+                method=method,
+                url=url,
+                error_type=type(e).__name__,
+                error=str(e),
+            )
+            raise  # Re-raise to trigger retry
 
     def _unix_timestamp_to_datetime(self, timestamp: int) -> datetime:
         """Convert Unix timestamp to datetime."""
@@ -108,8 +172,6 @@ class JobNimbusProvider(CRMProvider):
 
         try:
             response = await self._make_request("GET", endpoint)
-            response.raise_for_status()
-
             data = response.json()
             return JobNimbusJobResponse(**data)
         except httpx.HTTPStatusError as e:

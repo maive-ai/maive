@@ -167,7 +167,9 @@ async def get_job(job_id: str) -> dict[str, Any]:
     """Get a specific job by ID from JobNimbus.
 
     Args:
-        job_id: The JobNimbus job ID (JNID) to retrieve
+        job_id: The JobNimbus job ID (JNID) to retrieve.
+            Correct example: "mhdn17a1ssizgvz8fo0h66r".
+            Incorrect example: "1636" (job number not JNID).
 
     Returns:
         Dictionary with job details and notes. Key fields include:
@@ -206,9 +208,11 @@ async def get_job(job_id: str) -> dict[str, Any]:
         logger.error(
             "[MCP JobNimbus] CRM error getting job",
             job_id=job_id,
+            error_code=e.error_code,
             error_message=e.message,
         )
-        raise Exception(f"Failed to get job: {e.message}")
+        # Preserve error code in exception message for debugging
+        raise Exception(f"[{e.error_code}] Failed to get job: {e.message}")
     except Exception as e:
         logger.error(
             "[MCP JobNimbus] Unexpected error getting job", job_id=job_id, error=str(e)
@@ -319,9 +323,11 @@ async def get_all_jobs(
 
     except CRMError as e:
         logger.error(
-            "[MCP JobNimbus] CRM error searching jobs", error_message=e.message
+            "[MCP JobNimbus] CRM error searching jobs",
+            error_code=e.error_code,
+            error_message=e.message,
         )
-        raise Exception(f"Failed to search jobs: {e.message}")
+        raise Exception(f"[{e.error_code}] Failed to search jobs: {e.message}")
     except Exception as e:
         logger.error("[MCP JobNimbus] Unexpected error searching jobs", error=str(e))
         raise Exception(f"Failed to search jobs: {str(e)}")
@@ -393,9 +399,10 @@ async def list_job_files(job_id: str) -> dict[str, Any]:
         logger.error(
             "[MCP JobNimbus] CRM error listing files for job",
             job_id=job_id,
+            error_code=e.error_code,
             error_message=e.message,
         )
-        raise Exception(f"Failed to list files: {e.message}")
+        raise Exception(f"[{e.error_code}] Failed to list files: {e.message}")
     except Exception as e:
         logger.error(
             "[MCP JobNimbus] Unexpected error listing files for job",
