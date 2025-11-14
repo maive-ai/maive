@@ -4,6 +4,7 @@ import time
 
 import pulumi
 import pulumi_docker_build as docker_build
+import pulumi_esc_sdk as esc
 from pulumi_aws import (
     acm,
     apigatewayv2,
@@ -29,58 +30,57 @@ s3_cfg = pulumi.Config("s3")
 stack_name = pulumi.get_stack()
 environment = config.require("environment")
 
+
 # Get environment variables from ESC using the SDK
 # The ESC SDK is the ONLY way to programmatically access the environmentVariables section
 def get_esc_env_vars():
     """
     Fetch environment variables from ESC using the SDK.
-    
+
     Why SDK is needed:
     - ESC has two sections: environmentVariables (for containers) and pulumiConfig (for IaC)
     - pulumi.Config() only exposes pulumiConfig values
     - The SDK is required to access environmentVariables programmatically
-    
+
     Authentication:
     - Set PULUMI_ACCESS_TOKEN env var (useful for CI/CD)
     - Get token from: https://app.pulumi.com/account/tokens
     """
     try:
-        import pulumi_esc_sdk as esc
-        
         # Initialize ESC client (uses CLI credentials or PULUMI_ACCESS_TOKEN)
         client = esc.esc_client.default_client()
-        
+
         # Get the ESC environment path
         org_name = pulumi.get_organization()  # "maive"
-        project_name = pulumi.get_project()    # "maive-infra"
-        env_name = environment                  # "staging", "dev", etc.
-        
+        project_name = pulumi.get_project()  # "maive-infra"
+        env_name = environment  # "staging", "dev", etc.
+
         # Open environment - returns tuple of (env, values, yaml)
         _, values, _ = client.open_and_read_environment(
             org_name, project_name, env_name
         )
-        
+
         # Extract the environmentVariables section
         env_vars_dict = values.get("environmentVariables", {})
-        
+
         # Convert to ECS format
         env_vars = [
-            {"name": key, "value": str(value)} 
-            for key, value in env_vars_dict.items()
+            {"name": key, "value": str(value)} for key, value in env_vars_dict.items()
         ]
-        
+
         pulumi.log.info(
             f"✅ Loaded {len(env_vars)} environment variables from ESC: {org_name}/{project_name}/{env_name}"
         )
         return env_vars
-        
+
     except Exception as e:
         pulumi.log.warn(
             f"⚠️  Failed to load ESC environment variables: {e}\n"
             f"   Set PULUMI_ACCESS_TOKEN to enable ESC integration.\n"
             f"   Get token from: https://app.pulumi.com/account/tokens"
         )
-        return []
+        raise ValueError(f"Failed to load ESC environment variables: {e}")
+
 
 base_env_vars = get_esc_env_vars()
 
@@ -1054,6 +1054,9 @@ if deploy_containers:
             "PUBLIC_COGNITO_CLIENT_ID": pool_client.id,
             "PUBLIC_COGNITO_SCOPES": config.require("public_cognito_scopes"),
             "PUBLIC_OAUTH_REDIRECT_ROUTE": config.require("oauth_redirect_route"),
+            "PUBLIC_POSTHOG_KEY": config.require("public_posthog_key"),
+            "PUBLIC_POSTHOG_HOST": config.get("public_posthog_host")
+            or "https://app.posthog.com",
         },
         tags=[
             web_ecr_repository.repository_url.apply(
@@ -1125,7 +1128,8 @@ if deploy_containers:
                         db_instance.port,
                         active_calls_table.name,
                     ).apply(
-                        lambda args: base_env_vars + [
+                        lambda args: base_env_vars
+                        + [
                             # Override with Pulumi-created resource values
                             {"name": "COGNITO_USER_POOL_ID", "value": args[0]},
                             {"name": "COGNITO_CLIENT_ID", "value": args[1]},
@@ -1134,8 +1138,14 @@ if deploy_containers:
                             {"name": "DB_HOST", "value": args[4]},
                             {"name": "DB_PORT", "value": str(args[5])},
                             {"name": "DB_NAME", "value": db_name},
-                            {"name": "DB_USERNAME", "value": db_config.require("username")},
-                            {"name": "DB_PASSWORD", "value": db_config.require_secret("password")},
+                            {
+                                "name": "DB_USERNAME",
+                                "value": db_config.require("username"),
+                            },
+                            {
+                                "name": "DB_PASSWORD",
+                                "value": db_config.require_secret("password"),
+                            },
                             {"name": "DYNAMODB_TABLE_NAME", "value": args[6]},
                         ]
                     ),
@@ -1233,13 +1243,20 @@ if deploy_containers:
                         db_instance.address,
                         db_instance.port,
                     ).apply(
-                        lambda args: base_env_vars + [
+                        lambda args: base_env_vars
+                        + [
                             # Override with Pulumi-created resource values
                             {"name": "DB_HOST", "value": args[0]},
                             {"name": "DB_PORT", "value": str(args[1])},
                             {"name": "DB_NAME", "value": db_name},
-                            {"name": "DB_USERNAME", "value": db_config.require("username")},
-                            {"name": "DB_PASSWORD", "value": db_config.require_secret("password")},
+                            {
+                                "name": "DB_USERNAME",
+                                "value": db_config.require("username"),
+                            },
+                            {
+                                "name": "DB_PASSWORD",
+                                "value": db_config.require_secret("password"),
+                            },
                         ]
                     ),
                     "logConfiguration": {

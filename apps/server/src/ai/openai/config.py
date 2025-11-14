@@ -12,7 +12,6 @@ class OpenAISettings(BaseSettings):
     Attributes:
         api_key: OpenAI API key for authentication
         model_name: Default model to use (e.g., 'gpt-4o', 'gpt-5', 'o1')
-        audio_model_name: Model to use for audio processing
         temperature: Default temperature for non-reasoning models (0.0-2.0)
         max_tokens: Default max output tokens for generation
         reasoning_effort: Default reasoning effort for reasoning models
@@ -37,10 +36,6 @@ class OpenAISettings(BaseSettings):
     model_name: str = Field(
         default="gpt-5.1",
         description="Default OpenAI model to use (supports gpt-4o, gpt-5, o1, etc.)",
-    )
-    audio_model_name: str = Field(
-        default="gpt-4o-audio-preview",
-        description="Model to use for audio processing (gpt-4o-audio-preview supports native audio)",
     )
     temperature: float = Field(
         default=0.7,

@@ -1,13 +1,11 @@
 """OpenAI provider implementation."""
 
-import base64
-import json
 from pathlib import Path
 from typing import Any, AsyncGenerator, BinaryIO, TypeVar
 
 import httpx
+from braintrust import wrap_openai
 from openai import AsyncOpenAI
-from openai.types.chat import ChatCompletion
 from openai.types.responses import (
     EasyInputMessageParam,
     FileSearchToolParam,
@@ -20,10 +18,12 @@ from openai.types.responses import (
     ResponseFileSearchCallCompletedEvent,
     ResponseFileSearchCallInProgressEvent,
     ResponseFileSearchCallSearchingEvent,
+    ResponseFileSearchToolCall,
     ResponseInProgressEvent,
     ResponseOutputItemAddedEvent,
     ResponseOutputItemDoneEvent,
     ResponseOutputTextAnnotationAddedEvent,
+    ResponseReasoningItem,
     ResponseReasoningSummaryPartAddedEvent,
     ResponseReasoningSummaryPartDoneEvent,
     ResponseReasoningSummaryTextDeltaEvent,
@@ -37,21 +37,20 @@ from openai.types.responses import (
     WebSearchToolParam,
 )
 from openai.types.responses.response_create_params import (
-    Reasoning as ReasoningParam,
     ResponseCreateParams,
     ResponseCreateParamsStreaming,
     ResponseTextConfigParam,
 )
 from openai.types.responses.response_output_text import AnnotationURLCitation
+from openai.types.responses.response_reasoning_item import Summary
 from openai.types.shared import ReasoningEffort
+from openai.types.shared.reasoning import Reasoning
 from pydantic import BaseModel
 
 from src.ai.base import (
     AIProvider,
-    AudioAnalysisRequest,
     ChatMessage,
     ChatStreamChunk,
-    ContentAnalysisRequest,
     ContentGenerationResult,
     FileMetadata,
     ReasoningSummary,
@@ -59,13 +58,11 @@ from src.ai.base import (
     ToolCall,
     ToolName,
     ToolStatus,
-    TranscriptionResult,
 )
 from src.ai.openai.config import get_openai_settings
 from src.ai.openai.exceptions import (
     OpenAIAuthenticationError,
     OpenAIContentGenerationError,
-    OpenAIError,
     OpenAIFileUploadError,
 )
 from src.config import get_app_settings
@@ -81,16 +78,47 @@ class OpenAIProvider(AIProvider):
     Supports native audio input for models like gpt-4o-audio-preview.
     """
 
-    def __init__(self):
-        """Initialize OpenAI provider."""
+    def __init__(
+        self,
+        enable_braintrust: bool = False,
+        braintrust_project_name: str | None = None,
+    ):
+        """Initialize OpenAI provider.
+
+        Args:
+            enable_braintrust: Whether to enable Braintrust tracing for this provider instance
+            braintrust_project_name: Braintrust project name (only used if enable_braintrust=True)
+        """
         self.settings = get_openai_settings()
         self.app_settings = get_app_settings()
         self._client: AsyncOpenAI | None = None
+        self.enable_braintrust = enable_braintrust
+        self.braintrust_project_name = braintrust_project_name
 
     def _get_client(self) -> AsyncOpenAI:
-        """Get or create the OpenAI client."""
+        """Get or create the OpenAI client.
+
+        Automatically wraps the client with Braintrust tracing if enabled.
+        """
         if self._client is None:
             try:
+                client = AsyncOpenAI(api_key=self.settings.api_key)
+
+                # Wrap with Braintrust if logging is enabled for this instance
+                if self.enable_braintrust:
+                    project_info = (
+                        f" (project: {self.braintrust_project_name})"
+                        if self.braintrust_project_name
+                        else ""
+                    )
+                    logger.info(
+                        f"OpenAI client initialized with Braintrust tracing enabled{project_info}"
+                    )
+                    self._client = wrap_openai(client)
+                else:
+                    logger.info("OpenAI client initialized")
+                    self._client = client
+
                 # Configure timeout for long-running MCP calls
                 timeout = httpx.Timeout(
                     timeout=self.settings.request_timeout,
@@ -100,7 +128,10 @@ class OpenAIProvider(AIProvider):
                     api_key=self.settings.api_key,
                     timeout=timeout,
                 )
-                logger.info("[OPENAI] Client initialized", timeout_seconds=self.settings.request_timeout)
+                logger.info(
+                    "[OPENAI] Client initialized",
+                    timeout_seconds=self.settings.request_timeout,
+                )
             except Exception as e:
                 logger.error("[OPENAI] Failed to initialize client", error=str(e))
                 raise OpenAIAuthenticationError(
@@ -148,103 +179,106 @@ class OpenAIProvider(AIProvider):
             raise OpenAIFileUploadError(f"Failed to upload file: {e}", e)
 
     async def upload_file_from_handle(
-        self,
-        file: BinaryIO,
-        filename: str,
-        purpose: str = "user_data"
+        self, file: BinaryIO, filename: str, purpose: str = "user_data"
     ) -> str:
         """Upload file from file handle to OpenAI with 24-hour auto-expiration.
-        
+
         Files are automatically deleted 24 hours after upload to save storage costs.
         Use purpose="user_data" for Responses API.
-        
+
         Args:
             file: File-like object (e.g., BytesIO, open file handle)
             filename: Name for the file
             purpose: OpenAI file purpose (default: "user_data" for Responses API)
-        
+
         Returns:
             OpenAI file_id
-            
+
         Raises:
             OpenAIFileUploadError: If upload fails
         """
         try:
             client = self._get_client()
-            
+
             logger.info("[OpenAI] Uploading file", file_name=filename, purpose=purpose)
-            
+
             uploaded_file = await client.files.create(
                 file=(filename, file),
                 purpose=purpose,
                 expires_after={
                     "anchor": "created_at",
-                    "seconds": 86400  # 24 hours
-                }
+                    "seconds": 86400,  # 24 hours
+                },
             )
-            
-            logger.info("[OpenAI] File uploaded with 24h expiration", file_id=uploaded_file.id)
+
+            logger.info(
+                f"[OpenAI] File uploaded successfully with 24h expiration: {uploaded_file.id}"
+            )
+
+            logger.info(
+                "[OpenAI] File uploaded with 24h expiration", file_id=uploaded_file.id
+            )
             return uploaded_file.id
-                    
+
         except Exception as e:
             logger.error("[OpenAI] File upload failed", error=str(e))
             raise OpenAIFileUploadError(f"[OpenAI] Failed to upload file: {e}", e)
 
     def _is_reasoning_model(self, model: str) -> bool:
         """Check if a model is a reasoning model.
-        
+
         Args:
             model: Model name
-            
+
         Returns:
             True if reasoning model (gpt-5, o1, o3), False otherwise
         """
         return any(model.startswith(prefix) for prefix in ["gpt-5", "o1", "o3"])
 
     def _build_model_params(
-        self, 
+        self,
         model: str | None = None,
         temperature: float | None = None,
         max_tokens: int | None = None,
         max_output_tokens: int | None = None,
-        reasoning_effort: str | None = None
+        reasoning_effort: str | None = None,
     ) -> dict[str, Any]:
         """Build model-specific parameters for API calls.
-        
+
         Args:
             model: Model name (defaults to settings.model_name)
             temperature: Temperature for standard models (ignored for reasoning models)
             max_tokens: Max tokens for standard models (ignored for reasoning models)
             max_output_tokens: Max output tokens (reasoning models) or overrides max_tokens
             reasoning_effort: Reasoning effort for reasoning models ("minimal", "low", "medium", "high")
-            
+
         Returns:
             Dict with model name and model-appropriate parameters
         """
         _model = model or self.settings.model_name
         is_reasoning = self._is_reasoning_model(_model)
-        
+
         # Build params as dict (ResponseCreateParams is a TypedDict, not a class)
         params: ResponseCreateParams = {"model": _model}
-        
+
         if is_reasoning:
             # Reasoning models use max_output_tokens and reasoning_effort
             output_tokens = max_output_tokens or self.settings.max_tokens
             params["max_output_tokens"] = output_tokens
-            
+
             # Add reasoning effort if provided
             if reasoning_effort:
-                params["reasoning"] = {
-                    "effort": reasoning_effort,
-                    "summary": "auto"
-                }
+                reasoning_effort = reasoning_effort or self.settings.reasoning_effort
+                params["reasoning"] = Reasoning(
+                    effort=reasoning_effort, summary="detailed"
+                )
         else:
             # Standard models use temperature and max_output_tokens
             temp = temperature if temperature is not None else self.settings.temperature
             tokens = max_output_tokens or max_tokens or self.settings.max_tokens
             params["temperature"] = temp
             params["max_output_tokens"] = tokens
-        
+
         return params
 
     async def delete_file(self, file_id: str) -> bool:
@@ -262,68 +296,10 @@ class OpenAIProvider(AIProvider):
             logger.info("[OPENAI] File deleted successfully", file_id=file_id)
             return True
         except Exception as e:
-            logger.error("[OPENAI] Failed to delete file", file_id=file_id, error=str(e))
+            logger.error(
+                "[OPENAI] Failed to delete file", file_id=file_id, error=str(e)
+            )
             return False
-
-    async def transcribe_audio(self, audio_path: str, **kwargs) -> TranscriptionResult:
-        """Transcribe audio using Whisper.
-
-        Args:
-            audio_path: Path to the audio file
-            **kwargs: Additional options (model, language, prompt, etc.)
-
-        Returns:
-            TranscriptionResult: Transcription result
-        """
-        try:
-            client = self._get_client()
-            path = Path(audio_path)
-
-            if not path.exists():
-                raise OpenAIContentGenerationError(
-                    f"Audio file not found: {audio_path}"
-                )
-
-            logger.info("[OPENAI] Transcribing audio", audio_path=str(path))
-
-            model = kwargs.get("model", "whisper-1")
-            language = kwargs.get("language")
-            prompt = kwargs.get("prompt")
-            response_format = kwargs.get("response_format", "verbose_json")
-            temperature = kwargs.get("temperature", 0.0)
-
-            with open(path, "rb") as audio_file:
-                transcript = await client.audio.transcriptions.create(
-                    model=model,
-                    file=audio_file,
-                    language=language,
-                    prompt=prompt,
-                    response_format=response_format,
-                    temperature=temperature,
-                )
-
-            # Handle different response formats
-            if response_format == "verbose_json":
-                result = TranscriptionResult(
-                    text=transcript.text,
-                    language=getattr(transcript, "language", None),
-                    duration=getattr(transcript, "duration", None),
-                    segments=getattr(transcript, "segments", None),
-                )
-            elif response_format == "json":
-                result = TranscriptionResult(text=transcript.text)
-            else:
-                # For text, srt, vtt formats
-                result = TranscriptionResult(text=str(transcript))
-
-            logger.info("[OPENAI] Transcription complete", char_count=len(result.text))
-            return result
-
-        except OpenAIContentGenerationError:
-            raise
-        except Exception as e:
-            logger.error("[OPENAI] Transcription failed", error=str(e))
-            raise OpenAIContentGenerationError(f"Failed to transcribe audio: {e}", e)
 
     async def generate_content(
         self,
@@ -349,28 +325,24 @@ class OpenAIProvider(AIProvider):
             if file_attachments:
                 # Build content as array with file references and text (Responses API format)
                 content_parts = []
-                
+
                 # Add each file with appropriate type (input_image for images, input_file for docs)
                 for file_id, filename, is_image in file_attachments:
                     if is_image:
-                        content_parts.append({
-                            "type": "input_image",
-                            "file_id": file_id
-                        })
+                        content_parts.append(
+                            {"type": "input_image", "file_id": file_id}
+                        )
                     else:
-                        content_parts.append({
-                            "type": "input_file",
-                            "file_id": file_id
-                        })
-                
+                        content_parts.append({"type": "input_file", "file_id": file_id})
+
                 # Add text prompt
-                content_parts.append({
-                    "type": "input_text",
-                    "text": prompt
-                })
-                
+                content_parts.append({"type": "input_text", "text": prompt})
+
                 input_items = [{"role": "user", "content": content_parts}]
-                logger.info("[OpenAI] Including files in message", file_count=len(file_attachments))
+                logger.info(
+                    "[OpenAI] Including files in message",
+                    file_count=len(file_attachments),
+                )
             else:
                 # No files, just text
                 input_items = [{"role": "user", "content": prompt}]
@@ -381,11 +353,11 @@ class OpenAIProvider(AIProvider):
                 temperature=kwargs.get("temperature"),
                 max_tokens=kwargs.get("max_tokens"),
                 max_output_tokens=kwargs.get("max_output_tokens"),
-                reasoning_effort=kwargs.get("reasoning_effort")
+                reasoning_effort=kwargs.get("reasoning_effort"),
             )
             response_params["input"] = input_items
-            
-            logger.info("[OpenAI] Generating content", model=response_params['model'])
+
+            logger.info("[OpenAI] Generating content", model=response_params["model"])
 
             # Use Responses API (not streaming)
             response: Response = await client.responses.create(**response_params)
@@ -397,7 +369,10 @@ class OpenAIProvider(AIProvider):
                 finish_reason=response.status,
             )
 
-            logger.info("[OPENAI] Content generation complete", finish_reason=result.finish_reason)
+            logger.info(
+                "[OPENAI] Content generation complete",
+                finish_reason=result.finish_reason,
+            )
             return result
 
         except Exception as e:
@@ -407,17 +382,27 @@ class OpenAIProvider(AIProvider):
     async def generate_structured_content(
         self,
         prompt: str,
-        response_model: type[T],
+        response_schema: type[T],
         file_ids: list[str] | None = None,
+        vector_store_ids: list[str] | None = None,
         **kwargs,
-    ) -> T:
+    ) -> T | None:
         """Generate structured content using a Pydantic model.
+
+        Uses OpenAI's Responses API with parse() method for better support of
+        reasoning models and cleaner structured output handling.
 
         Args:
             prompt: Text prompt
             response_model: Pydantic model for structured output
             file_ids: Optional file IDs
-            **kwargs: Additional options
+            vector_store_ids: Optional vector store IDs for file search (RAG)
+            **kwargs: Additional options:
+                - model: Model name (default from settings)
+                - temperature: Temperature for standard models
+                - max_tokens: Max tokens for standard models
+                - max_output_tokens: Max output tokens (reasoning models) or overrides max_tokens
+                - reasoning_effort: Reasoning effort for reasoning models ("minimal", "low", "medium", "high")
 
         Returns:
             Instance of response_model with generated data
@@ -425,357 +410,92 @@ class OpenAIProvider(AIProvider):
         try:
             client = self._get_client()
 
-            model = kwargs.get("model", self.settings.model_name)
-            temperature = kwargs.get("temperature", self.settings.temperature)
-            max_tokens = kwargs.get("max_tokens", self.settings.max_tokens)
-
-            logger.info("[OPENAI] Generating structured content", model=model)
-
-            # Convert Pydantic model to JSON schema
-            schema = response_model.model_json_schema()
-
-            messages = [{"role": "user", "content": prompt}]
-
-            completion = await client.chat.completions.create(
-                model=model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": response_model.__name__,
-                        "schema": schema,
-                        "strict": True,
-                    },
-                },
-            )
-
-            message = completion.choices[0].message
-            content = message.content or "{}"
-
-            logger.debug("[OPENAI] Structured response", response_preview=content[:500])
-
-            # Parse and validate
-            data = json.loads(content)
-            return response_model(**data)
-
-        except Exception as e:
-            logger.error("[OPENAI] Structured content generation failed", error=str(e))
-            raise OpenAIContentGenerationError(
-                f"Failed to generate structured content: {e}", e
-            )
-
-    async def analyze_audio_with_context(
-        self,
-        request: AudioAnalysisRequest,
-    ) -> ContentGenerationResult:
-        """Analyze audio directly with contextual information.
-
-        Uses OpenAI's audio-capable models to process audio directly.
-
-        Args:
-            request: Audio analysis request
-
-        Returns:
-            ContentGenerationResult: Analysis result
-        """
-        try:
-            client = self._get_client()
-            path = Path(request.audio_path)
-
-            if not path.exists():
-                raise OpenAIError(f"Audio file not found: {request.audio_path}")
-
-            logger.info("[OPENAI] Analyzing audio with context", audio_path=str(path))
-
-            # Read and encode audio as base64
-            with open(path, "rb") as audio_file:
-                audio_data = base64.b64encode(audio_file.read()).decode("utf-8")
-
-            # Determine audio format from extension
-            audio_format = path.suffix.lstrip(".")  # e.g., 'mp3', 'wav'
-
-            # Build message with audio input
-            messages = [
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "input_audio",
-                            "input_audio": {
-                                "data": audio_data,
-                                "format": audio_format,
-                            },
-                        },
-                        {"type": "text", "text": request.prompt},
-                    ],
-                }
-            ]
-
-            # If context data is provided, include it in the prompt
-            if request.context_data:
-                context_text = (
-                    f"\n\nContext Data:\n{json.dumps(request.context_data, indent=2)}"
-                )
-                messages[0]["content"].append({"type": "text", "text": context_text})
-
-            model = self.settings.audio_model_name
-            temperature = request.temperature or self.settings.temperature
-
-            logger.info("[OPENAI] Using audio model", model=model)
-
-            completion: ChatCompletion = await client.chat.completions.create(
-                model=model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=self.settings.max_tokens,
-            )
-
-            message = completion.choices[0].message
-
-            result = ContentGenerationResult(
-                text=message.content or "",
-                usage=completion.usage.model_dump() if completion.usage else None,
-                finish_reason=completion.choices[0].finish_reason,
-            )
-
-            logger.info("[OPENAI] Audio analysis complete", finish_reason=result.finish_reason)
-            return result
-
-        except Exception as e:
-            logger.error("[OPENAI] Audio analysis failed", error=str(e))
-            raise OpenAIContentGenerationError(f"Failed to analyze audio: {e}", e)
-
-    async def analyze_audio_with_structured_output(
-        self,
-        request: AudioAnalysisRequest,
-        response_model: type[T],
-    ) -> T:
-        """Analyze audio directly and return structured output.
-
-        Args:
-            request: Audio analysis request
-            response_model: Pydantic model for structured output
-
-        Returns:
-            Instance of response_model with analysis results
-        """
-        try:
-            client = self._get_client()
-            path = Path(request.audio_path)
-
-            if not path.exists():
-                raise OpenAIError(f"Audio file not found: {request.audio_path}")
-
-            logger.info("[OPENAI] Analyzing audio with structured output", audio_path=str(path))
-
-            # Read and encode audio as base64
-            with open(path, "rb") as audio_file:
-                audio_data = base64.b64encode(audio_file.read()).decode("utf-8")
-
-            audio_format = path.suffix.lstrip(".")
-
-            # Build message with audio input
-            messages = [
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "input_audio",
-                            "input_audio": {
-                                "data": audio_data,
-                                "format": audio_format,
-                            },
-                        },
-                        {"type": "text", "text": request.prompt},
-                    ],
-                }
-            ]
-
-            if request.context_data:
-                context_text = (
-                    f"\n\nContext Data:\n{json.dumps(request.context_data, indent=2)}"
-                )
-                messages[0]["content"].append({"type": "text", "text": context_text})
-
-            model = self.settings.audio_model_name
-            temperature = request.temperature or self.settings.temperature
-
-            # Convert Pydantic model to JSON schema
-            schema = response_model.model_json_schema()
-
-            logger.info("[OPENAI] Using audio model with structured output", model=model)
-
-            completion = await client.chat.completions.create(
-                model=model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=self.settings.max_tokens,
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": response_model.__name__,
-                        "schema": schema,
-                        "strict": True,
-                    },
-                },
-            )
-
-            message = completion.choices[0].message
-            content = message.content or "{}"
-
-            logger.debug("[OPENAI] Structured audio analysis response", response_preview=content[:500])
-
-            # Parse and validate
-            data = json.loads(content)
-            return response_model(**data)
-
-        except Exception as e:
-            logger.error("[OPENAI] Structured audio analysis failed", error=str(e))
-            raise OpenAIContentGenerationError(
-                f"Failed to analyze audio with structured output: {e}", e
-            )
-
-    async def analyze_content_with_structured_output(
-        self,
-        request: ContentAnalysisRequest,
-        response_model: type[T],
-    ) -> T:
-        """Analyze content (audio, transcript, or both) and return structured output.
-
-        Args:
-            request: Content analysis request
-            response_model: Pydantic model for structured output
-
-        Returns:
-            Instance of response_model with analysis results
-        """
-        try:
-            client = self._get_client()
-
-            logger.info("[OPENAI] Analyzing content with structured output")
-
-            # Build input items for Responses API
-            input_items: list[dict[str, Any]] = []
-
-            # If audio is provided, add it as input
-            if request.audio_path:
-                path = Path(request.audio_path)
-                if not path.exists():
-                    raise OpenAIError(f"Audio file not found: {request.audio_path}")
-
-                logger.info("[OPENAI] Including audio file", audio_path=str(path))
-
-                # Read and encode audio as base64
-                with open(path, "rb") as audio_file:
-                    audio_data = base64.b64encode(audio_file.read()).decode("utf-8")
-
-                audio_format = path.suffix.lstrip(".")
-
-                input_items.append(
-                    {
-                        "type": "input_audio",
-                        "audio": audio_data,
-                        "format": audio_format,
-                    }
-                )
-
-            # Build the prompt text
-            prompt_text = request.prompt
-
-            # Add transcript if provided
-            if request.transcript_text:
-                prompt_text = f"{request.prompt}\n\n**Conversation Transcript:**\n{request.transcript_text}"
-
-            # Add context data if provided
-            if request.context_data:
-                context_text = (
-                    f"\n\nContext Data:\n{json.dumps(request.context_data, indent=2)}"
-                )
-                prompt_text += context_text
-
-            # Add message item
-            input_items.append({"type": "message", "role": "user", "content": prompt_text})
-
-            # Choose appropriate model
-            model = (
-                self.settings.audio_model_name
-                if request.audio_path
-                else self.settings.model_name
-            )
-
-            # Build model params using existing helper
+            # Build model params (handles reasoning vs standard models)
             model_params = self._build_model_params(
-                model=model,
-                temperature=request.temperature,
-                max_tokens=self.settings.max_tokens,
+                model=kwargs.get("model"),
+                temperature=kwargs.get("temperature"),
+                max_tokens=kwargs.get("max_tokens"),
+                max_output_tokens=kwargs.get("max_output_tokens"),
+                reasoning_effort=kwargs.get("reasoning_effort"),
             )
 
-            logger.info("[OPENAI] Using Responses API parse() with Pydantic model", model=model)
+            logger.info(
+                "[OPENAI] Generating structured content",
+                model=model_params["model"],
+                schema=response_schema.__name__,
+            )
+
+            # Build input items in Responses API format
+            input_items = [{"type": "message", "role": "user", "content": prompt}]
+
+            if file_ids:
+                file_inputs = [
+                    {"type": "input_file", "file_id": file_id} for file_id in file_ids
+                ]
+                file_inputs: EasyInputMessageParam = EasyInputMessageParam(
+                    role="user", content=file_inputs
+                )
+
+                input_items.append(file_inputs)
 
             # Build tools list
             tools: list[Any] = []
 
             # Add file search if vector store IDs provided
-            if request.vector_store_ids:
-                logger.info("[OPENAI] Adding FileSearchTool", vector_store_count=len(request.vector_store_ids))
+            if vector_store_ids:
+                logger.info(
+                    "[OPENAI] Adding FileSearchTool",
+                    vector_store_count=len(vector_store_ids),
+                )
                 tools.append(
                     FileSearchToolParam(
-                        type="file_search",
-                        vector_store_ids=request.vector_store_ids
+                        type="file_search", vector_store_ids=vector_store_ids
                     )
                 )
 
             # Use Responses API parse() method which directly accepts Pydantic models
-            # This is cleaner than manually constructing JSON schema
             parse_params: dict[str, Any] = {
                 **model_params,
                 "input": input_items,
-                "text_format": response_model,
+                "text_format": response_schema,  # Pydantic model directly
             }
 
             if tools:
                 parse_params["tools"] = tools
 
-            parsed_response = await client.responses.parse(**parse_params)
+            reasoning: Reasoning = Reasoning(
+                effort=self.settings.reasoning_effort, summary="detailed"
+            )
+            parsed_response = await client.responses.parse(
+                reasoning=reasoning, **parse_params
+            )
 
-            # The parse() method returns a ParsedResponse with the parsed data
-            # Extract the parsed Pydantic model from the response
-            if not parsed_response.output:
-                raise OpenAIError("No output in parsed response")
+            # Extract reasoning summaries if they exist
+            for item in parsed_response.output:
+                if isinstance(item, ResponseReasoningItem):
+                    for summary in item.summary:
+                        if isinstance(summary, Summary):
+                            logger.debug(
+                                "[OPENAI] REASONING SUMMARY", summary=summary.text
+                            )
+                elif isinstance(item, ResponseFileSearchToolCall):
+                    logger.debug(
+                        "[OPENAI] FILE SEARCH TOOL CALL",
+                        queries=item.queries,
+                        status=item.status,
+                        results=item.results,
+                    )
+                else:
+                    logger.debug(
+                        "[OPENAI] UNHANDLED ITEM", item=item, type=type(item).__name__
+                    )
 
-            logger.debug("[OPENAI] Parsed response status", status=parsed_response.status)
-            logger.debug("[OPENAI] Parsed response has output items", output_count=len(parsed_response.output))
-
-            # Find the message output item with parsed content
-            for output_item in parsed_response.output:
-                logger.debug("[OPENAI] Output item type", type=output_item.type)
-
-                if output_item.type == "message":
-                    # The content should be the parsed Pydantic model
-                    if hasattr(output_item, "parsed") and output_item.parsed:
-                        logger.debug("[OPENAI] Successfully parsed structured output")
-                        return output_item.parsed
-                    # Fallback: content is a list of content parts, extract text
-                    elif hasattr(output_item, "content") and output_item.content:
-                        # Content is a list of content parts (output_text, etc.)
-                        text_content = ""
-                        for content_part in output_item.content:
-                            if hasattr(content_part, "type") and content_part.type == "output_text":
-                                text_content = content_part.text
-                                break
-
-                        if text_content:
-                            data = json.loads(text_content)
-                            return response_model(**data)
-
-            raise OpenAIError("Could not extract parsed data from response")
+            return parsed_response.output_parsed
 
         except Exception as e:
-            logger.error("[OPENAI] Structured content analysis failed", error=str(e))
+            logger.error("[OPENAI] Structured content generation failed", error=str(e))
             raise OpenAIContentGenerationError(
-                f"Failed to analyze content with structured output: {e}", e
+                f"Failed to generate structured content: {e}", e
             )
 
     async def _parse_annotation_to_citation(
@@ -796,10 +516,10 @@ class OpenAIProvider(AIProvider):
             # Handle dict format annotations
             if isinstance(annotation, dict):
                 ann_type = annotation.get("type")
-                
+
                 if ann_type == "url_citation":
                     url_citation = AnnotationURLCitation(**annotation)
-                    
+
                     # Create citation from URL annotation
                     return SearchCitation(
                         url=url_citation.url,
@@ -807,43 +527,44 @@ class OpenAIProvider(AIProvider):
                         snippet=None,
                         accessed_at=None,
                     )
-                    
+
                 elif ann_type == "file_citation":
                     # Log RAG file hits for debugging (don't expose to user)
                     file_id = annotation.get("file_citation", {}).get(
                         "file_id"
                     ) or annotation.get("file_id")
                     quoted_text = (
-                        annotation.get("text")
-                        or annotation.get("quote")
-                        or ""
+                        annotation.get("text") or annotation.get("quote") or ""
                     )
-                    
+
                     if file_id:
                         # Try to fetch file metadata for logging
                         filename = None
                         try:
                             meta = await client.files.retrieve(file_id)
-                            filename = getattr(meta, 'filename', None)
+                            filename = getattr(meta, "filename", None)
                             logger.debug(
                                 "[OPENAI] RAG file cited",
                                 file_id=file_id,
                                 file_name=filename,
-                                quoted=quoted_text[:100]
+                                quoted=quoted_text[:100],
                             )
                         except Exception as e:
                             logger.debug(
                                 "[OPENAI] Failed to retrieve file metadata",
                                 file_id=file_id,
-                                error=str(e)
+                                error=str(e),
                             )
 
                     # Don't expose file citations to users - they're internal RAG files
                     return None
                 else:
-                    logger.debug("[OPENAI] Skipped unknown annotation type", annotation_type=ann_type)
+                    logger.debug(
+                        "[OPENAI] Skipped unknown annotation type",
+                        annotation_type=ann_type,
+                    )
                     return None
-                    
+
             # Handle object format annotations
             elif isinstance(annotation, AnnotationURLCitation):
                 # Create citation from URL annotation
@@ -856,7 +577,7 @@ class OpenAIProvider(AIProvider):
             else:
                 logger.debug(
                     "[OPENAI] Skipped unknown annotation format",
-                    annotation_type=type(annotation).__name__
+                    annotation_type=type(annotation).__name__,
                 )
                 return None
 
@@ -899,7 +620,7 @@ class OpenAIProvider(AIProvider):
             crm_search=enable_crm_search,
             file_search=bool(vector_store_ids),
             model=model,
-            is_reasoning=is_reasoning_model
+            is_reasoning=is_reasoning_model,
         )
 
         # Configure tools (Responses API format)
@@ -922,7 +643,7 @@ class OpenAIProvider(AIProvider):
                 mcp_config["headers"] = {
                     "Authorization": f"Bearer {self.app_settings.mcp_auth_token}"
                 }
-            
+
             tools.append(mcp_config)
 
         # Add file search if vector store IDs provided
@@ -965,15 +686,13 @@ class OpenAIProvider(AIProvider):
                 "reasoning_effort", self.settings.reasoning_effort
             )
             if reasoning_effort:
-                stream_params["reasoning"] = ReasoningParam(
+                stream_params["reasoning"] = Reasoning(
                     effort=reasoning_effort,
                     summary="auto",  # Request reasoning summaries
                 )
 
             # Add text verbosity
-            text_verbosity = kwargs.get(
-                "text_verbosity", self.settings.text_verbosity
-            )
+            text_verbosity = kwargs.get("text_verbosity", self.settings.text_verbosity)
             if text_verbosity:
                 stream_params["text"] = ResponseTextConfigParam(
                     verbosity=text_verbosity
@@ -990,17 +709,16 @@ class OpenAIProvider(AIProvider):
             if "temperature" in kwargs:
                 logger.warning(
                     "[OPENAI] temperature parameter ignored for reasoning model",
-                    model=model
+                    model=model,
                 )
             if "top_p" in kwargs:
                 logger.warning(
-                    "[OPENAI] top_p parameter ignored for reasoning model",
-                    model=model
+                    "[OPENAI] top_p parameter ignored for reasoning model", model=model
                 )
             if "logprobs" in kwargs:
                 logger.warning(
                     "[OPENAI] logprobs parameter ignored for reasoning model",
-                    model=model
+                    model=model,
                 )
         else:
             logger.info("[OPENAI] Using standard model", model=model)
@@ -1015,10 +733,10 @@ class OpenAIProvider(AIProvider):
         logger.debug(
             "[OPENAI] Stream params",
             model=model,
-            reasoning_effort=reasoning_effort if is_reasoning_model else 'N/A',
+            reasoning_effort=reasoning_effort if is_reasoning_model else "N/A",
             input_items=len(input_items),
             has_instructions=bool(instructions),
-            tools=bool(tools)
+            tools=bool(tools),
         )
 
         return stream_params, model, is_reasoning_model
@@ -1095,20 +813,20 @@ class OpenAIProvider(AIProvider):
 
     def _clean_citation_markers(self, text: str) -> str:
         """Remove citation markers from text.
-        
+
         Removes file citation markers and barcode symbols that OpenAI includes
         for internal RAG document references.
         Also strips MCP/tool marker tokens and Private Use Area (PUA) control
         characters that the Responses API may embed (renders as boxes/barcodes).
-        
+
         Args:
             text: Text potentially containing citation markers
-            
+
         Returns:
             Text with citation markers removed
         """
         import re
-        
+
         cleaned = text
         # Remove well-known literal markers
         cleaned = cleaned.replace("filecite", "")
@@ -1121,41 +839,39 @@ class OpenAIProvider(AIProvider):
         cleaned = re.sub(r"[\uE000-\uF8FF]", "", cleaned)
         # Remove any stray box-drawing/equals-like artifacts sometimes used as separators
         cleaned = cleaned.replace("≡", "").replace("░", "").replace("█", "")
-        
+
         return cleaned
 
-    def _buffer_and_clean_text(
-        self, buffer: str, delta: str
-    ) -> tuple[str | None, str]:
+    def _buffer_and_clean_text(self, buffer: str, delta: str) -> tuple[str | None, str]:
         """Buffer text deltas and clean citation markers at word boundaries.
-        
+
         Buffers incoming text until a space is encountered, then cleans citation
         markers from complete words before streaming to the frontend. This prevents
         users from seeing citation markers flash during streaming.
-        
+
         Args:
             buffer: Current text buffer
             delta: New text delta from stream
-            
+
         Returns:
             Tuple of (cleaned_content, new_buffer):
             - cleaned_content: Cleaned text to send (None if still buffering)
             - new_buffer: Updated buffer for next iteration
         """
         buffer += delta
-        
+
         # Wait for a space (word boundary) before cleaning and sending
         if " " not in buffer:
             return None, buffer
-        
+
         # Split on last space to keep incomplete word in buffer
         parts = buffer.rsplit(" ", 1)
         words_to_send = parts[0] + " "  # Include the space
         new_buffer = parts[1] if len(parts) > 1 else ""
-        
+
         # Clean citation markers from complete words
         cleaned = self._clean_citation_markers(words_to_send)
-        
+
         return cleaned, new_buffer
 
     def _handle_mcp_event(self, event: Any) -> ToolCall | None:
@@ -1168,18 +884,21 @@ class OpenAIProvider(AIProvider):
             ToolCall if the event should be yielded, None otherwise
         """
         event_type = type(event).__name__
-        
+
         # MCP tool listing events (not individual tool calls)
-        if event_type in ("ResponseMcpListToolsInProgressEvent", "ResponseMcpListToolsCompletedEvent"):
+        if event_type in (
+            "ResponseMcpListToolsInProgressEvent",
+            "ResponseMcpListToolsCompletedEvent",
+        ):
             logger.debug("[MCP] Tool listing event", event_type=event_type)
             return None
-        
+
         # MCP tool call started
         # Note: The in_progress event doesn't include the tool name - only item_id, output_index, sequence_number, type
         elif event_type == "ResponseMcpCallInProgressEvent":
             item_id = getattr(event, "item_id", "unknown")
             logger.info("[MCP] Tool call started", item_id=item_id)
-            
+
             # Return a hard coded "CRM search" message since we don't have the specific tool name yet
             return ToolCall(
                 tool_call_id=item_id,
@@ -1187,18 +906,18 @@ class OpenAIProvider(AIProvider):
                 args={"description": "Searching CRM..."},  # Generic message for UI
                 result=None,
             )
-        
+
         # MCP tool arguments being streamed
         elif event_type == "ResponseMcpCallArgumentsDeltaEvent":
             # Don't yield - just accumulate args
             logger.debug("[MCP] Arguments delta")
             return None
-        
+
         # MCP tool arguments complete
         elif event_type == "ResponseMcpCallArgumentsDoneEvent":
             # Don't yield - wait for completion
             return None
-        
+
         # MCP tool call completed
         elif event_type == "ResponseMcpCallCompletedEvent":
             item_id = getattr(event, "item_id", "unknown")
@@ -1209,12 +928,12 @@ class OpenAIProvider(AIProvider):
                 args={},
                 result={"status": ToolStatus.COMPLETE.value},
             )
-        
+
         # MCP tool listing failed
         elif event_type == "ResponseMcpListToolsFailedEvent":
             logger.error("[MCP] Tool listing failed")
             return None
-        
+
         # MCP tool call failed
         elif event_type == "ResponseMcpCallFailedEvent":
             item_id = getattr(event, "item_id", "unknown")
@@ -1222,7 +941,7 @@ class OpenAIProvider(AIProvider):
             logger.warning("[MCP] Tool call failed", item_id=item_id, error=str(error))
             # OpenAI typically retries automatically, so don't yield error to UI
             return None
-        
+
         return None
 
     def _handle_reasoning_summary_delta(
@@ -1233,13 +952,13 @@ class OpenAIProvider(AIProvider):
         current_reasoning_summary: str,
     ) -> tuple[str | None, int, str, ReasoningSummary | None]:
         """Handle reasoning summary delta events.
-        
+
         Args:
             event: Reasoning summary text delta event from OpenAI
             current_reasoning_id: Current reasoning summary ID (None if starting new summary)
             reasoning_summary_count: Counter for unique reasoning IDs
             current_reasoning_summary: Accumulated summary text
-            
+
         Returns:
             Tuple of (updated_reasoning_id, updated_count, updated_summary, reasoning_summary_to_append)
         """
@@ -1249,10 +968,7 @@ class OpenAIProvider(AIProvider):
             reasoning_summary_count += 1
             current_reasoning_id = f"reasoning_{reasoning_summary_count}"
             current_reasoning_summary = summary_delta
-        elif (
-            summary_delta.strip().startswith("**")
-            and current_reasoning_summary
-        ):
+        elif summary_delta.strip().startswith("**") and current_reasoning_summary:
             reasoning_summary_count += 1
             current_reasoning_id = f"reasoning_{reasoning_summary_count}"
             current_reasoning_summary = summary_delta
@@ -1328,11 +1044,13 @@ class OpenAIProvider(AIProvider):
             # Create streaming response using Responses API
             logger.info("[STREAM] Creating stream with OpenAI Responses API...")
             stream = await client.responses.create(**stream_params)
-            logger.info("[STREAM] Stream created successfully, starting to read events...")
+            logger.info(
+                "[STREAM] Stream created successfully, starting to read events..."
+            )
 
             # Track citations from web search
             accumulated_citations: list[SearchCitation] = []
-            
+
             # Buffer for word-by-word streaming with citation cleaning
             text_buffer = ""
             # Track reasoning summary state
@@ -1362,11 +1080,11 @@ class OpenAIProvider(AIProvider):
                     ):
                         # These are status/lifecycle events, just continue
                         continue
-                    
+
                     # Handle MCP tool events
                     elif type(event).__name__ in (
                         "ResponseMcpListToolsInProgressEvent",
-                        "ResponseMcpListToolsCompletedEvent", 
+                        "ResponseMcpListToolsCompletedEvent",
                         "ResponseMcpListToolsFailedEvent",
                         "ResponseMcpCallInProgressEvent",
                         "ResponseMcpCallArgumentsDeltaEvent",
@@ -1417,14 +1135,15 @@ class OpenAIProvider(AIProvider):
                             "[REASONING] Got reasoning delta",
                             delta_preview=event.delta[:100],
                             item_id=event.item_id,
-                            content_index=event.content_index
+                            content_index=event.content_index,
                         )
                         # Skip yielding raw reasoning content
                         continue
 
                     # Handle reasoning summary delta events
                     elif isinstance(event, ResponseReasoningSummaryTextDeltaEvent):
-                        (   current_reasoning_id,
+                        (
+                            current_reasoning_id,
                             reasoning_summary_count,
                             current_reasoning_summary,
                             reasoning_summary,
@@ -1434,7 +1153,7 @@ class OpenAIProvider(AIProvider):
                             reasoning_summary_count=reasoning_summary_count,
                             current_reasoning_summary=current_reasoning_summary,
                         )
-                        
+
                         if reasoning_summary:
                             reasoning_summaries_to_yield.append(reasoning_summary)
 
@@ -1456,7 +1175,7 @@ class OpenAIProvider(AIProvider):
                         cleaned_content, text_buffer = self._buffer_and_clean_text(
                             text_buffer, event.delta
                         )
-                        
+
                         if cleaned_content:
                             content = cleaned_content
                         else:
@@ -1469,11 +1188,11 @@ class OpenAIProvider(AIProvider):
                             annotation=event.annotation,
                             client=client,
                         )
-                        
+
                         # Add citation if it's a web citation (file citations return None)
                         if citation:
                             citations.append(citation)
-                            
+
                             # Track unique citations
                             if citation not in accumulated_citations:
                                 accumulated_citations.append(citation)
@@ -1482,7 +1201,7 @@ class OpenAIProvider(AIProvider):
                     elif isinstance(event, ResponseTextDoneEvent):
                         # Text content is done, no action needed
                         continue
-                    
+
                     # Handle content part done events (completion marker for content parts)
                     elif isinstance(event, ResponseContentPartDoneEvent):
                         # Content part is done, no action needed
@@ -1492,7 +1211,7 @@ class OpenAIProvider(AIProvider):
                     elif isinstance(event, ResponseCompletedEvent):
                         finish_reason = "completed"
                         logger.info("[STREAM] Completed successfully")
-                        
+
                         # Flush any remaining text in buffer
                         if text_buffer:
                             content = self._clean_citation_markers(text_buffer)
@@ -1501,7 +1220,7 @@ class OpenAIProvider(AIProvider):
                     elif isinstance(event, ResponseFailedEvent):
                         finish_reason = "failed"
                         logger.error("[STREAM] Failed", event_details=str(event))
-                        
+
                         # Flush any remaining text in buffer
                         if text_buffer:
                             content = self._clean_citation_markers(text_buffer)
@@ -1511,7 +1230,7 @@ class OpenAIProvider(AIProvider):
                         # Log unhandled event types
                         logger.warning(
                             "[UNHANDLED] Unhandled event type",
-                            event_type=type(event).__name__
+                            event_type=type(event).__name__,
                         )
 
                     # Yield chunk if there's content, tool calls, citations, or finish reason
@@ -1536,11 +1255,14 @@ class OpenAIProvider(AIProvider):
                     logger.error(
                         "[STREAM] Error parsing event",
                         error=str(e),
-                        event_type=type(event).__name__
+                        event_type=type(event).__name__,
                     )
                     continue
 
-            logger.info("[STREAM] Chat stream completed", citation_count=len(accumulated_citations))
+            logger.info(
+                "[STREAM] Chat stream completed",
+                citation_count=len(accumulated_citations),
+            )
 
         except Exception as e:
             logger.error("[STREAM] Streaming chat failed", error=str(e))
