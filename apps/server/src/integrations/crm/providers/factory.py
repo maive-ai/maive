@@ -2,7 +2,7 @@
 CRM provider factory for dependency injection.
 
 This module provides factory functions to create CRM provider instances
-based on configuration, following the same pattern as the auth module.
+based on configuration or dynamic credentials.
 """
 
 from src.integrations.crm.base import CRMProvider

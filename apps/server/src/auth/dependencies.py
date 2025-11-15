@@ -7,11 +7,14 @@ authorization, and user management.
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth import schemas
 from src.auth.constants import CookieNames, Permission, Role
 from src.auth.provider_factory import get_auth_provider
 from src.auth.service import AuthProvider
+from src.db.database import get_db
+from src.db.organizations.service import OrganizationService
 
 # Security scheme for JWT tokens (fallback for API clients)
 security = HTTPBearer(auto_error=False)
@@ -80,17 +83,35 @@ async def get_current_session(
 
 async def get_current_user(
     session: schemas.Session = Depends(get_current_session),
+    db: AsyncSession = Depends(get_db),
 ) -> schemas.User:
     """
-    Get the current user from the session.
+    Get the current user from the session and ensure they have an organization.
+
+    If the user doesn't have an organization_id, one is automatically created
+    based on their email domain.
 
     Args:
         session: The current user session
+        db: Database session
 
     Returns:
-        User: The current user
+        User: The current user with organization_id populated
     """
-    return session.user
+    user = session.user
+
+    # If user already has an organization, return them
+    if user.organization_id:
+        return user
+
+    # Otherwise, create an organization for them
+    org_service = OrganizationService(db)
+    org = await org_service.get_or_create_organization_for_email(user.email)
+
+    # Update the user object with the organization_id
+    user.organization_id = org.id
+
+    return user
 
 
 async def get_current_user_optional(

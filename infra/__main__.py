@@ -1100,6 +1100,31 @@ dynamodb_policy = iam.RolePolicy(
     ),
 )
 
+# IAM Policy for AWS Secrets Manager access (for CRM credentials)
+secrets_manager_policy = iam.RolePolicy(
+    f"{app_name}-secrets-manager-policy-{stack_name}",
+    role=task_role.id,
+    policy=pulumi.Output.json_dumps(
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Action": [
+                        "secretsmanager:GetSecretValue",
+                        "secretsmanager:DescribeSecret",
+                        "secretsmanager:CreateSecret",
+                        "secretsmanager:PutSecretValue",
+                        "secretsmanager:UpdateSecret",
+                        "secretsmanager:DeleteSecret",
+                    ],
+                    "Resource": f"arn:aws:secretsmanager:*:*:secret:maive/{environment}/crm/*",
+                }
+            ],
+        }
+    ),
+)
+
 # ECS Task Definition (conditional)
 task_definition = None
 if deploy_containers:
