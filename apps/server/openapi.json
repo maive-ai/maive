@@ -189,6 +189,96 @@
         ]
       }
     },
+    "/api/creds": {
+      "get": {
+        "tags": [
+          "Credentials"
+        ],
+        "summary": "Get Crm Credentials",
+        "description": "Get CRM credentials configuration for the user's organization.\n\nNote: This endpoint does NOT return the actual credential values,\nonly the metadata (provider type, created date, etc.).\n\nArgs:\n    current_user: Current authenticated user\n    db: Database session\n\nReturns:\n    Credentials metadata (no actual secrets)\n\nRaises:\n    HTTPException: If user has no organization or credentials not found",
+        "operationId": "get_crm_credentials_api_creds_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CRMCredentials"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Credentials"
+        ],
+        "summary": "Create Crm Credentials",
+        "description": "Create or update CRM credentials for the user's organization.\n\nIf credentials already exist, they will be deactivated and new ones created.\n\nArgs:\n    data: CRM credentials data (provider and credentials dict)\n    current_user: Current authenticated user\n    creds_service: Credentials service\n\nReturns:\n    Created credentials record (without actual credential values)\n\nRaises:\n    HTTPException: If user has no organization or creation fails",
+        "operationId": "create_crm_credentials_api_creds_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CRMCredentialsCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CRMCredentials"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Credentials"
+        ],
+        "summary": "Delete Crm Credentials",
+        "description": "Delete CRM credentials for the user's organization.\n\nThis removes credentials from both Secrets Manager and the database.\n\nArgs:\n    current_user: Current authenticated user\n    creds_service: Credentials service\n\nRaises:\n    HTTPException: If user has no organization or credentials not found",
+        "operationId": "delete_crm_credentials_api_creds_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/crm/jobs/{job_id}": {
       "get": {
         "tags": [
@@ -1538,6 +1628,87 @@
           "status_value"
         ],
         "title": "Body_update_project_status_api_crm_projects__project_id__status_patch"
+      },
+      "CRMCredentials": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "title": "Provider",
+            "description": "CRM provider (job_nimbus, service_titan)"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Credential record UUID"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id",
+            "description": "Organization UUID"
+          },
+          "secret_arn": {
+            "type": "string",
+            "title": "Secret Arn",
+            "description": "AWS Secrets Manager ARN"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "description": "Whether credentials are active"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "User who created the credentials"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Creation timestamp"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At",
+            "description": "Last update timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider",
+          "id",
+          "organization_id",
+          "secret_arn",
+          "is_active",
+          "created_by",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CRMCredentials",
+        "description": "CRM credentials schema with full details (no actual credentials exposed)."
+      },
+      "CRMCredentialsCreate": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "title": "Provider",
+            "description": "CRM provider (job_nimbus, service_titan)"
+          },
+          "credentials": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Credentials",
+            "description": "CRM API credentials (will be encrypted)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider",
+          "credentials"
+        ],
+        "title": "CRMCredentialsCreate",
+        "description": "Schema for creating CRM credentials."
       },
       "CRMProvider": {
         "type": "string",

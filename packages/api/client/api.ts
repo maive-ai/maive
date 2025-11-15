@@ -232,6 +232,80 @@ export interface BodyUpdateProjectStatusApiCrmProjectsProjectIdStatusPatch {
     'status_value': string;
 }
 /**
+ * CRM credentials schema with full details (no actual credentials exposed).
+ * @export
+ * @interface CRMCredentials
+ */
+export interface CRMCredentials {
+    /**
+     * CRM provider (job_nimbus, service_titan)
+     * @type {string}
+     * @memberof CRMCredentials
+     */
+    'provider': string;
+    /**
+     * Credential record UUID
+     * @type {string}
+     * @memberof CRMCredentials
+     */
+    'id': string;
+    /**
+     * Organization UUID
+     * @type {string}
+     * @memberof CRMCredentials
+     */
+    'organization_id': string;
+    /**
+     * AWS Secrets Manager ARN
+     * @type {string}
+     * @memberof CRMCredentials
+     */
+    'secret_arn': string;
+    /**
+     * Whether credentials are active
+     * @type {boolean}
+     * @memberof CRMCredentials
+     */
+    'is_active': boolean;
+    /**
+     * User who created the credentials
+     * @type {string}
+     * @memberof CRMCredentials
+     */
+    'created_by': string;
+    /**
+     * Creation timestamp
+     * @type {string}
+     * @memberof CRMCredentials
+     */
+    'created_at': string;
+    /**
+     * Last update timestamp
+     * @type {string}
+     * @memberof CRMCredentials
+     */
+    'updated_at': string;
+}
+/**
+ * Schema for creating CRM credentials.
+ * @export
+ * @interface CRMCredentialsCreate
+ */
+export interface CRMCredentialsCreate {
+    /**
+     * CRM provider (job_nimbus, service_titan)
+     * @type {string}
+     * @memberof CRMCredentialsCreate
+     */
+    'provider': string;
+    /**
+     * CRM API credentials (will be encrypted)
+     * @type {{ [key: string]: any; }}
+     * @memberof CRMCredentialsCreate
+     */
+    'credentials': { [key: string]: any; };
+}
+/**
  * Available CRM providers.
  * @export
  * @enum {string}
@@ -3333,6 +3407,252 @@ export class ChatApi extends BaseAPI {
      */
     public streamRoofingChatApiChatRoofingPost(chatRequest: ChatRequest, options?: RawAxiosRequestConfig) {
         return ChatApiFp(this.configuration).streamRoofingChatApiChatRoofingPost(chatRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+
+/**
+ * CredentialsApi - axios parameter creator
+ * @export
+ */
+export const CredentialsApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * Create or update CRM credentials for the user\'s organization.  If credentials already exist, they will be deactivated and new ones created.  Args:     data: CRM credentials data (provider and credentials dict)     current_user: Current authenticated user     creds_service: Credentials service  Returns:     Created credentials record (without actual credential values)  Raises:     HTTPException: If user has no organization or creation fails
+         * @summary Create Crm Credentials
+         * @param {CRMCredentialsCreate} cRMCredentialsCreate 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createCrmCredentialsApiCredsPost: async (cRMCredentialsCreate: CRMCredentialsCreate, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'cRMCredentialsCreate' is not null or undefined
+            assertParamExists('createCrmCredentialsApiCredsPost', 'cRMCredentialsCreate', cRMCredentialsCreate)
+            const localVarPath = `/api/creds`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(cRMCredentialsCreate, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Delete CRM credentials for the user\'s organization.  This removes credentials from both Secrets Manager and the database.  Args:     current_user: Current authenticated user     creds_service: Credentials service  Raises:     HTTPException: If user has no organization or credentials not found
+         * @summary Delete Crm Credentials
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        deleteCrmCredentialsApiCredsDelete: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/creds`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Get CRM credentials configuration for the user\'s organization.  Note: This endpoint does NOT return the actual credential values, only the metadata (provider type, created date, etc.).  Args:     current_user: Current authenticated user     db: Database session  Returns:     Credentials metadata (no actual secrets)  Raises:     HTTPException: If user has no organization or credentials not found
+         * @summary Get Crm Credentials
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getCrmCredentialsApiCredsGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/creds`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * CredentialsApi - functional programming interface
+ * @export
+ */
+export const CredentialsApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = CredentialsApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * Create or update CRM credentials for the user\'s organization.  If credentials already exist, they will be deactivated and new ones created.  Args:     data: CRM credentials data (provider and credentials dict)     current_user: Current authenticated user     creds_service: Credentials service  Returns:     Created credentials record (without actual credential values)  Raises:     HTTPException: If user has no organization or creation fails
+         * @summary Create Crm Credentials
+         * @param {CRMCredentialsCreate} cRMCredentialsCreate 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async createCrmCredentialsApiCredsPost(cRMCredentialsCreate: CRMCredentialsCreate, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CRMCredentials>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.createCrmCredentialsApiCredsPost(cRMCredentialsCreate, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CredentialsApi.createCrmCredentialsApiCredsPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Delete CRM credentials for the user\'s organization.  This removes credentials from both Secrets Manager and the database.  Args:     current_user: Current authenticated user     creds_service: Credentials service  Raises:     HTTPException: If user has no organization or credentials not found
+         * @summary Delete Crm Credentials
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async deleteCrmCredentialsApiCredsDelete(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.deleteCrmCredentialsApiCredsDelete(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CredentialsApi.deleteCrmCredentialsApiCredsDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Get CRM credentials configuration for the user\'s organization.  Note: This endpoint does NOT return the actual credential values, only the metadata (provider type, created date, etc.).  Args:     current_user: Current authenticated user     db: Database session  Returns:     Credentials metadata (no actual secrets)  Raises:     HTTPException: If user has no organization or credentials not found
+         * @summary Get Crm Credentials
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getCrmCredentialsApiCredsGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CRMCredentials>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getCrmCredentialsApiCredsGet(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CredentialsApi.getCrmCredentialsApiCredsGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+    }
+};
+
+/**
+ * CredentialsApi - factory interface
+ * @export
+ */
+export const CredentialsApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = CredentialsApiFp(configuration)
+    return {
+        /**
+         * Create or update CRM credentials for the user\'s organization.  If credentials already exist, they will be deactivated and new ones created.  Args:     data: CRM credentials data (provider and credentials dict)     current_user: Current authenticated user     creds_service: Credentials service  Returns:     Created credentials record (without actual credential values)  Raises:     HTTPException: If user has no organization or creation fails
+         * @summary Create Crm Credentials
+         * @param {CRMCredentialsCreate} cRMCredentialsCreate 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createCrmCredentialsApiCredsPost(cRMCredentialsCreate: CRMCredentialsCreate, options?: RawAxiosRequestConfig): AxiosPromise<CRMCredentials> {
+            return localVarFp.createCrmCredentialsApiCredsPost(cRMCredentialsCreate, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Delete CRM credentials for the user\'s organization.  This removes credentials from both Secrets Manager and the database.  Args:     current_user: Current authenticated user     creds_service: Credentials service  Raises:     HTTPException: If user has no organization or credentials not found
+         * @summary Delete Crm Credentials
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        deleteCrmCredentialsApiCredsDelete(options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.deleteCrmCredentialsApiCredsDelete(options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Get CRM credentials configuration for the user\'s organization.  Note: This endpoint does NOT return the actual credential values, only the metadata (provider type, created date, etc.).  Args:     current_user: Current authenticated user     db: Database session  Returns:     Credentials metadata (no actual secrets)  Raises:     HTTPException: If user has no organization or credentials not found
+         * @summary Get Crm Credentials
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getCrmCredentialsApiCredsGet(options?: RawAxiosRequestConfig): AxiosPromise<CRMCredentials> {
+            return localVarFp.getCrmCredentialsApiCredsGet(options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * CredentialsApi - object-oriented interface
+ * @export
+ * @class CredentialsApi
+ * @extends {BaseAPI}
+ */
+export class CredentialsApi extends BaseAPI {
+    /**
+     * Create or update CRM credentials for the user\'s organization.  If credentials already exist, they will be deactivated and new ones created.  Args:     data: CRM credentials data (provider and credentials dict)     current_user: Current authenticated user     creds_service: Credentials service  Returns:     Created credentials record (without actual credential values)  Raises:     HTTPException: If user has no organization or creation fails
+     * @summary Create Crm Credentials
+     * @param {CRMCredentialsCreate} cRMCredentialsCreate 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CredentialsApi
+     */
+    public createCrmCredentialsApiCredsPost(cRMCredentialsCreate: CRMCredentialsCreate, options?: RawAxiosRequestConfig) {
+        return CredentialsApiFp(this.configuration).createCrmCredentialsApiCredsPost(cRMCredentialsCreate, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Delete CRM credentials for the user\'s organization.  This removes credentials from both Secrets Manager and the database.  Args:     current_user: Current authenticated user     creds_service: Credentials service  Raises:     HTTPException: If user has no organization or credentials not found
+     * @summary Delete Crm Credentials
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CredentialsApi
+     */
+    public deleteCrmCredentialsApiCredsDelete(options?: RawAxiosRequestConfig) {
+        return CredentialsApiFp(this.configuration).deleteCrmCredentialsApiCredsDelete(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Get CRM credentials configuration for the user\'s organization.  Note: This endpoint does NOT return the actual credential values, only the metadata (provider type, created date, etc.).  Args:     current_user: Current authenticated user     db: Database session  Returns:     Credentials metadata (no actual secrets)  Raises:     HTTPException: If user has no organization or credentials not found
+     * @summary Get Crm Credentials
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CredentialsApi
+     */
+    public getCrmCredentialsApiCredsGet(options?: RawAxiosRequestConfig) {
+        return CredentialsApiFp(this.configuration).getCrmCredentialsApiCredsGet(options).then((request) => request(this.axios, this.basePath));
     }
 }
 
