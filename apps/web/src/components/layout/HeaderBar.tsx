@@ -1,81 +1,102 @@
 import { useAuth } from '@/auth';
-import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import type { User } from '@maive/api/client';
-import { User2 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { LogOut, Settings } from 'lucide-react';
+import { useState } from 'react';
+import { SettingsModal } from './SettingsModal';
 
 export type HeaderBarProps = {
   user: User | null;
 };
 
 export default function HeaderBar({ user }: HeaderBarProps) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const modalRef = useRef<HTMLDivElement>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { signOut } = useAuth();
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        modalRef.current &&
-        !modalRef.current.contains(event.target as Node)
-      ) {
-        setIsModalOpen(false);
-      }
-    }
-
-    if (isModalOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isModalOpen]);
 
   const handleSignOut = async () => {
     await signOut();
-    setIsModalOpen(false);
+  };
+
+  // Get user initials for avatar
+  const getInitials = () => {
+    if (user?.name) {
+      return user.name
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    if (user?.email) {
+      return user.email.slice(0, 2).toUpperCase();
+    }
+    return 'U';
+  };
+
+  // Extract organization name from email domain or use org name from backend
+  const getOrgName = () => {
+    if (user?.email) {
+      const domain = user.email.split('@')[1];
+      if (domain) {
+        const orgName = domain.split('.')[0];
+        if (orgName) {
+          return orgName.charAt(0).toUpperCase() + orgName.slice(1);
+        }
+      }
+    }
+    return 'Organization';
   };
 
   return (
-    <header className="flex h-16 items-center justify-end bg-neutral-50 px-6">
-      <div className="relative">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => setIsModalOpen(!isModalOpen)}
-          aria-label="User menu"
-          className="rounded-full border border-primary-900 bg-neutral-50 hover:bg-neutral-100 transition-colors"
-        >
-          <User2 className="h-5 w-5 text-primary-900" />
-        </Button>
-
-        {isModalOpen && (
-          <div
-            ref={modalRef}
-            className="absolute right-0 top-10 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
-          >
-            <div className="p-4">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="h-12 w-12 rounded-full bg-gray-300 flex items-center justify-center">
-                  <User2 className="h-8 w-8 text-gray-700" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-gray-600">{user?.email}</p>
+    <>
+      <header className="flex h-16 items-center justify-end bg-neutral-50 px-6">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-3 rounded-full transition-colors hover:bg-neutral-100 p-1">
+              <Avatar className="h-9 w-9 border-2 border-primary-900">
+                <AvatarFallback className="bg-primary-900 text-white text-sm font-medium">
+                  {getInitials()}
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-72">
+            <DropdownMenuLabel>
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12 border-2 border-primary-900">
+                  <AvatarFallback className="bg-primary-900 text-white text-lg font-medium">
+                    {getInitials()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{user?.email}</p>
+                  <p className="text-xs text-muted-foreground">{getOrgName()}</p>
                 </div>
               </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setIsSettingsOpen(true)}>
+              <Settings className="mr-2 h-4 w-4" />
+              <span>Settings</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleSignOut}>
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Sign out</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </header>
 
-              <Button
-                variant="outline"
-                onClick={handleSignOut}
-                className="w-full text-left border-primary-900 text-primary-900 bg-primary-50 hover:bg-neutral-100"
-              >
-                Sign out
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
-    </header>
+      <SettingsModal open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
+    </>
   );
 }
