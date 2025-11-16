@@ -108,7 +108,7 @@ void (empty response body)
 # **getCrmCredentialsApiCredsGet**
 > CRMCredentials getCrmCredentialsApiCredsGet()
 
-Get CRM credentials configuration for the user\'s organization.  Note: This endpoint does NOT return the actual credential values, only the metadata (provider type, created date, etc.).  Args:     current_user: Current authenticated user (guaranteed to have organization_id)     db: Database session  Returns:     Credentials metadata (no actual secrets)  Raises:     HTTPException: If credentials not found
+Get CRM credentials configuration for the user\'s organization.  Note: This endpoint does NOT return the actual credential values, only the metadata (provider type, created date, etc.).  Args:     current_user: Current authenticated user (guaranteed to have organization_id)     creds_service: Credentials service  Returns:     Credentials metadata (no actual secrets)  Raises:     HTTPException: If credentials not found
 
 ### Example
 

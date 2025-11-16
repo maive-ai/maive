@@ -10,6 +10,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config import get_app_settings
 from src.db.crm_credentials.model import OrganizationCRMCredentials
 from src.db.crm_credentials.schemas import CRMCredentialsCreate
 from src.utils.logger import logger
@@ -314,6 +315,6 @@ class CRMCredentialsService:
         Returns:
             Secret name
         """
-        # TODO: Get environment from config
-        environment = "dev"  # Replace with actual env
+        settings = get_app_settings()
+        environment = settings.environment.value
         return f"maive/{environment}/crm/{organization_id}"

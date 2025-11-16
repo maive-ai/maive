@@ -195,7 +195,7 @@
           "Credentials"
         ],
         "summary": "Get Crm Credentials",
-        "description": "Get CRM credentials configuration for the user's organization.\n\nNote: This endpoint does NOT return the actual credential values,\nonly the metadata (provider type, created date, etc.).\n\nArgs:\n    current_user: Current authenticated user (guaranteed to have organization_id)\n    db: Database session\n\nReturns:\n    Credentials metadata (no actual secrets)\n\nRaises:\n    HTTPException: If credentials not found",
+        "description": "Get CRM credentials configuration for the user's organization.\n\nNote: This endpoint does NOT return the actual credential values,\nonly the metadata (provider type, created date, etc.).\n\nArgs:\n    current_user: Current authenticated user (guaranteed to have organization_id)\n    creds_service: Credentials service\n\nReturns:\n    Credentials metadata (no actual secrets)\n\nRaises:\n    HTTPException: If credentials not found",
         "operationId": "get_crm_credentials_api_creds_get",
         "responses": {
           "200": {

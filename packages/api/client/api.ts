@@ -3493,7 +3493,7 @@ export const CredentialsApiAxiosParamCreator = function (configuration?: Configu
             };
         },
         /**
-         * Get CRM credentials configuration for the user\'s organization.  Note: This endpoint does NOT return the actual credential values, only the metadata (provider type, created date, etc.).  Args:     current_user: Current authenticated user (guaranteed to have organization_id)     db: Database session  Returns:     Credentials metadata (no actual secrets)  Raises:     HTTPException: If credentials not found
+         * Get CRM credentials configuration for the user\'s organization.  Note: This endpoint does NOT return the actual credential values, only the metadata (provider type, created date, etc.).  Args:     current_user: Current authenticated user (guaranteed to have organization_id)     creds_service: Credentials service  Returns:     Credentials metadata (no actual secrets)  Raises:     HTTPException: If credentials not found
          * @summary Get Crm Credentials
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -3562,7 +3562,7 @@ export const CredentialsApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * Get CRM credentials configuration for the user\'s organization.  Note: This endpoint does NOT return the actual credential values, only the metadata (provider type, created date, etc.).  Args:     current_user: Current authenticated user (guaranteed to have organization_id)     db: Database session  Returns:     Credentials metadata (no actual secrets)  Raises:     HTTPException: If credentials not found
+         * Get CRM credentials configuration for the user\'s organization.  Note: This endpoint does NOT return the actual credential values, only the metadata (provider type, created date, etc.).  Args:     current_user: Current authenticated user (guaranteed to have organization_id)     creds_service: Credentials service  Returns:     Credentials metadata (no actual secrets)  Raises:     HTTPException: If credentials not found
          * @summary Get Crm Credentials
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -3603,7 +3603,7 @@ export const CredentialsApiFactory = function (configuration?: Configuration, ba
             return localVarFp.deleteCrmCredentialsApiCredsDelete(options).then((request) => request(axios, basePath));
         },
         /**
-         * Get CRM credentials configuration for the user\'s organization.  Note: This endpoint does NOT return the actual credential values, only the metadata (provider type, created date, etc.).  Args:     current_user: Current authenticated user (guaranteed to have organization_id)     db: Database session  Returns:     Credentials metadata (no actual secrets)  Raises:     HTTPException: If credentials not found
+         * Get CRM credentials configuration for the user\'s organization.  Note: This endpoint does NOT return the actual credential values, only the metadata (provider type, created date, etc.).  Args:     current_user: Current authenticated user (guaranteed to have organization_id)     creds_service: Credentials service  Returns:     Credentials metadata (no actual secrets)  Raises:     HTTPException: If credentials not found
          * @summary Get Crm Credentials
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -3645,7 +3645,7 @@ export class CredentialsApi extends BaseAPI {
     }
 
     /**
-     * Get CRM credentials configuration for the user\'s organization.  Note: This endpoint does NOT return the actual credential values, only the metadata (provider type, created date, etc.).  Args:     current_user: Current authenticated user (guaranteed to have organization_id)     db: Database session  Returns:     Credentials metadata (no actual secrets)  Raises:     HTTPException: If credentials not found
+     * Get CRM credentials configuration for the user\'s organization.  Note: This endpoint does NOT return the actual credential values, only the metadata (provider type, created date, etc.).  Args:     current_user: Current authenticated user (guaranteed to have organization_id)     creds_service: Credentials service  Returns:     Credentials metadata (no actual secrets)  Raises:     HTTPException: If credentials not found
      * @summary Get Crm Credentials
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
