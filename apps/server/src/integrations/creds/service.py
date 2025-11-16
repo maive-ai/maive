@@ -214,6 +214,34 @@ class CRMCredentialsService:
                 status_code=500, detail="Failed to retrieve credentials"
             )
 
+    async def get_credentials_metadata(
+        self, organization_id: str
+    ) -> OrganizationCRMCredentials:
+        """
+        Get CRM credentials metadata (without actual secrets).
+
+        This returns only the database record with provider type, timestamps, etc.
+        Does NOT return the actual credential values.
+
+        Args:
+            organization_id: Organization UUID
+
+        Returns:
+            Credentials database record
+
+        Raises:
+            HTTPException: If credentials not found
+        """
+        cred_record = await self._get_active_credentials(organization_id)
+
+        if not cred_record:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No CRM credentials configured for organization {organization_id}",
+            )
+
+        return cred_record
+
     async def delete_credentials(self, organization_id: str) -> bool:
         """
         Delete CRM credentials for an organization.

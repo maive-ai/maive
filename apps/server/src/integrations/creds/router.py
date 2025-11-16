@@ -6,14 +6,10 @@ CRM integration credentials.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.dependencies import get_current_user
 from src.auth.schemas import User
-from src.db.crm_credentials.model import OrganizationCRMCredentials
 from src.db.crm_credentials.schemas import CRMCredentials, CRMCredentialsCreate
-from src.db.database import get_db
 from src.integrations.creds.dependencies import get_creds_service
 from src.integrations.creds.service import CRMCredentialsService
 
@@ -56,7 +52,7 @@ async def create_crm_credentials(
 @router.get("", response_model=CRMCredentials)
 async def get_crm_credentials(
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    creds_service: CRMCredentialsService = Depends(get_creds_service),
 ) -> CRMCredentials:
     """
     Get CRM credentials configuration for the user's organization.
@@ -66,7 +62,7 @@ async def get_crm_credentials(
 
     Args:
         current_user: Current authenticated user (guaranteed to have organization_id)
-        db: Database session
+        creds_service: Credentials service
 
     Returns:
         Credentials metadata (no actual secrets)
@@ -74,19 +70,9 @@ async def get_crm_credentials(
     Raises:
         HTTPException: If credentials not found
     """
-    result = await db.execute(
-        select(OrganizationCRMCredentials).where(
-            OrganizationCRMCredentials.organization_id == current_user.organization_id,
-            OrganizationCRMCredentials.is_active == True,  # noqa: E712
-        )
+    cred_record = await creds_service.get_credentials_metadata(
+        current_user.organization_id
     )
-    cred_record = result.scalar_one_or_none()
-
-    if not cred_record:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No CRM credentials configured for your organization",
-        )
 
     return CRMCredentials.model_validate(cred_record)
 

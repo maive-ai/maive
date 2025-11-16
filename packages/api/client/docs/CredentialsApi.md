@@ -11,7 +11,7 @@ All URIs are relative to *http://localhost*
 # **createCrmCredentialsApiCredsPost**
 > CRMCredentials createCrmCredentialsApiCredsPost(cRMCredentialsCreate)
 
-Create or update CRM credentials for the user\'s organization.  If credentials already exist, they will be deactivated and new ones created.  Args:     data: CRM credentials data (provider and credentials dict)     current_user: Current authenticated user     creds_service: Credentials service  Returns:     Created credentials record (without actual credential values)  Raises:     HTTPException: If user has no organization or creation fails
+Create or update CRM credentials for the user\'s organization.  If credentials already exist, they will be deactivated and new ones created.  Args:     data: CRM credentials data (provider and credentials dict)     current_user: Current authenticated user (guaranteed to have organization_id)     creds_service: Credentials service  Returns:     Created credentials record (without actual credential values)  Raises:     HTTPException: If creation fails
 
 ### Example
 
@@ -64,7 +64,7 @@ const { status, data } = await apiInstance.createCrmCredentialsApiCredsPost(
 # **deleteCrmCredentialsApiCredsDelete**
 > deleteCrmCredentialsApiCredsDelete()
 
-Delete CRM credentials for the user\'s organization.  This removes credentials from both Secrets Manager and the database.  Args:     current_user: Current authenticated user     creds_service: Credentials service  Raises:     HTTPException: If user has no organization or credentials not found
+Delete CRM credentials for the user\'s organization.  This removes credentials from both Secrets Manager and the database.  Args:     current_user: Current authenticated user (guaranteed to have organization_id)     creds_service: Credentials service  Raises:     HTTPException: If credentials not found
 
 ### Example
 
@@ -108,7 +108,7 @@ void (empty response body)
 # **getCrmCredentialsApiCredsGet**
 > CRMCredentials getCrmCredentialsApiCredsGet()
 
-Get CRM credentials configuration for the user\'s organization.  Note: This endpoint does NOT return the actual credential values, only the metadata (provider type, created date, etc.).  Args:     current_user: Current authenticated user     db: Database session  Returns:     Credentials metadata (no actual secrets)  Raises:     HTTPException: If user has no organization or credentials not found
+Get CRM credentials configuration for the user\'s organization.  Note: This endpoint does NOT return the actual credential values, only the metadata (provider type, created date, etc.).  Args:     current_user: Current authenticated user (guaranteed to have organization_id)     db: Database session  Returns:     Credentials metadata (no actual secrets)  Raises:     HTTPException: If credentials not found
 
 ### Example
 

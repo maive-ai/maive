@@ -195,7 +195,7 @@
           "Credentials"
         ],
         "summary": "Get Crm Credentials",
-        "description": "Get CRM credentials configuration for the user's organization.\n\nNote: This endpoint does NOT return the actual credential values,\nonly the metadata (provider type, created date, etc.).\n\nArgs:\n    current_user: Current authenticated user\n    db: Database session\n\nReturns:\n    Credentials metadata (no actual secrets)\n\nRaises:\n    HTTPException: If user has no organization or credentials not found",
+        "description": "Get CRM credentials configuration for the user's organization.\n\nNote: This endpoint does NOT return the actual credential values,\nonly the metadata (provider type, created date, etc.).\n\nArgs:\n    current_user: Current authenticated user (guaranteed to have organization_id)\n    db: Database session\n\nReturns:\n    Credentials metadata (no actual secrets)\n\nRaises:\n    HTTPException: If credentials not found",
         "operationId": "get_crm_credentials_api_creds_get",
         "responses": {
           "200": {
@@ -220,7 +220,7 @@
           "Credentials"
         ],
         "summary": "Create Crm Credentials",
-        "description": "Create or update CRM credentials for the user's organization.\n\nIf credentials already exist, they will be deactivated and new ones created.\n\nArgs:\n    data: CRM credentials data (provider and credentials dict)\n    current_user: Current authenticated user\n    creds_service: Credentials service\n\nReturns:\n    Created credentials record (without actual credential values)\n\nRaises:\n    HTTPException: If user has no organization or creation fails",
+        "description": "Create or update CRM credentials for the user's organization.\n\nIf credentials already exist, they will be deactivated and new ones created.\n\nArgs:\n    data: CRM credentials data (provider and credentials dict)\n    current_user: Current authenticated user (guaranteed to have organization_id)\n    creds_service: Credentials service\n\nReturns:\n    Created credentials record (without actual credential values)\n\nRaises:\n    HTTPException: If creation fails",
         "operationId": "create_crm_credentials_api_creds_post",
         "requestBody": {
           "content": {
@@ -265,7 +265,7 @@
           "Credentials"
         ],
         "summary": "Delete Crm Credentials",
-        "description": "Delete CRM credentials for the user's organization.\n\nThis removes credentials from both Secrets Manager and the database.\n\nArgs:\n    current_user: Current authenticated user\n    creds_service: Credentials service\n\nRaises:\n    HTTPException: If user has no organization or credentials not found",
+        "description": "Delete CRM credentials for the user's organization.\n\nThis removes credentials from both Secrets Manager and the database.\n\nArgs:\n    current_user: Current authenticated user (guaranteed to have organization_id)\n    creds_service: Credentials service\n\nRaises:\n    HTTPException: If credentials not found",
         "operationId": "delete_crm_credentials_api_creds_delete",
         "responses": {
           "204": {

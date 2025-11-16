@@ -3419,7 +3419,7 @@ export class ChatApi extends BaseAPI {
 export const CredentialsApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
         /**
-         * Create or update CRM credentials for the user\'s organization.  If credentials already exist, they will be deactivated and new ones created.  Args:     data: CRM credentials data (provider and credentials dict)     current_user: Current authenticated user     creds_service: Credentials service  Returns:     Created credentials record (without actual credential values)  Raises:     HTTPException: If user has no organization or creation fails
+         * Create or update CRM credentials for the user\'s organization.  If credentials already exist, they will be deactivated and new ones created.  Args:     data: CRM credentials data (provider and credentials dict)     current_user: Current authenticated user (guaranteed to have organization_id)     creds_service: Credentials service  Returns:     Created credentials record (without actual credential values)  Raises:     HTTPException: If creation fails
          * @summary Create Crm Credentials
          * @param {CRMCredentialsCreate} cRMCredentialsCreate 
          * @param {*} [options] Override http request option.
@@ -3459,7 +3459,7 @@ export const CredentialsApiAxiosParamCreator = function (configuration?: Configu
             };
         },
         /**
-         * Delete CRM credentials for the user\'s organization.  This removes credentials from both Secrets Manager and the database.  Args:     current_user: Current authenticated user     creds_service: Credentials service  Raises:     HTTPException: If user has no organization or credentials not found
+         * Delete CRM credentials for the user\'s organization.  This removes credentials from both Secrets Manager and the database.  Args:     current_user: Current authenticated user (guaranteed to have organization_id)     creds_service: Credentials service  Raises:     HTTPException: If credentials not found
          * @summary Delete Crm Credentials
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -3493,7 +3493,7 @@ export const CredentialsApiAxiosParamCreator = function (configuration?: Configu
             };
         },
         /**
-         * Get CRM credentials configuration for the user\'s organization.  Note: This endpoint does NOT return the actual credential values, only the metadata (provider type, created date, etc.).  Args:     current_user: Current authenticated user     db: Database session  Returns:     Credentials metadata (no actual secrets)  Raises:     HTTPException: If user has no organization or credentials not found
+         * Get CRM credentials configuration for the user\'s organization.  Note: This endpoint does NOT return the actual credential values, only the metadata (provider type, created date, etc.).  Args:     current_user: Current authenticated user (guaranteed to have organization_id)     db: Database session  Returns:     Credentials metadata (no actual secrets)  Raises:     HTTPException: If credentials not found
          * @summary Get Crm Credentials
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -3537,7 +3537,7 @@ export const CredentialsApiFp = function(configuration?: Configuration) {
     const localVarAxiosParamCreator = CredentialsApiAxiosParamCreator(configuration)
     return {
         /**
-         * Create or update CRM credentials for the user\'s organization.  If credentials already exist, they will be deactivated and new ones created.  Args:     data: CRM credentials data (provider and credentials dict)     current_user: Current authenticated user     creds_service: Credentials service  Returns:     Created credentials record (without actual credential values)  Raises:     HTTPException: If user has no organization or creation fails
+         * Create or update CRM credentials for the user\'s organization.  If credentials already exist, they will be deactivated and new ones created.  Args:     data: CRM credentials data (provider and credentials dict)     current_user: Current authenticated user (guaranteed to have organization_id)     creds_service: Credentials service  Returns:     Created credentials record (without actual credential values)  Raises:     HTTPException: If creation fails
          * @summary Create Crm Credentials
          * @param {CRMCredentialsCreate} cRMCredentialsCreate 
          * @param {*} [options] Override http request option.
@@ -3550,7 +3550,7 @@ export const CredentialsApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * Delete CRM credentials for the user\'s organization.  This removes credentials from both Secrets Manager and the database.  Args:     current_user: Current authenticated user     creds_service: Credentials service  Raises:     HTTPException: If user has no organization or credentials not found
+         * Delete CRM credentials for the user\'s organization.  This removes credentials from both Secrets Manager and the database.  Args:     current_user: Current authenticated user (guaranteed to have organization_id)     creds_service: Credentials service  Raises:     HTTPException: If credentials not found
          * @summary Delete Crm Credentials
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -3562,7 +3562,7 @@ export const CredentialsApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * Get CRM credentials configuration for the user\'s organization.  Note: This endpoint does NOT return the actual credential values, only the metadata (provider type, created date, etc.).  Args:     current_user: Current authenticated user     db: Database session  Returns:     Credentials metadata (no actual secrets)  Raises:     HTTPException: If user has no organization or credentials not found
+         * Get CRM credentials configuration for the user\'s organization.  Note: This endpoint does NOT return the actual credential values, only the metadata (provider type, created date, etc.).  Args:     current_user: Current authenticated user (guaranteed to have organization_id)     db: Database session  Returns:     Credentials metadata (no actual secrets)  Raises:     HTTPException: If credentials not found
          * @summary Get Crm Credentials
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -3584,7 +3584,7 @@ export const CredentialsApiFactory = function (configuration?: Configuration, ba
     const localVarFp = CredentialsApiFp(configuration)
     return {
         /**
-         * Create or update CRM credentials for the user\'s organization.  If credentials already exist, they will be deactivated and new ones created.  Args:     data: CRM credentials data (provider and credentials dict)     current_user: Current authenticated user     creds_service: Credentials service  Returns:     Created credentials record (without actual credential values)  Raises:     HTTPException: If user has no organization or creation fails
+         * Create or update CRM credentials for the user\'s organization.  If credentials already exist, they will be deactivated and new ones created.  Args:     data: CRM credentials data (provider and credentials dict)     current_user: Current authenticated user (guaranteed to have organization_id)     creds_service: Credentials service  Returns:     Created credentials record (without actual credential values)  Raises:     HTTPException: If creation fails
          * @summary Create Crm Credentials
          * @param {CRMCredentialsCreate} cRMCredentialsCreate 
          * @param {*} [options] Override http request option.
@@ -3594,7 +3594,7 @@ export const CredentialsApiFactory = function (configuration?: Configuration, ba
             return localVarFp.createCrmCredentialsApiCredsPost(cRMCredentialsCreate, options).then((request) => request(axios, basePath));
         },
         /**
-         * Delete CRM credentials for the user\'s organization.  This removes credentials from both Secrets Manager and the database.  Args:     current_user: Current authenticated user     creds_service: Credentials service  Raises:     HTTPException: If user has no organization or credentials not found
+         * Delete CRM credentials for the user\'s organization.  This removes credentials from both Secrets Manager and the database.  Args:     current_user: Current authenticated user (guaranteed to have organization_id)     creds_service: Credentials service  Raises:     HTTPException: If credentials not found
          * @summary Delete Crm Credentials
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -3603,7 +3603,7 @@ export const CredentialsApiFactory = function (configuration?: Configuration, ba
             return localVarFp.deleteCrmCredentialsApiCredsDelete(options).then((request) => request(axios, basePath));
         },
         /**
-         * Get CRM credentials configuration for the user\'s organization.  Note: This endpoint does NOT return the actual credential values, only the metadata (provider type, created date, etc.).  Args:     current_user: Current authenticated user     db: Database session  Returns:     Credentials metadata (no actual secrets)  Raises:     HTTPException: If user has no organization or credentials not found
+         * Get CRM credentials configuration for the user\'s organization.  Note: This endpoint does NOT return the actual credential values, only the metadata (provider type, created date, etc.).  Args:     current_user: Current authenticated user (guaranteed to have organization_id)     db: Database session  Returns:     Credentials metadata (no actual secrets)  Raises:     HTTPException: If credentials not found
          * @summary Get Crm Credentials
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -3622,7 +3622,7 @@ export const CredentialsApiFactory = function (configuration?: Configuration, ba
  */
 export class CredentialsApi extends BaseAPI {
     /**
-     * Create or update CRM credentials for the user\'s organization.  If credentials already exist, they will be deactivated and new ones created.  Args:     data: CRM credentials data (provider and credentials dict)     current_user: Current authenticated user     creds_service: Credentials service  Returns:     Created credentials record (without actual credential values)  Raises:     HTTPException: If user has no organization or creation fails
+     * Create or update CRM credentials for the user\'s organization.  If credentials already exist, they will be deactivated and new ones created.  Args:     data: CRM credentials data (provider and credentials dict)     current_user: Current authenticated user (guaranteed to have organization_id)     creds_service: Credentials service  Returns:     Created credentials record (without actual credential values)  Raises:     HTTPException: If creation fails
      * @summary Create Crm Credentials
      * @param {CRMCredentialsCreate} cRMCredentialsCreate 
      * @param {*} [options] Override http request option.
@@ -3634,7 +3634,7 @@ export class CredentialsApi extends BaseAPI {
     }
 
     /**
-     * Delete CRM credentials for the user\'s organization.  This removes credentials from both Secrets Manager and the database.  Args:     current_user: Current authenticated user     creds_service: Credentials service  Raises:     HTTPException: If user has no organization or credentials not found
+     * Delete CRM credentials for the user\'s organization.  This removes credentials from both Secrets Manager and the database.  Args:     current_user: Current authenticated user (guaranteed to have organization_id)     creds_service: Credentials service  Raises:     HTTPException: If credentials not found
      * @summary Delete Crm Credentials
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -3645,7 +3645,7 @@ export class CredentialsApi extends BaseAPI {
     }
 
     /**
-     * Get CRM credentials configuration for the user\'s organization.  Note: This endpoint does NOT return the actual credential values, only the metadata (provider type, created date, etc.).  Args:     current_user: Current authenticated user     db: Database session  Returns:     Credentials metadata (no actual secrets)  Raises:     HTTPException: If user has no organization or credentials not found
+     * Get CRM credentials configuration for the user\'s organization.  Note: This endpoint does NOT return the actual credential values, only the metadata (provider type, created date, etc.).  Args:     current_user: Current authenticated user (guaranteed to have organization_id)     db: Database session  Returns:     Credentials metadata (no actual secrets)  Raises:     HTTPException: If credentials not found
      * @summary Get Crm Credentials
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
