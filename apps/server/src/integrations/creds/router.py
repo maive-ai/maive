@@ -14,26 +14,10 @@ from src.auth.schemas import User
 from src.db.crm_credentials.model import OrganizationCRMCredentials
 from src.db.crm_credentials.schemas import CRMCredentials, CRMCredentialsCreate
 from src.db.database import get_db
-from src.integrations.creds.service import CRMCredentialsService, get_secrets_manager_client
+from src.integrations.creds.dependencies import get_creds_service
+from src.integrations.creds.service import CRMCredentialsService
 
 router = APIRouter(prefix="/creds", tags=["Credentials"])
-
-
-async def get_creds_service(
-    db: AsyncSession = Depends(get_db),
-    secrets_client=Depends(get_secrets_manager_client),
-) -> CRMCredentialsService:
-    """
-    FastAPI dependency for getting the credentials service.
-
-    Args:
-        db: Database session
-        secrets_client: AWS Secrets Manager client
-
-    Returns:
-        CRMCredentialsService instance
-    """
-    return CRMCredentialsService(db, secrets_client)
 
 
 @router.post("", response_model=CRMCredentials, status_code=status.HTTP_201_CREATED)
@@ -49,21 +33,15 @@ async def create_crm_credentials(
 
     Args:
         data: CRM credentials data (provider and credentials dict)
-        current_user: Current authenticated user
+        current_user: Current authenticated user (guaranteed to have organization_id)
         creds_service: Credentials service
 
     Returns:
         Created credentials record (without actual credential values)
 
     Raises:
-        HTTPException: If user has no organization or creation fails
+        HTTPException: If creation fails
     """
-    if not current_user.organization_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User does not belong to an organization",
-        )
-
     # Create credentials in Secrets Manager and DB
     cred_record = await creds_service.create_credentials(
         organization_id=current_user.organization_id,
@@ -87,25 +65,18 @@ async def get_crm_credentials(
     only the metadata (provider type, created date, etc.).
 
     Args:
-        current_user: Current authenticated user
+        current_user: Current authenticated user (guaranteed to have organization_id)
         db: Database session
 
     Returns:
         Credentials metadata (no actual secrets)
 
     Raises:
-        HTTPException: If user has no organization or credentials not found
+        HTTPException: If credentials not found
     """
-    if not current_user.organization_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User does not belong to an organization",
-        )
-
     result = await db.execute(
         select(OrganizationCRMCredentials).where(
-            OrganizationCRMCredentials.organization_id
-            == current_user.organization_id,
+            OrganizationCRMCredentials.organization_id == current_user.organization_id,
             OrganizationCRMCredentials.is_active == True,  # noqa: E712
         )
     )
@@ -131,18 +102,12 @@ async def delete_crm_credentials(
     This removes credentials from both Secrets Manager and the database.
 
     Args:
-        current_user: Current authenticated user
+        current_user: Current authenticated user (guaranteed to have organization_id)
         creds_service: Credentials service
 
     Raises:
-        HTTPException: If user has no organization or credentials not found
+        HTTPException: If credentials not found
     """
-    if not current_user.organization_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User does not belong to an organization",
-        )
-
     deleted = await creds_service.delete_credentials(current_user.organization_id)
 
     if not deleted:

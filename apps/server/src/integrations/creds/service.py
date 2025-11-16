@@ -44,6 +44,25 @@ class CRMCredentialsService:
         self.session = session
         self.secrets_client = secrets_client or get_secrets_manager_client()
 
+    @staticmethod
+    def _sanitize_credentials(credentials: dict) -> dict:
+        """
+        Sanitize credential values by stripping whitespace.
+
+        Args:
+            credentials: Raw credentials dictionary
+
+        Returns:
+            Sanitized credentials with whitespace stripped from string values
+        """
+        sanitized = {}
+        for key, value in credentials.items():
+            if isinstance(value, str):
+                sanitized[key] = value.strip()
+            else:
+                sanitized[key] = value
+        return sanitized
+
     async def create_credentials(
         self,
         organization_id: str,
@@ -71,10 +90,13 @@ class CRMCredentialsService:
             existing.is_active = False
             await self.session.flush()
 
+        # Sanitize credentials to remove whitespace
+        sanitized_credentials = self._sanitize_credentials(data.credentials)
+
         # Create secret in AWS Secrets Manager
         secret_name = self._generate_secret_name(organization_id)
         secret_value = json.dumps(
-            {"provider": data.provider, "credentials": data.credentials}
+            {"provider": data.provider, "credentials": sanitized_credentials}
         )
 
         try:

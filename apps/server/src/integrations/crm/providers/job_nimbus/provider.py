@@ -114,7 +114,7 @@ class JobNimbusProvider(CRMProvider):
             "Making JobNimbus API request",
             method=method,
             url=url,
-            timeout=self.config.request_timeout,
+            timeout=self.request_timeout,
         )
 
         try:

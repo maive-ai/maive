@@ -1,7 +1,7 @@
 """Unit tests for JobNimbus provider universal interface."""
 
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
@@ -9,13 +9,6 @@ import pytest
 from src.integrations.crm.base import CRMError
 from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
 from src.integrations.crm.providers.job_nimbus.provider import JobNimbusProvider
-from src.integrations.crm.providers.job_nimbus.schemas import (
-    JobNimbusActivityResponse,
-    JobNimbusContactResponse,
-    JobNimbusContactsListResponse,
-    JobNimbusJobResponse,
-    JobNimbusJobsListResponse,
-)
 
 
 # Sample JobNimbus API responses

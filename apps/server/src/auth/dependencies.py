@@ -14,7 +14,7 @@ from src.auth.constants import CookieNames, Permission, Role
 from src.auth.provider_factory import get_auth_provider
 from src.auth.service import AuthProvider
 from src.db.database import get_db
-from src.db.organizations.service import OrganizationService
+from src.db.users.service import UserService
 
 # Security scheme for JWT tokens (fallback for API clients)
 security = HTTPBearer(auto_error=False)
@@ -88,8 +88,8 @@ async def get_current_user(
     """
     Get the current user from the session and ensure they have an organization.
 
-    If the user doesn't have an organization_id, one is automatically created
-    based on their email domain.
+    This function ensures that every authenticated user has a persistent
+    organization assignment stored in the database.
 
     Args:
         session: The current user session
@@ -100,16 +100,15 @@ async def get_current_user(
     """
     user = session.user
 
-    # If user already has an organization, return them
-    if user.organization_id:
-        return user
+    # Look up or create user in database to get persistent org assignment
+    user_service = UserService(db)
+    db_user, db_org = await user_service.get_or_create_user(
+        user_id=user.id,
+        email=user.email
+    )
 
-    # Otherwise, create an organization for them
-    org_service = OrganizationService(db)
-    org = await org_service.get_or_create_organization_for_email(user.email)
-
-    # Update the user object with the organization_id
-    user.organization_id = org.id
+    # Update the user object with the persistent organization_id
+    user.organization_id = db_org.id
 
     return user
 

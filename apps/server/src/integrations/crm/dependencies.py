@@ -50,21 +50,15 @@ async def get_org_crm_credentials(
     FastAPI automatically caches this for the request duration.
 
     Args:
-        current_user: Current authenticated user
+        current_user: Current authenticated user (guaranteed to have organization_id)
         credentials_service: CRM credentials service
 
     Returns:
         Dict with 'provider' and 'credentials' keys
 
     Raises:
-        HTTPException: If user has no organization or credentials not configured
+        HTTPException: If credentials not configured
     """
-    if not current_user.organization_id:
-        raise HTTPException(
-            status_code=400,
-            detail="User does not belong to an organization. Please contact support.",
-        )
-
     return await credentials_service.get_credentials(current_user.organization_id)
 
 
