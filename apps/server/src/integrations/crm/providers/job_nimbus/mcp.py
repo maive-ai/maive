@@ -11,12 +11,19 @@ from src.ai.openai.exceptions import OpenAIError
 from src.ai.providers.openai import OpenAIProvider
 from src.config import get_app_settings
 from src.integrations.crm.base import CRMError
+from src.integrations.crm.config import get_crm_settings, JobNimbusConfig
 from src.integrations.crm.providers.job_nimbus.provider import JobNimbusProvider
 from src.integrations.crm.schemas import Job, JobList
 from src.utils.logger import logger
 
-# Initialize JobNimbus provider directly (not through factory)
-_provider = JobNimbusProvider()
+# Initialize JobNimbus provider with credentials from env vars
+# Note: MCP server runs at startup and can't use per-user credentials
+# It uses the default credentials from environment variables
+settings = get_crm_settings()
+if not isinstance(settings.provider_config, JobNimbusConfig):
+    raise ValueError("JobNimbus MCP server requires JobNimbus configuration")
+
+_provider = JobNimbusProvider(api_key=settings.provider_config.api_key)
 
 # Initialize OpenAI provider for mini-agent file analysis
 _openai_provider = OpenAIProvider()

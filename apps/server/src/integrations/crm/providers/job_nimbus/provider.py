@@ -19,7 +19,6 @@ from tenacity import (
 )
 
 from src.integrations.crm.base import CRMError, CRMProvider
-from src.integrations.crm.config import JobNimbusConfig, get_crm_settings
 from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
 from src.integrations.crm.providers.job_nimbus.constants import JobNimbusEndpoints
 from src.integrations.crm.providers.job_nimbus.schemas import (
@@ -57,27 +56,34 @@ from src.utils.logger import logger
 class JobNimbusProvider(CRMProvider):
     """JobNimbus implementation of the CRMProvider interface."""
 
-    def __init__(self):
-        """Initialize the JobNimbus provider."""
-        self.config = get_crm_settings()
-        self.settings = self.config.provider_config
+    def __init__(
+        self,
+        api_key: str,
+        base_api_url: str = "https://app.jobnimbus.com/api1",
+        request_timeout: int = 30,
+    ):
+        """
+        Initialize the JobNimbus provider with credentials.
 
-        if not isinstance(self.settings, JobNimbusConfig):
-            raise ValueError("JobNimbusConfig required for JobNimbusProvider")
-
-        self.api_key = self.settings.api_key
-        self.base_api_url = self.settings.base_api_url
+        Args:
+            api_key: JobNimbus API key
+            base_api_url: Base URL for JobNimbus API
+            request_timeout: Request timeout in seconds
+        """
+        self.api_key = api_key
+        self.base_api_url = base_api_url
+        self.request_timeout = request_timeout
 
         # HTTP client configuration
         self.client = httpx.AsyncClient(
-            timeout=httpx.Timeout(self.config.request_timeout),
+            timeout=httpx.Timeout(self.request_timeout),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {self.api_key}",
             },
         )
 
-        logger.info("JobNimbusProvider initialized")
+        logger.info("JobNimbusProvider initialized with dynamic credentials")
 
     @retry(
         retry=retry_if_exception_type(
@@ -108,7 +114,7 @@ class JobNimbusProvider(CRMProvider):
             "Making JobNimbus API request",
             method=method,
             url=url,
-            timeout=self.config.request_timeout,
+            timeout=self.request_timeout,
         )
 
         try:
