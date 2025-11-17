@@ -301,7 +301,7 @@ export function CRMCredentialsSettings({
                   required
                 />
                 <p className="text-xs text-muted-foreground">
-                  Find or create an API key by following the instructions in the <a href="https://docs.jobnimbus.com/docs/api-key" target="_blank" rel="noopener noreferrer" className="text-primary-900 hover:underline">JobNimbus documentation</a>
+                  Find or create an API key by following the instructions in the <a href="https://docs.jobnimbus.com/docs/api-key" target="_blank" rel="noopener noreferrer" className="text-primary-900 underline">JobNimbus documentation</a>
                 </p>
               </div>
             </div>
