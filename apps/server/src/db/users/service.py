@@ -22,7 +22,9 @@ class UserService:
         self.session = session
         self.org_repository = OrganizationRepository(session)
 
-    async def get_or_create_user(self, user_id: str, email: str | None = None) -> tuple[User, Organization]:
+    async def get_or_create_user(
+        self, user_id: str, email: str | None = None
+    ) -> tuple[User, Organization]:
         """
         Get or create a user and ensure they have an organization.
 
@@ -41,15 +43,15 @@ class UserService:
             ValueError: If email is None and user doesn't exist
         """
         # Check if user already exists
-        result = await self.session.execute(
-            select(User).where(User.id == user_id)
-        )
+        result = await self.session.execute(select(User).where(User.id == user_id))
         existing_user = result.scalar_one_or_none()
 
         if existing_user:
             # User exists, fetch their organization
             org_result = await self.session.execute(
-                select(Organization).where(Organization.id == existing_user.organization_id)
+                select(Organization).where(
+                    Organization.id == existing_user.organization_id
+                )
             )
             org = org_result.scalar_one()
             return existing_user, org
@@ -60,7 +62,9 @@ class UserService:
 
         return await self._create_user_and_org(user_id, email)
 
-    async def _create_user_and_org(self, user_id: str, email: str) -> tuple[User, Organization]:
+    async def _create_user_and_org(
+        self, user_id: str, email: str
+    ) -> tuple[User, Organization]:
         """
         Create a new user and organization.
 
@@ -86,7 +90,7 @@ class UserService:
             organization_id=org.id,
         )
         self.session.add(user)
-        await self.session.commit()
+        await self.session.flush()
         await self.session.refresh(user)
 
         return user, org
