@@ -113,6 +113,43 @@ async def get_current_user(
     return user
 
 
+async def get_user_auth_token(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+) -> str:
+    """
+    Get the raw authentication token from the request.
+
+    This extracts the JWT token string (not validated) for passing to
+    downstream services like MCP servers.
+
+    Args:
+        request: The HTTP request
+        credentials: The HTTP authorization credentials (optional)
+
+    Returns:
+        The raw JWT token string
+
+    Raises:
+        HTTPException: If no token is provided
+    """
+    # First try to get token from cookies (for web clients)
+    session_token = request.cookies.get(CookieNames.SESSION_TOKEN.value)
+
+    # Fallback to Bearer token (for API clients)
+    if not session_token and credentials:
+        session_token = credentials.credentials
+
+    if not session_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No authentication token provided",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return session_token
+
+
 async def get_current_user_optional(
     request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(security),

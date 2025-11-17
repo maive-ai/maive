@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from src.ai.base import SSEEvent
 from src.ai.chat.service import RoofingChatService
-from src.auth.dependencies import get_current_user
+from src.auth.dependencies import get_current_user, get_user_auth_token
 from src.auth.schemas import User
 from src.utils.logger import logger
 
@@ -52,6 +52,7 @@ def get_chat_service() -> RoofingChatService:
 async def stream_roofing_chat(
     request: ChatRequest,
     current_user: Annotated[User, Depends(get_current_user)],
+    user_auth_token: Annotated[str, Depends(get_user_auth_token)],
     chat_service: Annotated[RoofingChatService, Depends(get_chat_service)],
 ) -> StreamingResponse:
     """
@@ -93,7 +94,7 @@ async def stream_roofing_chat(
         tool_calls_used: list[str] = []
 
         try:
-            stream = chat_service.stream_chat_response(messages)
+            stream = chat_service.stream_chat_response(messages, user_auth_token=user_auth_token)
             stream_iter = stream.__aiter__()
             next_chunk_task = asyncio.create_task(stream_iter.__anext__())
 

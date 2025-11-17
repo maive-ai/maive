@@ -23,7 +23,7 @@ class UserService:
         self.org_repository = OrganizationRepository(session)
 
     async def get_or_create_user(
-        self, user_id: str, email: str
+        self, user_id: str, email: str | None = None
     ) -> tuple[User, Organization]:
         """
         Get or create a user and ensure they have an organization.
@@ -34,10 +34,13 @@ class UserService:
 
         Args:
             user_id: Cognito user ID (sub claim)
-            email: User email address
+            email: User email address (required for new users, optional for existing)
 
         Returns:
             Tuple of (User model, Organization model)
+
+        Raises:
+            ValueError: If email is None and user doesn't exist
         """
         # Check if user already exists
         result = await self.session.execute(select(User).where(User.id == user_id))
@@ -54,6 +57,9 @@ class UserService:
             return existing_user, org
 
         # User doesn't exist, create user and org
+        if not email:
+            raise ValueError(f"Email required to create new user {user_id}")
+
         return await self._create_user_and_org(user_id, email)
 
     async def _create_user_and_org(
