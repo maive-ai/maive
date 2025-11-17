@@ -1,9 +1,8 @@
-import { Configuration, CRMApi, CRMProvider } from '@maive/api/client';
+import { CRMProvider } from '@maive/api/client';
 import { Loader2, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
-import { getIdToken } from '@/auth';
 import {
   createCRMCredentials,
   deleteCRMCredentials,
@@ -14,7 +13,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { env } from '@/env';
 
 // Import logos
 import jobNimbusLogo from '@maive/brand/logos/integrations/jobnimbus/jobnimbus_logo.png';
@@ -301,7 +299,7 @@ export function CRMCredentialsSettings({
                   required
                 />
                 <p className="text-xs text-muted-foreground">
-                  Find or create an API key by following the instructions in the <a href="https://docs.jobnimbus.com/docs/api-key" target="_blank" rel="noopener noreferrer" className="text-primary-900 underline">JobNimbus documentation</a>
+                  Find or create an API key by following the instructions in the <a href="https://support.jobnimbus.com/how-do-i-create-an-api-key" target="_blank" rel="noopener noreferrer" className="text-primary-900 underline">JobNimbus documentation</a>
                 </p>
               </div>
             </div>
