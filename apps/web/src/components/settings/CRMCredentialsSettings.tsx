@@ -124,16 +124,7 @@ export function CRMCredentialsSettings({
       setIsLoading(false);
 
       // Show success message
-      toast.success('✓ Credentials saved successfully! Refreshing...');
-
-      // Store that modal should stay open after refresh
-      sessionStorage.setItem('keepSettingsModalOpen', 'true');
-
-      // Refresh the page after a short delay
-      setTimeout(() => {
-        console.log('[CRMCredentialsSettings] Refreshing page...');
-        window.location.reload();
-      }, 1000);
+      toast.success('✓ Credentials saved successfully!');
     } catch (error) {
       console.error('[CRMCredentialsSettings] Failed to save or test credentials:', error);
       setIsLoading(false);

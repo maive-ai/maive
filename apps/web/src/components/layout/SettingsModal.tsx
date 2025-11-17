@@ -22,15 +22,6 @@ interface SettingsModalProps {
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const [companyName, setCompanyName] = useState<string>('');
 
-  // Check if modal should stay open after refresh
-  useEffect(() => {
-    const shouldKeepOpen = sessionStorage.getItem('keepSettingsModalOpen');
-    if (shouldKeepOpen === 'true') {
-      sessionStorage.removeItem('keepSettingsModalOpen');
-      onOpenChange(true);
-    }
-  }, [onOpenChange]);
-
   useEffect(() => {
     const savedCompanyName = localStorage.getItem('companyName');
     if (savedCompanyName) {
