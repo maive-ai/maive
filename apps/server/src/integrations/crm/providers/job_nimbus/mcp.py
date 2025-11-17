@@ -24,6 +24,7 @@ def _get_openai_provider():
     global _openai_provider
     if _openai_provider is None:
         from src.ai.providers.openai import OpenAIProvider
+
         _openai_provider = OpenAIProvider()
     return _openai_provider
 
@@ -243,7 +244,8 @@ async def get_all_jobs(
     status: str | None = None,
     page: int = 1,
     page_size: int = 10,
-    ctx: Context = None,
+    *,
+    ctx: Context,
 ) -> dict[str, Any]:
     """Search for jobs in JobNimbus with various filters.
 
@@ -435,7 +437,8 @@ async def analyze_job_files(
     analysis_prompt: str,
     file_filter: str = "all",
     specific_file_id: str | None = None,
-    ctx: Context = None,
+    *,
+    ctx: Context,
 ) -> str:
     """Analyze files from a roofing job using specialized AI agent.
 

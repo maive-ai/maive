@@ -4,6 +4,8 @@ MCP server dependencies for multi-tenant authentication.
 Bridges FastMCP JWT authentication with existing REST API credential infrastructure.
 """
 
+from contextlib import asynccontextmanager
+
 from fastapi import HTTPException
 from fastmcp import Context
 from fastmcp.server.dependencies import get_access_token
@@ -11,10 +13,49 @@ from fastmcp.server.dependencies import get_access_token
 from src.auth.schemas import User
 from src.db.database import get_db
 from src.db.users.service import UserService
-from src.integrations.creds.service import CRMCredentialsService, get_secrets_manager_client
+from src.integrations.creds.service import (
+    CRMCredentialsService,
+    get_secrets_manager_client,
+)
 from src.integrations.crm.dependencies import get_crm_provider
 from src.integrations.crm.providers.job_nimbus.provider import JobNimbusProvider
 from src.utils.logger import logger
+
+
+@asynccontextmanager
+async def _db_session():
+    """
+    Context manager for database session that properly handles commit/rollback.
+
+    This ensures the get_db() generator's cleanup logic (commit on success,
+    rollback on exception) is properly executed by continuing the generator
+    after the yield point. Exceptions are sent to the generator using athrow()
+    so the rollback logic executes correctly.
+    """
+    import sys
+
+    db_gen = get_db()
+    db = await anext(db_gen)
+    try:
+        yield db
+    except Exception:
+        # Send exception to generator to trigger rollback
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        # athrow() sends exception to generator, which handles it (rollback)
+        # and re-raises it, so the exception will propagate naturally
+        try:
+            await db_gen.athrow(exc_type, exc_value, exc_traceback)
+        except StopAsyncIteration:
+            # Generator exhausted without re-raising (unlikely but possible)
+            # Re-raise the original exception
+            raise exc_value from None
+    else:
+        # No exception - continue generator to trigger commit
+        try:
+            await anext(db_gen)
+        except StopAsyncIteration:
+            # Generator exhausted after commit - this is expected on success
+            pass
 
 
 async def get_user_from_mcp_token() -> User:
@@ -49,11 +90,8 @@ async def get_user_from_mcp_token() -> User:
 
     logger.info("MCP request from user", user_id=user_id, has_email=bool(email))
 
-    # Get database session
-    db_gen = get_db()
-    db = await anext(db_gen)
-
-    try:
+    # Use database session with proper cleanup (commit/rollback)
+    async with _db_session() as db:
         # Look up user to get organization (same as REST API)
         user_service = UserService(db)
         db_user, db_org = await user_service.get_or_create_user(user_id, email)
@@ -71,9 +109,6 @@ async def get_user_from_mcp_token() -> User:
             organization_id=db_org.id,
             role=None,
         )
-
-    finally:
-        await db.close()
 
 
 async def get_job_nimbus_provider_from_context(ctx: Context) -> JobNimbusProvider:
@@ -98,10 +133,8 @@ async def get_job_nimbus_provider_from_context(ctx: Context) -> JobNimbusProvide
     user = await get_user_from_mcp_token()
 
     # Step 2: Get credentials for user's organization (reuse REST API logic)
-    db_gen = get_db()
-    db = await anext(db_gen)
-
-    try:
+    # Use database session with proper cleanup (commit/rollback)
+    async with _db_session() as db:
         creds_service = CRMCredentialsService(db, get_secrets_manager_client())
         credentials = await creds_service.get_credentials(user.organization_id)
 
@@ -116,6 +149,3 @@ async def get_job_nimbus_provider_from_context(ctx: Context) -> JobNimbusProvide
             )
 
         return provider
-
-    finally:
-        await db.close()
