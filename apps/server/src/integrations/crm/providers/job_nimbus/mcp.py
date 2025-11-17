@@ -8,7 +8,6 @@ from fastmcp import Context, FastMCP
 from fastmcp.server.auth.providers.jwt import JWTVerifier
 
 from src.ai.openai.exceptions import OpenAIError
-from src.ai.providers.openai import OpenAIProvider
 from src.auth.config import get_auth_settings
 from src.config import get_app_settings
 from src.integrations.crm.base import CRMError
@@ -16,8 +15,17 @@ from src.integrations.crm.mcp.dependencies import get_job_nimbus_provider_from_c
 from src.integrations.crm.schemas import Job, JobList
 from src.utils.logger import logger
 
-# Initialize OpenAI provider for mini-agent file analysis
-_openai_provider = OpenAIProvider()
+# Lazy-load OpenAI provider to avoid requiring API key at import time
+_openai_provider = None
+
+
+def _get_openai_provider():
+    """Get or create OpenAI provider (lazy initialization)."""
+    global _openai_provider
+    if _openai_provider is None:
+        from src.ai.providers.openai import OpenAIProvider
+        _openai_provider = OpenAIProvider()
+    return _openai_provider
 
 
 async def _analyze_job_files_with_mini_agent(
@@ -85,7 +93,8 @@ async def _analyze_job_files_with_mini_agent(
 
                 # Upload to OpenAI with appropriate purpose
                 file_handle = BytesIO(file_content)
-                openai_file_id = await _openai_provider.upload_file_from_handle(
+                openai_provider = _get_openai_provider()
+                openai_file_id = await openai_provider.upload_file_from_handle(
                     file_handle, filename, purpose=purpose
                 )
                 file_attachments.append((openai_file_id, filename, is_image))
@@ -129,10 +138,11 @@ async def _analyze_job_files_with_mini_agent(
 
         # Make mini-agent API call with reasoning for faster analysis
         # Pass file attachments with type information (input_image vs input_file)
-        result = await _openai_provider.generate_content(
+        openai_provider = _get_openai_provider()
+        result = await openai_provider.generate_content(
             prompt=detailed_prompt,
             file_attachments=file_attachments,  # List of (file_id, filename, is_image)
-            model=_openai_provider.settings.model_name,
+            model=openai_provider.settings.model_name,
         )
 
         logger.info("[Mini-Agent] Analysis complete", char_count=len(result.text))

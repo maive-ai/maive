@@ -1,147 +1,121 @@
 """
-FastAPI dependencies for MCP server authentication and provider injection.
+MCP server dependencies for multi-tenant authentication.
 
-This module bridges FastMCP's JWT authentication with our multi-tenant
-credential system, enabling per-organization CRM provider routing.
+Bridges FastMCP JWT authentication with existing REST API credential infrastructure.
 """
 
 from fastapi import HTTPException
 from fastmcp import Context
 from fastmcp.server.dependencies import get_access_token
 
+from src.auth.schemas import User
 from src.db.database import get_db
 from src.db.users.service import UserService
-from src.integrations.creds.service import (
-    CRMCredentialsService,
-    get_secrets_manager_client,
-)
-from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
+from src.integrations.creds.service import CRMCredentialsService, get_secrets_manager_client
+from src.integrations.crm.dependencies import get_crm_provider
 from src.integrations.crm.providers.job_nimbus.provider import JobNimbusProvider
 from src.utils.logger import logger
 
 
-async def get_job_nimbus_provider_from_context(ctx: Context) -> JobNimbusProvider:
+async def get_user_from_mcp_token() -> User:
     """
-    Get JobNimbus provider for authenticated user from FastMCP Context.
+    Extract authenticated user from validated MCP JWT token.
 
-    This is the main entry point for MCP tool functions. It:
-    1. Extracts the validated JWT claims from FastMCP's auth context
-    2. Looks up user's organization in database
-    3. Fetches CRM credentials for that organization
-    4. Returns JobNimbusProvider instance with org-specific credentials
-
-    Args:
-        ctx: FastMCP Context object
+    This is the MCP equivalent of get_current_user() for REST APIs.
+    It extracts user_id from the JWT and looks up organization assignment.
 
     Returns:
-        JobNimbusProvider configured with organization's credentials
+        User object with organization_id populated
 
     Raises:
-        HTTPException: If authentication fails or credentials not configured
+        HTTPException: If token is missing or invalid
     """
-    # Get the access token from FastMCP's auth context (validated by JWTVerifier)
+    # Get validated access token from FastMCP (already verified by JWTVerifier)
     access_token = get_access_token()
-
     if not access_token:
-        logger.error("No access token found in MCP request")
-        raise HTTPException(
-            status_code=401,
-            detail="Authentication required. Please provide a valid JWT token.",
-        )
+        raise HTTPException(401, "Authentication required")
 
-    # Extract user_id and email from JWT claims
-    claims = access_token.claims
-    user_id = claims.get("sub")
-    email = claims.get("email") or claims.get("cognito:username")
-
+    # Extract user_id from JWT claims
+    user_id = access_token.claims.get("sub")
     if not user_id:
-        logger.error("Missing 'sub' claim in JWT", claims=list(claims.keys()))
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid token: missing user ID claim",
-        )
+        raise HTTPException(401, "Invalid token: missing user ID")
 
-    if not email:
-        logger.warning("Missing email claim in JWT, using user_id as fallback", user_id=user_id)
-        email = f"{user_id}@unknown.local"
+    # Try to get email from various JWT claim locations
+    email = (
+        access_token.claims.get("email")
+        or access_token.claims.get("cognito:username")
+        or access_token.claims.get("username")
+    )
 
-    logger.info("Extracted user from JWT claims", user_id=user_id, email=email)
+    logger.info("MCP request from user", user_id=user_id, has_email=bool(email))
 
     # Get database session
     db_gen = get_db()
     db = await anext(db_gen)
 
     try:
-        # Look up user in database to get organization
+        # Look up user to get organization (same as REST API)
         user_service = UserService(db)
         db_user, db_org = await user_service.get_or_create_user(user_id, email)
 
-        organization_id = db_org.id
         logger.info(
-            "Resolved user to organization",
-            user_id=user_id,
-            organization_id=organization_id,
+            "Resolved to organization",
+            organization_id=db_org.id,
             organization_name=db_org.name,
         )
 
-        # Get secrets client and credentials service
-        secrets_client = get_secrets_manager_client()
-        creds_service = CRMCredentialsService(db, secrets_client)
-
-        # Get CRM credentials for this organization
-        try:
-            credentials = await creds_service.get_credentials(organization_id)
-        except HTTPException as e:
-            if e.status_code == 404:
-                logger.warning(
-                    "Organization has no CRM credentials configured",
-                    organization_id=organization_id,
-                    user_id=user_id,
-                )
-                raise HTTPException(
-                    status_code=400,
-                    detail="Your organization has not configured JobNimbus credentials. "
-                           "Please add credentials in the settings page.",
-                )
-            raise
-
-        # Verify it's JobNimbus
-        provider_type = credentials.get("provider")
-        if provider_type != CRMProviderEnum.JOB_NIMBUS:
-            logger.warning(
-                "Organization credentials not for JobNimbus",
-                organization_id=organization_id,
-                actual_provider=provider_type,
-            )
-            raise HTTPException(
-                status_code=400,
-                detail=f"Your organization is configured for {provider_type}, not JobNimbus. "
-                       "Please update your CRM settings.",
-            )
-
-        # Extract JobNimbus API key
-        creds = credentials.get("credentials", {})
-        api_key = creds.get("api_key")
-
-        if not api_key:
-            logger.error(
-                "JobNimbus credentials missing api_key",
-                organization_id=organization_id,
-            )
-            raise HTTPException(
-                status_code=500,
-                detail="Invalid JobNimbus credentials configuration. Please re-save your credentials.",
-            )
-
-        # Create and return provider instance
-        logger.info(
-            "Creating JobNimbus provider for organization",
-            organization_id=organization_id,
-            user_id=user_id,
+        # Return User schema (matches get_current_user() from REST API)
+        return User(
+            id=user_id,
+            email=db_user.email,
+            organization_id=db_org.id,
+            role=None,
         )
 
-        return JobNimbusProvider(api_key=api_key)
+    finally:
+        await db.close()
+
+
+async def get_job_nimbus_provider_from_context(ctx: Context) -> JobNimbusProvider:
+    """
+    Get JobNimbus provider for authenticated MCP request.
+
+    This composes existing dependencies:
+    1. get_user_from_mcp_token() - Extract user from JWT
+    2. CRMCredentialsService.get_credentials() - Fetch org credentials
+    3. get_crm_provider() - Create provider instance
+
+    Args:
+        ctx: FastMCP Context (unused, but required by FastMCP signature)
+
+    Returns:
+        JobNimbusProvider with organization-specific credentials
+
+    Raises:
+        HTTPException: If auth fails or org not configured for JobNimbus
+    """
+    # Step 1: Get user from JWT token
+    user = await get_user_from_mcp_token()
+
+    # Step 2: Get credentials for user's organization (reuse REST API logic)
+    db_gen = get_db()
+    db = await anext(db_gen)
+
+    try:
+        creds_service = CRMCredentialsService(db, get_secrets_manager_client())
+        credentials = await creds_service.get_credentials(user.organization_id)
+
+        # Step 3: Create provider using existing factory (reuse REST API logic)
+        provider = await get_crm_provider(credentials)
+
+        # Step 4: Verify type
+        if not isinstance(provider, JobNimbusProvider):
+            raise HTTPException(
+                400,
+                f"Organization configured for {credentials.get('provider')}, not JobNimbus",
+            )
+
+        return provider
 
     finally:
-        # Close database session
         await db.close()
