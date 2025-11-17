@@ -63,12 +63,14 @@ class RoofingChatService:
     async def stream_chat_response(
         self,
         messages: list[dict[str, Any]],
+        user_auth_token: str | None = None,
     ) -> AsyncGenerator[ChatStreamChunk, None]:
         """
         Stream chat responses using AI provider with web search and RAG capabilities.
 
         Args:
             messages: List of chat messages
+            user_auth_token: User's JWT token for MCP authentication (optional)
 
         Yields:
             ChatStreamChunk: Response chunks with content and optional citations
@@ -99,6 +101,7 @@ class RoofingChatService:
                 model=self.settings.model_name,
                 temperature=0.7,  # Slightly creative but focused
                 max_tokens=2000,
+                user_auth_token=user_auth_token,  # Pass user's JWT for MCP auth
             ):
                 yield chunk
 

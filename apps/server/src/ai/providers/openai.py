@@ -592,6 +592,7 @@ class OpenAIProvider(AIProvider):
         enable_web_search: bool,
         enable_crm_search: bool,
         vector_store_ids: list[str] | None,
+        user_auth_token: str | None = None,
         **kwargs,
     ) -> tuple[ResponseCreateParamsStreaming, str, bool]:
         """Build streaming parameters for OpenAI Responses API.
@@ -638,11 +639,16 @@ class OpenAIProvider(AIProvider):
                 "server_url": f"{self.app_settings.server_base_url}/crm/mcp",
                 "require_approval": "never",
             }
-            # Add auth token if configured
-            if self.app_settings.mcp_auth_token:
-                mcp_config["headers"] = {
-                    "Authorization": f"Bearer {self.app_settings.mcp_auth_token}"
-                }
+            # Add auth token - prefer user's JWT, fallback to static token
+            auth_token = user_auth_token
+            if auth_token:
+                mcp_config["headers"] = {"Authorization": f"Bearer {auth_token}"}
+                logger.info(
+                    "[MCP] Configured MCP with authentication",
+                    using_user_token=bool(user_auth_token),
+                )
+            else:
+                logger.warning("[MCP] No authentication token available for MCP")
 
             tools.append(mcp_config)
 
@@ -996,6 +1002,7 @@ class OpenAIProvider(AIProvider):
         enable_web_search: bool = False,
         enable_crm_search: bool = False,
         vector_store_ids: list[str] | None = None,
+        user_auth_token: str | None = None,
         **kwargs,
     ) -> AsyncGenerator[ChatStreamChunk, None]:
         """Stream chat responses with optional web search, file search, CRM search, and citations.
@@ -1038,6 +1045,7 @@ class OpenAIProvider(AIProvider):
                 enable_web_search=enable_web_search,
                 enable_crm_search=enable_crm_search,
                 vector_store_ids=vector_store_ids,
+                user_auth_token=user_auth_token,
                 **kwargs,
             )
 

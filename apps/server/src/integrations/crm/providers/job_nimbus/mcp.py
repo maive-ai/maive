@@ -1,35 +1,27 @@
-"""JobNimbus MCP Server for CRM job search and retrieval."""
+"""JobNimbus MCP Server for CRM job search and retrieval with multi-tenant authentication."""
 
 import textwrap
 from io import BytesIO
 from typing import Any
 
-from fastmcp import FastMCP
-from fastmcp.server.auth.providers.jwt import StaticTokenVerifier
+from fastmcp import Context, FastMCP
+from fastmcp.server.auth.providers.jwt import JWTVerifier
 
 from src.ai.openai.exceptions import OpenAIError
 from src.ai.providers.openai import OpenAIProvider
+from src.auth.config import get_auth_settings
 from src.config import get_app_settings
 from src.integrations.crm.base import CRMError
-from src.integrations.crm.config import get_crm_settings, JobNimbusConfig
-from src.integrations.crm.providers.job_nimbus.provider import JobNimbusProvider
+from src.integrations.crm.mcp.dependencies import get_job_nimbus_provider_from_context
 from src.integrations.crm.schemas import Job, JobList
 from src.utils.logger import logger
-
-# Initialize JobNimbus provider with credentials from env vars
-# Note: MCP server runs at startup and can't use per-user credentials
-# It uses the default credentials from environment variables
-settings = get_crm_settings()
-if not isinstance(settings.provider_config, JobNimbusConfig):
-    raise ValueError("JobNimbus MCP server requires JobNimbus configuration")
-
-_provider = JobNimbusProvider(api_key=settings.provider_config.api_key)
 
 # Initialize OpenAI provider for mini-agent file analysis
 _openai_provider = OpenAIProvider()
 
 
 async def _analyze_job_files_with_mini_agent(
+    provider,  # JobNimbusProvider instance
     job_id: str,
     analysis_prompt: str,
     file_filter: str = "all",
@@ -41,6 +33,7 @@ async def _analyze_job_files_with_mini_agent(
     analysis API call, and returns the summary for the main agent to use.
 
     Args:
+        provider: JobNimbus provider instance
         job_id: JobNimbus job ID
         analysis_prompt: User's question about the files
         file_filter: Type filter - "all", "images", or "pdfs"
@@ -63,13 +56,13 @@ async def _analyze_job_files_with_mini_agent(
         # Get files - either specific file or filtered list
         if specific_file_id:
             # Get specific file by ID
-            file = await _provider.get_specific_job_file(job_id, specific_file_id)
+            file = await provider.get_specific_job_file(job_id, specific_file_id)
             if not file:
                 return f"File {specific_file_id} not found in job {job_id}"
             files = [file]
         else:
             # Get filtered files
-            files = await _provider.get_job_files(job_id, file_filter)
+            files = await provider.get_job_files(job_id, file_filter)
             if not files:
                 return f"No {file_filter} files found for job {job_id}"
 
@@ -80,7 +73,7 @@ async def _analyze_job_files_with_mini_agent(
         for file_meta in files:
             try:
                 # Download from JobNimbus
-                file_content, filename, content_type = await _provider.download_file(
+                file_content, filename, content_type = await provider.download_file(
                     file_meta.id,
                     filename=file_meta.filename,
                     content_type=file_meta.content_type,
@@ -151,26 +144,29 @@ async def _analyze_job_files_with_mini_agent(
         raise OpenAIError(f"File analysis failed: {e}")
 
 
-# Create MCP server instance with optional auth
-settings = get_app_settings()
-auth = None
-if settings.mcp_auth_token:
-    # Use StaticTokenVerifier for simple bearer token authentication
-    auth = StaticTokenVerifier(
-        tokens={
-            settings.mcp_auth_token: {
-                "sub": "openai-integration",
-                "aud": "maive-mcp-server",
-                "client_id": "openai-client",
-                "scopes": [],  # No scope restrictions
-            }
-        }
-    )
-mcp = FastMCP(name="JobNimbus CRM", auth=auth)
+# Create MCP server instance with Cognito JWT authentication
+app_settings = get_app_settings()
+auth_settings = get_auth_settings()
+
+# Configure JWT verification using Cognito JWKS
+# This validates JWT tokens from Cognito and extracts claims
+jwks_uri = (
+    f"https://cognito-idp.{auth_settings.aws_region}.amazonaws.com/"
+    f"{auth_settings.cognito_user_pool_id}/.well-known/jwks.json"
+)
+
+logger.info("Initializing JobNimbus MCP with Cognito JWT auth", jwks_uri=jwks_uri)
+
+auth = JWTVerifier(
+    jwks_uri=jwks_uri,
+    issuer=f"https://cognito-idp.{auth_settings.aws_region}.amazonaws.com/{auth_settings.cognito_user_pool_id}",
+)
+
+mcp = FastMCP(name="JobNimbus CRM (Multi-Tenant)", auth=auth)
 
 
 @mcp.tool
-async def get_job(job_id: str) -> dict[str, Any]:
+async def get_job(job_id: str, ctx: Context) -> dict[str, Any]:
     """Get a specific job by ID from JobNimbus.
 
     Args:
@@ -204,8 +200,9 @@ async def get_job(job_id: str) -> dict[str, Any]:
         Exception: If the job is not found or an error occurs
     """
     try:
+        provider = await get_job_nimbus_provider_from_context(ctx)
         logger.info("[MCP JobNimbus] Getting job", job_id=job_id)
-        job = await _provider.get_job(job_id)
+        job = await provider.get_job(job_id)
 
         result = job.model_dump()
         logger.info("[MCP JobNimbus] Successfully retrieved job", job_id=job_id)
@@ -236,6 +233,7 @@ async def get_all_jobs(
     status: str | None = None,
     page: int = 1,
     page_size: int = 10,
+    ctx: Context = None,
 ) -> dict[str, Any]:
     """Search for jobs in JobNimbus with various filters.
 
@@ -273,6 +271,7 @@ async def get_all_jobs(
         - Combine filters: search_jobs(customer_name="Smith", status="Completed")
     """
     try:
+        provider = await get_job_nimbus_provider_from_context(ctx)
         logger.info(
             "[MCP JobNimbus] Searching jobs with filters",
             customer_name=customer_name,
@@ -296,7 +295,7 @@ async def get_all_jobs(
             filters["status"] = status
 
         # Delegate to provider (handles all filtering logic)
-        job_list: JobList = await _provider.get_all_jobs(
+        job_list: JobList = await provider.get_all_jobs(
             filters=filters if filters else None,
             page=page,
             page_size=page_size,
@@ -309,7 +308,7 @@ async def get_all_jobs(
                 "[MCP JobNimbus] Single job result, fetching notes",
                 job_id=job.id,
             )
-            job.notes = await _provider._get_job_notes(job.id)
+            job.notes = await provider._get_job_notes(job.id)
             job_list.jobs[0] = job
 
         # Convert to dict format for MCP response
@@ -341,7 +340,7 @@ async def get_all_jobs(
 
 
 @mcp.tool
-async def list_job_files(job_id: str) -> dict[str, Any]:
+async def list_job_files(job_id: str, ctx: Context) -> dict[str, Any]:
     """List all files attached to a job without uploading them.
 
     Returns file metadata including IDs, names, types, sizes, and descriptions.
@@ -376,8 +375,9 @@ async def list_job_files(job_id: str) -> dict[str, Any]:
         list_job_files(job_id="mhdn17a1ssizgvz8fo0h66r")
     """
     try:
+        provider = await get_job_nimbus_provider_from_context(ctx)
         logger.info("[MCP JobNimbus] Listing files for job", job_id=job_id)
-        files = await _provider.get_job_files(job_id)
+        files = await provider.get_job_files(job_id)
 
         result = {
             "count": len(files),
@@ -425,6 +425,7 @@ async def analyze_job_files(
     analysis_prompt: str,
     file_filter: str = "all",
     specific_file_id: str | None = None,
+    ctx: Context = None,
 ) -> str:
     """Analyze files from a roofing job using specialized AI agent.
 
@@ -452,6 +453,8 @@ async def analyze_job_files(
         - Analyze all PDFs: analyze_job_files(job_id="mha5p15...", analysis_prompt="What is the total cost?", file_filter="pdfs")
     """
     try:
+        provider = await get_job_nimbus_provider_from_context(ctx)
+
         if specific_file_id:
             logger.info(
                 "[MCP JobNimbus] Analyzing specific file for job",
@@ -468,6 +471,7 @@ async def analyze_job_files(
 
         # Call local mini-agent handler
         result = await _analyze_job_files_with_mini_agent(
+            provider=provider,
             job_id=job_id,
             analysis_prompt=analysis_prompt,
             file_filter=file_filter,
