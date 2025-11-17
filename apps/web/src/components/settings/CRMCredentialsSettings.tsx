@@ -27,16 +27,10 @@ export function CRMCredentialsSettings({
   onSuccess,
 }: CRMCredentialsSettingsProps) {
   const [existingCredentials, setExistingCredentials] = useState<CRMCredentials | null>(null);
-  const [selectedProvider, setSelectedProvider] = useState<CRMProvider | null>(
-    null
-  );
+  const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingCredentials, setIsFetchingCredentials] = useState(true);
-  const [isTesting, setIsTesting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [testResult, setTestResult] = useState<'success' | 'error' | null>(
-    null
-  );
 
   // JobNimbus state
   const [jobNimbusApiKey, setJobNimbusApiKey] = useState('');
@@ -70,69 +64,16 @@ export function CRMCredentialsSettings({
   }, []);
 
   const buildCredentialsData = (): CRMCredentialsCreate => {
-    if (selectedProvider === CRMProvider.JobNimbus) {
-      return {
-        provider: CRMProvider.JobNimbus,
-        credentials: {
-          api_key: jobNimbusApiKey,
-        },
-      };
-    } else {
-      throw new Error('Unsupported CRM provider');
-    }
-  };
-
-  const handleTestConnection = async () => {
-    if (!selectedProvider) {
-      toast.error('Please select a CRM provider');
-      return;
-    }
-
-    setIsTesting(true);
-    setTestResult(null);
-
-    try {
-      // First save the credentials
-      const credentialsData = buildCredentialsData();
-      await createCRMCredentials(credentialsData);
-
-      // Then try to fetch jobs to test the connection
-      const token = await getIdToken();
-      if (!token) throw new Error('Not authenticated');
-
-      const crmApi = new CRMApi(
-        new Configuration({
-          accessToken: token,
-          basePath: env.PUBLIC_SERVER_URL,
-          baseOptions: { withCredentials: true },
-        })
-      );
-
-      // Test by fetching 1 job
-      await crmApi.getAllJobsApiCrmJobsGet(1, 1);
-
-      setTestResult('success');
-      toast.success('Connection successful! Your credentials are valid.');
-    } catch (error) {
-      console.error('Test connection failed:', error);
-      setTestResult('error');
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : 'Connection failed. Please check your credentials.'
-      );
-    } finally {
-      setIsTesting(false);
-    }
+    return {
+      provider: CRMProvider.JobNimbus,
+      credentials: {
+        api_key: jobNimbusApiKey,
+      },
+    };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!selectedProvider) {
-      toast.error('Please select a CRM provider');
-      return;
-    }
 
     // Prevent double submission
     if (isLoading) {
@@ -144,6 +85,7 @@ export function CRMCredentialsSettings({
     setIsLoading(true);
 
     try {
+      // Step 1: Save credentials
       const credentialsData = buildCredentialsData();
       console.log('[CRMCredentialsSettings] Calling createCRMCredentials with:', { provider: credentialsData.provider });
 
@@ -152,25 +94,23 @@ export function CRMCredentialsSettings({
 
       // Reset form and update existing credentials
       setJobNimbusApiKey('');
-      setSelectedProvider(null);
-      setTestResult(null);
+      setIsEditing(false);
       setExistingCredentials(credentials);
       setIsLoading(false);
 
       // Show success message
-      toast.success('CRM credentials saved successfully! Refreshing...');
+      toast.success('✓ Credentials saved successfully! Refreshing...');
 
-      // Close the modal first
-      console.log('[CRMCredentialsSettings] Closing modal...');
-      onSuccess?.();
+      // Store that modal should stay open after refresh
+      sessionStorage.setItem('keepSettingsModalOpen', 'true');
 
-      // Then refresh the page after a short delay
+      // Refresh the page after a short delay
       setTimeout(() => {
         console.log('[CRMCredentialsSettings] Refreshing page...');
         window.location.reload();
-      }, 300);
+      }, 1000);
     } catch (error) {
-      console.error('[CRMCredentialsSettings] Failed to save credentials:', error);
+      console.error('[CRMCredentialsSettings] Failed to save or test credentials:', error);
       setIsLoading(false);
 
       // Log the full error for debugging
@@ -196,7 +136,7 @@ export function CRMCredentialsSettings({
       await deleteCRMCredentials();
       toast.success('CRM credentials deleted successfully!');
       setExistingCredentials(null);
-      setSelectedProvider(null);
+      setIsEditing(false);
     } catch (error) {
       console.error('Failed to delete credentials:', error);
       toast.error(
@@ -218,7 +158,7 @@ export function CRMCredentialsSettings({
       );
     }
 
-    if (existingCredentials && !selectedProvider) {
+    if (existingCredentials && !isEditing) {
       return (
         <div className="space-y-4">
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
@@ -256,30 +196,11 @@ export function CRMCredentialsSettings({
           </div>
           <Button
             variant="outline"
-            onClick={() => setSelectedProvider(CRMProvider.JobNimbus)}
+            onClick={() => setIsEditing(true)}
             className="w-full"
           >
             Update Credentials
           </Button>
-        </div>
-      );
-    }
-
-    if (!selectedProvider) {
-      return (
-        <div className="space-y-4">
-          <p className="text-sm font-medium">Choose your CRM provider:</p>
-          <button
-            onClick={() => setSelectedProvider(CRMProvider.JobNimbus)}
-            className="flex flex-col items-center gap-4 p-6 border-2 border-gray-200 rounded-lg hover:border-primary-900 hover:bg-primary-50 transition-colors w-full"
-          >
-            <img
-              src={jobNimbusLogo}
-              alt="JobNimbus"
-              className="h-12 object-contain"
-            />
-            <span className="font-medium">JobNimbus</span>
-          </button>
         </div>
       );
     }
@@ -298,17 +219,6 @@ export function CRMCredentialsSettings({
                 Configure your credentials
               </p>
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setSelectedProvider(null);
-                setTestResult(null);
-              }}
-            >
-              Cancel
-            </Button>
           </div>
 
           <div className="space-y-4">
@@ -328,52 +238,11 @@ export function CRMCredentialsSettings({
             </div>
           </div>
 
-          {testResult && (
-            <div
-              className={`p-3 rounded-lg text-sm ${
-                testResult === 'success'
-                  ? 'bg-green-50 text-green-800 border border-green-200'
-                  : 'bg-red-50 text-red-800 border border-red-200'
-              }`}
-            >
-              {testResult === 'success' ? (
-                <p>✓ Connection successful! Your credentials are valid.</p>
-              ) : (
-                <p>
-                  ✗ Connection failed. Please verify your credentials and try
-                  again.
-                </p>
-              )}
-            </div>
-          )}
-
-          <div className="flex justify-between items-center gap-3 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleTestConnection}
-              disabled={isLoading || isTesting}
-            >
-              {isTesting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Test Connection
+          <div className="flex justify-end pt-4">
+            <Button type="submit" disabled={isLoading} className="min-w-[180px]">
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Credentials
             </Button>
-            <div className="flex gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setSelectedProvider(null);
-                  setTestResult(null);
-                }}
-                disabled={isLoading || isTesting}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading || isTesting}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Credentials
-              </Button>
-            </div>
           </div>
         </form>
     );
