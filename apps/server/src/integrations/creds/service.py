@@ -113,7 +113,9 @@ class CRMCredentialsService:
                 secret_arn=secret_arn,
             )
         except ClientError as e:
-            if e.response["Error"]["Code"] == "ResourceExistsException":
+            error_code = e.response["Error"]["Code"]
+
+            if error_code == "ResourceExistsException":
                 # Secret already exists, update it instead
                 self.secrets_client.put_secret_value(
                     SecretId=secret_name, SecretString=secret_value
@@ -123,6 +125,27 @@ class CRMCredentialsService:
                 secret_arn = secret_info["ARN"]
                 logger.info(
                     "Updated existing secret",
+                    organization_id=organization_id,
+                    secret_arn=secret_arn,
+                )
+            elif error_code == "InvalidRequestException" and "scheduled for deletion" in str(e):
+                # Secret is scheduled for deletion, restore it and update with NEW credentials
+                logger.info(
+                    "Secret scheduled for deletion, restoring and updating with new credentials",
+                    organization_id=organization_id,
+                    secret_name=secret_name,
+                )
+                # First restore the secret from scheduled deletion
+                self.secrets_client.restore_secret(SecretId=secret_name)
+                # Then immediately update it with the NEW credentials (not the old ones)
+                self.secrets_client.put_secret_value(
+                    SecretId=secret_name, SecretString=secret_value
+                )
+                # Get the ARN
+                secret_info = self.secrets_client.describe_secret(SecretId=secret_name)
+                secret_arn = secret_info["ARN"]
+                logger.info(
+                    "Restored and updated secret with new credentials",
                     organization_id=organization_id,
                     secret_arn=secret_arn,
                 )
@@ -258,20 +281,20 @@ class CRMCredentialsService:
         if not cred_record:
             return False
 
-        # Delete from Secrets Manager
+        # Delete from Secrets Manager (scheduled deletion, can be restored)
         try:
             self.secrets_client.delete_secret(
                 SecretId=cred_record.secret_arn,
-                ForceDeleteWithoutRecovery=True,  # Immediate deletion
+                RecoveryWindowInDays=7,  # 7-day recovery window (minimum)
             )
             logger.info(
-                "Deleted secret from Secrets Manager",
+                "Scheduled secret for deletion (7-day recovery window)",
                 organization_id=organization_id,
                 secret_arn=cred_record.secret_arn,
             )
         except ClientError as e:
             logger.warning(
-                "Failed to delete secret (may not exist)",
+                "Failed to delete secret (may not exist or already deleted)",
                 organization_id=organization_id,
                 error=str(e),
             )
