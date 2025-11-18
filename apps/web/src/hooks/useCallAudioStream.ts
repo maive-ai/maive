@@ -28,8 +28,8 @@ export function useCallAudioStream(listenUrl: string | null) {
     const player = new PCMPlayer({
       inputCodec: 'Int16',
       channels: 1,
-      sampleRate: 32000,
-      flushTime: 100,
+      sampleRate: 32000, // Match Vapi's stream format
+      flushTime: 150,    // Increased buffer to reduce crackling
       fftSize: FFT_SIZE,
     });
     playerRef.current = player;
