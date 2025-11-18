@@ -2,8 +2,8 @@ import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
 import { createFileRoute } from '@tanstack/react-router';
 import { AlertCircle, Building2, CheckCircle2, Clock, Download, FileText, Loader2, Mail, MapPin, Phone, PhoneCall, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { isValidPhoneNumber } from 'react-phone-number-input';
 import type { Value as E164Number } from 'react-phone-number-input';
+import { isValidPhoneNumber } from 'react-phone-number-input';
 
 import { useEndCall } from '@/clients/ai/voice';
 import { downloadFile, useFetchJobFiles, useFetchProject } from '@/clients/crm';
@@ -53,8 +53,19 @@ function ProjectDetail() {
     },
   });
 
-  // Only allow ending the call when we have the control URL
-  const canEndCall = controlUrl !== null;
+  // Only allow ending the call when we have the control URL AND the call is ringing or connected
+  const canEndCall = controlUrl !== null && callStatus === 'in_progress';
+
+  // Debug logging for button state
+  useEffect(() => {
+    console.log('[Project Detail] Button state:', {
+      activeCallId,
+      callStatus,
+      controlUrl,
+      canEndCall,
+      listenUrl
+    });
+  }, [activeCallId, callStatus, controlUrl, canEndCall, listenUrl]);
 
   const isValid = phoneNumber ? isValidPhoneNumber(phoneNumber) : false;
 
@@ -93,9 +104,14 @@ function ProjectDetail() {
       setListenUrl(activeCall.listen_url ?? null);
 
       // Extract control URL from provider_data
-      const providerData = activeCall.provider_data as any;
-      if (providerData?.monitor?.control_url) {
-        setControlUrl(providerData.monitor.control_url);
+      // TypeScript uses camelCase (auto-converted by OpenAPI generator from Python snake_case)
+      const providerData = activeCall.provider_data;
+      const newControlUrl = providerData?.monitor?.controlUrl;
+      if (newControlUrl) {
+        console.log('[Project Detail] Setting control URL from polling:', newControlUrl);
+        setControlUrl(newControlUrl);
+      } else {
+        console.log('[Project Detail] No control URL found in provider_data:', providerData);
       }
     } else if (activeCall && activeCall.project_id !== projectId) {
       // Active call for different project - show warning
@@ -107,16 +123,20 @@ function ProjectDetail() {
   // Store call ID and status when call starts successfully
   useEffect(() => {
     if (callAndWritetoCrmMutation.isSuccess && callAndWritetoCrmMutation.data) {
+      console.log('[Project Detail] Call mutation successful:', callAndWritetoCrmMutation.data);
       setActiveCallId(callAndWritetoCrmMutation.data.call_id);
       setCallStatus(callAndWritetoCrmMutation.data.status);
 
       // Extract listenUrl and controlUrl from provider_data
+      // TypeScript uses camelCase (auto-converted by OpenAPI generator from Python snake_case)
       const providerData = callAndWritetoCrmMutation.data.provider_data;
-      if (providerData?.monitor?.listen_url) {
-        setListenUrl(providerData.monitor.listen_url);
+      if (providerData?.monitor?.listenUrl) {
+        console.log('[Project Detail] Setting listen URL from mutation:', providerData.monitor.listenUrl);
+        setListenUrl(providerData.monitor.listenUrl);
       }
-      if (providerData?.monitor?.control_url) {
-        setControlUrl(providerData.monitor.control_url);
+      if (providerData?.monitor?.controlUrl) {
+        console.log('[Project Detail] Setting control URL from mutation:', providerData.monitor.controlUrl);
+        setControlUrl(providerData.monitor.controlUrl);
       }
     }
   }, [callAndWritetoCrmMutation.isSuccess, callAndWritetoCrmMutation.data]);
