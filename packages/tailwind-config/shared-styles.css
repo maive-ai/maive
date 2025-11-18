@@ -10,13 +10,6 @@
   [type='reset'] {
     @apply cursor-pointer;
   }
-
-  [data-slot='dropdown-menu-item'],
-  [data-slot='dropdown-menu-checkbox-item'],
-  [data-slot='dropdown-menu-radio-item'],
-  [data-slot='dropdown-menu-sub-trigger'] {
-    cursor: pointer !important;
-  }
 }
 
 @theme {
