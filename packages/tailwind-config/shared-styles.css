@@ -2,6 +2,16 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+@layer base {
+  button,
+  [role='button'],
+  [type='button'],
+  [type='submit'],
+  [type='reset'] {
+    @apply cursor-pointer;
+  }
+}
+
 @theme {
   /* Primary brand color - White background with Midnight Onix text */
   --color-primary-50: #ffffff; /* White - primary background */
