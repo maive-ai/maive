@@ -19,6 +19,7 @@ from src.ai.voice_ai.service import VoiceAIService
 from src.db.calls.repository import CallRepository
 from src.integrations.crm.service import CRMService
 from src.utils.logger import logger
+from src.workflows.config import get_call_monitoring_settings
 
 
 class CallAndWriteToCRMWorkflow:
@@ -41,6 +42,7 @@ class CallAndWriteToCRMWorkflow:
         self.voice_ai_service = voice_ai_service
         self.crm_service = crm_service
         self.call_repository = call_repository
+        self.settings = get_call_monitoring_settings()
 
     async def call_and_write_results_to_crm(
         self,
@@ -238,16 +240,16 @@ class CallAndWriteToCRMWorkflow:
                             status=status_result.status,
                         )
 
-                        # Extract structured data and update CRM
+                        # Process completed call
                         # At this point, status_result is guaranteed to be CallResponse due to the isinstance check above
                         assert isinstance(status_result, CallResponse), (
                             "status_result should be CallResponse at this point"
                         )
-                        await self._process_completed_call(
+
+                        # Update database with final call state
+                        await self._persist_completed_call(
                             call_id=call_id,
                             call_response=status_result,
-                            request=request,
-                            user_id=user_id,
                             repository=task_repository,
                         )
                         await session.commit()
@@ -255,6 +257,24 @@ class CallAndWriteToCRMWorkflow:
                             "[Call Monitoring Workflow] Committed final call state",
                             call_id=call_id,
                         )
+
+                        # Update CRM if enabled
+                        if self.settings.enable_crm_write:
+                            logger.info(
+                                "[Call Monitoring Workflow] Updating CRM with call results",
+                                call_id=call_id,
+                            )
+                            await self._update_crm_with_call_results(
+                                call_id=call_id,
+                                call_response=status_result,
+                                request=request,
+                            )
+                        else:
+                            logger.info(
+                                "[Call Monitoring Workflow] CRM write disabled, skipping CRM update",
+                                call_id=call_id,
+                            )
+
                         break
 
                     await asyncio.sleep(poll_interval_seconds)
@@ -271,25 +291,20 @@ class CallAndWriteToCRMWorkflow:
                 error=str(e),
             )
 
-
-    async def _process_completed_call(
+    async def _persist_completed_call(
         self,
         call_id: str,
         call_response: CallResponse,
-        request: CallRequest,
-        user_id: str | None,
         repository: CallRepository,
     ) -> None:
         """
-        Process a completed call and update CRM with structured data.
+        Persist completed call data to the database.
 
-        Removes the call from DynamoDB active state and updates CRM.
+        Marks the call as ended and stores final status, analysis, and transcript.
 
         Args:
             call_id: The call identifier
             call_response: The final call response with provider data
-            request: The original call request (contains tenant/job_id)
-            user_id: The ID of the user who created the call
             repository: The call repository with an active session
         """
         try:
@@ -306,7 +321,9 @@ class CallAndWriteToCRMWorkflow:
                 analysis_data=call_response.analysis.model_dump(mode="json")
                 if call_response.analysis
                 else None,
-                transcript=[msg.model_dump(mode="json") for msg in call_response.messages]
+                transcript=[
+                    msg.model_dump(mode="json") for msg in call_response.messages
+                ]
                 if call_response.messages
                 else None,
             )
@@ -314,13 +331,36 @@ class CallAndWriteToCRMWorkflow:
                 "[Call Monitoring Workflow] Marked call as ended in database",
                 call_id=call_id,
             )
+        except Exception as e:
+            logger.error(
+                "[Call Monitoring Workflow] Error persisting completed call",
+                call_id=call_id,
+                error=str(e),
+            )
 
+    async def _update_crm_with_call_results(
+        self,
+        call_id: str,
+        call_response: CallResponse,
+        request: CallRequest,
+    ) -> None:
+        """
+        Update CRM with structured data from completed call.
+
+        Adds a formatted note to the CRM job and updates job status if applicable.
+
+        Args:
+            call_id: The call identifier
+            call_response: The final call response with analysis data
+            request: The original call request (contains tenant/job_id)
+        """
+        try:
             # Extract typed analysis data from provider response
             analysis = call_response.analysis
 
             if analysis is None or analysis.structured_data is None:
                 logger.info(
-                    "[Call Monitoring Workflow] No analysis available for call after polling",
+                    "[Call Monitoring Workflow] No analysis available for call, skipping CRM update",
                     call_id=call_id,
                 )
                 return
@@ -344,7 +384,7 @@ class CallAndWriteToCRMWorkflow:
             # Format note text from structured data
             note_text = self._format_crm_note(analysis)
 
-            # Add note to CRM job via service (no HTTP!)
+            # Add note to CRM job via service
             crm_result = await self.crm_service.add_note(
                 entity_id=job_id,
                 entity_type="job",
@@ -392,7 +432,7 @@ class CallAndWriteToCRMWorkflow:
 
         except Exception as e:
             logger.error(
-                "[Call Monitoring Workflow] Error processing completed call",
+                "[Call Monitoring Workflow] Error updating CRM with call results",
                 call_id=call_id,
                 error=str(e),
             )
@@ -427,7 +467,7 @@ class CallAndWriteToCRMWorkflow:
             # Add claim status if available
             if structured_data.claim_status:
                 note_lines.append(f"Claim Status: {structured_data.claim_status}")
-            
+
             # Add summary if available
             if summary:
                 note_lines.append(f"Summary: {summary}")

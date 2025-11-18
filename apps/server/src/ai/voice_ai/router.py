@@ -139,15 +139,14 @@ async def end_call(
         monitor = call.provider_data.get('monitor', {})
         control_url = monitor.get('control_url')
 
-    if not control_url:
-        logger.error("[End Call] No control URL found for call", call_id=call_id)
-        raise HTTPException(
-            status_code=HTTPStatus.BAD_REQUEST,
-            detail="Control URL not available for this call"
-        )
+    # If control URL not in database, the service will fetch it from the provider
+    # This handles the case where the call was created but control URL wasn't available yet
+    if control_url:
+        logger.info("[End Call] Using control URL from database", call_id=call_id, control_url=control_url)
+    else:
+        logger.info("[End Call] No control URL in database, will fetch from provider", call_id=call_id)
 
-    # Try to end call via Vapi using the control URL
-    logger.info("[End Call] Attempting to end call via control URL", call_id=call_id, control_url=control_url)
+    # Try to end call via Vapi (will fetch control URL if not provided)
     result = await voice_ai_service.end_call(call_id, control_url=control_url)
 
     if isinstance(result, VoiceAIErrorResponse):
