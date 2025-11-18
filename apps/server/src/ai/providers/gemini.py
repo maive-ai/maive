@@ -1,27 +1,30 @@
 """Gemini provider implementation."""
 
-import json
-from pathlib import Path
-from typing import Any, AsyncGenerator, TypeVar
+from typing import AsyncGenerator, TypeVar
 
+from braintrust.wrappers.google_genai import setup_genai
+from google import genai
+from google.genai.types import (
+    FileSearch,
+    GenerateContentConfig,
+    GenerateContentResponse,
+    Tool,
+)
 from pydantic import BaseModel
 
 from src.ai.base import (
     AIProvider,
-    AudioAnalysisRequest,
     ChatMessage,
     ChatStreamChunk,
-    ContentAnalysisRequest,
     ContentGenerationResult,
     FileMetadata,
-    SearchCitation,
-    TranscriptionResult,
 )
 from src.ai.gemini import get_gemini_client
+from src.ai.gemini.config import get_gemini_settings
+from src.ai.gemini.exceptions import GeminiError
 from src.ai.gemini.schemas import (
     FileUploadRequest,
     GenerateContentRequest,
-    GenerateStructuredContentRequest,
 )
 from src.utils.logger import logger
 
@@ -35,9 +38,46 @@ class GeminiProvider(AIProvider):
     Gemini supports native multimodal input including audio files.
     """
 
-    def __init__(self):
-        """Initialize Gemini provider."""
-        self.client = get_gemini_client()
+    def __init__(
+        self,
+        enable_braintrust: bool = False,
+        braintrust_project_name: str | None = None,
+    ):
+        """Initialize Gemini provider.
+
+        Args:
+            enable_braintrust: Whether to enable Braintrust tracing for this provider instance
+            braintrust_project_name: Braintrust project name (only used if enable_braintrust=True)
+        """
+        self.client = get_gemini_client(
+            enable_braintrust=enable_braintrust,
+            braintrust_project_name=braintrust_project_name,
+        )
+        self._client: genai.Client | None = None
+        self.enable_braintrust = enable_braintrust
+        self.braintrust_project_name = braintrust_project_name
+        self.settings = get_gemini_settings()
+
+    def _get_client(self) -> genai.Client:
+        """Get or create the Gemini client.
+
+        Automatically sets up Braintrust tracing if enabled.
+        """
+        if self._client is None:
+            try:
+                # Setup Braintrust tracing if enabled for this instance
+                if self.enable_braintrust and self.braintrust_project_name:
+                    logger.info(
+                        f"Setting up Gemini with Braintrust tracing enabled (project: {self.braintrust_project_name})"
+                    )
+                    setup_genai(project_name=self.braintrust_project_name)
+
+                self._client = genai.Client(api_key=self.settings.api_key)
+                logger.info("Gemini client initialized")
+            except Exception as e:
+                logger.error("Failed to initialize Gemini client", error=str(e))
+                raise GeminiError(f"Failed to authenticate: {e}")
+        return self._client
 
     async def upload_file(self, file_path: str, **kwargs) -> FileMetadata:
         """Upload a file to Gemini Files API.
@@ -55,15 +95,7 @@ class GeminiProvider(AIProvider):
                 display_name=kwargs.get("display_name"),
                 mime_type=kwargs.get("mime_type"),
             )
-            result = await self.client.upload_file(request)
-
-            # Convert Gemini's FileMetadata to our generic format
-            return FileMetadata(
-                id=result.name,
-                name=result.display_name or Path(file_path).name,
-                mime_type=result.mime_type,
-                size_bytes=result.size_bytes,
-            )
+            return await self.client.upload_file(request)
         except Exception as e:
             logger.error("File upload failed", error=str(e))
             raise
@@ -84,54 +116,12 @@ class GeminiProvider(AIProvider):
             logger.error("Failed to delete file", file_id=file_id, error=str(e))
             return False
 
-    async def transcribe_audio(self, audio_path: str, **kwargs) -> TranscriptionResult:
-        """Transcribe audio using Gemini.
-
-        Note: Gemini doesn't have a dedicated transcription API like Whisper.
-        This method processes the audio and extracts text via content generation.
-
-        Args:
-            audio_path: Path to the audio file
-            **kwargs: Additional options (language, prompt, etc.)
-
-        Returns:
-            TranscriptionResult: Transcription result
-        """
-        try:
-            logger.info("Transcribing audio with Gemini", audio_path=audio_path)
-
-            # Upload audio file
-            file_metadata = await self.upload_file(audio_path)
-
-            # Use content generation to transcribe
-            prompt = kwargs.get(
-                "prompt",
-                "Please transcribe the audio. Provide only the transcription text, no additional commentary.",
-            )
-
-            request = GenerateContentRequest(
-                prompt=prompt,
-                files=[file_metadata.id],
-                temperature=kwargs.get("temperature", 0.0),
-            )
-
-            response = await self.client.generate_content(request)
-
-            # Clean up uploaded file
-            await self.delete_file(file_metadata.id)
-
-            return TranscriptionResult(
-                text=response.text,
-                language=kwargs.get("language"),
-            )
-        except Exception as e:
-            logger.error("Transcription failed", error=str(e))
-            raise
-
     async def generate_content(
         self,
         prompt: str,
         file_ids: list[str] | None = None,
+        file_attachments: list[tuple[str, str, bool]] | None = None,
+        file_search_store_names: list[str] | None = None,
         **kwargs,
     ) -> ContentGenerationResult:
         """Generate text content using Gemini.
@@ -139,15 +129,29 @@ class GeminiProvider(AIProvider):
         Args:
             prompt: Text prompt
             file_ids: Optional list of file IDs (names) to include
+            file_attachments: Optional list of (file_id, filename, is_image) tuples (not supported)
+            file_search_store_names: Optional list of File Search store names to search
             **kwargs: Additional options (temperature, max_tokens, model, etc.)
 
         Returns:
             ContentGenerationResult: Generated content
+
+        Raises:
+            NotImplementedError: If file_attachments is provided
         """
+        # Check for unsupported features
+        if file_attachments:
+            raise NotImplementedError(
+                "File attachments are not supported for Gemini provider. "
+                "Use file_ids parameter instead."
+            )
+
         try:
+            logger.info("Generating content with Gemini")
             request = GenerateContentRequest(
                 prompt=prompt,
                 files=file_ids or [],
+                file_search_store_names=file_search_store_names,
                 temperature=kwargs.get("temperature"),
                 model_name=kwargs.get("model"),
             )
@@ -166,187 +170,107 @@ class GeminiProvider(AIProvider):
     async def generate_structured_content(
         self,
         prompt: str,
-        response_model: type[T],
+        response_schema: type[T],
         file_ids: list[str] | None = None,
+        vector_store_ids: list[str] | None = None,
+        file_search_store_names: list[str] | None = None,
         **kwargs,
     ) -> T:
         """Generate structured content using a Pydantic model.
 
         Args:
             prompt: Text prompt
-            response_model: Pydantic model for structured output
-            file_ids: Optional list of file IDs
+            response_schema: Pydantic model for structured output
+            file_ids: Optional list of file names
+            vector_store_ids: Optional vector store IDs (deprecated, use file_search_store_names)
+            file_search_store_names: Optional list of File Search store names to search
             **kwargs: Additional options
 
         Returns:
-            Instance of response_model with generated data
+            Instance of response_schema with generated data
+
+        Raises:
+            NotImplementedError: If vector_store_ids is provided (use file_search_store_names instead)
         """
-        try:
-            request = GenerateStructuredContentRequest(
-                prompt=prompt,
-                response_model=response_model,
-                files=file_ids or [],
-                temperature=kwargs.get("temperature"),
-                model_name=kwargs.get("model"),
+        # Check for deprecated parameter
+        if vector_store_ids:
+            raise NotImplementedError(
+                "Vector store search is not supported for Gemini provider. "
+                "Please use file_search_store_names parameter for Gemini File Search."
             )
 
-            result = await self.client.generate_structured_content(request)
-            return result
-        except Exception as e:
-            logger.error("Structured content generation failed", error=str(e))
-            raise
-
-    async def analyze_audio_with_context(
-        self,
-        request: AudioAnalysisRequest,
-    ) -> ContentGenerationResult:
-        """Analyze audio with contextual information using Gemini.
-
-        Gemini supports native multimodal input, so we can send audio files directly.
-
-        Args:
-            request: Audio analysis request
-
-        Returns:
-            ContentGenerationResult: Analysis result
-        """
         try:
-            logger.info("Analyzing audio with Gemini", audio_path=request.audio_path)
+            client = self._get_client()
 
-            # Upload audio file
-            file_metadata = await self.upload_file(request.audio_path)
+            # Prepare content list
+            contents = [prompt]
 
-            # Build prompt with context
-            full_prompt = request.prompt
-            if request.context_data:
-                context_text = (
-                    f"\n\nContext Data:\n{json.dumps(request.context_data, indent=2)}"
+            # Add files if provided
+            if file_ids:
+                for file_name in file_ids:
+                    file_obj = client.files.get(name=file_name)
+                    contents.append(file_obj)
+                    logger.info("Added file to content", file_name=file_name)
+
+            # Prepare generation config
+            model_name = kwargs.get("model") or self.settings.model_name
+            temperature = kwargs.get("temperature") or self.settings.temperature
+            tools = None
+            if file_search_store_names:
+                tools = [
+                    Tool(file_search=FileSearch(file_search_store_names=[store_name]))
+                    for store_name in file_search_store_names
+                ]
+
+            generation_config = GenerateContentConfig(
+                temperature=temperature,
+                # response_schema=response_schema,
+                response_schema=response_schema,
+                tools=tools,
+            )
+
+            logger.info("Generating content with model", model_name=model_name)
+
+            # Generate content
+            response: GenerateContentResponse = client.models.generate_content(
+                model=model_name, contents=contents, config=generation_config
+            )
+            # logger.info("First pass response", response=response)
+            # if not response.text:
+            #     logger.error("Response text is empty", response=response)
+            #     raise ValueError("Response text is empty")
+            # logger.info("First pass response text", text=response.text)
+
+            structured_config = GenerateContentConfig(
+                temperature=temperature,
+                response_json_schema=response_schema.model_json_schema(),
+                response_mime_type="application/json",
+            )
+            structured_response: GenerateContentResponse = (
+                client.models.generate_content(
+                    model="gemini-2.5-flash-lite",
+                    contents=[
+                        "Please parse the following text into a JSON object: ",
+                        response.text,
+                    ],
+                    config=structured_config,
                 )
-                full_prompt += context_text
-
-            # Generate analysis
-            gen_request = GenerateContentRequest(
-                prompt=full_prompt,
-                files=[file_metadata.id],
-                temperature=request.temperature,
             )
+            if structured_response.parsed:
+                # logger.info("Have parsed response", parsed=structured_response.parsed)
+                return response_schema.model_validate(structured_response.parsed)
 
-            response = await self.client.generate_content(gen_request)
-
-            # Clean up uploaded file
-            await self.delete_file(file_metadata.id)
-
-            return ContentGenerationResult(
-                text=response.text,
-                usage=response.usage,
-                finish_reason=response.finish_reason,
-            )
-        except Exception as e:
-            logger.error("Audio analysis failed", error=str(e))
-            raise
-
-    async def analyze_audio_with_structured_output(
-        self,
-        request: AudioAnalysisRequest,
-        response_model: type[T],
-    ) -> T:
-        """Analyze audio and return structured output using Gemini.
-
-        Args:
-            request: Audio analysis request
-            response_model: Pydantic model for structured output
-
-        Returns:
-            Instance of response_model with analysis results
-        """
-        try:
-            logger.info(
-                "Analyzing audio with structured output (Gemini)", audio_path=request.audio_path
-            )
-
-            # Upload audio file
-            file_metadata = await self.upload_file(request.audio_path)
-            logger.info("Uploaded file to Files API!")
-
-            # Build prompt with context
-            full_prompt = request.prompt
-            if request.context_data:
-                context_text = (
-                    f"\n\nContext Data:\n{json.dumps(request.context_data, indent=2)}"
+            if not structured_response.text:
+                logger.error(
+                    "Structured response text is empty", response=structured_response
                 )
-                full_prompt += context_text
+                raise ValueError("Structured response text is empty")
 
-            # Generate structured analysis
-            gen_request = GenerateStructuredContentRequest(
-                prompt=full_prompt,
-                response_model=response_model,
-                files=[file_metadata.id],
-                temperature=request.temperature,
-            )
+            logger.info("Second pass response text", text=structured_response.parsed)
+            return response_schema(**structured_response.parsed)
 
-            result = await self.client.generate_structured_content(gen_request)
-
-            # Clean up uploaded file
-            await self.delete_file(file_metadata.id)
-
-            return result
         except Exception as e:
-            logger.error("Structured audio analysis failed", error=str(e))
-            raise
-
-    async def analyze_content_with_structured_output(
-        self,
-        request: ContentAnalysisRequest,
-        response_model: type[T],
-    ) -> T:
-        """Analyze content (audio, transcript, or both) and return structured output.
-
-        Args:
-            request: Content analysis request
-            response_model: Pydantic model for structured output
-
-        Returns:
-            Instance of response_model with analysis results
-        """
-        try:
-            logger.info("Analyzing content with structured output")
-
-            # Build prompt (includes transcript if provided)
-            full_prompt = request.prompt
-            if request.transcript_text:
-                full_prompt = f"{request.prompt}\n\n**Conversation Transcript:**\n{request.transcript_text}"
-
-            if request.context_data:
-                context_text = (
-                    f"\n\nContext Data:\n{json.dumps(request.context_data, indent=2)}"
-                )
-                full_prompt += context_text
-
-            # Handle audio file if provided
-            file_ids = []
-            file_metadata = None
-            if request.audio_path:
-                logger.info("Uploading audio file", audio_path=request.audio_path)
-                file_metadata = await self.upload_file(request.audio_path)
-                file_ids = [file_metadata.id]
-
-            # Generate structured analysis
-            gen_request = GenerateStructuredContentRequest(
-                prompt=full_prompt,
-                response_model=response_model,
-                files=file_ids,
-                temperature=request.temperature,
-            )
-
-            result = await self.client.generate_structured_content(gen_request)
-
-            # Clean up uploaded file if any
-            if file_metadata:
-                await self.delete_file(file_metadata.id)
-
-            return result
-        except Exception as e:
-            logger.error("Structured content analysis failed", error=str(e))
+            logger.error("Content generation failed", error=str(e))
             raise
 
     async def stream_chat(

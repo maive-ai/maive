@@ -1,70 +1,26 @@
-import json
-import re
+import sys
 import time
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
-from bs4 import BeautifulSoup
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import Page, sync_playwright
 
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-def clean_html_content(html_content):
-    """
-    Clean HTML content to remove unnecessary elements and attributes.
+from scraper_utils import (
+    clean_html_content,
+    create_output_metadata,
+    extract_url_path_segment,
+    flatten_toc,
+    parse_scraper_cli_args,
+    print_scraping_statistics,
+    run_batch_scraper,
+    save_scraped_output,
+    setup_browser_and_page,
+)
 
-    Args:
-        html_content: HTML string to clean
-
-    Returns:
-        Cleaned HTML string
-    """
-    soup = BeautifulSoup(html_content, "html.parser")
-
-    # Remove script and style tags
-    for tag in soup.find_all(["script", "style"]):
-        tag.decompose()
-
-    # Remove stylesheet links
-    for link in soup.find_all("link", rel="stylesheet"):
-        link.decompose()
-
-    # Remove empty paragraphs and divs
-    for tag in soup.find_all(["p", "div", "span"]):
-        if not tag.get_text(strip=True) and not tag.find_all(True):
-            tag.decompose()
-
-    # Clean attributes - keep only essential ones
-    for tag in soup.find_all(True):
-        new_attrs = {}
-        if "id" in tag.attrs:
-            new_attrs["id"] = tag.attrs["id"]
-        if "href" in tag.attrs:
-            new_attrs["href"] = tag.attrs["href"]
-        if "target" in tag.attrs:
-            new_attrs["target"] = tag.attrs["target"]
-        # Keep semantic mco- classes that indicate content type
-        if "class" in tag.attrs:
-            classes = (
-                tag.attrs["class"]
-                if isinstance(tag.attrs["class"], list)
-                else [tag.attrs["class"]]
-            )
-            mco_classes = [c for c in classes if c.startswith("mco-")]
-            if mco_classes:
-                new_attrs["class"] = mco_classes
-        tag.attrs = new_attrs
-
-    # Convert back to string
-    cleaned_html = str(soup)
-
-    # Remove HTML comments
-    cleaned_html = re.sub(r"<!--.*?-->", "", cleaned_html, flags=re.DOTALL)
-
-    # Remove excessive whitespace
-    cleaned_html = re.sub(r"\n\s*\n+", "\n", cleaned_html)
-
-    return cleaned_html.strip()
+# No need for local clean_html_content - using shared utility
 
 
 def extract_toc_structure(page):
@@ -122,31 +78,7 @@ def extract_toc_structure(page):
     """)
 
 
-def flatten_toc(
-    nodes: List[Dict[str, Any]], parent_path: List[str] = None
-) -> List[Dict[str, Any]]:
-    """Flatten the nested TOC structure into a list with paths."""
-    parent_path = parent_path or []
-    flat_list = []
-
-    for node in nodes:
-        current_path = parent_path + [node["text"]]
-        has_children = bool(node.get("children"))
-
-        flat_list.append(
-            {
-                "value": node["text"],  # The text/title is the value
-                "path": current_path,
-                "url": node.get("url"),
-                "depth": len(current_path) - 1,
-                "has_children": has_children,
-            }
-        )
-
-        if has_children:
-            flat_list.extend(flatten_toc(node["children"], current_path))
-
-    return flat_list
+# Using shared flatten_toc from scraper_utils
 
 
 def expand_all_nodes(page):
@@ -187,72 +119,147 @@ def expand_all_nodes(page):
     return total_expanded
 
 
-
 def scrape_from_csv(csv_path: str, output_dir_path: str = "output"):
     """
     Scrape multiple jurisdictions from a CSV file.
-
-    CSV format expected:
-        name,slug,base_url,code_url,status
 
     Args:
         csv_path: Path to CSV file containing jurisdiction list
         output_dir_path: Directory to save outputs (default: "output")
     """
-    import csv
-    from pathlib import Path
+    run_batch_scraper(
+        csv_path=csv_path,
+        output_dir_path=output_dir_path,
+        scraper_function=scrape_single_jurisdiction,
+        scraper_name="general_code_publish.py",
+    )
 
-    csv_file = Path(csv_path)
-    if not csv_file.exists():
-        print(f"Error: CSV file not found: {csv_path}")
+
+# URL parsing handled by extract_url_path_segment from scraper_utils
+
+
+def _extract_section_content(page: Page, section_id: str) -> str | None:
+    """
+    Extract content for a specific section by ID.
+
+    Args:
+        page: Playwright page object
+        section_id: Section ID to extract
+
+    Returns:
+        HTML content string or None if not found
+    """
+    return page.evaluate(
+        f"""
+        () => {{
+            const sectionHeader = document.getElementById('{section_id}');
+            if (!sectionHeader) return null;
+
+            const container = document.createElement('div');
+            let currentElement = sectionHeader;
+
+            container.appendChild(currentElement.cloneNode(true));
+
+            currentElement = currentElement.nextElementSibling;
+            while (currentElement) {{
+                const tagName = currentElement.tagName.toLowerCase();
+                if (tagName === 'h2' || tagName === 'h3') {{
+                    break;
+                }}
+                container.appendChild(currentElement.cloneNode(true));
+                currentElement = currentElement.nextElementSibling;
+            }}
+
+            return container.outerHTML;
+        }}
+    """
+    )
+
+
+def _scrape_section_content(
+    page: Page, item: Dict[str, Any], index: int, total: int
+) -> None:
+    """
+    Scrape content for a single section item.
+
+    Args:
+        page: Playwright page object
+        item: TOC item dictionary
+        index: Current index (0-based)
+        total: Total number of items
+    """
+    if not item["url"]:
+        print(f"  ✗ {index + 1}/{total}: No URL - {item['value'][:80]}")
         return
 
-    # Read all jurisdictions from CSV
-    jurisdictions = []
-    with open(csv_file, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            if row.get('status') == 'ready' and row.get('code_url'):
-                jurisdictions.append(row)
+    # Extract anchor ID from hash-bang URLs (e.g., "#!/path/file.html#1.01" -> "1.01")
+    # For hash-bang URLs, we need the part after the last # in the fragment
+    from urllib.parse import urlparse
+    parsed = urlparse(item["url"])
 
-    if not jurisdictions:
-        print(f"Error: No ready jurisdictions found in {csv_path}")
+    if parsed.fragment and "#" in parsed.fragment:
+        # Hash-bang URL: extract the anchor ID after the last #
+        section_id = parsed.fragment.split("#")[-1]
+    else:
+        # Regular URL: use the fragment as-is
+        section_id = extract_url_path_segment(item["url"])
+
+    if not section_id:
+        item["html_error"] = "No section ID in URL"
+        print(f"  ✗ {index + 1}/{total}: No section ID - {item['value'][:80]}")
         return
 
-    print(f"\n{'='*60}")
-    print(f"BATCH SCRAPING MODE")
-    print(f"{'='*60}")
-    print(f"CSV file: {csv_path}")
-    print(f"Found {len(jurisdictions)} jurisdictions to scrape")
-    print(f"Output directory: {output_dir_path}")
-    print(f"{'='*60}\n")
+    try:
+        page.goto(item["url"], wait_until="networkidle", timeout=60000)
+        page.wait_for_selector("#mainContent", timeout=60000)
+        page.wait_for_timeout(300)
 
-    # Scrape each jurisdiction
-    for i, juris in enumerate(jurisdictions, 1):
-        print(f"\n{'='*60}")
-        print(f"[{i}/{len(jurisdictions)}] Scraping: {juris['name']}")
-        print(f"{'='*60}")
+        content_html = _extract_section_content(page, section_id)
 
-        try:
-            # Call the single scraping function directly
-            scrape_single_jurisdiction(
-                url=juris['code_url'],
-                output_name=juris['slug'],
-                output_dir_path=output_dir_path
-            )
-            print(f"✓ Completed: {juris['name']}")
-        except Exception as e:
-            print(f"✗ Failed: {juris['name']}")
-            print(f"  Error: {str(e)}")
-            # Continue with next jurisdiction
+        if not content_html:
+            print(f"  ↻ {index + 1}/{total}: Retrying - {item['value'][:80]}")
+            page.reload(wait_until="networkidle", timeout=60000)
+            page.wait_for_selector("#mainContent", timeout=60000)
+            page.wait_for_timeout(500)
 
-    print(f"\n{'='*60}")
-    print(f"BATCH SCRAPING COMPLETE")
-    print(f"Processed {len(jurisdictions)} jurisdictions")
-    print(f"{'='*60}\n")
+            content_html = _extract_section_content(page, section_id)
+
+        if content_html:
+            cleaned_html = clean_html_content(content_html, preserve_classes=["mco-"])
+            item["html"] = cleaned_html
+            print(f"  ✓ {index + 1}/{total}: {item['value'][:80]}")
+        else:
+            item["html_error"] = f"Section ID '{section_id}' not found on page"
+            print(f"  ✗ {index + 1}/{total}: Section not found - {item['value'][:80]}")
+
+        time.sleep(0.5)
+
+    except Exception as e:
+        print(f"  ✗ {index + 1}/{total}: {item['value'][:80]} - {str(e)}")
+        item["html_error"] = str(e)
 
 
-def scrape_single_jurisdiction(url: str, output_name: str, output_dir_path: str = "output"):
+def _scrape_all_leaf_nodes(page: Page, leaf_nodes: List[Dict[str, Any]]) -> None:
+    """
+    Scrape HTML content for all leaf nodes.
+
+    Args:
+        page: Playwright page object
+        leaf_nodes: List of leaf node dictionaries
+    """
+    for i, item in enumerate(leaf_nodes):
+        _scrape_section_content(page, item, i, len(leaf_nodes))
+
+
+# Using shared print_scraping_statistics from scraper_utils
+
+
+def scrape_single_jurisdiction(
+    url: str,
+    output_name: str,
+    output_dir_path: str = "output",
+    csv_file: str | None = None,
+):
     """
     Scrape HTML content from a single jurisdiction's code.
 
@@ -260,259 +267,75 @@ def scrape_single_jurisdiction(url: str, output_name: str, output_dir_path: str 
         url: Full URL to the jurisdiction code
         output_name: Name for the output file
         output_dir_path: Directory to save output (default: "output")
+        csv_file: Optional CSV file path for state extraction
     """
     print(f"Using URL: {url}")
     print(f"Output name: {output_name}")
     print(f"Output directory: {output_dir_path}")
 
-    hierarchical_toc = None
-    flat_toc = None
-    leaf_nodes = []
-
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)  # Set to True for production
-        context = browser.new_context()
-        page = context.new_page()
+        browser, page = setup_browser_and_page(p)
 
-        print(f"Navigating to {url} to extract TOC...")
-        page.goto(url, wait_until="networkidle", timeout=60000)
+        try:
+            print(f"Navigating to {url} to extract TOC...")
+            page.goto(url, wait_until="networkidle", timeout=60000)
 
-        # Wait for TOC to load (can take a while on some sites)
-        print("Waiting for TOC to load (this may take up to 60 seconds)...")
-        page.wait_for_selector("#archiveTOC", timeout=60000)
-        page.wait_for_load_state("networkidle", timeout=10000)
+            print("Waiting for TOC to load (this may take up to 60 seconds)...")
+            page.wait_for_selector("#archiveTOC", timeout=60000)
+            page.wait_for_load_state("networkidle", timeout=10000)
 
-        # Expand all nodes
-        print("Expanding TOC nodes...")
-        expand_all_nodes(page)
+            print("Expanding TOC nodes...")
+            expand_all_nodes(page)
 
-        # Extract the TOC structure
-        print("Extracting TOC structure...")
-        toc_data = extract_toc_structure(page)
+            print("Extracting TOC structure...")
+            toc_data = extract_toc_structure(page)
 
-        if "error" in toc_data:
-            print(f"Error: {toc_data['error']}")
+            if "error" in toc_data:
+                print(f"Error: {toc_data['error']}")
+                return
+
+            hierarchical_toc = toc_data["items"]
+            print(f"Found {toc_data['totalItems']} total items in TOC")
+
+            flat_toc = flatten_toc(hierarchical_toc)
+
+            leaf_nodes = [
+                item for item in flat_toc if not item.get("has_children", False)
+            ]
+            print(f"Found {len(leaf_nodes)} leaf nodes to scrape HTML")
+
+            _scrape_all_leaf_nodes(page, leaf_nodes)
+
+        finally:
             browser.close()
-            return
 
-        hierarchical_toc = toc_data["items"]
-        print(f"Found {toc_data['totalItems']} total items in TOC")
-
-        # Flatten the TOC
-        flat_toc = flatten_toc(hierarchical_toc)
-
-        # Filter to only leaf nodes
-        leaf_nodes = [item for item in flat_toc if not item.get("has_children", False)]
-        print(f"Found {len(leaf_nodes)} leaf nodes to scrape HTML")
-
-        # Now scrape HTML for each leaf node
-        for i, item in enumerate(leaf_nodes):
-            if not item["url"]:
-                print(f"  ✗ {i + 1}/{len(leaf_nodes)}: No URL - {item['value'][:80]}")
-                continue
-
-            # Extract section ID from URL fragment (handle URLs with hashbang like #!/...#section)
-            # URL format: /UT/Syracuse/#!/Syracuse07/Syracuse0730.html#7.30.010
-            url_parts = item["url"].split("#")
-            section_id = None
-            if len(url_parts) >= 3:
-                # Has both hashbang and section anchor
-                section_id = url_parts[-1]
-            elif len(url_parts) == 2 and not url_parts[1].startswith("!"):
-                # Has only section anchor (no hashbang)
-                section_id = url_parts[1]
-
-            try:
-                # Navigate to the specific leaf node URL
-                page.goto(item["url"], wait_until="networkidle", timeout=60000)
-                page.wait_for_selector("#mainContent", timeout=60000)
-                page.wait_for_timeout(300)
-
-                # Try to find the specific section by ID
-                if section_id:
-                    # Extract content from this section to the next section header using getElementById
-                    content_html = page.evaluate(f"""
-                        () => {{
-                            const sectionHeader = document.getElementById('{section_id}');
-                            if (!sectionHeader) return null;
-
-                            const container = document.createElement('div');
-                            let currentElement = sectionHeader;
-
-                            // Add the header itself
-                            container.appendChild(currentElement.cloneNode(true));
-
-                            // Collect siblings until we hit another h2 or h3 header
-                            currentElement = currentElement.nextElementSibling;
-                            while (currentElement) {{
-                                const tagName = currentElement.tagName.toLowerCase();
-                                if (tagName === 'h2' || tagName === 'h3') {{
-                                    break;
-                                }}
-                                container.appendChild(currentElement.cloneNode(true));
-                                currentElement = currentElement.nextElementSibling;
-                            }}
-
-                            return container.outerHTML;
-                        }}
-                    """)
-
-                    if not content_html:
-                        # Section not found on first try, reload and try again
-                        print(
-                            f"  ↻ {i + 1}/{len(leaf_nodes)}: Retrying - {item['value'][:80]}"
-                        )
-                        page.reload(wait_until="networkidle", timeout=60000)
-                        page.wait_for_selector("#mainContent", timeout=60000)
-                        page.wait_for_timeout(500)
-
-                        content_html = page.evaluate(f"""
-                            () => {{
-                                const sectionHeader = document.getElementById('{section_id}');
-                                if (!sectionHeader) return null;
-
-                                const container = document.createElement('div');
-                                let currentElement = sectionHeader;
-                                container.appendChild(currentElement.cloneNode(true));
-
-                                currentElement = currentElement.nextElementSibling;
-                                while (currentElement) {{
-                                    const tagName = currentElement.tagName.toLowerCase();
-                                    if (tagName === 'h2' || tagName === 'h3') break;
-                                    container.appendChild(currentElement.cloneNode(true));
-                                    currentElement = currentElement.nextElementSibling;
-                                }}
-
-                                return container.outerHTML;
-                            }}
-                        """)
-
-                    if content_html:
-                        cleaned_html = clean_html_content(content_html)
-                        item["html"] = cleaned_html
-                        print(f"  ✓ {i + 1}/{len(leaf_nodes)}: {item['value'][:80]}")
-                    else:
-                        # Section still not found after retry - mark as error
-                        item["html_error"] = (
-                            f"Section ID '{section_id}' not found on page"
-                        )
-                        print(
-                            f"  ✗ {i + 1}/{len(leaf_nodes)}: Section not found - {item['value'][:80]}"
-                        )
-                else:
-                    # No section ID - this shouldn't happen for leaf nodes, mark as error
-                    item["html_error"] = "No section ID in URL"
-                    print(
-                        f"  ✗ {i + 1}/{len(leaf_nodes)}: No section ID - {item['value'][:80]}"
-                    )
-
-                # Add a small delay to be respectful to the server
-                time.sleep(0.5)
-
-            except Exception as e:
-                print(f"  ✗ {i + 1}/{len(leaf_nodes)}: {item['value'][:80]} - {str(e)}")
-
-                # Add error information to the item
-                item["html_error"] = str(e)
-
-        browser.close()
-
-    # Create output directory if it doesn't exist
-    output_dir = Path(output_dir_path)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    # Generate filename (no date prefix - overwrites existing)
-    output_filename = f"{output_name}.json"
-    output_path = output_dir / output_filename
-
-    # Wrap content with metadata
     if flat_toc:
-        scraped_at = datetime.now().isoformat()
-        output_data = {
-            "metadata": {
-                "scraped_at": scraped_at,
-                "city_slug": output_name,
-                "source_url": url,
-                "scraper": "general_code_publish.py",
-                "scraper_version": "2.0"
-            },
-            "sections": flat_toc
-        }
+        metadata = create_output_metadata(
+            url=url,
+            output_name=output_name,
+            scraper_name="general_code_publish.py",
+            scraper_version="2.0",
+            csv_file=csv_file,
+        )
 
-        # Save with metadata wrapper
-        with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(output_data, f, indent=2, ensure_ascii=False)
+        output_path = save_scraped_output(
+            sections=flat_toc,
+            metadata=metadata,
+            output_dir_path=output_dir_path,
+            output_name=output_name,
+        )
+
         print(f"\nSaved flattened TOC with HTML to: {output_path}")
 
-    # Report statistics
-    items_with_html = sum(1 for item in flat_toc if "html" in item)
-    items_with_errors = sum(1 for item in flat_toc if "html_error" in item)
-    total_leaf_nodes = sum(
-        1 for item in flat_toc if not item.get("has_children", False)
-    )
-
-    print("\n✓ Complete!")
-    print(f"  Total TOC items: {len(flat_toc) if flat_toc else 0}")
-    print(f"  Leaf nodes (with HTML): {total_leaf_nodes}")
-
-    print(f"  Successfully scraped HTML: {items_with_html}/{total_leaf_nodes}")
-    if items_with_errors > 0:
-        print(f"  Errors: {items_with_errors}")
-
-    # Report on any leaf nodes without HTML
-    missing_html = [
-        item
-        for item in flat_toc
-        if not item.get("has_children", False) and "html" not in item
-    ]
-    if missing_html:
-        print(f"\n⚠ Warning: {len(missing_html)} leaf nodes have no HTML content:")
-        for item in missing_html[:5]:  # Show first 5
-            print(f"    - {item.get('value', 'Unknown')}")
-        if len(missing_html) > 5:
-            print(f"    ... and {len(missing_html) - 5} more")
+    print_scraping_statistics(flat_toc)
 
 
 if __name__ == "__main__":
-    import sys
+    mode, url_or_csv, output_name, output_dir_path = parse_scraper_cli_args(
+        "general_code_publish.py"
+    )
 
-    # Check for CSV mode
-    if len(sys.argv) >= 2 and sys.argv[1] == "--csv":
-        if len(sys.argv) < 3:
-            print("Usage: python general_code_publish.py --csv <CSV_FILE> [--output-dir DIR]")
-            print("Example: python general_code_publish.py --csv ut_ecode360.csv --output-dir output")
-            sys.exit(1)
-
-        csv_path = sys.argv[2]
-
-        # Parse optional output directory
-        output_dir_path = "output"
-        if len(sys.argv) > 3 and sys.argv[3] == "--output-dir":
-            if len(sys.argv) > 4:
-                output_dir_path = sys.argv[4]
-
-        scrape_from_csv(csv_path, output_dir_path)
-
-    # Single jurisdiction mode
-    elif len(sys.argv) >= 3:
-        url = sys.argv[1]
-        output_name = sys.argv[2]
-
-        # Parse optional output directory
-        output_dir_path = "output"
-        if len(sys.argv) > 3 and sys.argv[3] == "--output-dir":
-            if len(sys.argv) > 4:
-                output_dir_path = sys.argv[4]
-
-        scrape_single_jurisdiction(url, output_name, output_dir_path)
-
-    # Show usage
-    else:
-        print("Usage:")
-        print("  Single mode:  python general_code_publish.py <URL> <NAME> [--output-dir DIR]")
-        print("  Batch mode:   python general_code_publish.py --csv <CSV_FILE> [--output-dir DIR]")
-        print()
-        print("Examples:")
-        print("  python general_code_publish.py https://ecode360.com/HU4729 huntington")
-        print("  python general_code_publish.py --csv ut_ecode360.csv --output-dir output/codes/ut")
-        sys.exit(1)
+    if mode == "csv":
+        scrape_from_csv(url_or_csv, output_dir_path)
+    else:  # single mode
+        scrape_single_jurisdiction(url_or_csv, output_name, output_dir_path)

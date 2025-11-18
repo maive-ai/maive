@@ -47,7 +47,7 @@ class TranscriptionResult(BaseModel):
 class ContentGenerationResult(BaseModel):
     """Result from content generation."""
 
-    text: str
+    text: str | T
     usage: dict[str, Any] | None = None
     finish_reason: str | None = None
 
@@ -74,7 +74,7 @@ class ChatMessage(BaseModel):
 
 class ResponseStreamParams(BaseModel):
     """Parameters for OpenAI Responses API streaming requests.
-    
+
     Mirrors the structure of ResponseCreateParams from the OpenAI SDK.
     """
 
@@ -132,9 +132,12 @@ class SSEEvent(BaseModel):
     """
 
     data: str
-    event: Literal[
-        "citation", "done", "error", "tool_call", "reasoning_summary", "heartbeat"
-    ] | None = None
+    event: (
+        Literal[
+            "citation", "done", "error", "tool_call", "reasoning_summary", "heartbeat"
+        ]
+        | None
+    ) = None
     id: str | None = None
     retry: int | None = None
 
@@ -209,23 +212,11 @@ class AIProvider(ABC):
         pass
 
     @abstractmethod
-    async def transcribe_audio(self, audio_path: str, **kwargs) -> TranscriptionResult:
-        """Transcribe audio to text.
-
-        Args:
-            audio_path: Path to the audio file
-            **kwargs: Provider-specific options (language, prompt, etc.)
-
-        Returns:
-            TranscriptionResult: Transcription result with text and metadata
-        """
-        pass
-
-    @abstractmethod
     async def generate_content(
         self,
         prompt: str,
         file_ids: list[str] | None = None,
+        file_attachments: list[tuple[str, str, bool]] | None = None,
         **kwargs,
     ) -> ContentGenerationResult:
         """Generate text content.
@@ -233,6 +224,7 @@ class AIProvider(ABC):
         Args:
             prompt: Text prompt for generation
             file_ids: Optional list of file IDs to include as context
+            file_attachments: Optional list of (file_id, filename, is_image) tuples
             **kwargs: Provider-specific options (temperature, max_tokens, etc.)
 
         Returns:
@@ -244,8 +236,9 @@ class AIProvider(ABC):
     async def generate_structured_content(
         self,
         prompt: str,
-        response_model: type[T],
+        response_schema: type[T],
         file_ids: list[str] | None = None,
+        vector_store_ids: list[str] | None = None,
         **kwargs,
     ) -> T:
         """Generate structured content using a Pydantic model.
@@ -254,66 +247,11 @@ class AIProvider(ABC):
             prompt: Text prompt for generation
             response_model: Pydantic model class for structured output
             file_ids: Optional list of file IDs to include as context
+            vector_store_ids: Optional vector store IDs for file search (RAG)
             **kwargs: Provider-specific options
 
         Returns:
             Instance of response_model with generated data
-        """
-        pass
-
-    @abstractmethod
-    async def analyze_audio_with_context(
-        self,
-        request: AudioAnalysisRequest,
-    ) -> ContentGenerationResult:
-        """Analyze audio directly with contextual information.
-
-        This method allows the AI to process audio directly (not just transcription)
-        along with additional context like documents, forms, etc.
-
-        Args:
-            request: Audio analysis request with audio path, prompt, and context
-
-        Returns:
-            ContentGenerationResult: Analysis result
-        """
-        pass
-
-    @abstractmethod
-    async def analyze_audio_with_structured_output(
-        self,
-        request: AudioAnalysisRequest,
-        response_model: type[T],
-    ) -> T:
-        """Analyze audio directly and return structured output.
-
-        Combines audio analysis with structured output generation.
-
-        Args:
-            request: Audio analysis request
-            response_model: Pydantic model for structured output
-
-        Returns:
-            Instance of response_model with analysis results
-        """
-        pass
-
-    @abstractmethod
-    async def analyze_content_with_structured_output(
-        self,
-        request: ContentAnalysisRequest,
-        response_model: type[T],
-    ) -> T:
-        """Analyze content (audio, transcript, or both) and return structured output.
-
-        More generic version that can handle audio files, transcripts, or both.
-
-        Args:
-            request: Content analysis request
-            response_model: Pydantic model for structured output
-
-        Returns:
-            Instance of response_model with analysis results
         """
         pass
 

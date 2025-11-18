@@ -16,12 +16,16 @@ class AIProviderType(str, Enum):
 
 def create_ai_provider(
     provider_type: AIProviderType | str | None = None,
+    enable_braintrust: bool = False,
+    braintrust_project_name: str | None = None,
 ) -> AIProvider:
     """Create an AI provider instance.
 
     Args:
         provider_type: Type of provider to create. If None, uses AI_PROVIDER env var
                       or defaults to OpenAI.
+        enable_braintrust: Whether to enable Braintrust tracing for this provider instance
+        braintrust_project_name: Braintrust project name (only used if enable_braintrust=True)
 
     Returns:
         AIProvider: Instance of the specified provider
@@ -40,29 +44,45 @@ def create_ai_provider(
     if provider_type == AIProviderType.OPENAI:
         from src.ai.providers.openai import OpenAIProvider
 
-        return OpenAIProvider()
+        return OpenAIProvider(
+            enable_braintrust=enable_braintrust,
+            braintrust_project_name=braintrust_project_name,
+        )
     elif provider_type == AIProviderType.GEMINI:
         from src.ai.providers.gemini import GeminiProvider
 
-        return GeminiProvider()
+        return GeminiProvider(
+            enable_braintrust=enable_braintrust,
+            braintrust_project_name=braintrust_project_name,
+        )
     else:
         raise ValueError(f"Unsupported AI provider: {provider_type}")
 
 
-# Global provider instance
+# Global provider instance (deprecated - use create_ai_provider with explicit config)
 _ai_provider: AIProvider | None = None
 
 
-def get_ai_provider() -> AIProvider:
-    """Get the global AI provider instance.
+def get_ai_provider(
+    enable_braintrust: bool = False,
+    braintrust_project_name: str | None = None,
+) -> AIProvider:
+    """Get an AI provider instance.
+
+    Note: This creates a new provider instance each time with the given config.
+    For workflows that need tracing, pass enable_braintrust=True and project_name.
+
+    Args:
+        enable_braintrust: Whether to enable Braintrust tracing for this provider instance
+        braintrust_project_name: Braintrust project name (only used if enable_braintrust=True)
 
     Returns:
-        AIProvider: The global provider instance
+        AIProvider: Provider instance
     """
-    global _ai_provider
-    if _ai_provider is None:
-        _ai_provider = create_ai_provider()
-    return _ai_provider
+    return create_ai_provider(
+        enable_braintrust=enable_braintrust,
+        braintrust_project_name=braintrust_project_name,
+    )
 
 
 def set_ai_provider(provider: AIProvider) -> None:

@@ -147,7 +147,7 @@ class DiscrepancyDetectionWorkflow:
             output_filename = f"estimate_data_job_{job_id}_estimate_{selected_estimate.id}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.json"
             with open(output_filename, "w") as f:
                 json.dump(estimate_data_output, f, indent=2, default=str)
-            logger.info("✅ Estimate data saved to", filename=output_filename)
+            logger.info("✅ Estimate data saved to", file_name=output_filename)
 
             # Step 4: Get form submission (Notes to Production)
             if form_submission:

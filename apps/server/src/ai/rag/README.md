@@ -4,12 +4,25 @@ This directory contains the Retrieval-Augmented Generation (RAG) system for inge
 
 ## Architecture
 
-The RAG system uses **OpenAI's native vector store** and **file_search tool** integrated with the Responses API:
+The RAG system supports two providers:
+
+1. **OpenAI**: Uses OpenAI's native vector store and file_search tool
+2. **Gemini**: Uses Google Gemini File Search stores
+
+### OpenAI RAG Flow
 
 ```
 Apify Scraper → Ingestion Service → OpenAI Vector Store
                                             ↓
 RoofGPT Chat ←─────────────────── File Search Tool
+```
+
+### Gemini RAG Flow
+
+```
+Pricebook JSON → Ingestion Script → Gemini File Search Store
+                                            ↓
+GeminiProvider ←─────────────────── File Search Tool
 ```
 
 ### Components
@@ -162,6 +175,81 @@ OpenAI vector store pricing (as of Jan 2025):
 - **Search**: Included in response token usage (~$0.03/search)
 
 **Typical usage** for 10-20 cities: $5-20/month
+
+## Gemini File Search (Alternative to OpenAI)
+
+Gemini File Search provides an alternative RAG solution using Google's Gemini API. It's particularly useful for pricebook data ingestion and querying.
+
+### One-Time Ingestion
+
+Upload your pricebook JSON file once to a Gemini File Search store:
+
+```bash
+# From apps/server directory
+uv run python scripts/ingest_pricebook_gemini.py ingest
+```
+
+The script will:
+1. Create a File Search store named "pricebook-items" (or use existing)
+2. Upload the cleaned pricebook JSON file
+3. Poll until indexing is complete
+4. Print the **store name** (format: `fileSearchStores/xxxxx`)
+
+**Important**: Copy the store name printed at the end - you'll need it for queries.
+
+### Check Store Status
+
+```bash
+uv run python scripts/ingest_pricebook_gemini.py status
+```
+
+This shows the store name and confirms it's ready for queries.
+
+### Using File Search in Queries
+
+Pass the store name when calling `GeminiProvider`:
+
+```python
+from src.ai.providers.gemini import GeminiProvider
+
+provider = GeminiProvider()
+
+# Generate content with File Search
+result = await provider.generate_content(
+    prompt="What is the price for item XYZ?",
+    file_search_store_names=["fileSearchStores/abc123"]
+)
+
+# Generate structured content with File Search
+structured_result = await provider.generate_structured_content(
+    prompt="Extract pricing information for item XYZ",
+    response_schema=PriceInfoSchema,
+    file_search_store_names=["fileSearchStores/abc123"]
+)
+```
+
+### Gemini File Search Pricing
+
+- **Embeddings at indexing**: $0.15 per 1M tokens
+- **Storage**: Free of charge
+- **Query time embeddings**: Free
+- **Retrieved document tokens**: Charged as regular context tokens
+
+### Supported File Types
+
+Gemini File Search supports JSON files (and many other formats). See the [Gemini File Search documentation](https://ai.google.dev/gemini-api/docs/file-search#supported_file_types) for the full list.
+
+### Rate Limits
+
+- **Max file size**: 100 MB per document
+- **Storage limits** (by tier):
+  - Free: 1 GB
+  - Tier 1: 10 GB
+  - Tier 2: 100 GB
+  - Tier 3: 1 TB
+- **Recommendation**: Limit each store to <20 GB for optimal retrieval latency
+
+**Note**: Storage limit is computed based on input size plus embeddings (typically ~3x input size).
 
 ## Troubleshooting
 

@@ -1,12 +1,28 @@
 import asyncio
-import json
-import re
-from datetime import datetime
+import sys
+import warnings
 from pathlib import Path
 from typing import Any, Dict, List
 
-from bs4 import BeautifulSoup
 from playwright.async_api import Page, async_playwright
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from scraper_utils import (
+    clean_html_content,
+    create_output_metadata,
+    flatten_toc,
+    parse_scraper_cli_args,
+    read_municipalities_from_csv,
+    save_scraped_output,
+    setup_browser_and_page_async,
+)
+
+# Suppress RuntimeWarning from playwright_stealth (harmless in async context)
+warnings.filterwarnings(
+    "ignore", category=RuntimeWarning, message=".*coroutine.*was never awaited.*"
+)
 
 
 class AMLegalContentScraper:
@@ -22,15 +38,9 @@ class AMLegalContentScraper:
         Returns:
             Minimal HTML with only content and essential structure
         """
-        soup = BeautifulSoup(html_content, "html.parser")
-
-        # Remove script and style tags
-        for tag in soup.find_all(["script", "style"]):
-            tag.decompose()
-
-        # Remove navigation and UI elements
-        for element in soup.find_all(
-            class_=[
+        return clean_html_content(
+            html_content,
+            remove_ui_classes=[
                 "navbar",
                 "nav-",
                 "header",
@@ -43,32 +53,8 @@ class AMLegalContentScraper:
                 "menu",
                 "toolbar",
                 "pagination",
-            ]
-        ):
-            element.decompose()
-
-        # Remove empty divs and spans
-        for tag in soup.find_all(["span", "div"]):
-            if not tag.get_text(strip=True) and not tag.find_all(True):
-                tag.decompose()
-
-        # Keep only essential attributes
-        for tag in soup.find_all(True):
-            new_attrs = {}
-            if "id" in tag.attrs:
-                new_attrs["id"] = tag.attrs["id"]
-            if "href" in tag.attrs:
-                new_attrs["href"] = tag.attrs["href"]
-            tag.attrs = new_attrs
-
-        # Remove HTML comments
-        cleaned_html = str(soup)
-        cleaned_html = re.sub(r"<!--.*?-->", "", cleaned_html, flags=re.DOTALL)
-
-        # Remove excessive whitespace
-        cleaned_html = re.sub(r"\n\s*\n+", "\n", cleaned_html)
-
-        return cleaned_html.strip()
+            ],
+        )
 
     async def expand_all_nodes(self, page: Page) -> None:
         """Expand all nodes in the TOC tree."""
@@ -201,8 +187,8 @@ class AMLegalContentScraper:
 
                     const text = link.innerText.trim();
                     const url = link.href;
-                    const docId = link.dataset.docid || null;
-                    const codeUuid = link.dataset.codeuuid || null;
+                    const _docId = link.dataset.docid || null;
+                    const _codeUuid = link.dataset.codeuuid || null;
 
                     // Get children if expanded
                     const children = [];
@@ -222,8 +208,8 @@ class AMLegalContentScraper:
 
                     return {
                         text: text,
-                        docId: docId,
-                        codeUuid: codeUuid,
+                        _docId: _docId,
+                        _codeUuid: _codeUuid,
                         url: url,
                         hasChildren: hasChildren,
                         children: children
@@ -270,61 +256,180 @@ class AMLegalContentScraper:
             }
         """)
 
-    def flatten_toc(
-        self, nodes: List[Dict[str, Any]], parent_path: List[str] = None
-    ) -> List[Dict[str, Any]]:
-        """Flatten the nested TOC structure into a list with paths."""
-        if parent_path is None:
-            parent_path = []
+    # Using shared flatten_toc from scraper_utils
 
-        flat_list = []
+    async def _inject_navigation_helpers(self, page: Page) -> None:
+        """Inject JavaScript helper functions for programmatic navigation."""
+        await page.evaluate("""
+            () => {
+                window.navigateToDoc = function(docId) {
+                    const link = document.querySelector(`a.toc-link[data-docid="${docId}"]`);
+                    if (link) {
+                        link.click();
+                        return true;
+                    }
+                    return false;
+                };
 
-        for node in nodes:
-            current_path = parent_path + [node["text"]]
-
-            flat_item = {
-                "value": node["text"],
-                "path": current_path,
-                "url": node.get("url"),
-                "depth": len(current_path) - 1,
-                "has_children": node.get("hasChildren", False),
+                window.navigateByHash = function(docId) {
+                    const link = document.querySelector(`a.toc-link[data-docid="${docId}"]`);
+                    if (link && link.href) {
+                        window.location.href = link.href;
+                        return true;
+                    }
+                    return false;
+                };
             }
+        """)
 
-            # Keep docId and codeUuid internally for scraping, but they won't be in final output
-            flat_item["_docId"] = node.get("docId")
-            flat_item["_codeUuid"] = node.get("codeUuid")
+    async def _process_leaf_node(
+        self, page: Page, item: Dict[str, Any], index: int, total: int, scraped_ids: set
+    ) -> tuple[bool, Dict[str, Any] | None]:
+        """
+        Process a single leaf node, extracting content if available.
 
-            flat_list.append(flat_item)
+        Returns:
+            Tuple of (success, failed_item if failed else None)
+        """
+        if not item.get("_docId"):
+            item["html_error"] = "No docId for this item"
+            print(f"  ⚠ Skipping {index + 1}/{total}: {item['value'][:80]} - no docId")
+            return False, None
 
-            # Recursively process children
-            if node.get("children"):
-                flat_list.extend(self.flatten_toc(node["children"], current_path))
+        if item["_docId"] in scraped_ids:
+            print(
+                f"  ✓ Skipping {index + 1}/{total}: {item['value'][:80]} - already scraped"
+            )
+            return True, None
 
-        return flat_list
+        try:
+            rid_selector = f"#rid-{item['_docId']}"
+            is_already_present = await page.evaluate(
+                f'document.querySelector("{rid_selector}") !== null'
+            )
+
+            if is_already_present:
+                print(
+                    f"  ⚡ {index + 1}/{total}: {item['value'][:80]} - already loaded"
+                )
+            else:
+                link_selector = f'a.toc-link[data-docid="{item["_docId"]}"]'
+                await page.click(link_selector)
+                await page.wait_for_selector(rid_selector, timeout=15000)
+
+            html_content = await self.scrape_content(page, item["_docId"])
+
+            if html_content:
+                item["html"] = html_content
+                scraped_ids.add(item["_docId"])
+                return True, None
+            else:
+                print(
+                    f"  ⚠ No content for {index + 1}/{total}: {item['value'][:80]} - will retry"
+                )
+                return False, item
+
+        except asyncio.TimeoutError:
+            print(
+                f"  ⏳ Timeout for {index + 1}/{total}: {item['value'][:80]} - will retry"
+            )
+            return False, item
+        except Exception as e:
+            print(
+                f"  ⚠ Error for {index + 1}/{total}: {item['value'][:80]} - {str(e)[:50]}"
+            )
+            return False, item
+
+    async def _retry_failed_item(
+        self, page: Page, item: Dict[str, Any], index: int, total: int
+    ) -> bool:
+        """Retry scraping a failed item with longer timeout."""
+        try:
+            success = await page.evaluate(f'window.navigateToDoc("{item["_docId"]}")')
+            if not success:
+                link_selector = f'a.toc-link[data-docid="{item["_docId"]}"]'
+                await page.click(link_selector)
+
+            rid_selector = f"#rid-{item['_docId']}"
+            await page.wait_for_selector(rid_selector, timeout=30000)
+
+            html_content = await self.scrape_content(page, item["_docId"])
+
+            if html_content:
+                item["html"] = html_content
+                return True
+            else:
+                item["html_error"] = "No content found after retry"
+                print(
+                    f"  ✗ Retry {index + 1}/{total}: {item['value'][:80]} - still no content"
+                )
+                return False
+
+        except asyncio.TimeoutError:
+            item["html_error"] = "Timeout on retry"
+            print(f"  ✗ Retry {index + 1}/{total}: {item['value'][:80]} - timeout")
+            return False
+        except Exception as e:
+            item["html_error"] = str(e)
+            print(
+                f"  ✗ Retry {index + 1}/{total}: {item['value'][:80]} - {str(e)[:50]}"
+            )
+            return False
+
+    async def _scrape_leaf_nodes(
+        self, page: Page, leaf_nodes: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Scrape all leaf nodes, collecting failures for retry."""
+        failed_items = []
+        scraped_ids = set()
+
+        for i, item in enumerate(leaf_nodes):
+            success, failed_item = await self._process_leaf_node(
+                page, item, i, len(leaf_nodes), scraped_ids
+            )
+            if not success and failed_item:
+                failed_items.append(failed_item)
+
+            await page.wait_for_timeout(200)
+
+        return failed_items
+
+    async def _retry_failed_nodes(
+        self, page: Page, failed_items: List[Dict[str, Any]]
+    ) -> None:
+        """Retry scraping failed items."""
+        if not failed_items:
+            return
+
+        print(f"\nRetrying {len(failed_items)} failed items...")
+        for i, item in enumerate(failed_items):
+            await self._retry_failed_item(page, item, i, len(failed_items))
+            await page.wait_for_timeout(500)
+
+        recovered = sum(1 for item in failed_items if "html" in item)
+        if recovered < len(failed_items):
+            print(
+                f"\nRetry complete: {recovered}/{len(failed_items)} recovered, "
+                f"{len(failed_items) - recovered} still failed"
+            )
 
     async def scrape_all_content(
         self, url: str
     ) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]]]:
         """Main scraping function that clicks through TOC and collects content."""
         async with async_playwright() as p:
-            browser = await p.chromium.launch(
-                headless=False, args=["--disable-blink-features=AutomationControlled"]
-            )
-            page = await browser.new_page()
+            browser, page = await setup_browser_and_page_async(p)
 
             try:
                 print(f"Navigating to {url}")
                 await page.goto(url, wait_until="domcontentloaded")
 
-                # Wait for TOC to load
                 print("Waiting for TOC to load...")
                 await page.wait_for_selector(".codenav__toc", timeout=60000)
                 await page.wait_for_load_state("networkidle", timeout=10000)
 
-                # Expand all nodes first
                 await self.expand_all_nodes(page)
 
-                # Extract the hierarchical TOC structure
                 print("Extracting TOC structure...")
                 toc_data = await self.extract_toc_structure(page)
 
@@ -335,145 +440,21 @@ class AMLegalContentScraper:
                 hierarchical_toc = toc_data["items"]
                 print(f"Found {toc_data['totalItems']} total items in TOC")
 
-                # Flatten the TOC
-                flat_toc = self.flatten_toc(hierarchical_toc)
-
-                # Filter to only leaf nodes for HTML scraping
+                flat_toc = flatten_toc(hierarchical_toc)
                 leaf_nodes = [
                     item for item in flat_toc if not item.get("has_children", False)
                 ]
-                print(f"Found {len(leaf_nodes)} leaf nodes to scrape HTML")
+                print(f"Found {len(leaf_nodes)} leaf nodes to process")
 
-                # Inject a helper function for programmatic navigation
-                await page.evaluate("""
-                    () => {
-                        window.navigateToDoc = function(docId) {
-                            // Find and click the link programmatically
-                            const link = document.querySelector(`a.toc-link[data-docid="${docId}"]`);
-                            if (link) {
-                                link.click();
-                                return true;
-                            }
-                            return false;
-                        };
+                await self._inject_navigation_helpers(page)
 
-                        // Alternative: trigger navigation by updating URL hash
-                        window.navigateByHash = function(docId) {
-                            const link = document.querySelector(`a.toc-link[data-docid="${docId}"]`);
-                            if (link && link.href) {
-                                window.location.href = link.href;
-                                return true;
-                            }
-                            return false;
-                        };
-                    }
-                """)
+                failed_items = await self._scrape_leaf_nodes(page, leaf_nodes)
+                await self._retry_failed_nodes(page, failed_items)
 
-                # Process items in two passes - skip failures and retry them at the end
-                failed_items = []
-
-                # FIRST PASS: Process all items, collect failures
-                for i, item in enumerate(leaf_nodes):
-                    if not item.get("_docId"):
-                        item["html_error"] = "No docId for this item"
-                        print(
-                            f"  ⚠ Skipping {i + 1}/{len(leaf_nodes)}: {item['value'][:80]} - no docId"
-                        )
-                        continue
-
-                    try:
-                        # Try with shorter timeout on first pass
-                        link_selector = f'a.toc-link[data-docid="{item["_docId"]}"]'
-                        await page.click(link_selector)
-
-                        # Wait for the specific rid element to appear (shorter timeout)
-                        rid_selector = f"#rid-{item['_docId']}"
-                        await page.wait_for_selector(rid_selector, timeout=15000)
-
-                        # Extract the content
-                        html_content = await self.scrape_content(page, item["_docId"])
-
-                        if html_content:
-                            item["html"] = html_content
-                        else:
-                            failed_items.append(item)
-                            print(
-                                f"  ⚠ No content for {i + 1}/{len(leaf_nodes)}: {item['value'][:80]} - will retry"
-                            )
-
-                    except asyncio.TimeoutError:
-                        failed_items.append(item)
-                        print(
-                            f"  ⏳ Timeout for {i + 1}/{len(leaf_nodes)}: {item['value'][:80]} - will retry"
-                        )
-                    except Exception as e:
-                        failed_items.append(item)
-                        print(
-                            f"  ⚠ Error for {i + 1}/{len(leaf_nodes)}: {item['value'][:80]} - {str(e)[:50]}"
-                        )
-
-                    # Small delay between clicks
-                    await page.wait_for_timeout(200)
-
-                # SECOND PASS: Retry failed items
-                if failed_items:
-                    print(f"\nRetrying {len(failed_items)} failed items...")
-                    for i, item in enumerate(failed_items):
-                        try:
-                            # Use JavaScript navigation for retry
-                            success = await page.evaluate(
-                                f'window.navigateToDoc("{item["_docId"]}")'
-                            )
-                            if not success:
-                                # Fallback to regular click
-                                link_selector = (
-                                    f'a.toc-link[data-docid="{item["_docId"]}"]'
-                                )
-                                await page.click(link_selector)
-
-                            # Wait with longer timeout on retry
-                            rid_selector = f"#rid-{item['_docId']}"
-                            await page.wait_for_selector(rid_selector, timeout=30000)
-
-                            # Extract the content
-                            html_content = await self.scrape_content(
-                                page, item["_docId"]
-                            )
-
-                            if html_content:
-                                item["html"] = html_content
-                            else:
-                                item["html_error"] = "No content found after retry"
-                                print(
-                                    f"  ✗ Retry {i + 1}/{len(failed_items)}: {item['value'][:80]} - still no content"
-                                )
-
-                        except asyncio.TimeoutError:
-                            item["html_error"] = "Timeout on retry"
-                            print(
-                                f"  ✗ Retry {i + 1}/{len(failed_items)}: {item['value'][:80]} - timeout"
-                            )
-                        except Exception as e:
-                            item["html_error"] = str(e)
-                            print(
-                                f"  ✗ Retry {i + 1}/{len(failed_items)}: {item['value'][:80]} - {str(e)[:50]}"
-                            )
-
-                        # Small delay between retries
-                        await page.wait_for_timeout(500)
-
-                    recovered = sum(1 for item in failed_items if "html" in item)
-                    if recovered < len(failed_items):
-                        print(
-                            f"\nRetry complete: {recovered}/{len(failed_items)} recovered, {len(failed_items) - recovered} still failed"
-                        )
-
-                # Clean up internal fields before returning
                 for item in flat_toc:
                     item.pop("_docId", None)
                     item.pop("_codeUuid", None)
 
-                # Return hierarchical TOC, flat TOC, and leaf nodes with HTML
                 return hierarchical_toc, flat_toc, leaf_nodes
 
             except Exception as e:
@@ -484,7 +465,12 @@ class AMLegalContentScraper:
                 await browser.close()
 
 
-async def scrape_single_municipality(url: str, output_name: str, output_dir_path: str = "output"):
+async def scrape_single_municipality(
+    url: str,
+    output_name: str,
+    output_dir_path: str = "output",
+    csv_file: str | None = None,
+):
     """
     Scrape HTML content from a single municipality's code.
 
@@ -492,59 +478,48 @@ async def scrape_single_municipality(url: str, output_name: str, output_dir_path
         url: Full URL to the municipality code
         output_name: Name for the output file (without extension)
         output_dir_path: Directory to save output (default: "output")
+        csv_file: Optional CSV file path for state extraction
     """
     print(f"Using URL: {url}")
     print(f"Output name: {output_name}")
     print(f"Output directory: {output_dir_path}")
 
     scraper = AMLegalContentScraper()
-
-    # Scrape all content and TOC in one pass
     hierarchical_toc, flat_toc, _ = await scraper.scrape_all_content(url)
 
-    if flat_toc:
-        # Create output directory if it doesn't exist
-        output_dir = Path(output_dir_path)
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-        # Generate filename (no date prefix - overwrites existing)
-        output_filename = f"{output_name}.json"
-        output_path = output_dir / output_filename
-
-        # Wrap content with metadata
-        scraped_at = datetime.now().isoformat()
-        output_data = {
-            "metadata": {
-                "scraped_at": scraped_at,
-                "city_slug": output_name,
-                "source_url": url,
-                "scraper": "amlegal.py",
-                "scraper_version": "2.0"
-            },
-            "sections": flat_toc
-        }
-
-        # Save with metadata wrapper
-        with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(output_data, f, indent=2, ensure_ascii=False)
-        print(f"\nSaved flattened TOC with HTML to: {output_path}")
-
-        # Report statistics
-        items_with_html = sum(1 for item in flat_toc if "html" in item)
-        items_with_errors = sum(1 for item in flat_toc if "html_error" in item)
-        total_leaf_nodes = sum(
-            1 for item in flat_toc if not item.get("has_children", False)
-        )
-
-        print("\n✓ Complete!")
-        print(f"  Total TOC items: {len(flat_toc)}")
-        print(f"  Leaf nodes (with HTML): {total_leaf_nodes}")
-        print(f"  Successfully scraped: {items_with_html}/{total_leaf_nodes}")
-        if items_with_errors > 0:
-            print(f"  Errors: {items_with_errors}")
-    else:
+    if not flat_toc:
         print("Failed to extract content")
         raise Exception("Failed to extract content")
+
+    metadata = create_output_metadata(
+        url=url,
+        output_name=output_name,
+        scraper_name="amlegal.py",
+        scraper_version="2.0",
+        csv_file=csv_file,
+    )
+
+    output_path = save_scraped_output(
+        sections=flat_toc,
+        metadata=metadata,
+        output_dir_path=output_dir_path,
+        output_name=output_name,
+    )
+
+    print(f"\nSaved flattened TOC with HTML to: {output_path}")
+
+    items_with_html = sum(1 for item in flat_toc if "html" in item)
+    items_with_errors = sum(1 for item in flat_toc if "html_error" in item)
+    total_leaf_nodes = sum(
+        1 for item in flat_toc if not item.get("has_children", False)
+    )
+
+    print("\n✓ Complete!")
+    print(f"  Total TOC items: {len(flat_toc)}")
+    print(f"  Leaf nodes (with HTML): {total_leaf_nodes}")
+    print(f"  Successfully scraped: {items_with_html}/{total_leaf_nodes}")
+    if items_with_errors > 0:
+        print(f"  Errors: {items_with_errors}")
 
 
 def scrape_from_csv(csv_path: str, output_dir_path: str = "output"):
@@ -558,98 +533,57 @@ def scrape_from_csv(csv_path: str, output_dir_path: str = "output"):
         csv_path: Path to CSV file containing municipality list
         output_dir_path: Directory to save outputs (default: "output")
     """
-    import csv
-    from pathlib import Path
-
-    csv_file = Path(csv_path)
-    if not csv_file.exists():
-        print(f"Error: CSV file not found: {csv_path}")
+    try:
+        municipalities = read_municipalities_from_csv(csv_path)
+    except FileNotFoundError as e:
+        print(f"Error: {e}")
         return
-
-    # Read all municipalities from CSV
-    municipalities = []
-    with open(csv_file, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            if row.get('status') == 'ready' and row.get('code_url'):
-                municipalities.append(row)
 
     if not municipalities:
         print(f"Error: No ready municipalities found in {csv_path}")
         return
 
-    print(f"\n{'='*60}")
-    print(f"BATCH SCRAPING MODE")
-    print(f"{'='*60}")
+    print(f"\n{'=' * 60}")
+    print("BATCH SCRAPING MODE")
+    print(f"{'=' * 60}")
     print(f"CSV file: {csv_path}")
     print(f"Found {len(municipalities)} municipalities to scrape")
     print(f"Output directory: {output_dir_path}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
-    # Scrape each municipality
     for i, muni in enumerate(municipalities, 1):
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"[{i}/{len(municipalities)}] Scraping: {muni['name']}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         try:
-            asyncio.run(scrape_single_municipality(
-                url=muni['code_url'],
-                output_name=muni['slug'],
-                output_dir_path=output_dir_path
-            ))
+            asyncio.run(
+                scrape_single_municipality(
+                    url=muni["code_url"],
+                    output_name=muni["slug"],
+                    output_dir_path=output_dir_path,
+                    csv_file=csv_path,
+                )
+            )
             print(f"✓ Completed: {muni['name']}")
         except Exception as e:
             print(f"✗ Failed: {muni['name']}")
             print(f"  Error: {str(e)}")
-            # Continue with next municipality
 
-    print(f"\n{'='*60}")
-    print(f"BATCH SCRAPING COMPLETE")
+    print(f"\n{'=' * 60}")
+    print("BATCH SCRAPING COMPLETE")
     print(f"Processed {len(municipalities)} municipalities")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
 
 if __name__ == "__main__":
-    import sys
+    mode, url_or_csv, output_name, output_dir_path = parse_scraper_cli_args(
+        "amlegal.py", supports_async=True
+    )
 
-    # Check for CSV mode
-    if len(sys.argv) >= 2 and sys.argv[1] == "--csv":
-        if len(sys.argv) < 3:
-            print("Usage: python amlegal.py --csv <CSV_FILE> [--output-dir DIR]")
-            print("Example: python amlegal.py --csv ut_cities.csv --output-dir output")
-            sys.exit(1)
-
-        csv_path = sys.argv[2]
-
-        # Parse optional output directory
-        output_dir_path = "output"
-        if len(sys.argv) > 3 and sys.argv[3] == "--output-dir":
-            if len(sys.argv) > 4:
-                output_dir_path = sys.argv[4]
-
-        scrape_from_csv(csv_path, output_dir_path)
-
-    # Single municipality mode
-    elif len(sys.argv) >= 3:
-        url = sys.argv[1]
-        output_name = sys.argv[2]
-
-        # Parse optional output directory
-        output_dir_path = "output"
-        if len(sys.argv) > 3 and sys.argv[3] == "--output-dir":
-            if len(sys.argv) > 4:
-                output_dir_path = sys.argv[4]
-
-        asyncio.run(scrape_single_municipality(url, output_name, output_dir_path))
-
-    # Show usage
-    else:
-        print("Usage:")
-        print("  Single mode:  python amlegal.py <URL> <NAME> [--output-dir DIR]")
-        print("  Batch mode:   python amlegal.py --csv <CSV_FILE> [--output-dir DIR]")
-        print()
-        print("Examples:")
-        print("  python amlegal.py https://codelibrary.amlegal.com/codes/altaut/latest/overview alta")
-        print("  python amlegal.py --csv ut_cities.csv --output-dir output")
-        sys.exit(1)
+    if mode == "csv":
+        scrape_from_csv(url_or_csv, output_dir_path)
+    else:  # single mode
+        asyncio.run(
+            scrape_single_municipality(url_or_csv, output_name, output_dir_path)
+        )

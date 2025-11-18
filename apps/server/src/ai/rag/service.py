@@ -47,7 +47,7 @@ class VectorStoreService:
 
         # Create new vector store
         try:
-            logger.info("Creating new vector store", name=self.VECTOR_STORE_NAME)
+            logger.info("Creating new vector store", store_name=self.VECTOR_STORE_NAME)
             vector_store = await self.client.vector_stores.create(
                 name=self.VECTOR_STORE_NAME,
             )
@@ -115,7 +115,7 @@ class VectorStoreService:
                 logger.info(
                     "Uploaded file",
                     file_id=uploaded_file.id,
-                    filename=filename,
+                    file_name=filename,
                     jurisdiction=metadata.jurisdiction_name,
                 )
 
@@ -175,7 +175,7 @@ class VectorStoreService:
                         logger.warning("Failed to cleanup temp file", error=str(e))
 
         except Exception as e:
-            logger.error("Failed to upload document", filename=filename, error=str(e))
+            logger.error("Failed to upload document", file_name=filename, error=str(e))
             raise
 
     async def find_file_id_by_filename(

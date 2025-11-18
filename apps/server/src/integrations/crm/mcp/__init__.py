@@ -2,39 +2,24 @@
 
 from fastmcp import FastMCP
 
-from src.integrations.crm.config import get_crm_settings
-from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
 from src.utils.logger import logger
 
 
 def get_crm_mcp_server() -> FastMCP:
-    """Get the MCP server for the configured CRM provider.
-    
-    Returns the appropriate MCP server instance based on the CRM_PROVIDER
-    environment variable setting.
-    
+    """Get the MCP server for CRM integrations.
+
+    Returns the multi-tenant JobNimbus MCP server which supports per-user
+    authentication and organization-specific credential routing.
+
+    Note: ServiceTitan and Mock MCP servers are not yet multi-tenant enabled.
+    For now, we only return the JobNimbus MCP server.
+
     Returns:
-        FastMCP: The configured MCP server instance
-        
-    Raises:
-        ValueError: If the configured provider is not supported
+        FastMCP: The JobNimbus MCP server instance with multi-tenant support
     """
-    settings = get_crm_settings()
-    
-    if settings.provider == CRMProviderEnum.JOB_NIMBUS:
-        logger.info("Loading JobNimbus MCP server")
-        from src.integrations.crm.providers.job_nimbus.mcp import mcp
-        return mcp
-    elif settings.provider == CRMProviderEnum.MOCK:
-        logger.info("Loading Mock CRM MCP server")
-        from src.integrations.crm.providers.mock.mcp import mcp
-        return mcp
-    elif settings.provider == CRMProviderEnum.SERVICE_TITAN:
-        logger.info("Returning ServiceTitan MCP server")
-        from src.integrations.crm.providers.service_titan.mcp import mcp
-        return mcp
-    else:
-        raise ValueError(f"Unsupported CRM provider for MCP: {settings.provider}")
+    logger.info("Loading JobNimbus MCP server (multi-tenant)")
+    from src.integrations.crm.providers.job_nimbus.mcp import mcp
+    return mcp
 
 
 __all__ = ["get_crm_mcp_server"]

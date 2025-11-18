@@ -75,6 +75,8 @@ By default the following URLs will be accessible:
 ## Install pulumi
 `brew install pulumi/tap/pulumi`
 `brew update && brew install pulumi/tap/esc`
+`pulumi login`
+Open the browser, create an access token, add it to your shell config as `PULUMI_ACCESS_TOKEN`
 
 ## API Development Guidelines
 
@@ -202,3 +204,11 @@ claude mcp add vapi-mcp \
     --scope local \
     -- npx -y mcp-remote https://mcp.vapi.ai/mcp --header "Authorization:Bearer ${VAPI_API_KEY}"
 ```
+
+## Setting up tailscale
+- Join the maive.io org (we may need to invite a maive.ai email address by inviting someone "outside of our org" -- we set this up when we had maive.io)
+- Install tailscale on your machine and likely in the terminal as well
+- Login with your Google account
+- Run `tailscale funnel`, which should cause you to need to auth in the browser
+- Then you'll be good to run `esc <your-env> -- pnpm dev`, which includes a command to run our system with the tailscale funnel / proxy.
+- Get your tailscale URL from the logs and add it to your Pulumi env as server_base_url and (env var) SERVER_BASE_URL

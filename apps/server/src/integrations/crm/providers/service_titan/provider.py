@@ -11,7 +11,6 @@ from typing import Any
 import httpx
 
 from src.integrations.crm.base import CRMError, CRMProvider
-from src.integrations.crm.config import get_crm_settings
 from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
 from src.integrations.crm.constants import Status
 from src.integrations.crm.providers.service_titan.constants import ServiceTitanEndpoints
@@ -54,28 +53,45 @@ from src.utils.logger import logger
 class ServiceTitanProvider(CRMProvider):
     """Service Titan implementation of the CRMProvider interface."""
 
-    def __init__(self):
-        """Initialize the Service Titan provider."""
-        self.config = get_crm_settings()
-        self.settings = self.config.provider_config
+    def __init__(
+        self,
+        tenant_id: str,
+        client_id: str,
+        client_secret: str,
+        app_key: str,
+        base_api_url: str = "https://api-integration.servicetitan.io",
+        token_url: str = "https://auth-integration.servicetitan.io/connect/token",
+        request_timeout: int = 30,
+    ):
+        """
+        Initialize the Service Titan provider with credentials.
 
-        # Configuration is validated in CRMSettings, so we can safely access these
-        self.tenant_id = self.settings.tenant_id
-        self.client_id = self.settings.client_id
-        self.client_secret = self.settings.client_secret
-        self.app_key = self.settings.app_key
-        self.base_api_url = self.settings.base_api_url
-        self.token_url = self.settings.token_url
+        Args:
+            tenant_id: Service Titan tenant ID
+            client_id: OAuth client ID
+            client_secret: OAuth client secret
+            app_key: Application key
+            base_api_url: Base URL for Service Titan API
+            token_url: OAuth token URL
+            request_timeout: Request timeout in seconds
+        """
+        self.tenant_id = tenant_id
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.app_key = app_key
+        self.base_api_url = base_api_url
+        self.token_url = token_url
+        self.request_timeout = request_timeout
 
         # HTTP client configuration
         self.client = httpx.AsyncClient(
-            timeout=httpx.Timeout(self.config.request_timeout),
+            timeout=httpx.Timeout(self.request_timeout),
             headers={
                 "Content-Type": "application/json",
             },
         )
 
-        logger.info("ServiceTitanProvider initialized for tenant", tenant_id=self.tenant_id)
+        logger.info("ServiceTitanProvider initialized with dynamic credentials", tenant_id=self.tenant_id)
         self._access_token: str | None = None
 
     async def _get_access_token(self) -> str:

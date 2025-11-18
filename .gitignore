@@ -9,7 +9,6 @@ out/
 !.env.example
 
 .DS_Store
-.vscode
 
 mock-data/
 
@@ -22,3 +21,7 @@ packages/api/client/.openapi-generator/
 
 scripts/scraping/output
 demo_data/
+
+# Python
+__pycache__/
+*.so

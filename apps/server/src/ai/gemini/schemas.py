@@ -37,6 +37,9 @@ class GenerateContentRequest(BaseModel):
     files: Optional[List[str]] = Field(
         default=None, description="List of uploaded file names to include"
     )
+    file_search_store_names: Optional[List[str]] = Field(
+        default=None, description="List of File Search store names to search"
+    )
     temperature: Optional[float] = Field(
         default=None, description="Temperature override for this request"
     )
@@ -60,6 +63,9 @@ class GenerateStructuredContentRequest(BaseModel):
     )
     files: Optional[List[str]] = Field(
         default=None, description="List of uploaded file names to include"
+    )
+    file_search_store_names: Optional[List[str]] = Field(
+        default=None, description="List of File Search store names to search"
     )
     temperature: Optional[float] = Field(
         default=None, description="Temperature override for this request"

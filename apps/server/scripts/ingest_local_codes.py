@@ -59,6 +59,7 @@ class ScrapedCodeMetadata(BaseModel):
 
     scraped_at: str = Field(..., description="ISO timestamp when code was scraped")
     city_slug: str = Field(..., description="Slug identifier for the city")
+    state: str | None = Field(None, description="Two-letter state code")
     source_url: str | None = Field(None, description="Source URL of the code")
     scraper: str | None = Field(None, description="Name of scraper used")
     scraper_version: str | None = Field(None, description="Version of scraper")
@@ -306,13 +307,21 @@ class LocalCodeIngestionService:
 
         Args:
             code_data: Parsed code data
-            json_file: Path to the source file (for state extraction)
+            json_file: Path to the source file (for state extraction fallback)
 
         Returns:
             CodeDocumentMetadata: Metadata for the document
         """
-        # Get state from parent directory name
-        state_abbrev = json_file.parent.name.upper()
+        # Get state from metadata first, fall back to parent directory name
+        state_abbrev = None
+        if code_data.metadata.state:
+            state_abbrev = code_data.metadata.state.upper()
+        else:
+            # Fallback to directory name
+            state_abbrev = json_file.parent.name.upper()
+            logger.warning(
+                f"{json_file.name}: No state in metadata, using directory name: {state_abbrev}"
+            )
 
         # Get city name from slug (clean it up)
         city_slug = code_data.metadata.city_slug
@@ -403,38 +412,35 @@ class LocalCodeIngestionService:
         return "\n".join(text_parts).strip()
 
     def _clean_html(self, html: str) -> str:
-        """Clean HTML content to plain text.
+        """Clean HTML content to plain text using BeautifulSoup.
 
         Args:
             html: Raw HTML content
 
         Returns:
-            str: Cleaned text
+            str: Cleaned text suitable for RAG ingestion
         """
-        # Remove script and style tags
-        text = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL)
-        text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL)
+        from bs4 import BeautifulSoup
 
-        # Remove HTML tags but preserve line breaks
-        text = re.sub(r"<br\s*/?>", "\n", text)
-        text = re.sub(r"</p>", "\n\n", text)
-        text = re.sub(r"</div>", "\n", text)
-        text = re.sub(r"<[^>]+>", "", text)
+        # Parse HTML and remove unwanted tags (more robust than regex)
+        soup = BeautifulSoup(html, 'html.parser')
+        for tag in soup(['script', 'style', 'meta', 'link']):
+            tag.decompose()
 
-        # Decode HTML entities
-        text = text.replace("&nbsp;", " ")
-        text = text.replace("&amp;", "&")
-        text = text.replace("&lt;", "<")
-        text = text.replace("&gt;", ">")
-        text = text.replace("&quot;", '"')
-        text = text.replace("&#39;", "'")
+        # Extract text (automatically decodes ALL HTML entities, not just common ones)
+        text = soup.get_text(separator='\n')
 
-        # Normalize whitespace
-        text = re.sub(r"\n\s*\n\s*\n+", "\n\n", text)  # Max 2 newlines
-        text = re.sub(r" +", " ", text)  # Multiple spaces to single
-        text = re.sub(r"\t+", " ", text)  # Tabs to spaces
+        # Normalize whitespace within each line
+        text = re.sub(r'[ \t]+', ' ', text)  # Multiple spaces/tabs to single space
 
-        return text.strip()
+        # Clean up lines and remove empty ones
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        text = '\n'.join(lines)
+
+        # Normalize multiple newlines to max 2 (paragraph breaks)
+        text = re.sub(r'\n{3,}', '\n\n', text)
+
+        return text
 
     def _generate_filename(self, metadata: CodeDocumentMetadata) -> str:
         """Generate a filename for the document.

@@ -11,11 +11,15 @@ from datetime import UTC, datetime
 from typing import Any
 
 import httpx
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from src.integrations.crm.base import CRMError, CRMProvider
-from src.integrations.crm.config import JobNimbusConfig, get_crm_settings
 from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
-from src.integrations.crm.schemas import FormSubmissionListResponse
 from src.integrations.crm.providers.job_nimbus.constants import JobNimbusEndpoints
 from src.integrations.crm.providers.job_nimbus.schemas import (
     FileMetadata,
@@ -33,6 +37,7 @@ from src.integrations.crm.schemas import (
     ContactList,
     EquipmentListResponse,
     EstimateResponse,
+    FormSubmissionListResponse,
     Job,
     JobList,
     JobNoteResponse,
@@ -51,34 +56,99 @@ from src.utils.logger import logger
 class JobNimbusProvider(CRMProvider):
     """JobNimbus implementation of the CRMProvider interface."""
 
-    def __init__(self):
-        """Initialize the JobNimbus provider."""
-        self.config = get_crm_settings()
-        self.settings = self.config.provider_config
+    def __init__(
+        self,
+        api_key: str,
+        base_api_url: str = "https://app.jobnimbus.com/api1",
+        request_timeout: int = 30,
+    ):
+        """
+        Initialize the JobNimbus provider with credentials.
 
-        if not isinstance(self.settings, JobNimbusConfig):
-            raise ValueError("JobNimbusConfig required for JobNimbusProvider")
-
-        self.api_key = self.settings.api_key
-        self.base_api_url = self.settings.base_api_url
+        Args:
+            api_key: JobNimbus API key
+            base_api_url: Base URL for JobNimbus API
+            request_timeout: Request timeout in seconds
+        """
+        self.api_key = api_key
+        self.base_api_url = base_api_url
+        self.request_timeout = request_timeout
 
         # HTTP client configuration
         self.client = httpx.AsyncClient(
-            timeout=httpx.Timeout(self.config.request_timeout),
+            timeout=httpx.Timeout(self.request_timeout),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {self.api_key}",
             },
         )
 
-        logger.info("JobNimbusProvider initialized")
+        logger.info("JobNimbusProvider initialized with dynamic credentials")
 
+    @retry(
+        retry=retry_if_exception_type(
+            (
+                httpx.ConnectError,
+                httpx.TimeoutException,
+                httpx.NetworkError,
+                httpx.PoolTimeout,
+                httpx.ConnectTimeout,
+                httpx.ReadTimeout,
+                httpx.WriteTimeout,
+            )
+        ),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        reraise=True,
+    )
     async def _make_request(
         self, method: str, endpoint: str, **kwargs
     ) -> httpx.Response:
-        """Make an authenticated request to JobNimbus API."""
+        """Make an authenticated request to JobNimbus API with retry logic.
+
+        Only retries connection/network errors (timeouts, connection errors, etc.).
+        Does NOT retry HTTP status errors (4xx, 5xx) - those fail immediately.
+        """
         url = f"{self.base_api_url}{endpoint}"
-        return await self.client.request(method, url, **kwargs)
+        logger.debug(
+            "Making JobNimbus API request",
+            method=method,
+            url=url,
+            timeout=self.request_timeout,
+        )
+
+        try:
+            response = await self.client.request(method, url, **kwargs)
+            response.raise_for_status()
+            return response
+        except httpx.HTTPStatusError as e:
+            # HTTP status errors (4xx, 5xx) - don't retry, fail immediately
+            logger.warning(
+                "JobNimbus API returned error status",
+                method=method,
+                url=url,
+                status_code=e.response.status_code,
+                response_text=e.response.text[:500] if e.response.text else None,
+            )
+            raise  # Don't retry HTTP errors
+        except (
+            httpx.ConnectError,
+            httpx.TimeoutException,
+            httpx.NetworkError,
+            httpx.PoolTimeout,
+            httpx.ConnectTimeout,
+            httpx.ReadTimeout,
+            httpx.WriteTimeout,
+        ) as e:
+            # Connection/network errors - will be retried by decorator
+            logger.warning(
+                "JobNimbus API connection error (will retry)",
+                method=method,
+                url=url,
+                error_type=type(e).__name__,
+                error=str(e),
+            )
+            raise  # Re-raise to trigger retry
 
     def _unix_timestamp_to_datetime(self, timestamp: int) -> datetime:
         """Convert Unix timestamp to datetime."""
@@ -93,24 +163,29 @@ class JobNimbusProvider(CRMProvider):
     async def _get_job_by_id(self, job_id: str) -> JobNimbusJobResponse:
         """
         Internal helper to fetch a single job from JobNimbus API.
-        
+
         Args:
             job_id: The JobNimbus JNID
-            
+
         Returns:
             JobNimbusJobResponse: Raw job data from API
-            
+
         Raises:
             CRMError: If the job is not found or an error occurs
         """
         endpoint = JobNimbusEndpoints.JOB_BY_ID.format(jnid=job_id)
         logger.debug("Fetching job for JNID", job_id=job_id)
-        
-        response = await self._make_request("GET", endpoint)
-        response.raise_for_status()
-        
-        data = response.json()
-        return JobNimbusJobResponse(**data)
+
+        try:
+            response = await self._make_request("GET", endpoint)
+            data = response.json()
+            return JobNimbusJobResponse(**data)
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise CRMError(f"Job with JNID {job_id} not found", "NOT_FOUND")
+            else:
+                logger.error("HTTP error fetching job", job_id=job_id, error=str(e))
+                raise CRMError(f"Failed to fetch job: {e}", "HTTP_ERROR")
 
     async def get_job(self, job_id: str) -> Job:
         """
@@ -127,24 +202,21 @@ class JobNimbusProvider(CRMProvider):
         """
         try:
             jn_job = await self._get_job_by_id(job_id)
-            
+
             # Transform to universal Job with contact details
             job = await self._transform_jn_job_to_universal_async(
                 jn_job,
                 include_contact_details=True,
             )
-            
+
             # Fetch and attach notes
             job.notes = await self._get_job_notes(job_id)
-            
+
             return job
 
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 404:
-                raise CRMError(f"Job with JNID {job_id} not found", "NOT_FOUND")
-            else:
-                logger.error("HTTP error fetching job", job_id=job_id, error=str(e))
-                raise CRMError(f"Failed to fetch job: {e}", "HTTP_ERROR")
+        except CRMError:
+            # Re-raise CRMError as-is (already properly formatted)
+            raise
         except Exception as e:
             logger.error("Unexpected error fetching job", job_id=job_id, error=str(e))
             raise CRMError(f"Failed to fetch job: {str(e)}", "UNKNOWN_ERROR")
@@ -210,22 +282,27 @@ class JobNimbusProvider(CRMProvider):
     ) -> JobNimbusJobsListResponse:
         """
         Internal helper to fetch paginated jobs list from JobNimbus API.
-        
+
         Args:
             filters: Optional dictionary of filters (for future server-side filtering)
             page: Page number (1-indexed)
             page_size: Number of items per page
-            
+
         Returns:
             JobNimbusJobsListResponse: Raw jobs list data from API
-            
+
         Raises:
             CRMError: If the API request fails
         """
-        logger.debug("Fetching jobs list from API", page=page, page_size=page_size, filters=filters)
+        logger.debug(
+            "Fetching jobs list from API",
+            page=page,
+            page_size=page_size,
+            filters=filters,
+        )
 
         endpoint = JobNimbusEndpoints.JOBS
-        
+
         # Convert page/page_size to JobNimbus from/size params
         # JobNimbus uses zero-based offset, we use 1-indexed pages
         from_offset = (page - 1) * page_size
@@ -237,7 +314,7 @@ class JobNimbusProvider(CRMProvider):
         api_filter = self._build_filter_query(filters or {})
         if api_filter:
             params["filter"] = json.dumps(api_filter)
-        
+
         response = await self._make_request("GET", endpoint, params=params)
         response.raise_for_status()
 
@@ -263,12 +340,16 @@ class JobNimbusProvider(CRMProvider):
         Returns:
             tuple of (jobs list, total_count, has_more)
         """
-        jn_jobs_list = await self._fetch_jobs_list(filters=filters, page=page, page_size=page_size)
+        jn_jobs_list = await self._fetch_jobs_list(
+            filters=filters, page=page, page_size=page_size
+        )
 
         # Transform to universal Job schemas (async to optionally fetch contact details)
         jobs = await asyncio.gather(
             *[
-                self._transform_jn_job_to_universal_async(jn_job, include_contact_details=include_contact_details)
+                self._transform_jn_job_to_universal_async(
+                    jn_job, include_contact_details=include_contact_details
+                )
                 for jn_job in jn_jobs_list.results
             ]
         )
@@ -276,7 +357,10 @@ class JobNimbusProvider(CRMProvider):
         # Use API total count and results for pagination metadata (server-side filtering)
         total_count = jn_jobs_list.count
         from_offset = (page - 1) * page_size
-        has_more = len(jn_jobs_list.results) == page_size and (from_offset + page_size) < total_count
+        has_more = (
+            len(jn_jobs_list.results) == page_size
+            and (from_offset + page_size) < total_count
+        )
 
         return jobs, total_count, has_more
 
@@ -420,10 +504,14 @@ class JobNimbusProvider(CRMProvider):
             if e.response.status_code == 404:
                 raise CRMError(f"Contact with JNID {contact_id} not found", "NOT_FOUND")
             else:
-                logger.error("HTTP error fetching contact", contact_id=contact_id, error=str(e))
+                logger.error(
+                    "HTTP error fetching contact", contact_id=contact_id, error=str(e)
+                )
                 raise CRMError(f"Failed to fetch contact: {e}", "HTTP_ERROR")
         except Exception as e:
-            logger.error("Unexpected error fetching contact", contact_id=contact_id, error=str(e))
+            logger.error(
+                "Unexpected error fetching contact", contact_id=contact_id, error=str(e)
+            )
             raise CRMError(f"Failed to fetch contact: {str(e)}", "UNKNOWN_ERROR")
 
     async def get_all_contacts(
@@ -447,14 +535,14 @@ class JobNimbusProvider(CRMProvider):
             logger.debug("Fetching all contacts", page=page, page_size=page_size)
 
             endpoint = JobNimbusEndpoints.CONTACTS
-            
+
             # Convert page/page_size to JobNimbus from/size params
             from_offset = (page - 1) * page_size
             params = {
                 "size": page_size,
                 "from": from_offset,
             }
-            
+
             response = await self._make_request("GET", endpoint, params=params)
             response.raise_for_status()
 
@@ -469,7 +557,10 @@ class JobNimbusProvider(CRMProvider):
 
             # Use API total count for accurate pagination metadata
             total_count = jn_contacts_list.count
-            has_more = len(jn_contacts_list.results) == page_size and (from_offset + page_size) < total_count
+            has_more = (
+                len(jn_contacts_list.results) == page_size
+                and (from_offset + page_size) < total_count
+            )
 
             return ContactList(
                 contacts=contacts,
@@ -507,7 +598,9 @@ class JobNimbusProvider(CRMProvider):
             CRMError: If the entity is not found or note creation fails
         """
         try:
-            logger.info("Adding note to entity", entity_type=entity_type, entity_id=entity_id)
+            logger.info(
+                "Adding note to entity", entity_type=entity_type, entity_id=entity_id
+            )
 
             # Create activity in JobNimbus
             activity_request = JobNimbusCreateActivityRequest(
@@ -533,8 +626,12 @@ class JobNimbusProvider(CRMProvider):
                 entity_type=entity_type,
                 created_by_id=jn_activity.created_by,
                 created_by_name=jn_activity.created_by_name,
-                created_at=self._unix_timestamp_to_datetime(jn_activity.date_created).isoformat(),
-                updated_at=self._unix_timestamp_to_datetime(jn_activity.date_updated).isoformat()
+                created_at=self._unix_timestamp_to_datetime(
+                    jn_activity.date_created
+                ).isoformat(),
+                updated_at=self._unix_timestamp_to_datetime(
+                    jn_activity.date_updated
+                ).isoformat()
                 if jn_activity.date_updated
                 else None,
                 is_pinned=False,  # JobNimbus doesn't support pinning
@@ -546,7 +643,12 @@ class JobNimbusProvider(CRMProvider):
             )
 
         except Exception as e:
-            logger.error("Error adding note to entity", entity_type=entity_type, entity_id=entity_id, error=str(e))
+            logger.error(
+                "Error adding note to entity",
+                entity_type=entity_type,
+                entity_id=entity_id,
+                error=str(e),
+            )
             raise CRMError(f"Failed to add note: {str(e)}", "UNKNOWN_ERROR")
 
     async def update_job_status(
@@ -608,7 +710,9 @@ class JobNimbusProvider(CRMProvider):
         Raises:
             CRMError: If the project is not found or update fails
         """
-        logger.info("Updating JobNimbus project status", project_id=project_id, status=status)
+        logger.info(
+            "Updating JobNimbus project status", project_id=project_id, status=status
+        )
         await self.update_job_status(project_id, status, **kwargs)
 
     # ========================================================================
@@ -618,31 +722,29 @@ class JobNimbusProvider(CRMProvider):
     async def _get_job_notes(self, job_id: str) -> list[Note]:
         """
         Fetch activities (notes) for a specific job.
-        
+
         Args:
             job_id: The job ID (JNID)
-            
+
         Returns:
             list[Note]: List of notes for the job (empty list if none or on error)
         """
         try:
             logger.info("Fetching notes for job", job_id=job_id)
-            
+
             # Build filter to get activities related to this job
-            filter_query = json.dumps({
-                "must": [{"term": {"related.id": job_id}}]
-            })
-            
+            filter_query = json.dumps({"must": [{"term": {"related.id": job_id}}]})
+
             # Request activities from JobNimbus API
             endpoint = f"{JobNimbusEndpoints.ACTIVITIES}?filter={filter_query}"
             response = await self._make_request("GET", endpoint)
             response.raise_for_status()
-            
+
             data = response.json()
-                        
+
             # Parse activities list response
             activities_response = JobNimbusActivitiesListResponse(**data)
-            
+
             # Transform each activity to universal Note
             notes = []
             for jn_activity in activities_response.results:
@@ -656,8 +758,12 @@ class JobNimbusProvider(CRMProvider):
                             entity_type="job",
                             created_by_id=jn_activity.created_by,
                             created_by_name=jn_activity.created_by_name,
-                            created_at=self._unix_timestamp_to_datetime(jn_activity.date_created).isoformat(),
-                            updated_at=self._unix_timestamp_to_datetime(jn_activity.date_updated).isoformat()
+                            created_at=self._unix_timestamp_to_datetime(
+                                jn_activity.date_created
+                            ).isoformat(),
+                            updated_at=self._unix_timestamp_to_datetime(
+                                jn_activity.date_updated
+                            ).isoformat()
                             if jn_activity.date_updated
                             else None,
                             is_pinned=False,
@@ -669,12 +775,14 @@ class JobNimbusProvider(CRMProvider):
                         )
                         notes.append(note)
                 except Exception as e:
-                    logger.warning("Failed to parse activity for job", job_id=job_id, error=str(e))
+                    logger.warning(
+                        "Failed to parse activity for job", job_id=job_id, error=str(e)
+                    )
                     continue
-            
+
             logger.info("Fetched notes for job", job_id=job_id, note_count=len(notes))
             return notes
-            
+
         except Exception as e:
             logger.warning("Error fetching notes for job", job_id=job_id, error=str(e))
             return []  # Return empty list on error - don't fail the job fetch
@@ -684,20 +792,18 @@ class JobNimbusProvider(CRMProvider):
     # ========================================================================
 
     async def get_specific_job_file(
-        self, 
-        job_id: str, 
-        file_id: str
+        self, job_id: str, file_id: str
     ) -> FileMetadata | None:
         """
         Get a specific file by ID from a job.
-        
+
         Helper method that retrieves all files for a job and returns the one
         matching the specified file_id.
-        
+
         Args:
             job_id: The job JNID to get the file from
             file_id: The specific file ID to retrieve
-            
+
         Returns:
             FileMetadata object if found, None if not found
         """
@@ -709,45 +815,85 @@ class JobNimbusProvider(CRMProvider):
             return None
         return matching_files[0]
 
-
-    async def get_job_files(self, job_id: str, file_filter: str = "all") -> list[FileMetadata]:
+    async def get_job_files(
+        self, job_id: str, file_filter: str = "all"
+    ) -> list[FileMetadata]:
         """
         Get files attached to a specific job with optional type filtering.
-        
+
         Uses the 'related' query parameter to filter files server-side by job.
         Applies additional client-side filtering by file type if requested.
-        
+
+        IMPORTANT: JobNimbus API sometimes returns size=0 for files that actually have content.
+        When size=0 is detected, we download the file to determine the actual size.
+
         Args:
             job_id: The job JNID to get files for
             file_filter: Filter by type - "all", "images", or "pdfs" (default: "all")
-            
+
         Returns:
             List of file metadata objects (filtered by type if specified)
-            
+
         Raises:
             CRMError: If the API request fails
         """
         try:
             endpoint = JobNimbusEndpoints.FILES
             params = {"related": job_id}
-            logger.info("[JobNimbus] Fetching files for job", job_id=job_id, file_filter=file_filter)
-            
+            logger.info(
+                "[JobNimbus] Fetching files for job",
+                job_id=job_id,
+                file_filter=file_filter,
+            )
+
             response = await self._make_request("GET", endpoint, params=params)
             response.raise_for_status()
-            
+
             data = response.json()
-            
+
             files_response = JobNimbusFilesListResponse(**data)
-            
+
             # Transform to FileMetadata objects
             all_files: list[FileMetadata] = []
             for file in files_response.results:
+                file_size = file.size
+
+                # Fix for JobNimbus API bug: if size is 0, download file to get actual size
+                if file_size == 0:
+                    logger.warning(
+                        "[JobNimbus] File has size=0, downloading to determine actual size",
+                        file_name=file.filename,
+                        file_id=file.jnid,
+                    )
+                    try:
+                        # Download file to get actual size
+                        file_content, _, _ = await self.download_file(
+                            file.jnid,
+                            filename=file.filename,
+                            content_type=file.content_type,
+                        )
+                        file_size = len(file_content)
+                        logger.info(
+                            "[JobNimbus] Corrected file size from 0 to actual size",
+                            file_name=file.filename,
+                            file_id=file.jnid,
+                            actual_size=file_size,
+                        )
+                    except Exception as e:
+                        logger.error(
+                            "[JobNimbus] Failed to download file to determine size",
+                            file_name=file.filename,
+                            file_id=file.jnid,
+                            error=str(e),
+                        )
+                        # Keep size as 0 if download fails
+
                 all_files.append(
                     FileMetadata(
                         id=file.jnid,
                         filename=file.filename,
                         content_type=file.content_type,
-                        size=file.size,
+                        size=file_size,
                         record_type_name=file.record_type_name,
                         description=file.description,
                         date_created=file.date_created,
@@ -755,68 +901,85 @@ class JobNimbusProvider(CRMProvider):
                         is_private=file.is_private,
                     )
                 )
-            
+
             # Apply client-side filtering by type
             if file_filter == "images":
-                filtered_files = [f for f in all_files if f.content_type.startswith("image/")]
+                filtered_files = [
+                    f for f in all_files if f.content_type.startswith("image/")
+                ]
             elif file_filter == "pdfs":
-                filtered_files = [f for f in all_files if f.content_type == "application/pdf"]
+                filtered_files = [
+                    f for f in all_files if f.content_type == "application/pdf"
+                ]
             else:  # "all"
                 filtered_files = all_files
-            
-            logger.info("[JobNimbus] Found files for job", job_id=job_id, file_filter=file_filter, file_count=len(filtered_files))
+
+            logger.info(
+                "[JobNimbus] Found files for job",
+                job_id=job_id,
+                file_filter=file_filter,
+                file_count=len(filtered_files),
+            )
             return filtered_files
-            
+
         except httpx.HTTPStatusError as e:
-            logger.error("HTTP error fetching files for job", job_id=job_id, error=str(e))
+            logger.error(
+                "HTTP error fetching files for job", job_id=job_id, error=str(e)
+            )
             raise CRMError(
-                f"Failed to fetch files: {e.response.status_code}",
-                "API_ERROR"
+                f"Failed to fetch files: {e.response.status_code}", "API_ERROR"
             )
         except Exception as e:
             logger.error("Error fetching files for job", job_id=job_id, error=str(e))
             raise CRMError(f"Failed to fetch files: {str(e)}", "UNKNOWN_ERROR")
 
     async def download_file(
-        self, 
-        file_id: str, 
-        filename: str | None = None, 
-        content_type: str | None = None
+        self, file_id: str, filename: str | None = None, content_type: str | None = None
     ) -> tuple[bytes, str, str]:
         """
         Download a file's content from JobNimbus.
-        
+
         Args:
             file_id: The file JNID to download
             filename: Filename from file metadata
             content_type: Content type from file metadata
-            
+
         Returns:
             Tuple of (file_content_bytes, filename, content_type)
-            
+
         Raises:
             CRMError: If the download fails
         """
         try:
             endpoint = JobNimbusEndpoints.FILE_BY_ID.format(jnid=file_id)
             logger.info("[JobNimbus] Downloading file", file_id=file_id)
-            
+
             # JobNimbus returns a 302 redirect to the actual file on CloudFront/S3
             response = await self._make_request("GET", endpoint, follow_redirects=True)
             response.raise_for_status()
-            
+
             # Use provided metadata or fallback to defaults
             resolved_filename = filename or f"download_{file_id}"
             resolved_content_type = content_type or "application/octet-stream"
-            
-            logger.info("[JobNimbus] Downloaded file", filename=resolved_filename, size_bytes=len(response.content))
+
+            logger.info(
+                "[JobNimbus] Downloaded file",
+                file_name=resolved_filename,
+                size_bytes=len(response.content),
+            )
             return (response.content, resolved_filename, resolved_content_type)
-            
+
         except httpx.HTTPStatusError as e:
-            logger.error("[JobNimbus] HTTP error downloading file", file_id=file_id, error=str(e))
-            raise CRMError(f"Failed to download file: {e.response.status_code}", "API_ERROR")
+            logger.error(
+                "[JobNimbus] HTTP error downloading file", file_id=file_id, error=str(e)
+            )
+            raise CRMError(
+                f"Failed to download file: {e.response.status_code}", "API_ERROR"
+            )
         except Exception as e:
-            logger.error("[JobNimbus] Error downloading file", file_id=file_id, error=str(e))
+            logger.error(
+                "[JobNimbus] Error downloading file", file_id=file_id, error=str(e)
+            )
             raise CRMError(f"Failed to download file: {str(e)}", "UNKNOWN_ERROR")
 
     # ========================================================================
@@ -840,7 +1003,9 @@ class JobNimbusProvider(CRMProvider):
             else None
         )
 
-        adjuster_name = self._extract_custom_field(all_data, ["adjustername", "adjuster"])
+        adjuster_name = self._extract_custom_field(
+            all_data, ["adjustername", "adjuster"]
+        )
         adjuster_phone = self._extract_custom_field(
             all_data, ["adjusterphone", "adjusterphoneno", "adjustercontact"]
         )
@@ -855,7 +1020,9 @@ class JobNimbusProvider(CRMProvider):
             try:
                 contact = await self.get_contact(jn_job.primary.id)
                 customer_email = contact.email
-                customer_phone = contact.phone or contact.mobile_phone or contact.work_phone
+                customer_phone = (
+                    contact.phone or contact.mobile_phone or contact.work_phone
+                )
                 logger.debug(
                     "[JobNimbus] Fetched contact",
                     contact_id=jn_job.primary.id,
@@ -877,7 +1044,9 @@ class JobNimbusProvider(CRMProvider):
             "source_name": jn_job.source_name,
             "location": jn_job.location.model_dump() if jn_job.location else None,
             "owners": [owner.model_dump() for owner in jn_job.owners],
-            "related": [r.model_dump() for r in jn_job.related] if jn_job.related else None,
+            "related": [r.model_dump() for r in jn_job.related]
+            if jn_job.related
+            else None,
             "is_active": jn_job.is_active,
             "is_archived": jn_job.is_archived,
             "geo": jn_job.geo.model_dump() if jn_job.geo else None,
@@ -915,8 +1084,12 @@ class JobNimbusProvider(CRMProvider):
             state=jn_job.state_text,
             postal_code=jn_job.zip,
             country=jn_job.country_name,
-            created_at=self._unix_timestamp_to_datetime(jn_job.date_created).isoformat(),
-            updated_at=self._unix_timestamp_to_datetime(jn_job.date_updated).isoformat(),
+            created_at=self._unix_timestamp_to_datetime(
+                jn_job.date_created
+            ).isoformat(),
+            updated_at=self._unix_timestamp_to_datetime(
+                jn_job.date_updated
+            ).isoformat(),
             completed_at=None,  # JobNimbus doesn't track completion explicitly
             sales_rep_id=jn_job.sales_rep,
             sales_rep_name=jn_job.sales_rep_name,
@@ -938,7 +1111,9 @@ class JobNimbusProvider(CRMProvider):
         """
         for key, value in all_data.items():
             # Normalize the key by removing spaces, underscores, and special chars
-            normalized_key = key.lower().replace(" ", "").replace("_", "").replace("#", "")
+            normalized_key = (
+                key.lower().replace(" ", "").replace("_", "").replace("#", "")
+            )
             if normalized_key in possible_names and value:
                 return value
         return None
@@ -979,7 +1154,8 @@ class JobNimbusProvider(CRMProvider):
             actual_completion_date=None,
             claim_number=provider_data.get("claim_number"),
             date_of_loss=provider_data.get("date_of_loss"),
-            insurance_company=provider_data.get("insurance_company") or provider_data.get("insuranceAgency"),
+            insurance_company=provider_data.get("insurance_company")
+            or provider_data.get("insuranceAgency"),
             adjuster_name=adjuster_contact.get("name"),
             adjuster_phone=adjuster_contact.get("phone"),
             adjuster_email=adjuster_contact.get("email"),
@@ -990,12 +1166,16 @@ class JobNimbusProvider(CRMProvider):
             notes=job.notes,
         )
 
-    def _transform_jn_contact_to_universal(self, jn_contact: JobNimbusContactResponse) -> Contact:
+    def _transform_jn_contact_to_universal(
+        self, jn_contact: JobNimbusContactResponse
+    ) -> Contact:
         """Transform JobNimbus contact to universal Contact schema."""
         # Parse name
         first_name = jn_contact.first_name
         last_name = jn_contact.last_name
-        display_name = jn_contact.display_name or f"{first_name or ''} {last_name or ''}".strip()
+        display_name = (
+            jn_contact.display_name or f"{first_name or ''} {last_name or ''}".strip()
+        )
 
         return Contact(
             id=jn_contact.jnid,
@@ -1004,7 +1184,9 @@ class JobNimbusProvider(CRMProvider):
             company=jn_contact.company,
             display_name=display_name,
             email=jn_contact.email,
-            phone=jn_contact.home_phone or jn_contact.mobile_phone or jn_contact.work_phone,
+            phone=jn_contact.home_phone
+            or jn_contact.mobile_phone
+            or jn_contact.work_phone,
             mobile_phone=jn_contact.mobile_phone,
             work_phone=jn_contact.work_phone,
             address_line1=jn_contact.address_line1,
@@ -1015,8 +1197,12 @@ class JobNimbusProvider(CRMProvider):
             country=jn_contact.country_name,
             status=jn_contact.status_name,
             workflow_type=jn_contact.record_type_name,
-            created_at=self._unix_timestamp_to_datetime(jn_contact.date_created).isoformat(),
-            updated_at=self._unix_timestamp_to_datetime(jn_contact.date_updated).isoformat(),
+            created_at=self._unix_timestamp_to_datetime(
+                jn_contact.date_created
+            ).isoformat(),
+            updated_at=self._unix_timestamp_to_datetime(
+                jn_contact.date_updated
+            ).isoformat(),
             provider=CRMProviderEnum.JOB_NIMBUS,
             provider_data={
                 "recid": jn_contact.recid,
@@ -1026,76 +1212,11 @@ class JobNimbusProvider(CRMProvider):
                 "is_archived": jn_contact.is_archived,
                 "is_sub": jn_contact.is_sub,
                 "home_phone": jn_contact.home_phone,
-                "location": jn_contact.location.model_dump() if jn_contact.location else None,
+                "location": jn_contact.location.model_dump()
+                if jn_contact.location
+                else None,
             },
         )
-
-    # ========================================================================
-    # Legacy/JobNimbus-Specific Methods
-    # ========================================================================
-
-    async def get_project_status(self, project_id: str) -> ProjectStatusResponse:
-        """
-        Get the status of a specific job/project by JNID from JobNimbus.
-
-        Note: JobNimbus doesn't have a separate "project" concept - jobs serve this purpose.
-
-        Args:
-            project_id: The JobNimbus JNID
-
-        Returns:
-            ProjectStatusResponse: The job status information
-
-        Raises:
-            CRMError: If the job is not found or an error occurs
-        """
-        try:
-            endpoint = JobNimbusEndpoints.JOB_BY_ID.format(jnid=project_id)
-
-            logger.debug("Fetching job status for JNID", project_id=project_id)
-
-            response = await self._make_request("GET", endpoint)
-            response.raise_for_status()
-
-            data = response.json()
-
-            # Parse as JobNimbus job response
-            jn_job = JobNimbusJobResponse(**data)
-
-            # Transform to ProjectStatusResponse
-            # Note: JobNimbus has custom statuses per workflow, so we store the raw status name
-            return ProjectStatusResponse(
-                project_id=jn_job.jnid,
-                status=jn_job.status_name or "Unknown",  # Using raw status name
-                provider=CRMProviderEnum.JOB_NIMBUS,
-                updated_at=self._unix_timestamp_to_datetime(jn_job.date_updated),
-                provider_data={
-                    "jnid": jn_job.jnid,
-                    "number": jn_job.number,
-                    "name": jn_job.name,
-                    "record_type_name": jn_job.record_type_name,
-                    "status_name": jn_job.status_name,
-                    "status_id": jn_job.status,
-                    "sales_rep_name": jn_job.sales_rep_name,
-                    "address": {
-                        "line1": jn_job.address_line1,
-                        "line2": jn_job.address_line2,
-                        "city": jn_job.city,
-                        "state": jn_job.state_text,
-                        "zip": jn_job.zip,
-                    },
-                },
-            )
-
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 404:
-                raise CRMError(f"Job with JNID {project_id} not found", "NOT_FOUND")
-            else:
-                logger.error("HTTP error fetching job status", project_id=project_id, error=str(e))
-                raise CRMError(f"Failed to fetch job status: {e}", "HTTP_ERROR")
-        except Exception as e:
-            logger.error("Unexpected error fetching job status", project_id=project_id, error=str(e))
-            raise CRMError(f"Failed to fetch job status: {str(e)}", "UNKNOWN_ERROR")
 
     async def get_all_project_statuses(self) -> ProjectStatusListResponse:
         """
@@ -1136,7 +1257,9 @@ class JobNimbusProvider(CRMProvider):
                         project_id=jn_job.jnid,
                         status=jn_job.status_name or "Unknown",
                         provider=CRMProviderEnum.JOB_NIMBUS,
-                        updated_at=self._unix_timestamp_to_datetime(jn_job.date_updated),
+                        updated_at=self._unix_timestamp_to_datetime(
+                            jn_job.date_updated
+                        ),
                         provider_data={
                             "jnid": jn_job.jnid,
                             "number": jn_job.number,
@@ -1233,7 +1356,9 @@ class JobNimbusProvider(CRMProvider):
             logger.debug("Adding note to job", job_id=jnid)
 
             response = await self._make_request(
-                "POST", endpoint, json=request_body.model_dump(by_alias=True, exclude_none=True)
+                "POST",
+                endpoint,
+                json=request_body.model_dump(by_alias=True, exclude_none=True),
             )
             response.raise_for_status()
 
@@ -1255,10 +1380,14 @@ class JobNimbusProvider(CRMProvider):
             if e.response.status_code == 404:
                 raise CRMError(f"Job with JNID {job_id} not found", "NOT_FOUND")
             else:
-                logger.error("HTTP error adding note to job", job_id=job_id, error=str(e))
+                logger.error(
+                    "HTTP error adding note to job", job_id=job_id, error=str(e)
+                )
                 raise CRMError(f"Failed to add note to job: {e}", "HTTP_ERROR")
         except Exception as e:
-            logger.error("Unexpected error adding note to job", job_id=job_id, error=str(e))
+            logger.error(
+                "Unexpected error adding note to job", job_id=job_id, error=str(e)
+            )
             raise CRMError(f"Failed to add note to job: {str(e)}", "UNKNOWN_ERROR")
 
     # Unsupported Service Titan-specific methods
@@ -1270,11 +1399,15 @@ class JobNimbusProvider(CRMProvider):
         owners: list[dict] | None = None,
     ) -> FormSubmissionListResponse:
         """Not supported by JobNimbus."""
-        raise CRMError("Form submissions are not supported by JobNimbus", "NOT_SUPPORTED")
+        raise CRMError(
+            "Form submissions are not supported by JobNimbus", "NOT_SUPPORTED"
+        )
 
     async def get_estimate(self, estimate_id: int) -> EstimateResponse:
         """Not supported by JobNimbus."""
-        raise CRMError("Estimates are not directly supported by JobNimbus", "NOT_SUPPORTED")
+        raise CRMError(
+            "Estimates are not directly supported by JobNimbus", "NOT_SUPPORTED"
+        )
 
     async def update_project_claim_status(self, job_id: int, claim_status: str) -> None:
         """
@@ -1292,19 +1425,25 @@ class JobNimbusProvider(CRMProvider):
         self, request: PricebookItemsRequest
     ) -> MaterialsListResponse:
         """Not supported by JobNimbus."""
-        raise CRMError("Pricebook materials are not supported by JobNimbus", "NOT_SUPPORTED")
+        raise CRMError(
+            "Pricebook materials are not supported by JobNimbus", "NOT_SUPPORTED"
+        )
 
     async def get_pricebook_services(
         self, request: PricebookItemsRequest
     ) -> ServicesListResponse:
         """Not supported by JobNimbus."""
-        raise CRMError("Pricebook services are not supported by JobNimbus", "NOT_SUPPORTED")
+        raise CRMError(
+            "Pricebook services are not supported by JobNimbus", "NOT_SUPPORTED"
+        )
 
     async def get_pricebook_equipment(
         self, request: PricebookItemsRequest
     ) -> EquipmentListResponse:
         """Not supported by JobNimbus."""
-        raise CRMError("Pricebook equipment is not supported by JobNimbus", "NOT_SUPPORTED")
+        raise CRMError(
+            "Pricebook equipment is not supported by JobNimbus", "NOT_SUPPORTED"
+        )
 
     async def close(self):
         """Close the HTTP client."""
