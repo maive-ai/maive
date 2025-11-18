@@ -25,17 +25,14 @@ class DiscrepancyDetectionWorkflowSettings(BaseSettings):
     )
 
     enable_braintrust_logging: bool = Field(
-        env_prefix="WORKFLOWS_DISCREPANCY_DETECTION_",
         default=False,
         description="Enable Braintrust tracing for AI calls and workflow execution",
     )
     braintrust_project_name: str = Field(
-        env_prefix="WORKFLOWS_DISCREPANCY_DETECTION_",
         default="discrepancy-detection",
         description="Braintrust project name",
     )
     prompt_version: str | None = Field(
-        env_prefix="WORKFLOWS_DISCREPANCY_DETECTION_",
         default=None,
         description="Specific Braintrust prompt version to pin (numeric string like '1000196126440992772'). If None, uses latest version.",
     )
@@ -83,3 +80,32 @@ def _load_discrepancy_detection_prompt():
 
 # Load prompt at module initialization (happens once per import)
 DISCREPANCY_DETECTION_PROMPT = _load_discrepancy_detection_prompt()
+
+
+class CallMonitoringWorkflowSettings(BaseSettings):
+    """Settings for Call Monitoring workflow.
+
+    Attributes:
+        enable_crm_write: Enable writing call results to CRM after call completion
+    """
+
+    model_config = SettingsConfigDict(
+        env_prefix="WORKFLOWS_CALL_MONITORING_",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    enable_crm_write: bool = Field(
+        default=False,
+        description="Enable writing call results to CRM after call completion",
+    )
+
+
+@lru_cache
+def get_call_monitoring_settings() -> CallMonitoringWorkflowSettings:
+    """Get cached call monitoring workflow settings.
+
+    Returns:
+        CallMonitoringWorkflowSettings: Cached settings instance
+    """
+    return CallMonitoringWorkflowSettings()
