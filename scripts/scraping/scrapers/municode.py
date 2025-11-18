@@ -1,17 +1,31 @@
-import json
 import re
+import sys
 import time
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
 from bs4 import BeautifulSoup
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import Page, sync_playwright
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from scraper_utils import (
+    clean_html_content,
+    create_output_metadata,
+    escape_css_selector,
+    flatten_toc,
+    parse_scraper_cli_args,
+    print_scraping_statistics,
+    run_batch_scraper,
+    save_scraped_output,
+    setup_browser_and_page,
+)
 
 
 def clean_municode_html(html_content):
     """
-    Aggressively clean Municode HTML to keep only essential content.
+    Clean Municode HTML to keep only essential content.
 
     Args:
         html_content: HTML string to clean
@@ -19,32 +33,8 @@ def clean_municode_html(html_content):
     Returns:
         Minimal HTML with only content and essential structure
     """
+    # First, handle Municode-specific structure extraction
     soup = BeautifulSoup(html_content, "html.parser")
-
-    # Remove script and style tags
-    for tag in soup.find_all(["script", "style"]):
-        tag.decompose()
-
-    # Remove stylesheet links
-    for link in soup.find_all("link", rel="stylesheet"):
-        link.decompose()
-
-    # Remove action bar elements and other UI components
-    for element in soup.find_all(
-        class_=[
-            "mcc_codes_content_action_bar",
-            "btn-group",
-            "action-dropdown",
-            "action-bar",
-            "anchor-offset",
-        ]
-    ):
-        element.decompose()
-
-    # Remove empty spans and divs
-    for tag in soup.find_all(["span", "div"]):
-        if not tag.get_text(strip=True) and not tag.find_all(True):
-            tag.decompose()
 
     # Remove Angular-specific custom tags (but keep their content)
     for tag in soup.find_all(
@@ -52,74 +42,52 @@ def clean_municode_html(html_content):
     ):
         tag.unwrap()
 
-    # Aggressively clean attributes - keep ONLY id and essential data
-    for tag in soup.find_all(True):
-        # Keep only id attribute and data-nodedepth/data-nodetype for structure
-        new_attrs = {}
-        if "id" in tag.attrs:
-            new_attrs["id"] = tag.attrs["id"]
-        if "data-nodedepth" in tag.attrs:
-            new_attrs["data-nodedepth"] = tag.attrs["data-nodedepth"]
-        if "href" in tag.attrs:
-            new_attrs["href"] = tag.attrs["href"]
-        if "target" in tag.attrs:
-            new_attrs["target"] = tag.attrs["target"]
-        # Keep semantic classes like 'b0' that indicate formatting
-        if "class" in tag.attrs and tag.name in ["p", "div", "span"]:
-            classes = (
-                tag.attrs["class"]
-                if isinstance(tag.attrs["class"], list)
-                else [tag.attrs["class"]]
-            )
-            # Keep single-letter classes like 'b0' or structural classes
-            semantic_classes = [
-                c for c in classes if len(c) <= 2 or c.startswith("chunk-")
-            ]
-            if semantic_classes:
-                new_attrs["class"] = semantic_classes
-        tag.attrs = new_attrs
-
-    # Find the main content wrapper and extract just the content
+    # Try to extract main content wrapper
     content_wrapper = soup.find("div", class_="chunk-content-wrapper")
     if content_wrapper:
         content_div = content_wrapper.find("div", class_="chunk-content")
         if content_div:
-            # Get the title from the chunk-title div
-            title_div = soup.find("div", class_="chunk-title")
-            title_html = (
-                f"<h3>{title_div.get_text(strip=True)}</h3>" if title_div else ""
-            )
+            # Build new div with BeautifulSoup instead of string concatenation
+            new_div = soup.new_tag("div")
 
-            # Get the outer chunk div's attributes
+            # Copy attributes from chunk div if present
             chunk_div = soup.find("div", class_="chunk")
-            chunk_attrs = ""
             if chunk_div:
                 if chunk_div.get("id"):
-                    chunk_attrs = f' id="{chunk_div["id"]}"'
+                    new_div["id"] = chunk_div["id"]
                 if chunk_div.get("data-nodedepth"):
-                    chunk_attrs += f' data-nodedepth="{chunk_div["data-nodedepth"]}"'
+                    new_div["data-nodedepth"] = chunk_div["data-nodedepth"]
 
-            # Reconstruct minimal HTML
-            content_html = (
-                str(content_div.decode_contents())
-                if content_div.decode_contents()
-                else ""
-            )
-            cleaned_html = f"<div{chunk_attrs}>{title_html}{content_html}</div>"
-            return cleaned_html
+            # Add title if present
+            title_div = soup.find("div", class_="chunk-title")
+            if title_div:
+                h3 = soup.new_tag("h3")
+                h3.string = title_div.get_text(strip=True)
+                new_div.append(h3)
 
-    # Fallback: convert back to string if structure is different
-    cleaned_html = str(soup)
+            # Add content
+            if content_div:
+                for child in content_div.children:
+                    new_div.append(child)
 
-    # Remove HTML comments (including Angular's empty comments)
-    cleaned_html = re.sub(r"<!--.*?-->", "", cleaned_html, flags=re.DOTALL)
-    # Remove any leftover Angular comment markers
-    cleaned_html = cleaned_html.replace("<!---->", "")
+            html_content = str(new_div)
 
-    # Remove excessive whitespace
-    cleaned_html = re.sub(r"\n\s*\n+", "\n", cleaned_html)
+    # Remove any Angular comment markers
+    html_content = html_content.replace("<!---->", "")
 
-    return cleaned_html.strip()
+    # Use shared HTML cleaning utility
+    return clean_html_content(
+        html_content,
+        remove_ui_classes=[
+            "mcc_codes_content_action_bar",
+            "btn-group",
+            "action-dropdown",
+            "action-bar",
+            "anchor-offset",
+        ],
+        preserve_classes=["chunk-", "b"],
+        preserve_data_attrs=["data-nodedepth"],
+    )
 
 
 def extract_toc_structure(page):
@@ -188,36 +156,15 @@ def extract_toc_structure(page):
     """)
 
 
-def flatten_toc(
-    nodes: List[Dict[str, Any]], parent_path: List[str] = None
-) -> List[Dict[str, Any]]:
-    """Flatten the nested TOC structure into a list with paths."""
-    if parent_path is None:
-        parent_path = []
-
-    flat_list = []
-
-    for node in nodes:
-        current_path = parent_path + [node["text"]]
-
-        flat_item = {
-            "value": node["text"],
-            "path": current_path,
-            "url": node.get("url"),
-            "depth": len(current_path) - 1,
-            "has_children": node.get("hasChildren", False),
-        }
-
-        # Keep nodeId internally for scraping, but it won't be in final output
-        flat_item["_nodeId"] = node.get("nodeId")
-
-        flat_list.append(flat_item)
-
-        # Recursively process children
-        if node.get("children"):
-            flat_list.extend(flatten_toc(node["children"], current_path))
-
-    return flat_list
+def _prepare_municode_toc_node(node: Dict[str, Any]) -> Dict[str, Any]:
+    """Add Municode-specific fields to TOC node."""
+    # Store nodeId as internal field for later use
+    if node.get("nodeId"):
+        node["_nodeId"] = node["nodeId"]
+    # Normalize hasChildren to children key
+    if "hasChildren" in node and not node.get("children"):
+        node["has_children"] = node["hasChildren"]
+    return node
 
 
 def expand_all_nodes(page):
@@ -266,7 +213,102 @@ def expand_all_nodes(page):
     print(f"Expansion complete: {expanded_count} nodes expanded")
 
 
-def scrape_single_municipality(url: str, output_name: str, output_dir_path: str = "output"):
+def _load_chunks_area(page: Page, first_leaf_node: Dict[str, Any]) -> None:
+    """
+    Load chunks area by clicking the first leaf node.
+
+    Args:
+        page: Playwright page object
+        first_leaf_node: First leaf node dictionary with _nodeId
+    """
+    if not first_leaf_node.get("_nodeId"):
+        return
+
+    first_link_selector = (
+        f'#genTocList a.toc-item-heading[href*="nodeId={first_leaf_node["_nodeId"]}"]'
+    )
+    try:
+        page.click(first_link_selector)
+        page.wait_for_selector("ul.chunks", timeout=60000)
+        print("Chunks area loaded successfully")
+    except Exception as e:
+        print(f"Warning: Could not load chunks area: {e}")
+
+
+def _scrape_chunk_content(
+    page: Page, item: Dict[str, Any], index: int, total: int
+) -> None:
+    """
+    Scrape content for a single chunk item.
+
+    Args:
+        page: Playwright page object
+        item: TOC item dictionary
+        index: Current index (0-based)
+        total: Total number of items
+    """
+    if not item.get("_nodeId"):
+        item["html_error"] = "No nodeId for this item"
+        print(f"  ⚠ {index + 1}/{total}: {item['value'][:80]} - no nodeId")
+        return
+
+    link_selector = f'#genTocList a.toc-item-heading[href*="nodeId={item["_nodeId"]}"]'
+
+    try:
+        page.click(link_selector)
+
+        escaped_node_id = escape_css_selector(item["_nodeId"])
+        chunk_selector = f"#c_{escaped_node_id}"
+        page.wait_for_selector(chunk_selector, timeout=60000)
+
+        page.wait_for_function(
+            '() => document.querySelectorAll(".loading, .spinner").length === 0',
+            timeout=60000,
+        )
+
+        time.sleep(0.5)
+
+        chunk_html = page.locator(chunk_selector).evaluate("el => el.outerHTML")
+
+        cleaned_html = clean_municode_html(chunk_html)
+        cleaned_html = cleaned_html.replace('\\"', '"')
+
+        item["html"] = cleaned_html
+
+    except Exception as e:
+        print(
+            f"  ⚠ {index + 1}/{total}: {item['value'][:80]} - Failed to load chunk: {str(e)}"
+        )
+        item["html_error"] = f"Failed to load chunk: {str(e)}"
+
+    time.sleep(0.3)
+
+
+def _scrape_all_leaf_nodes(page: Page, leaf_nodes: List[Dict[str, Any]]) -> None:
+    """
+    Scrape HTML content for all leaf nodes.
+
+    Args:
+        page: Playwright page object
+        leaf_nodes: List of leaf node dictionaries
+    """
+    for i, item in enumerate(leaf_nodes):
+        try:
+            _scrape_chunk_content(page, item, i, len(leaf_nodes))
+        except Exception as e:
+            print(f"  ✗ {i + 1}/{len(leaf_nodes)}: {item['value'][:80]} - {str(e)}")
+            item["html_error"] = str(e)
+
+
+# Using shared print_scraping_statistics from scraper_utils
+
+
+def scrape_single_municipality(
+    url: str,
+    output_name: str,
+    output_dir_path: str = "output",
+    csv_file: str | None = None,
+):
     """
     Scrape HTML content from a single municipality's code.
 
@@ -274,35 +316,29 @@ def scrape_single_municipality(url: str, output_name: str, output_dir_path: str 
         url: Full URL to the municipality code
         output_name: Name for the output file
         output_dir_path: Directory to save output (default: "output")
+        csv_file: Optional CSV file path to extract state from
     """
     print(f"Using URL: {url}")
     print(f"Output name: {output_name}")
     print(f"Output directory: {output_dir_path}")
 
-    hierarchical_toc = None
     flat_toc = None
-    leaf_nodes = []
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)  # Set to True for production
-        context = browser.new_context()
-        page = context.new_page()
+        browser, page = setup_browser_and_page(p)
 
         try:
             print(f"Navigating to {url}")
             page.goto(url, wait_until="domcontentloaded")
 
-            # Wait for TOC to load
             print("Waiting for Angular TOC to load...")
             page.wait_for_selector("#genTocList", timeout=60000)
             page.wait_for_selector("a.toc-item-heading", timeout=60000)
             page.wait_for_load_state("networkidle", timeout=10000)
 
-            # Expand all nodes
             print("Expanding TOC nodes...")
             expand_all_nodes(page)
 
-            # Extract the TOC structure
             print("Extracting TOC structure...")
             toc_data = extract_toc_structure(page)
 
@@ -313,84 +349,33 @@ def scrape_single_municipality(url: str, output_name: str, output_dir_path: str 
             hierarchical_toc = toc_data["items"]
             print(f"Found {toc_data['totalItems']} total items in TOC")
 
-            # Flatten the TOC
+            # Rename nodeId to _nodeId before flattening (flatten_toc only preserves fields starting with _)
+            def add_underscore_to_nodeid(nodes):
+                """Recursively rename nodeId to _nodeId in TOC structure."""
+                for node in nodes:
+                    if "nodeId" in node:
+                        node["_nodeId"] = node.pop("nodeId")
+                    if "children" in node:
+                        add_underscore_to_nodeid(node["children"])
+
+            add_underscore_to_nodeid(hierarchical_toc)
+
             flat_toc = flatten_toc(hierarchical_toc)
 
-            # Filter to only leaf nodes for HTML scraping
             leaf_nodes = [
                 item for item in flat_toc if not item.get("has_children", False)
             ]
             print(f"Found {len(leaf_nodes)} leaf nodes to scrape HTML")
 
-            # Before clicking TOC links, we need to ensure chunks are loaded
-            # Click the first leaf node to load the chunks area
-            if leaf_nodes and leaf_nodes[0].get("_nodeId"):
-                first_link_selector = f'#genTocList a.toc-item-heading[href*="nodeId={leaf_nodes[0]["_nodeId"]}"]'
-                try:
-                    page.click(first_link_selector)
-                    # Wait for chunks container to appear
-                    page.wait_for_selector("ul.chunks", timeout=60000)
-                    print("Chunks area loaded successfully")
-                except Exception as e:
-                    print(f"Warning: Could not load chunks area: {e}")
+            if leaf_nodes:
+                _load_chunks_area(page, leaf_nodes[0])
 
-            # Now scrape HTML for each leaf node by clicking TOC links
-            for i, item in enumerate(leaf_nodes):
-                try:
-                    if item.get("_nodeId"):
-                        # Click the TOC link for this item
-                        # Find the link with the specific nodeId in the URL
-                        link_selector = f'#genTocList a.toc-item-heading[href*="nodeId={item["_nodeId"]}"]'
+            _scrape_all_leaf_nodes(page, leaf_nodes)
 
-                        try:
-                            # Click the TOC link
-                            page.click(link_selector)
+            for item in flat_toc:
+                item.pop("_nodeId", None)
 
-                            # Wait for the specific chunk to appear
-                            chunk_selector = f"#c_{item['_nodeId']}"
-                            page.wait_for_selector(chunk_selector, timeout=60000)
-
-                            # Wait for any loading to complete
-                            page.wait_for_function(
-                                '() => document.querySelectorAll(".loading, .spinner").length === 0',
-                                timeout=60000,
-                            )
-
-                            # Small delay to ensure content is fully rendered
-                            time.sleep(0.5)
-
-                            # Get the chunk HTML directly
-                            chunk_html = page.locator(chunk_selector).evaluate(
-                                "el => el.outerHTML"
-                            )
-
-                            # Clean the HTML content
-                            cleaned_html = clean_municode_html(chunk_html)
-
-                            # Unescape any escaped quotes to ensure valid HTML
-                            cleaned_html = cleaned_html.replace('\\"', '"')
-
-                            item["html"] = cleaned_html
-
-                        except Exception as e:
-                            print(
-                                f"  ⚠ {i + 1}/{len(leaf_nodes)}: {item['value'][:80]} - Failed to load chunk: {str(e)}"
-                            )
-                            item["html_error"] = f"Failed to load chunk: {str(e)}"
-                    else:
-                        item["html_error"] = "No nodeId for this item"
-                        print(
-                            f"  ⚠ {i + 1}/{len(leaf_nodes)}: {item['value'][:80]} - no nodeId"
-                        )
-
-                except Exception as e:
-                    print(
-                        f"  ✗ {i + 1}/{len(leaf_nodes)}: {item['value'][:80]} - {str(e)}"
-                    )
-                    item["html_error"] = str(e)
-
-                # Small delay between clicks
-                time.sleep(0.3)
+            print("\n✓ Scraping complete!")
 
         except Exception as e:
             print(f"Error: {e}")
@@ -399,170 +384,50 @@ def scrape_single_municipality(url: str, output_name: str, output_dir_path: str 
         finally:
             browser.close()
 
-        # Clean up internal fields before saving
-        for item in flat_toc:
-            item.pop("_nodeId", None)
-
-        print("\n✓ Scraping complete!")
-
-    # Create output directory if it doesn't exist
-    output_dir = Path(output_dir_path)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    # Generate filename (no date prefix - overwrites existing)
-    output_filename = f"{output_name}.json"
-    output_path = output_dir / output_filename
-
-    # Wrap content with metadata
     if flat_toc:
-        scraped_at = datetime.now().isoformat()
-        output_data = {
-            "metadata": {
-                "scraped_at": scraped_at,
-                "city_slug": output_name,
-                "source_url": url,
-                "scraper": "municode.py",
-                "scraper_version": "2.0"
-            },
-            "sections": flat_toc
-        }
+        metadata = create_output_metadata(
+            url=url,
+            output_name=output_name,
+            scraper_name="municode.py",
+            scraper_version="2.0",
+            csv_file=csv_file,
+        )
 
-        # Save with metadata wrapper
-        with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(output_data, f, indent=2, ensure_ascii=False)
+        output_path = save_scraped_output(
+            sections=flat_toc,
+            metadata=metadata,
+            output_dir_path=output_dir_path,
+            output_name=output_name,
+        )
+
         print(f"\nSaved flattened TOC with HTML to: {output_path}")
 
-    # Report statistics
-    items_with_html = sum(1 for item in flat_toc if "html" in item)
-    items_with_errors = sum(1 for item in flat_toc if "html_error" in item)
-    total_leaf_nodes = sum(
-        1 for item in flat_toc if not item.get("has_children", False)
-    )
-
-    print("\n✓ Complete!")
-    print(f"  Total TOC items: {len(flat_toc) if flat_toc else 0}")
-    print(f"  Leaf nodes (with HTML): {total_leaf_nodes}")
-    print(f"  Successfully scraped: {items_with_html}/{total_leaf_nodes}")
-    if items_with_errors > 0:
-        print(f"  Errors: {items_with_errors}")
-
-    # Report on any leaf nodes without HTML
-    missing_html = [
-        item
-        for item in flat_toc
-        if not item.get("has_children", False) and "html" not in item
-    ]
-    if missing_html:
-        print(f"\n⚠ Warning: {len(missing_html)} leaf nodes have no HTML content:")
-        for item in missing_html[:5]:  # Show first 5
-            print(f"    - {item['value']}")
-        if len(missing_html) > 5:
-            print(f"    ... and {len(missing_html) - 5} more")
+    if flat_toc:
+        print_scraping_statistics(flat_toc)
 
 
 def scrape_from_csv(csv_path: str, output_dir_path: str = "output"):
     """
     Scrape multiple municipalities from a CSV file.
 
-    CSV format expected:
-        name,slug,base_url,code_url,status
-
     Args:
         csv_path: Path to CSV file containing municipality list
         output_dir_path: Directory to save outputs (default: "output")
     """
-    import csv
-    from pathlib import Path
-
-    csv_file = Path(csv_path)
-    if not csv_file.exists():
-        print(f"Error: CSV file not found: {csv_path}")
-        return
-
-    # Read all municipalities from CSV
-    municipalities = []
-    with open(csv_file, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            if row.get('status') == 'ready' and row.get('code_url'):
-                municipalities.append(row)
-
-    if not municipalities:
-        print(f"Error: No ready municipalities found in {csv_path}")
-        return
-
-    print(f"\n{'='*60}")
-    print(f"BATCH SCRAPING MODE")
-    print(f"{'='*60}")
-    print(f"CSV file: {csv_path}")
-    print(f"Found {len(municipalities)} municipalities to scrape")
-    print(f"Output directory: {output_dir_path}")
-    print(f"{'='*60}\n")
-
-    # Scrape each municipality
-    for i, muni in enumerate(municipalities, 1):
-        print(f"\n{'='*60}")
-        print(f"[{i}/{len(municipalities)}] Scraping: {muni['name']}")
-        print(f"{'='*60}")
-
-        try:
-            scrape_single_municipality(
-                url=muni['code_url'],
-                output_name=muni['slug'],
-                output_dir_path=output_dir_path
-            )
-            print(f"✓ Completed: {muni['name']}")
-        except Exception as e:
-            print(f"✗ Failed: {muni['name']}")
-            print(f"  Error: {str(e)}")
-            # Continue with next municipality
-
-    print(f"\n{'='*60}")
-    print(f"BATCH SCRAPING COMPLETE")
-    print(f"Processed {len(municipalities)} municipalities")
-    print(f"{'='*60}\n")
+    run_batch_scraper(
+        csv_path=csv_path,
+        output_dir_path=output_dir_path,
+        scraper_function=scrape_single_municipality,
+        scraper_name="municode.py",
+    )
 
 
 if __name__ == "__main__":
-    import sys
+    mode, url_or_csv, output_name, output_dir_path = parse_scraper_cli_args(
+        "municode.py"
+    )
 
-    # Check for CSV mode
-    if len(sys.argv) >= 2 and sys.argv[1] == "--csv":
-        if len(sys.argv) < 3:
-            print("Usage: python municode.py --csv <CSV_FILE> [--output-dir DIR]")
-            print("Example: python municode.py --csv ut_final_library.csv --output-dir output")
-            sys.exit(1)
-
-        csv_path = sys.argv[2]
-
-        # Parse optional output directory
-        output_dir_path = "output"
-        if len(sys.argv) > 3 and sys.argv[3] == "--output-dir":
-            if len(sys.argv) > 4:
-                output_dir_path = sys.argv[4]
-
-        scrape_from_csv(csv_path, output_dir_path)
-
-    # Single municipality mode
-    elif len(sys.argv) >= 3:
-        url = sys.argv[1]
-        output_name = sys.argv[2]
-
-        # Parse optional output directory
-        output_dir_path = "output"
-        if len(sys.argv) > 3 and sys.argv[3] == "--output-dir":
-            if len(sys.argv) > 4:
-                output_dir_path = sys.argv[4]
-
-        scrape_single_municipality(url, output_name, output_dir_path)
-
-    # Show usage
-    else:
-        print("Usage:")
-        print("  Single mode:  python municode.py <URL> <NAME> [--output-dir DIR]")
-        print("  Batch mode:   python municode.py --csv <CSV_FILE> [--output-dir DIR]")
-        print()
-        print("Examples:")
-        print("  python municode.py https://library.municode.com/ut/coalville/codes/development_code coalville")
-        print("  python municode.py --csv ut_final_library.csv --output-dir output")
-        sys.exit(1)
+    if mode == "csv":
+        scrape_from_csv(url_or_csv, output_dir_path)
+    else:  # single mode
+        scrape_single_municipality(url_or_csv, output_name, output_dir_path)
