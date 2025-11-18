@@ -1117,6 +1117,7 @@ secrets_manager_policy = iam.RolePolicy(
                         "secretsmanager:PutSecretValue",
                         "secretsmanager:UpdateSecret",
                         "secretsmanager:DeleteSecret",
+                        "secretsmanager:RestoreSecret",
                     ],
                     "Resource": f"arn:aws:secretsmanager:*:*:secret:maive/{environment}/crm/*",
                 }

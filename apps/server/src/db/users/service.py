@@ -1,12 +1,14 @@
 """Service layer for user management."""
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.organizations.model import Organization
 from src.db.organizations.repository import OrganizationRepository
 from src.db.organizations.schemas import OrganizationCreate
 from src.db.users.model import User
+from src.utils.logger import logger
 
 
 class UserService:
@@ -60,13 +62,45 @@ class UserService:
         if not email:
             raise ValueError(f"Email required to create new user {user_id}")
 
-        return await self._create_user_and_org(user_id, email)
+        try:
+            return await self._create_user_and_org(user_id, email)
+        except IntegrityError:
+            # Race condition: another request created the user between our check and insert
+            # Rollback and retry the lookup
+            logger.info(
+                "User creation race condition detected, retrying lookup",
+                user_id=user_id
+            )
+            await self.session.rollback()
+
+            # Re-query for the user (should exist now)
+            result = await self.session.execute(select(User).where(User.id == user_id))
+            existing_user = result.scalar_one_or_none()
+
+            if existing_user:
+                # Fetch their organization
+                org_result = await self.session.execute(
+                    select(Organization).where(
+                        Organization.id == existing_user.organization_id
+                    )
+                )
+                org = org_result.scalar_one()
+                return existing_user, org
+            else:
+                # User still doesn't exist - something else went wrong
+                logger.error("User still not found after IntegrityError", user_id=user_id)
+                raise
 
     async def _create_user_and_org(
         self, user_id: str, email: str
     ) -> tuple[User, Organization]:
         """
-        Create a new user and organization.
+        Create a new user and add them to organization.
+
+        If an organization with the same domain already exists, the user
+        is added to that organization. Otherwise, a new organization is created.
+
+        Database-level unique constraint on organization.name prevents duplicates.
 
         Args:
             user_id: Cognito user ID
@@ -79,9 +113,42 @@ class UserService:
         domain = email.split("@")[1].lower()
         org_name = self._extract_org_name_from_domain(domain)
 
-        # Create organization
-        org_data = OrganizationCreate(name=org_name)
-        org = await self.org_repository.create(org_data)
+        # Check if organization with this name already exists
+        org_result = await self.session.execute(
+            select(Organization).where(Organization.name == org_name)
+        )
+        org = org_result.scalar_one_or_none()
+
+        if org:
+            logger.info(
+                "Adding user to existing organization",
+                user_id=user_id,
+                email=email,
+                organization_id=org.id,
+                organization_name=org.name,
+            )
+        else:
+            # Create new organization (unique constraint prevents duplicates)
+            try:
+                org_data = OrganizationCreate(name=org_name)
+                org = await self.org_repository.create(org_data)
+                logger.info(
+                    "Created new organization for user",
+                    user_id=user_id,
+                    email=email,
+                    organization_id=org.id,
+                    organization_name=org.name,
+                )
+            except IntegrityError:
+                # Race condition: another request created the org between our check and insert
+                logger.info("Organization race condition, retrying lookup", org_name=org_name)
+                await self.session.rollback()
+
+                # Re-query for the organization
+                org_result = await self.session.execute(
+                    select(Organization).where(Organization.name == org_name)
+                )
+                org = org_result.scalar_one()  # Must exist now
 
         # Create user
         user = User(

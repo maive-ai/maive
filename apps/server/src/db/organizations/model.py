@@ -31,9 +31,9 @@ class Organization(Base):
         comment="Organization UUID",
     )
 
-    # Display name (customizable by users)
+    # Display name (customizable by users, unique to prevent duplicate orgs)
     name: Mapped[str] = mapped_column(
-        String(255), nullable=False, comment="Organization display name"
+        String(255), nullable=False, unique=True, comment="Organization display name"
     )
 
     # Timestamps
