@@ -57,17 +57,17 @@ export default function HeaderBar({ user }: HeaderBarProps) {
 
   return (
     <>
-      <header className="flex h-16 items-center justify-end bg-neutral-50 px-6">
+      <header className="flex h-16 shrink-0 items-center justify-end gap-2 bg-neutral-50 px-6 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-3 rounded-full transition-colors hover:bg-neutral-100 p-1">
-              <Avatar className="h-9 w-9 border-2 border-primary-900">
-                <AvatarFallback className="bg-primary-900 text-white text-sm font-medium">
-                  {getInitials()}
-                </AvatarFallback>
-              </Avatar>
-            </button>
-          </DropdownMenuTrigger>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-3 rounded-full transition-colors hover:bg-neutral-100 p-1">
+                <Avatar className="h-9 w-9 border-2 border-primary-900">
+                  <AvatarFallback className="bg-primary-900 text-white text-sm font-medium">
+                    {getInitials()}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-72">
             <DropdownMenuLabel>
               <div className="flex items-center gap-3">
