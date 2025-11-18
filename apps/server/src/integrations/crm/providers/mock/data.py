@@ -9,7 +9,11 @@ import uuid
 from datetime import UTC, datetime
 
 from src.integrations.crm.constants import CRMProvider, Status
-from src.integrations.crm.providers.mock.schemas import ContactInfo, MockNote, MockProject
+from src.integrations.crm.providers.mock.schemas import (
+    ContactInfo,
+    MockNote,
+    MockProject,
+)
 from src.integrations.crm.schemas import Note, Project
 
 # Default phone number for all mock data
@@ -42,7 +46,9 @@ MOCK_PROJECTS_RAW: list[MockProject] = [
             phone=DEFAULT_PHONE_NUMBER,
             email=DEMO_EMAIL,
         ),
-        notes=[MockNote(text="Wind damage on muliple faces. Emergency tarp installed.")],
+        notes=[
+            MockNote(text="Wind damage on muliple faces. Emergency tarp installed.")
+        ],
         status=Status.IN_PROGRESS.value,
     ),
     MockProject(
@@ -65,7 +71,11 @@ MOCK_PROJECTS_RAW: list[MockProject] = [
             phone=DEFAULT_PHONE_NUMBER,
             email="Rick.Davis@statefarm.com",
         ),
-        notes=[MockNote(text="Roof damage from hail storm. Customer requests neon yellow roof.")],
+        notes=[
+            MockNote(
+                text="Roof damage from hail storm. Customer requests neon yellow roof."
+            )
+        ],
         status=Status.IN_PROGRESS.value,
     ),
     MockProject(
@@ -89,7 +99,11 @@ MOCK_PROJECTS_RAW: list[MockProject] = [
             email="david.brown@usaa.com",
         ),
         status=Status.DISPATCHED.value,
-        notes=[MockNote(text="Multiple shingle damage areas. Customer has military discount.")],
+        notes=[
+            MockNote(
+                text="Multiple shingle damage areas. Customer has military discount."
+            )
+        ],
     ),
     MockProject(
         id="md_004",
@@ -112,7 +126,11 @@ MOCK_PROJECTS_RAW: list[MockProject] = [
             email="amanda.garcia@farmersinsurance.com",
         ),
         status=Status.SCHEDULED.value,
-        notes=[MockNote(text="Storm damage claim pending. Customer needs quick turnaround.")],
+        notes=[
+            MockNote(
+                text="Storm damage claim pending. Customer needs quick turnaround."
+            )
+        ],
     ),
     MockProject(
         id="st_005",
@@ -190,7 +208,11 @@ MOCK_PROJECTS_RAW: list[MockProject] = [
             email="rachel.green@geico.com",
         ),
         status=Status.IN_PROGRESS.value,
-        notes=[MockNote(text="Multiple shingle replacement needed. Customer prefers afternoon appointments.")],
+        notes=[
+            MockNote(
+                text="Multiple shingle replacement needed. Customer prefers afternoon appointments."
+            )
+        ],
     ),
     MockProject(
         id="jn_009",
@@ -245,7 +267,9 @@ MOCK_PROJECTS_RAW: list[MockProject] = [
             email="kevin.murphy@travelers.com",
         ),
         status=Status.SCHEDULED.value,
-        notes=[MockNote(text="Hail damage assessment needed. Customer works from home.")],
+        notes=[
+            MockNote(text="Hail damage assessment needed. Customer works from home.")
+        ],
     ),
     MockProject(
         id="jn_012",
@@ -253,7 +277,9 @@ MOCK_PROJECTS_RAW: list[MockProject] = [
         address="987 Elm Street, Carrollton, TX 75006",
         phone=DEFAULT_PHONE_NUMBER,
         email="rebecca.martinez@gmail.com",
-        notes=[MockNote(text="Preventive maintenance customer. Annual inspection due.")],
+        notes=[
+            MockNote(text="Preventive maintenance customer. Annual inspection due.")
+        ],
         status=Status.SCHEDULED.value,
     ),
     MockProject(
@@ -285,7 +311,9 @@ MOCK_PROJECTS_RAW: list[MockProject] = [
         address="321 Valley View Road, Flower Mound, TX 75022",
         phone=DEFAULT_PHONE_NUMBER,
         email="stephanie.white@gmail.com",
-        notes=[MockNote(text="New customer referral. Interested in full roof replacement.")],
+        notes=[
+            MockNote(text="New customer referral. Interested in full roof replacement.")
+        ],
         status=Status.SCHEDULED.value,
     ),
     MockProject(
@@ -309,7 +337,11 @@ MOCK_PROJECTS_RAW: list[MockProject] = [
             email="robert.clark@amica.com",
         ),
         status=Status.HOLD.value,
-        notes=[MockNote(text="Large commercial claim. Multiple building assessment needed.")],
+        notes=[
+            MockNote(
+                text="Large commercial claim. Multiple building assessment needed."
+            )
+        ],
     ),
     MockProject(
         id="al_016",
@@ -341,7 +373,11 @@ MOCK_PROJECTS_RAW: list[MockProject] = [
             email="michael.davis@metlife.com",
         ),
         status=Status.DISPATCHED.value,
-        notes=[MockNote(text="Storm damage to shingles and flashing. Veteran discount applied.")],
+        notes=[
+            MockNote(
+                text="Storm damage to shingles and flashing. Veteran discount applied."
+            )
+        ],
     ),
     MockProject(
         id="al_018",
@@ -396,7 +432,11 @@ MOCK_PROJECTS_RAW: list[MockProject] = [
             email="lisa.thompson@amfam.com",
         ),
         status=Status.IN_PROGRESS.value,
-        notes=[MockNote(text="Wind damage from recent storm. Customer needs quick estimate.")],
+        notes=[
+            MockNote(
+                text="Wind damage from recent storm. Customer needs quick estimate."
+            )
+        ],
     ),
     MockProject(
         id="al_021",
@@ -404,7 +444,9 @@ MOCK_PROJECTS_RAW: list[MockProject] = [
         address="789 Meadowbrook Lane, Southlake, TX 76092",
         phone=DEFAULT_PHONE_NUMBER,
         email="steven.wilson@gmail.com",
-        notes=[MockNote(text="New construction inspection. High-end residential project.")],
+        notes=[
+            MockNote(text="New construction inspection. High-end residential project.")
+        ],
         status=Status.SCHEDULED.value,
     ),
     MockProject(
@@ -428,7 +470,11 @@ MOCK_PROJECTS_RAW: list[MockProject] = [
             email="carol.smith@safeco.com",
         ),
         status=Status.SCHEDULED.value,
-        notes=[MockNote(text="Hail damage assessment. Customer has elderly parents living with them.")],
+        notes=[
+            MockNote(
+                text="Hail damage assessment. Customer has elderly parents living with them."
+            )
+        ],
     ),
     MockProject(
         id="md_023",
@@ -460,7 +506,11 @@ MOCK_PROJECTS_RAW: list[MockProject] = [
             email="susan.brown@auto-owners.com",
         ),
         status=Status.HOLD.value,
-        notes=[MockNote(text="Storm damage to multiple areas. Complex claim requiring detailed assessment.")],
+        notes=[
+            MockNote(
+                text="Storm damage to multiple areas. Complex claim requiring detailed assessment."
+            )
+        ],
     ),
     MockProject(
         id="md_025",
@@ -483,7 +533,11 @@ MOCK_PROJECTS_RAW: list[MockProject] = [
             email="anthony.wilson@mutualofomaha.com",
         ),
         status=Status.IN_PROGRESS.value,
-        notes=[MockNote(text="Wind and hail damage. Customer works night shift, prefers daytime appointments.")],
+        notes=[
+            MockNote(
+                text="Wind and hail damage. Customer works night shift, prefers daytime appointments."
+            )
+        ],
     ),
     MockProject(
         id="md_026",
@@ -491,7 +545,11 @@ MOCK_PROJECTS_RAW: list[MockProject] = [
         address="321 Brookside Drive, Duncanville, TX 75116",
         phone=DEFAULT_PHONE_NUMBER,
         email="dorothy.lee@gmail.com",
-        notes=[MockNote(text="Senior citizen customer. Preventive maintenance and inspection.")],
+        notes=[
+            MockNote(
+                text="Senior citizen customer. Preventive maintenance and inspection."
+            )
+        ],
         status=Status.SCHEDULED.value,
     ),
     MockProject(
@@ -515,7 +573,11 @@ MOCK_PROJECTS_RAW: list[MockProject] = [
             email="gregory.taylor@cinfin.com",
         ),
         status=Status.IN_PROGRESS.value,
-        notes=[MockNote(text="Large residential property. Multiple damage areas from recent storm.")],
+        notes=[
+            MockNote(
+                text="Large residential property. Multiple damage areas from recent storm."
+            )
+        ],
     ),
     MockProject(
         id="md_028",
@@ -523,7 +585,11 @@ MOCK_PROJECTS_RAW: list[MockProject] = [
         address="654 Maple Ridge Circle, Red Oak, TX 75154",
         phone=DEFAULT_PHONE_NUMBER,
         email="betty.anderson@gmail.com",
-        notes=[MockNote(text="Long-term customer. Quarterly gutter maintenance and roof inspection.")],
+        notes=[
+            MockNote(
+                text="Long-term customer. Quarterly gutter maintenance and roof inspection."
+            )
+        ],
         status=Status.COMPLETED.value,
     ),
 ]
@@ -578,7 +644,9 @@ def parse_raw_project_data(
 
     # Derive job_id if not provided
     if job_id is None:
-        job_id = _derive_numeric_job_id(mock_project.id)
+        # Generate fallback ID if mock_project.id is None
+        project_id = mock_project.id or str(uuid.uuid4())
+        job_id = _derive_numeric_job_id(project_id)
 
     # Get adjuster info from adjusterContact or adjusterName
     adjuster_name = mock_project.adjuster_name
@@ -598,9 +666,13 @@ def parse_raw_project_data(
 
     # Convert ContactInfo instances to dicts for storage
     if mock_project.insurance_agency_contact:
-        provider_data["insuranceAgencyContact"] = mock_project.insurance_agency_contact.model_dump(exclude_none=True)
+        provider_data["insuranceAgencyContact"] = (
+            mock_project.insurance_agency_contact.model_dump(exclude_none=True)
+        )
     if mock_project.adjuster_contact:
-        provider_data["adjusterContact"] = mock_project.adjuster_contact.model_dump(exclude_none=True)
+        provider_data["adjusterContact"] = mock_project.adjuster_contact.model_dump(
+            exclude_none=True
+        )
 
     provider_data["job_id"] = job_id
     provider_data["tenant"] = 1
