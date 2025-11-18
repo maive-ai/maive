@@ -27,9 +27,9 @@ export function useCallAudioStream(listenUrl: string | null) {
     // Initialize PCMPlayer with built-in analyser
     const player = new PCMPlayer({
       inputCodec: 'Int16',
-      channels: 2,
-      sampleRate: 24000,
-      flushTime: 50, // Low latency buffer (50ms)
+      channels: 1,
+      sampleRate: 32000,
+      flushTime: 100,
       fftSize: FFT_SIZE,
     });
     playerRef.current = player;
