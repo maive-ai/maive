@@ -48,18 +48,10 @@ export default function AppSidebar({ user, ...props }: AppSidebarProps & React.C
               </Button>
             </div>
           ) : (
-            <div className="flex items-center gap-2 px-2">
-              <SidebarMenu className="flex-1">
-                <SidebarMenuItem>
-                  <SidebarMenuButton size="lg" asChild className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
-                    <Link to="/">
-                      <div className="grid flex-1 text-left text-sm leading-tight">
-                        <img src={fullLogo} alt="Maive Logo" className="w-32" />
-                      </div>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
+            <div className="flex items-center gap-2 px-2 py-2">
+              <div className="flex-1 px-2">
+                <img src={fullLogo} alt="Maive Logo" className="w-32" />
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
@@ -91,18 +83,15 @@ export default function AppSidebar({ user, ...props }: AppSidebarProps & React.C
                           tooltip={item.label}
                           isActive={isActive}
                           className={cn(
-                            'text-base', // 20% bigger text (from 0.875rem to 1rem)
+                            'text-base items-center', // 20% bigger text and ensure vertical center alignment
                             isCreateWorkflow &&
                               'bg-primary-900 text-primary-50 shadow-xs hover:bg-primary-800 data-[active=true]:bg-primary-800',
                           )}
                         >
-                          <Link to={item.route.fullPath}>
+                          <Link to={item.route.fullPath} className="flex items-center gap-3">
                             {item.icon && (
                               <item.icon
-                                className={cn(
-                                  'h-6 w-6', // 20% bigger icons (from h-5 w-5 to h-6 w-6)
-                                  isCreateWorkflow ? 'text-primary-50' : 'text-gray-500',
-                                )}
+                                className="h-6 w-6" // 20% bigger icons (from h-5 w-5 to h-6 w-6), removed color override
                               />
                             )}
                             <span>{item.label}</span>
@@ -122,9 +111,9 @@ export default function AppSidebar({ user, ...props }: AppSidebarProps & React.C
                 <SidebarMenuButton
                   onClick={() => setSettingsOpen(true)}
                   tooltip="Settings"
-                  className="text-base"
+                  className="text-base items-center"
                 >
-                  <Settings className="h-6 w-6 text-gray-500" />
+                  <Settings className="h-6 w-6" />
                   <span>Settings</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
