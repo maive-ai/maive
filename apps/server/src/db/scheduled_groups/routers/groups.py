@@ -72,7 +72,9 @@ async def list_scheduled_groups(
         await build_group_response(group, repository) for group in groups
     ]
 
-    return ScheduledGroupsListResponse(groups=group_responses, total=len(group_responses))
+    return ScheduledGroupsListResponse(
+        groups=group_responses, total=len(group_responses)
+    )
 
 
 @router.get("/{group_id}", response_model=ScheduledGroupDetailResponse)
@@ -105,19 +107,27 @@ async def update_scheduled_group(
     repository: ScheduledGroupsRepository = Depends(get_scheduled_groups_repository),
 ) -> ScheduledGroupResponse:
     """Update a scheduled group."""
-    # Validate goal_description for user_specified goal type
-    if request.goal_type == "user_specified" and not request.goal_description:
-        raise HTTPException(
-            status_code=HTTPStatus.BAD_REQUEST,
-            detail="goal_description is required when goal_type is user_specified",
-        )
-
     group = await repository.get_group(group_id, current_user.id)
 
     if not group:
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND,
             detail=f"Scheduled group {group_id} not found",
+        )
+
+    # Determine final goal_type and goal_description after update
+    final_goal_type = request.goal_type.value if request.goal_type else group.goal_type
+    final_goal_description = (
+        request.goal_description
+        if request.goal_description is not None
+        else group.goal_description
+    )
+
+    # Validate goal_description for user_specified goal type
+    if final_goal_type == "user_specified" and not final_goal_description:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail="goal_description is required when goal_type is user_specified",
         )
 
     group = await repository.update_group(
