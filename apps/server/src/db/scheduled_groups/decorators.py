@@ -45,7 +45,8 @@ def handle_db_errors(operation: str):
 
                 # Log the error with context
                 logger.exception(
-                    f"Failed to {operation}",
+                    "[SCHEDULED_GROUPS] Operation failed",
+                    operation=operation,
                     user_id=current_user.id if current_user else None,
                     error=str(e),
                 )
