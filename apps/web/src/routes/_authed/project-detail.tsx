@@ -181,13 +181,22 @@ function ProjectDetail() {
       phone_number: phoneNumber,
       // Pass customer details from project data
       customer_id: project.id,
-      customer_name: providerData?.customerName,
+      customer_name: project.customer_name || providerData?.customerName,
       company_name: companyName,
-      customer_address: providerData?.address,
+      customer_address: project.address_line1
+        ? [
+            project.address_line1,
+            project.address_line2,
+            [project.city, project.state].filter(Boolean).join(', '),
+            project.postal_code,
+            project.country
+          ].filter(Boolean).join(', ')
+        : providerData?.address,
       claim_number: project.claim_number || providerData?.claimNumber,
-      insurance_agency: providerData?.insuranceAgency,
-      adjuster_name: providerData?.adjusterName,
-      adjuster_phone: providerData?.adjusterContact?.phone,
+      date_of_loss: project.date_of_loss,
+      insurance_agency: project.insurance_company || providerData?.insuranceAgency,
+      adjuster_name: project.adjuster_name || providerData?.adjusterName,
+      adjuster_phone: project.adjuster_phone || providerData?.adjusterContact?.phone,
       tenant: providerData?.tenant,
       // For flat CRMs (Mock, JobNimbus), use project.id as the job_id
       // For hierarchical CRMs (Service Titan), this would need to be the actual job_id
