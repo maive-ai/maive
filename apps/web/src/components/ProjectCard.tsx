@@ -1,4 +1,11 @@
-import { Building2, CheckCircle2, Circle, Mail, MapPin, Phone } from 'lucide-react';
+import {
+  Building2,
+  CheckCircle2,
+  Circle,
+  Mail,
+  MapPin,
+  Phone,
+} from 'lucide-react';
 
 import type { Project } from '@/clients/crm';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -17,15 +24,22 @@ export function ProjectCard({
   onClick,
   isSelectMode = false,
   isSelected = false,
-  onSelect
+  onSelect,
 }: ProjectCardProps) {
   // Extract data from provider_data
   const providerData = project.provider_data as any;
 
-  const customerName = project.customer_name || providerData?.customerName || 'Customer Name';
-  const address = project.address_line1 || providerData?.address || '123 Main St, City, State 12345';
-  const phone = formatPhoneNumber(providerData?.customer_phone || providerData?.phone);
-  const email = providerData?.customer_email || providerData?.email || 'Not available';
+  const customerName =
+    project.customer_name || providerData?.customerName || 'Customer Name';
+  const address =
+    project.address_line1 ||
+    providerData?.address ||
+    '123 Main St, City, State 12345';
+  const phone = formatPhoneNumber(
+    providerData?.customer_phone || providerData?.phone,
+  );
+  const email =
+    providerData?.customer_email || providerData?.email || 'Not available';
 
   const handleClick = (): void => {
     if (isSelectMode && onSelect) {
@@ -59,7 +73,9 @@ export function ProjectCard({
             <Building2 className="size-6 text-white" />
           </div>
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900">{customerName}</h3>
+            <h3 className="text-lg font-semibold text-gray-900">
+              {customerName}
+            </h3>
           </div>
         </div>
       </CardHeader>
@@ -85,7 +101,9 @@ export function ProjectCard({
 
         {/* Status Badge */}
         <div className="pt-3">
-          <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
+          <div
+            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}
+          >
             {project.status}
           </div>
         </div>
@@ -93,4 +111,3 @@ export function ProjectCard({
     </Card>
   );
 }
-

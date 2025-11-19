@@ -7,7 +7,13 @@ import {
   type CallListItemResponse,
   type CallListResponse,
 } from '@maive/api/client';
-import { useMutation, useQuery, useQueryClient, type UseQueryResult, type UseMutationResult } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseQueryResult,
+  type UseMutationResult,
+} from '@tanstack/react-query';
 
 import { env } from '@/env';
 import { baseClient } from './base';
@@ -24,7 +30,7 @@ const createCallListApi = (): CallListApi => {
       basePath: env.PUBLIC_SERVER_URL,
     }),
     undefined,
-    baseClient
+    baseClient,
   );
 };
 
@@ -35,7 +41,7 @@ export async function fetchCallList(): Promise<CallListResponse> {
   const api = createCallListApi();
   const response = await api.getCallListApiCallListGet();
   console.log(
-    `[Call List Client] Fetched call list with ${response.data.total} items`
+    `[Call List Client] Fetched call list with ${response.data.total} items`,
   );
   return response.data;
 }
@@ -43,11 +49,15 @@ export async function fetchCallList(): Promise<CallListResponse> {
 /**
  * Add projects to the call list
  */
-export async function addToCallList(projectIds: string[]): Promise<CallListResponse> {
+export async function addToCallList(
+  projectIds: string[],
+): Promise<CallListResponse> {
   const api = createCallListApi();
-  const response = await api.addToCallListApiCallListAddPost({ project_ids: projectIds });
+  const response = await api.addToCallListApiCallListAddPost({
+    project_ids: projectIds,
+  });
   console.log(
-    `[Call List Client] Added ${projectIds.length} projects to call list`
+    `[Call List Client] Added ${projectIds.length} projects to call list`,
   );
   return response.data;
 }
@@ -58,9 +68,7 @@ export async function addToCallList(projectIds: string[]): Promise<CallListRespo
 export async function removeFromCallList(projectId: string): Promise<void> {
   const api = createCallListApi();
   await api.removeFromCallListApiCallListProjectIdDelete(projectId);
-  console.log(
-    `[Call List Client] Removed project ${projectId} from call list`
-  );
+  console.log(`[Call List Client] Removed project ${projectId} from call list`);
 }
 
 /**
@@ -86,7 +94,11 @@ export function useCallList(): UseQueryResult<CallListResponse, Error> {
 /**
  * React Query mutation for adding projects to call list
  */
-export function useAddToCallList(): UseMutationResult<CallListResponse, Error, string[]> {
+export function useAddToCallList(): UseMutationResult<
+  CallListResponse,
+  Error,
+  string[]
+> {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -101,7 +113,11 @@ export function useAddToCallList(): UseMutationResult<CallListResponse, Error, s
 /**
  * React Query mutation for removing a project from call list
  */
-export function useRemoveFromCallList(): UseMutationResult<void, Error, string> {
+export function useRemoveFromCallList(): UseMutationResult<
+  void,
+  Error,
+  string
+> {
   const queryClient = useQueryClient();
 
   return useMutation({

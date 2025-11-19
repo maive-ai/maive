@@ -1,5 +1,14 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { CheckCircle2, ChevronDown, ChevronUp, Edit, Play, Plus, Square, X } from 'lucide-react';
+import {
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Edit,
+  Play,
+  Plus,
+  Square,
+  X,
+} from 'lucide-react';
 import { useState } from 'react';
 
 import { useFetchProjects } from '@/clients/crm';
@@ -22,7 +31,11 @@ import {
   formatWhoToCall,
   timeToInputFormat,
 } from '@/lib/scheduledGroupsUtils';
-import { formatPhoneNumber, getStatusColor, getAdjusterInfo } from '@/lib/utils';
+import {
+  formatPhoneNumber,
+  getStatusColor,
+  getAdjusterInfo,
+} from '@/lib/utils';
 
 export const Route = createFileRoute('/_authed/schedule')({
   component: Schedule,
@@ -35,7 +48,8 @@ function Schedule() {
   const toggleActive = useToggleGroupActive();
   const removeProject = useRemoveProjectFromGroup();
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set());
-  const [editingGroup, setEditingGroup] = useState<ScheduledGroupResponse | null>(null);
+  const [editingGroup, setEditingGroup] =
+    useState<ScheduledGroupResponse | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const projects = projectsData?.projects || [];
@@ -59,11 +73,17 @@ function Schedule() {
     }
   };
 
-  const handleToggleActive = async (groupId: number, isActive: boolean): Promise<void> => {
+  const handleToggleActive = async (
+    groupId: number,
+    isActive: boolean,
+  ): Promise<void> => {
     await toggleActive.mutateAsync({ groupId, isActive });
   };
 
-  const handleRemoveProject = async (groupId: number, projectId: string): Promise<void> => {
+  const handleRemoveProject = async (
+    groupId: number,
+    projectId: string,
+  ): Promise<void> => {
     await removeProject.mutateAsync({ groupId, projectId });
   };
 
@@ -107,8 +127,12 @@ function Schedule() {
                 onToggleExpanded={() => toggleGroupExpanded(group.id)}
                 onEdit={() => setEditingGroup(group)}
                 onDelete={() => handleDeleteGroup(group.id)}
-                onToggleActive={() => handleToggleActive(group.id, !group.is_active)}
-                onRemoveProject={(projectId) => handleRemoveProject(group.id, projectId)}
+                onToggleActive={() =>
+                  handleToggleActive(group.id, !group.is_active)
+                }
+                onRemoveProject={(projectId) =>
+                  handleRemoveProject(group.id, projectId)
+                }
                 projectMap={projectMap}
               />
             );
@@ -154,7 +178,9 @@ function GroupCard({
   onRemoveProject,
   projectMap,
 }: GroupCardProps) {
-  const { data: groupDetail } = useScheduledGroupDetail(isExpanded ? group.id : null);
+  const { data: groupDetail } = useScheduledGroupDetail(
+    isExpanded ? group.id : null,
+  );
   const removeProject = useRemoveProjectFromGroup();
   const toggleActive = useToggleGroupActive();
   const navigate = useNavigate();
@@ -178,7 +204,9 @@ function GroupCard({
             )}
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <h3 className="text-lg font-semibold text-gray-900">{group.name}</h3>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {group.name}
+                </h3>
                 {group.is_active && (
                   <Badge className="bg-green-100 text-green-800">Active</Badge>
                 )}
@@ -190,11 +218,15 @@ function GroupCard({
                 )}
               </div>
               <p className="text-sm text-gray-500 mt-1">
-                {formatFrequency(group.frequency)} at {timeToInputFormat(group.time_of_day)}
+                {formatFrequency(group.frequency)} at{' '}
+                {timeToInputFormat(group.time_of_day)}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="flex items-center gap-2"
+            onClick={(e) => e.stopPropagation()}
+          >
             <Button
               variant="outline"
               size="sm"
@@ -217,7 +249,12 @@ function GroupCard({
               <Edit className="size-4 mr-2" />
               Edit
             </Button>
-            <Button variant="outline" size="sm" onClick={onDelete} disabled={removeProject.isPending}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onDelete}
+              disabled={removeProject.isPending}
+            >
               <X className="size-4" />
             </Button>
           </div>
@@ -229,23 +266,33 @@ function GroupCard({
         <div className="border-t bg-gray-50 p-4">
           {/* Group Settings Summary */}
           <div className="mb-4 p-3 bg-white rounded-lg">
-            <h4 className="font-semibold text-sm text-gray-700 mb-2">Group Settings</h4>
+            <h4 className="font-semibold text-sm text-gray-700 mb-2">
+              Group Settings
+            </h4>
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div>
                 <span className="text-gray-500">Frequency:</span>{' '}
-                <span className="font-medium">{formatFrequency(group.frequency)}</span>
+                <span className="font-medium">
+                  {formatFrequency(group.frequency)}
+                </span>
               </div>
               <div>
                 <span className="text-gray-500">Time:</span>{' '}
-                <span className="font-medium">{timeToInputFormat(group.time_of_day)}</span>
+                <span className="font-medium">
+                  {timeToInputFormat(group.time_of_day)}
+                </span>
               </div>
               <div>
                 <span className="text-gray-500">Goal:</span>{' '}
-                <span className="font-medium">{formatGoalType(group.goal_type)}</span>
+                <span className="font-medium">
+                  {formatGoalType(group.goal_type)}
+                </span>
               </div>
               <div>
                 <span className="text-gray-500">Who to Call:</span>{' '}
-                <span className="font-medium">{formatWhoToCall(group.who_to_call)}</span>
+                <span className="font-medium">
+                  {formatWhoToCall(group.who_to_call)}
+                </span>
               </div>
             </div>
             {group.goal_description && (
@@ -272,55 +319,61 @@ function GroupCard({
                   const adjuster = getAdjusterInfo(project);
 
                   return (
-                        <Card
-                          key={member.id}
-                          className={`p-3 cursor-pointer hover:bg-gray-50 transition-colors ${
-                            member.goal_completed
-                              ? 'bg-green-50 border-green-200'
-                              : 'bg-white'
-                          }`}
-                          onClick={() => navigate({ to: '/project-detail', search: { projectId: member.project_id } })}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3 flex-1">
-                              {member.goal_completed && (
-                                <CheckCircle2 className="size-5 text-green-600" />
-                              )}
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-gray-900">
-                                    {project.customer_name || 'Unknown'}
-                                  </span>
-                                  <div
-                                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                                      project.status
-                                    )}`}
-                                  >
-                                    {project.status}
-                                  </div>
-                                </div>
-                                <div className="text-sm text-gray-600 mt-1">
-                                  <span className="font-medium">Adjuster:</span> {adjuster.name}
-                                  {' • '}
-                                  <span className="font-medium">Phone:</span>{' '}
-                                  {formatPhoneNumber(adjuster.phone)}
-                                </div>
+                    <Card
+                      key={member.id}
+                      className={`p-3 cursor-pointer hover:bg-gray-50 transition-colors ${
+                        member.goal_completed
+                          ? 'bg-green-50 border-green-200'
+                          : 'bg-white'
+                      }`}
+                      onClick={() =>
+                        navigate({
+                          to: '/project-detail',
+                          search: { projectId: member.project_id },
+                        })
+                      }
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 flex-1">
+                          {member.goal_completed && (
+                            <CheckCircle2 className="size-5 text-green-600" />
+                          )}
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-900">
+                                {project.customer_name || 'Unknown'}
+                              </span>
+                              <div
+                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                                  project.status,
+                                )}`}
+                              >
+                                {project.status}
                               </div>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onRemoveProject(member.project_id);
-                              }}
-                              disabled={removeProject.isPending}
-                            >
-                              <X className="size-4" />
-                            </Button>
+                            <div className="text-sm text-gray-600 mt-1">
+                              <span className="font-medium">Adjuster:</span>{' '}
+                              {adjuster.name}
+                              {' • '}
+                              <span className="font-medium">Phone:</span>{' '}
+                              {formatPhoneNumber(adjuster.phone)}
+                            </div>
                           </div>
-                        </Card>
-                      );
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRemoveProject(member.project_id);
+                          }}
+                          disabled={removeProject.isPending}
+                        >
+                          <X className="size-4" />
+                        </Button>
+                      </div>
+                    </Card>
+                  );
                 })}
               </div>
             )}
@@ -330,4 +383,3 @@ function GroupCard({
     </Card>
   );
 }
-

@@ -25,7 +25,10 @@ export type AppSidebarProps = {
   user: User | null;
 };
 
-export default function AppSidebar({ user, ...props }: AppSidebarProps & React.ComponentProps<typeof Sidebar>) {
+export default function AppSidebar({
+  user,
+  ...props
+}: AppSidebarProps & React.ComponentProps<typeof Sidebar>) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const role = user?.role;
   const { state, toggleSidebar } = useSidebar();
@@ -88,7 +91,10 @@ export default function AppSidebar({ user, ...props }: AppSidebarProps & React.C
                               'bg-primary-900 text-primary-50 shadow-xs hover:bg-primary-800 data-[active=true]:bg-primary-800',
                           )}
                         >
-                          <Link to={item.route.fullPath} className="flex items-center gap-3">
+                          <Link
+                            to={item.route.fullPath}
+                            className="flex items-center gap-3"
+                          >
                             {item.icon && (
                               <item.icon
                                 className="h-6 w-6" // 20% bigger icons (from h-5 w-5 to h-6 w-6), removed color override

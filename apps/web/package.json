@@ -11,6 +11,7 @@
     "dev": "pnpm env:run dev",
     "env:run": "dotenv -- vite",
     "format": "prettier --check . --ignore-path .prettierignore --ignore-path ../../.gitignore",
+    "format:check": "prettier --check . --ignore-path .prettierignore --ignore-path ../../.gitignore",
     "format:fix": "prettier --write . --ignore-path .prettierignore --ignore-path ../../.gitignore",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "preview": "pnpm env:run preview",

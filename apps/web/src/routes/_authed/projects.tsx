@@ -1,17 +1,33 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { AlertCircle, ChevronLeft, ChevronRight, Eye, FileSearch, Search } from 'lucide-react';
+import {
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  FileSearch,
+  Search,
+} from 'lucide-react';
 import { useState } from 'react';
 
 import { useAddToCallList, useCallList } from '@/clients/callList';
 import { useFetchProjects } from '@/clients/crm';
-import { useAddProjectsToGroup, useScheduledGroups } from '@/clients/scheduledGroups';
+import {
+  useAddProjectsToGroup,
+  useScheduledGroups,
+} from '@/clients/scheduledGroups';
 import { CallListSheet } from '@/components/CallListSheet';
 import { ProjectCard } from '@/components/ProjectCard';
 import { ScheduledGroupModal } from '@/components/ScheduledGroupModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { env } from '@/env';
 import { useProjectSearch } from '@/hooks/useProjectSearch';
 
@@ -29,10 +45,14 @@ function Projects() {
   const addProjectsToGroup = useAddProjectsToGroup();
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSelectMode, setIsSelectMode] = useState<boolean>(false);
-  const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
+  const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(
+    new Set(),
+  );
   const [isCallListOpen, setIsCallListOpen] = useState<boolean>(false);
-  const [isScheduleGroupModalOpen, setIsScheduleGroupModalOpen] = useState<boolean>(false);
-  const [scheduleGroupSelectValue, setScheduleGroupSelectValue] = useState<string>('');
+  const [isScheduleGroupModalOpen, setIsScheduleGroupModalOpen] =
+    useState<boolean>(false);
+  const [scheduleGroupSelectValue, setScheduleGroupSelectValue] =
+    useState<string>('');
   const navigate = useNavigate();
 
   const handleProjectClick = (projectId: string): void => {
@@ -73,9 +93,11 @@ function Projects() {
     });
   };
 
-  const handleAddToScheduleGroup = async (groupId: number | 'new'): Promise<void> => {
+  const handleAddToScheduleGroup = async (
+    groupId: number | 'new',
+  ): Promise<void> => {
     const projectIds = Array.from(selectedProjectIds);
-    
+
     if (groupId === 'new') {
       // Open create modal, and after creation, add projects
       setIsScheduleGroupModalOpen(true);
@@ -145,7 +167,8 @@ function Projects() {
             Failed to load projects
           </h2>
           <p className="text-gray-600 text-center max-w-md">
-            {error?.message || 'An unexpected error occurred while fetching projects.'}
+            {error?.message ||
+              'An unexpected error occurred while fetching projects.'}
           </p>
         </div>
       </div>
@@ -187,24 +210,29 @@ function Projects() {
       {/* Action Buttons - Above Search Bar */}
       <div className="mb-4 flex justify-end gap-2">
         {/* View Call List button - shown when call list has items */}
-        {env.PUBLIC_ENABLE_CALL_LIST && !isSelectMode && callListData && callListData.total > 0 && (
-          <Button
-            onClick={() => setIsCallListOpen(true)}
-          >
-            <Eye />
-            Call List
-          </Button>
-        )}
+        {env.PUBLIC_ENABLE_CALL_LIST &&
+          !isSelectMode &&
+          callListData &&
+          callListData.total > 0 && (
+            <Button onClick={() => setIsCallListOpen(true)}>
+              <Eye />
+              Call List
+            </Button>
+          )}
 
         {/* Add to Call List button - shown in select mode when items are selected */}
-        {env.PUBLIC_ENABLE_CALL_LIST && isSelectMode && selectedProjectIds.size > 0 && (
-          <Button
-            onClick={handleAddToCallList}
-            disabled={addToCallList.isPending}
-          >
-            {addToCallList.isPending ? 'Adding...' : `Add to Call List (${selectedProjectIds.size})`}
-          </Button>
-        )}
+        {env.PUBLIC_ENABLE_CALL_LIST &&
+          isSelectMode &&
+          selectedProjectIds.size > 0 && (
+            <Button
+              onClick={handleAddToCallList}
+              disabled={addToCallList.isPending}
+            >
+              {addToCallList.isPending
+                ? 'Adding...'
+                : `Add to Call List (${selectedProjectIds.size})`}
+            </Button>
+          )}
 
         {/* Add to Schedule Group dropdown - shown in select mode when items are selected */}
         {isSelectMode && selectedProjectIds.size > 0 && (
@@ -230,11 +258,17 @@ function Projects() {
               ) : (
                 <>
                   {scheduledGroupsData?.groups.map((group) => (
-                    <SelectItem key={group.id} value={group.id.toString()} className="cursor-pointer">
+                    <SelectItem
+                      key={group.id}
+                      value={group.id.toString()}
+                      className="cursor-pointer"
+                    >
                       {group.name} ({group.member_count})
                     </SelectItem>
                   ))}
-                  <SelectItem value="new" className="cursor-pointer">Create New Group...</SelectItem>
+                  <SelectItem value="new" className="cursor-pointer">
+                    Create New Group...
+                  </SelectItem>
                 </>
               )}
             </SelectContent>
@@ -242,10 +276,7 @@ function Projects() {
         )}
 
         {/* Select / Cancel button */}
-        <Button
-          variant="outline"
-          onClick={toggleSelectMode}
-        >
+        <Button variant="outline" onClick={toggleSelectMode}>
           {isSelectMode ? 'Cancel' : 'Select'}
         </Button>
       </div>
@@ -264,7 +295,9 @@ function Projects() {
         </div>
         {searchQuery && (
           <p className="text-sm text-gray-600 mt-2">
-            {filteredProjects.length} {filteredProjects.length === 1 ? 'result' : 'results'} found on this page
+            {filteredProjects.length}{' '}
+            {filteredProjects.length === 1 ? 'result' : 'results'} found on this
+            page
             {data && ` (${data.total_count} total projects)`}
           </p>
         )}
@@ -280,23 +313,24 @@ function Projects() {
             No results found
           </h2>
           <p className="text-gray-600 text-center max-w-md">
-            No projects match your search query &ldquo;{searchQuery}&rdquo;. Try a different search term.
+            No projects match your search query &ldquo;{searchQuery}&rdquo;. Try
+            a different search term.
           </p>
         </div>
       ) : (
         <>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProjects.map((project) => (
-            <ProjectCard
-              key={project.id}
-              project={project}
-              onClick={handleProjectClick}
-              isSelectMode={isSelectMode}
-              isSelected={selectedProjectIds.has(project.id)}
-              onSelect={toggleProjectSelection}
-            />
-          ))}
-        </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredProjects.map((project) => (
+              <ProjectCard
+                key={project.id}
+                project={project}
+                onClick={handleProjectClick}
+                isSelectMode={isSelectMode}
+                isSelected={selectedProjectIds.has(project.id)}
+                onSelect={toggleProjectSelection}
+              />
+            ))}
+          </div>
 
           {/* Pagination Controls */}
           {data && (
@@ -304,15 +338,19 @@ function Projects() {
               <div className="text-sm text-gray-600">
                 {searchQuery ? (
                   <>
-                    Showing {filteredProjects.length} {filteredProjects.length === 1 ? 'result' : 'results'} on page {page} of {Math.ceil(data.total_count / pageSize) || 1}
+                    Showing {filteredProjects.length}{' '}
+                    {filteredProjects.length === 1 ? 'result' : 'results'} on
+                    page {page} of {Math.ceil(data.total_count / pageSize) || 1}
                   </>
                 ) : (
                   <>
-                    Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, data.total_count)} of {data.total_count} projects
+                    Showing {(page - 1) * pageSize + 1} to{' '}
+                    {Math.min(page * pageSize, data.total_count)} of{' '}
+                    {data.total_count} projects
                   </>
                 )}
               </div>
-              
+
               <div className="flex items-center gap-4">
                 {/* Page Size Selector */}
                 <div className="flex items-center gap-2">
@@ -349,11 +387,11 @@ function Projects() {
                     <ChevronLeft className="size-4" />
                     Previous
                   </Button>
-                  
+
                   <div className="text-sm text-gray-600 px-2">
                     Page {page} of {Math.ceil(data.total_count / pageSize) || 1}
                   </div>
-                  
+
                   <Button
                     variant="outline"
                     size="sm"
@@ -388,4 +426,3 @@ function Projects() {
     </div>
   );
 }
-

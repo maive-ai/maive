@@ -8,7 +8,10 @@ export const FileSearchToolUI = makeAssistantToolUI({
     if (!result) {
       return (
         <div className="mb-2">
-          <ShinyText text="Finding the latest data..." className="text-base leading-7 text-muted-foreground" />
+          <ShinyText
+            text="Finding the latest data..."
+            className="text-base leading-7 text-muted-foreground"
+          />
         </div>
       );
     }

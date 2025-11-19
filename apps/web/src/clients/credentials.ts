@@ -22,7 +22,7 @@ const createCredentialsApi = (): CredentialsApi => {
       basePath: env.PUBLIC_SERVER_URL,
     }),
     undefined,
-    baseClient
+    baseClient,
   );
 };
 
@@ -30,7 +30,7 @@ const createCredentialsApi = (): CredentialsApi => {
  * Create CRM credentials for the user's organization
  */
 export async function createCRMCredentials(
-  data: CRMCredentialsCreate
+  data: CRMCredentialsCreate,
 ): Promise<CRMCredentials> {
   const api = createCredentialsApi();
   const response = await api.createCrmCredentialsApiCredsPost(data);

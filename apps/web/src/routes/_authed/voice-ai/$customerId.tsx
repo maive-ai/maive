@@ -39,13 +39,15 @@ function CustomerVoiceAI() {
       </div>
 
       <div className="text-center">
-        <img src={MaiveLogo} alt="Maive Logo" className="w-16 h-auto mx-auto mb-4" />
+        <img
+          src={MaiveLogo}
+          alt="Maive Logo"
+          className="w-16 h-auto mx-auto mb-4"
+        />
         <h1 className="text-3xl font-bold text-gray-900 mb-4">
           Customer Voice AI - Coming Soon
         </h1>
-        <p className="text-lg text-gray-600 mb-2">
-          Customer ID: {customerId}
-        </p>
+        <p className="text-lg text-gray-600 mb-2">Customer ID: {customerId}</p>
         <p className="text-lg text-gray-600">
           This feature is currently under development.
         </p>

@@ -10,7 +10,10 @@ import type { Project } from '@/clients/crm';
  * @param searchQuery - Search query string
  * @returns Filtered array of projects matching the search query
  */
-export function useProjectSearch(projects: Project[] | undefined, searchQuery: string): Project[] {
+export function useProjectSearch(
+  projects: Project[] | undefined,
+  searchQuery: string,
+): Project[] {
   return useMemo(() => {
     if (!projects || !searchQuery.trim()) {
       return projects || [];
@@ -39,9 +42,8 @@ export function useProjectSearch(projects: Project[] | undefined, searchQuery: s
       ];
 
       return searchableFields.some((field) =>
-        field?.toString().toLowerCase().includes(query)
+        field?.toString().toLowerCase().includes(query),
       );
     });
   }, [projects, searchQuery]);
 }
-
