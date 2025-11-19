@@ -10,7 +10,7 @@ import {
 import { useMutation, useQuery, useQueryClient, type UseQueryResult, type UseMutationResult } from '@tanstack/react-query';
 
 import { env } from '@/env';
-import { apiClient } from '@/lib/apiClient';
+import { baseClient } from './base';
 
 // Re-export types from the generated client
 export type { AddToCallListRequest, CallListItemResponse, CallListResponse };
@@ -24,7 +24,7 @@ const createCallListApi = (): CallListApi => {
       basePath: env.PUBLIC_SERVER_URL,
     }),
     undefined,
-    apiClient
+    baseClient
   );
 };
 

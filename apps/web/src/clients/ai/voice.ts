@@ -9,7 +9,7 @@ import {
 } from '@maive/api/client';
 import { useMutation, useQuery, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query';
 import { env } from '@/env';
-import { apiClient } from '@/lib/apiClient';
+import { baseClient } from '../base';
 
 // Re-export types from the generated client
 export type { ActiveCallResponse, CallRequest, CallResponse };
@@ -23,7 +23,7 @@ const createVoiceAIApi = (): VoiceAIApi => {
       basePath: env.PUBLIC_SERVER_URL,
     }),
     undefined,
-    apiClient
+    baseClient
   );
 };
 

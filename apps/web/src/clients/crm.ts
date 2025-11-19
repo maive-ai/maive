@@ -11,7 +11,7 @@ import {
 import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query';
 
 import { env } from '@/env';
-import { apiClient } from '@/lib/apiClient';
+import { baseClient } from './base';
 
 // Re-export types from the generated client
 export type { MockNote, MockProject, Project, ProjectList };
@@ -25,7 +25,7 @@ const createCRMApi = (): CRMApi => {
       basePath: env.PUBLIC_SERVER_URL,
     }),
     undefined,
-    apiClient
+    baseClient
   );
 };
 

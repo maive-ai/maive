@@ -8,7 +8,7 @@ import {
 } from '@maive/api/client';
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 
-import { apiClient } from '@/lib/apiClient';
+import { baseClient } from './base';
 import { env } from '@/env';
 
 // Re-export types from the generated client
@@ -23,7 +23,7 @@ const createWorkflowsApi = (): WorkflowsApi => {
       basePath: env.PUBLIC_SERVER_URL,
     }),
     undefined,
-    apiClient
+    baseClient
   );
 };
 
