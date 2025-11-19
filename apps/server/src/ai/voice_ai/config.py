@@ -47,7 +47,10 @@ class VapiSettings(BaseSettings):
         description="Vapi phone number ID for outbound calls"
     )
     default_assistant_id: str = Field(
-        description="Default Vapi assistant ID for outbound calls"
+        description="Default Vapi assistant ID or squad ID for outbound calls"
+    )
+    use_squad: bool = Field(
+        default=False, description="Whether to use squad instead of assistant"
     )
 
     # Vapi-specific settings
