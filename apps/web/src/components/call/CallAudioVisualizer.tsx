@@ -52,11 +52,22 @@ export function CallAudioVisualizer({
   }, [listenUrl, isConnected, disconnect]);
 
   const handleToggle = () => {
+    console.log('[CallAudioVisualizer] Toggle clicked', {
+      isConnected,
+      canConnect,
+      callStatus,
+      listenUrl,
+    });
+
     if (isConnected) {
+      console.log('[CallAudioVisualizer] Disconnecting...');
       disconnect();
       onDisconnect?.();
     } else if (canConnect) {
+      console.log('[CallAudioVisualizer] Connecting...');
       connect();
+    } else {
+      console.warn('[CallAudioVisualizer] Cannot connect - conditions not met');
     }
   };
 
@@ -66,7 +77,8 @@ export function CallAudioVisualizer({
     transition: { duration: 0.8, repeat: Infinity },
   };
 
-  if (!listenUrl) return null;
+  // Only show the component when call is in progress and we have a listen URL
+  if (!listenUrl || callStatus !== 'in_progress') return null;
 
   return (
     <div className="border-t pt-4">

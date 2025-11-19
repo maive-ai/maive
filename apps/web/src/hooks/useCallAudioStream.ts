@@ -86,8 +86,11 @@ export function useCallAudioStream(listenUrl: string | null) {
   };
 
   const handleWebSocketClose = (): void => {
+    console.log('[Audio Stream] WebSocket closed');
     isConnectingRef.current = false;
     stopVolumeMonitoring();
+    cleanupPlayer();
+    wsRef.current = null; // Clear the ref so we can reconnect
     setState((prev) => ({ ...prev, isConnected: false, volumeLevel: 0 }));
   };
 
@@ -108,11 +111,20 @@ export function useCallAudioStream(listenUrl: string | null) {
       return;
     }
 
+    // If there's an existing WebSocket, check its state
     if (wsRef.current) {
-      console.warn('[Audio Stream] Cannot connect: WebSocket already exists', {
-        readyState: wsRef.current.readyState,
-      });
-      return;
+      const readyState = wsRef.current.readyState;
+      // WebSocket.CLOSED (3) or WebSocket.CLOSING (2) - clean it up and reconnect
+      if (readyState === WebSocket.CLOSED || readyState === WebSocket.CLOSING) {
+        console.log('[Audio Stream] Cleaning up stale WebSocket before reconnecting');
+        disconnect();
+      } else {
+        // WebSocket.CONNECTING (0) or WebSocket.OPEN (1) - don't interrupt
+        console.warn('[Audio Stream] Cannot connect: WebSocket already active', {
+          readyState,
+        });
+        return;
+      }
     }
 
     if (isConnectingRef.current) {
