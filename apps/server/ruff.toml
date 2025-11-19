@@ -1,27 +1,6 @@
-# Target Python version for lint rules
-target-version = "py313"
+# Extend shared Ruff configuration
+extend = "../../tools/ruff/ruff.toml"
 
-# Exclude build and virtual-env dirs
-exclude = [
-  ".git",
-  "__pycache__",
-  ".venv",
-  "build",
-  "dist",
-]
-
-# Enable import sorting rules (isort)
-[lint]
-select = [
-  "I",  # isort - import sorting
-]
-
-# Ignore specific rules
-extend-ignore = [
-  "B008",  # Do not perform function call in argument defaults (FastAPI Depends)
-]
-
-# Configure import sorting behavior
+# Configure import sorting behavior for this project
 [lint.isort]
 known-first-party = ["src"]
-section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
