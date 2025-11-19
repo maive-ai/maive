@@ -66,21 +66,12 @@ jobs:
         working-directory: apps/server
         run: uv sync --all-groups
 
-      # ===== Frontend Checks =====
-      - name: Check Prettier formatting
+      # ===== Checks (using Turbo) =====
+      - name: Check formatting (Prettier + Ruff)
         run: pnpm format:check
 
-      - name: Run ESLint
+      - name: Run linting (ESLint + Ruff)
         run: pnpm lint
 
       - name: Run TypeScript type checking
         run: pnpm typecheck
-
-      # ===== Backend Checks =====
-      - name: Check Python formatting (Ruff)
-        working-directory: apps/server
-        run: pnpm format:check
-
-      - name: Run Python linting (Ruff)
-        working-directory: apps/server
-        run: pnpm lint
