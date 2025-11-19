@@ -10,7 +10,19 @@ exclude = [
   "dist",
 ]
 
+# Enable import sorting rules (isort)
+[lint]
+select = [
+  "I",  # isort - import sorting
+]
+
 # Ignore specific rules
+[lint.extend-ignore]
 ignore = [
   "B008",  # Do not perform function call in argument defaults (FastAPI Depends)
 ]
+
+# Configure import sorting behavior
+[lint.isort]
+known-first-party = ["src"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
