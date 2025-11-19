@@ -2,7 +2,8 @@ packages:
   - apps/*
   - packages/*
   - tools/*
-  - infra/*
+  - infra
+  - scripts
 
 catalog:
   '@eslint/js': ^9.30.0
