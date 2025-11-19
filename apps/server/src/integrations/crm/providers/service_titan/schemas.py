@@ -11,7 +11,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from src.integrations.crm.constants import EstimateReviewStatus
 
-
 # ============================================================================
 # Service Titan Job Schemas
 # ============================================================================

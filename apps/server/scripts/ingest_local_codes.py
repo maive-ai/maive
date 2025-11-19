@@ -49,7 +49,11 @@ _codes_dir = _repo_root / "scripts" / "scraping" / "output" / "codes"
 
 from pydantic import BaseModel, Field  # noqa: E402
 
-from src.ai.rag.schemas import CodeDocumentMetadata, CodeType, JurisdictionLevel  # noqa: E402
+from src.ai.rag.schemas import (  # noqa: E402
+    CodeDocumentMetadata,
+    CodeType,
+    JurisdictionLevel,
+)
 from src.ai.rag.service import VectorStoreService  # noqa: E402
 from src.utils.logger import logger  # noqa: E402
 

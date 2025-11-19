@@ -8,16 +8,18 @@ from datetime import UTC, datetime, time
 from typing import Any
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     DateTime,
     ForeignKey,
     Index,
     Integer,
-    JSON,
     String,
     Text,
-    Time as SQLTime,
     UniqueConstraint,
+)
+from sqlalchemy import (
+    Time as SQLTime,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 

@@ -13,14 +13,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from src.integrations.crm.base import CRMError, CRMProvider
-from src.integrations.crm.constants import Status
 from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
+from src.integrations.crm.constants import Status
+from src.integrations.crm.providers.job_nimbus.schemas import FileMetadata
 from src.integrations.crm.providers.mock.data import (
     get_mock_projects,
     parse_raw_project_data,
 )
 from src.integrations.crm.providers.mock.schemas import MockProject
-from src.integrations.crm.providers.job_nimbus.schemas import FileMetadata
 from src.integrations.crm.schemas import (
     Contact,
     ContactList,

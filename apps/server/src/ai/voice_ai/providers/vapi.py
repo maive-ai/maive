@@ -7,7 +7,6 @@ This module implements the VoiceAIProvider interface for Vapi.
 from http import HTTPStatus
 from typing import Any
 
-from vapi.types.analysis import Analysis
 import httpx
 import phonenumbers
 from vapi import AsyncVapi
@@ -15,13 +14,16 @@ from vapi.types import (
     AnalysisPlan,
     AssistantOverrides,
     BotMessage,
-    Call as VapiCall,
     CallMessagesItem,
     CreateCustomerDto,
     JsonSchema,
     StructuredDataPlan,
     UserMessage,
 )
+from vapi.types import (
+    Call as VapiCall,
+)
+from vapi.types.analysis import Analysis
 
 from src.ai.voice_ai.base import VoiceAIError, VoiceAIProvider
 from src.ai.voice_ai.config import get_vapi_settings, get_voice_ai_settings

@@ -15,7 +15,6 @@ from src.db.crm_credentials.model import OrganizationCRMCredentials
 from src.db.crm_credentials.schemas import CRMCredentialsCreate
 from src.utils.logger import logger
 
-
 # In-memory TTL cache: 1000 orgs max, 5 min TTL (300 seconds)
 _credentials_cache: TTLCache = TTLCache(maxsize=1000, ttl=300)
 

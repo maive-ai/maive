@@ -12,7 +12,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from src.integrations.crm.constants import CRMProvider, EstimateReviewStatus, Status
 
-
 # ============================================================================
 # UNIVERSAL SCHEMAS - Work across all CRM providers
 # ============================================================================

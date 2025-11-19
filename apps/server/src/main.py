@@ -13,8 +13,8 @@ from src.db.scheduled_groups.router import router as scheduled_groups_router
 from src.integrations.creds.router import router as creds_router
 from src.integrations.crm.mcp import get_crm_mcp_server
 from src.integrations.crm.router import router as crm_router
-from src.workflows.router import router as workflows_router
 from src.utils.logger import logger
+from src.workflows.router import router as workflows_router
 
 
 def get_version():

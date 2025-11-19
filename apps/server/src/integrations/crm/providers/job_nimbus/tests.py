@@ -10,7 +10,6 @@ from src.integrations.crm.base import CRMError
 from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
 from src.integrations.crm.providers.job_nimbus.provider import JobNimbusProvider
 
-
 # Sample JobNimbus API responses
 SAMPLE_JN_JOB = {
     "recid": 12345,

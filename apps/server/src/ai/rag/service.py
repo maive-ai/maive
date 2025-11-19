@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import BinaryIO
 
-from openai import AsyncOpenAI, APIError
+from openai import APIError, AsyncOpenAI
 
 from src.ai.openai.config import get_openai_settings
 from src.ai.rag.schemas import CodeDocumentMetadata, VectorStoreStatus
