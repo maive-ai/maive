@@ -8,25 +8,22 @@ import {
 } from '@maive/api/client';
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 
-import { getIdToken } from '@/auth';
+import { baseClient } from './base';
 import { env } from '@/env';
 
 // Re-export types from the generated client
 export type { CallRequest, CallResponse };
 
 /**
- * Create a configured Workflows API instance
+ * Create a configured Workflows API instance using the shared axios client
  */
-const createWorkflowsApi = async (): Promise<WorkflowsApi> => {
-  const token = await getIdToken();
-  if (!token) throw new Error('Not authenticated');
-
+const createWorkflowsApi = (): WorkflowsApi => {
   return new WorkflowsApi(
     new Configuration({
-      accessToken: token,
       basePath: env.PUBLIC_SERVER_URL,
-      baseOptions: { withCredentials: true },
     }),
+    undefined,
+    baseClient
   );
 };
 
@@ -36,7 +33,7 @@ const createWorkflowsApi = async (): Promise<WorkflowsApi> => {
 export async function callAndWriteToCrm(
   request: CallRequest,
 ): Promise<CallResponse> {
-  const api = await createWorkflowsApi();
+  const api = createWorkflowsApi();
 
   const response = await api.callAndWriteResultsToCrmApiWorkflowsCallAndWriteResultsToCrmPost(request);
   return response.data;
