@@ -9,6 +9,7 @@ from src.ai.voice_ai.router import router as voice_ai_router
 from src.auth.router import router as auth_router
 from src.config import get_client_base_url
 from src.db.call_list.router import router as call_list_router
+from src.db.scheduled_groups.router import router as scheduled_groups_router
 from src.integrations.creds.router import router as creds_router
 from src.integrations.crm.mcp import get_crm_mcp_server
 from src.integrations.crm.router import router as crm_router
@@ -63,6 +64,7 @@ app.include_router(creds_router, prefix="/api")
 app.include_router(crm_router, prefix="/api")
 app.include_router(voice_ai_router, prefix="/api")
 app.include_router(call_list_router, prefix="/api")
+app.include_router(scheduled_groups_router, prefix="/api")
 app.include_router(workflows_router, prefix="/api")
 
 

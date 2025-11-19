@@ -13,7 +13,10 @@ from fastapi.responses import StreamingResponse
 from src.auth.dependencies import get_current_user, get_current_user_optional
 from src.auth.schemas import User
 from src.integrations.crm.base import CRMError
+from src.integrations.crm.config import get_crm_settings
+from src.integrations.crm.constants import CRMProvider
 from src.integrations.crm.dependencies import get_crm_service
+from src.integrations.crm.providers.mock.schemas import MockProject
 from src.integrations.crm.schemas import (
     Contact,
     ContactList,
@@ -505,3 +508,102 @@ async def add_contact_note(
             )
 
     return result
+
+
+# ========================================================================
+# Mock CRM Only Endpoints
+# ========================================================================
+
+
+@router.post("/projects", response_model=Project, status_code=status.HTTP_201_CREATED)
+async def create_mock_project(
+    request: MockProject,
+    current_user: User = Depends(get_current_user),
+    crm_service: CRMService = Depends(get_crm_service),
+) -> Project:
+    """
+    Create a new demo project (Mock CRM only).
+
+    This endpoint is only available when using the Mock CRM provider.
+    It allows creating demo projects for testing and demonstrations.
+
+    Args:
+        request: The project data to create
+        current_user: The authenticated user
+        crm_service: The CRM service instance
+
+    Returns:
+        Project: The created project
+
+    Raises:
+        HTTPException: If not using Mock CRM or an error occurs
+    """
+    # Check if using Mock CRM
+    settings = get_crm_settings()
+    if settings.provider != CRMProvider.MOCK:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Project creation is only available for the Mock CRM provider",
+        )
+
+    # Create the project
+    await crm_service.crm_provider.create_project(request)
+
+    # Return the most recently created project (last in the list)
+    projects_result = await crm_service.crm_provider.get_all_projects(
+        page=1, page_size=1000
+    )
+    if not projects_result.projects:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create project",
+        )
+
+    # Return the last project (most recently added)
+    return projects_result.projects[-1]
+
+
+@router.patch("/projects/{project_id}", response_model=Project)
+async def update_mock_project(
+    project_id: str,
+    request: MockProject,
+    current_user: User = Depends(get_current_user),
+    crm_service: CRMService = Depends(get_crm_service),
+) -> Project:
+    """
+    Update an existing demo project (Mock CRM only).
+
+    This endpoint is only available when using the Mock CRM provider.
+    It allows updating demo projects for testing and demonstrations.
+
+    Args:
+        project_id: The unique identifier for the project
+        request: The updated project data
+        current_user: The authenticated user
+        crm_service: The CRM service instance
+
+    Returns:
+        Project: The updated project
+
+    Raises:
+        HTTPException: If not using Mock CRM or an error occurs
+    """
+    # Check if using Mock CRM
+    settings = get_crm_settings()
+    if settings.provider != CRMProvider.MOCK:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Project update is only available for the Mock CRM provider",
+        )
+
+    # Update the project
+    try:
+        updated_project = await crm_service.crm_provider.update_project(
+            project_id, request
+        )
+        return updated_project
+    except CRMError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )

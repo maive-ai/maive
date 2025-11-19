@@ -9,25 +9,22 @@ import {
 } from '@maive/api/client';
 import { useMutation, useQuery, useQueryClient, type UseQueryResult, type UseMutationResult } from '@tanstack/react-query';
 
-import { getIdToken } from '@/auth';
 import { env } from '@/env';
+import { baseClient } from './base';
 
 // Re-export types from the generated client
 export type { AddToCallListRequest, CallListItemResponse, CallListResponse };
 
 /**
- * Create a configured Call List API instance
+ * Create a configured Call List API instance using the shared axios client
  */
-const createCallListApi = async (): Promise<CallListApi> => {
-  const token = await getIdToken();
-  if (!token) throw new Error('Not authenticated');
-
+const createCallListApi = (): CallListApi => {
   return new CallListApi(
     new Configuration({
-      accessToken: token,
       basePath: env.PUBLIC_SERVER_URL,
-      baseOptions: { withCredentials: true },
     }),
+    undefined,
+    baseClient
   );
 };
 
@@ -35,7 +32,7 @@ const createCallListApi = async (): Promise<CallListApi> => {
  * Fetch the user's call list
  */
 export async function fetchCallList(): Promise<CallListResponse> {
-  const api = await createCallListApi();
+  const api = createCallListApi();
   const response = await api.getCallListApiCallListGet();
   console.log(
     `[Call List Client] Fetched call list with ${response.data.total} items`
@@ -47,7 +44,7 @@ export async function fetchCallList(): Promise<CallListResponse> {
  * Add projects to the call list
  */
 export async function addToCallList(projectIds: string[]): Promise<CallListResponse> {
-  const api = await createCallListApi();
+  const api = createCallListApi();
   const response = await api.addToCallListApiCallListAddPost({ project_ids: projectIds });
   console.log(
     `[Call List Client] Added ${projectIds.length} projects to call list`
@@ -59,7 +56,7 @@ export async function addToCallList(projectIds: string[]): Promise<CallListRespo
  * Remove a project from the call list
  */
 export async function removeFromCallList(projectId: string): Promise<void> {
-  const api = await createCallListApi();
+  const api = createCallListApi();
   await api.removeFromCallListApiCallListProjectIdDelete(projectId);
   console.log(
     `[Call List Client] Removed project ${projectId} from call list`
@@ -70,7 +67,7 @@ export async function removeFromCallList(projectId: string): Promise<void> {
  * Clear all items from the call list
  */
 export async function clearCallList(): Promise<void> {
-  const api = await createCallListApi();
+  const api = createCallListApi();
   await api.clearCallListApiCallListDelete();
   console.log(`[Call List Client] Cleared call list`);
 }

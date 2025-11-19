@@ -688,6 +688,62 @@
             }
           }
         }
+      },
+      "patch": {
+        "tags": [
+          "CRM"
+        ],
+        "summary": "Update Mock Project",
+        "description": "Update an existing demo project (Mock CRM only).\n\nThis endpoint is only available when using the Mock CRM provider.\nIt allows updating demo projects for testing and demonstrations.\n\nArgs:\n    project_id: The unique identifier for the project\n    request: The updated project data\n    current_user: The authenticated user\n    crm_service: The CRM service instance\n\nReturns:\n    Project: The updated project\n\nRaises:\n    HTTPException: If not using Mock CRM or an error occurs",
+        "operationId": "update_mock_project_api_crm_projects__project_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MockProject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/crm/projects": {
@@ -739,6 +795,51 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProjectList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "CRM"
+        ],
+        "summary": "Create Mock Project",
+        "description": "Create a new demo project (Mock CRM only).\n\nThis endpoint is only available when using the Mock CRM provider.\nIt allows creating demo projects for testing and demonstrations.\n\nArgs:\n    request: The project data to create\n    current_user: The authenticated user\n    crm_service: The CRM service instance\n\nReturns:\n    Project: The created project\n\nRaises:\n    HTTPException: If not using Mock CRM or an error occurs",
+        "operationId": "create_mock_project_api_crm_projects_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MockProject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
                 }
               }
             }
@@ -1292,6 +1393,454 @@
         }
       }
     },
+    "/api/scheduled-groups/": {
+      "get": {
+        "tags": [
+          "Scheduled Groups"
+        ],
+        "summary": "List Scheduled Groups",
+        "description": "List all scheduled groups for the user.",
+        "operationId": "list_scheduled_groups_api_scheduled_groups__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduledGroupsListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Scheduled Groups"
+        ],
+        "summary": "Create Scheduled Group",
+        "description": "Create a new scheduled group.",
+        "operationId": "create_scheduled_group_api_scheduled_groups__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateScheduledGroupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduledGroupResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/scheduled-groups/{group_id}": {
+      "get": {
+        "tags": [
+          "Scheduled Groups"
+        ],
+        "summary": "Get Scheduled Group",
+        "description": "Get a scheduled group with its members.",
+        "operationId": "get_scheduled_group_api_scheduled_groups__group_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduledGroupDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Scheduled Groups"
+        ],
+        "summary": "Update Scheduled Group",
+        "description": "Update a scheduled group.",
+        "operationId": "update_scheduled_group_api_scheduled_groups__group_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateScheduledGroupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduledGroupResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Scheduled Groups"
+        ],
+        "summary": "Delete Scheduled Group",
+        "description": "Delete a scheduled group.",
+        "operationId": "delete_scheduled_group_api_scheduled_groups__group_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scheduled-groups/{group_id}/active": {
+      "patch": {
+        "tags": [
+          "Scheduled Groups"
+        ],
+        "summary": "Toggle Group Active",
+        "description": "Start or stop a scheduled group.",
+        "operationId": "toggle_group_active_api_scheduled_groups__group_id__active_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateGroupStatusRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduledGroupResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scheduled-groups/{group_id}/members": {
+      "post": {
+        "tags": [
+          "Scheduled Groups"
+        ],
+        "summary": "Add Projects To Group",
+        "description": "Add projects to a scheduled group.",
+        "operationId": "add_projects_to_group_api_scheduled_groups__group_id__members_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddProjectsToGroupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduledGroupDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scheduled-groups/{group_id}/members/{project_id}": {
+      "delete": {
+        "tags": [
+          "Scheduled Groups"
+        ],
+        "summary": "Remove Project From Group",
+        "description": "Remove a project from a scheduled group.",
+        "operationId": "remove_project_from_group_api_scheduled_groups__group_id__members__project_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scheduled-groups/{group_id}/members/{project_id}/completed": {
+      "patch": {
+        "tags": [
+          "Scheduled Groups"
+        ],
+        "summary": "Mark Goal Completed",
+        "description": "Mark goal as completed for a project in a group.",
+        "operationId": "mark_goal_completed_api_scheduled_groups__group_id__members__project_id__completed_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "completed",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Completed"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduledGroupMemberResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/workflows/call-and-write-results-to-crm": {
       "post": {
         "tags": [
@@ -1448,6 +1997,25 @@
         ],
         "title": "ActiveCallResponse",
         "description": "Response model for the user's currently active call."
+      },
+      "AddProjectsToGroupRequest": {
+        "properties": {
+          "project_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Project Ids",
+            "description": "List of project/job IDs to add to group"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_ids"
+        ],
+        "title": "AddProjectsToGroupRequest",
+        "description": "Request model for adding projects to a group."
       },
       "AddToCallListRequest": {
         "properties": {
@@ -2362,6 +2930,49 @@
         "title": "Contact",
         "description": "Universal contact/customer model that works across all CRM providers."
       },
+      "ContactInfo": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Contact name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone",
+            "description": "Contact phone"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email",
+            "description": "Contact email"
+          }
+        },
+        "type": "object",
+        "title": "ContactInfo",
+        "description": "Simple contact information (name, phone, email)."
+      },
       "ContactList": {
         "properties": {
           "contacts": {
@@ -2426,6 +3037,73 @@
         ],
         "title": "ContactList",
         "description": "Universal contact list response with pagination."
+      },
+      "CreateScheduledGroupRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "description": "Group display name"
+          },
+          "frequency": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Frequency",
+            "description": "Days of week: ['monday', 'tuesday', etc.]"
+          },
+          "time_of_day": {
+            "type": "string",
+            "format": "time",
+            "title": "Time Of Day",
+            "description": "Time of day to make calls"
+          },
+          "goal_type": {
+            "$ref": "#/components/schemas/GoalType",
+            "description": "Type of goal for this group"
+          },
+          "goal_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Description",
+            "description": "User-specified goal description (required if goal_type is user_specified)"
+          },
+          "who_to_call": {
+            "$ref": "#/components/schemas/WhoToCall",
+            "description": "Who to call for this group"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "frequency",
+          "time_of_day",
+          "goal_type",
+          "who_to_call"
+        ],
+        "title": "CreateScheduledGroupRequest",
+        "description": "Request model for creating a scheduled group."
+      },
+      "GoalType": {
+        "type": "string",
+        "enum": [
+          "status_check",
+          "locate_check",
+          "user_specified",
+          "ai_determined"
+        ],
+        "title": "GoalType",
+        "description": "Goal type enum for scheduled groups."
       },
       "HTTPValidationError": {
         "properties": {
@@ -2783,6 +3461,272 @@
         "type": "object",
         "title": "MarkCallCompletedRequest",
         "description": "Request model for marking a call as completed."
+      },
+      "MockNote": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id",
+            "description": "Note ID"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "Note text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "MockNote",
+        "description": "Simple note for mock projects."
+      },
+      "MockProject": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id",
+            "description": "Project ID"
+          },
+          "customerName": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Customername",
+            "description": "Customer name"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address",
+            "description": "Project address"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone",
+            "description": "Customer phone"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email",
+            "description": "Customer email"
+          },
+          "claimNumber": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimnumber",
+            "description": "Insurance claim number"
+          },
+          "dateOfLoss": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dateofloss",
+            "description": "Date of loss (ISO format)"
+          },
+          "insuranceCompany": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Insurancecompany",
+            "description": "Insurance company name"
+          },
+          "insuranceAgency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Insuranceagency",
+            "description": "Insurance agency name"
+          },
+          "insuranceAgencyContact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContactInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Insurance agency contact"
+          },
+          "insuranceContactName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Insurancecontactname",
+            "description": "Insurance contact name"
+          },
+          "insuranceContactPhone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Insurancecontactphone",
+            "description": "Insurance contact phone"
+          },
+          "insuranceContactEmail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Insurancecontactemail",
+            "description": "Insurance contact email"
+          },
+          "adjusterName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjustername",
+            "description": "Adjuster name"
+          },
+          "adjusterContact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContactInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Adjuster contact"
+          },
+          "adjusterContactName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjustercontactname",
+            "description": "Adjuster contact name"
+          },
+          "adjusterContactPhone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjustercontactphone",
+            "description": "Adjuster contact phone"
+          },
+          "adjusterContactEmail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjustercontactemail",
+            "description": "Adjuster contact email"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/MockNote"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "Project notes"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Project status",
+            "default": "In Progress"
+          }
+        },
+        "type": "object",
+        "required": [
+          "customerName"
+        ],
+        "title": "MockProject",
+        "description": "Mock project data model (Mock CRM only)."
       },
       "Note": {
         "properties": {
@@ -3452,6 +4396,270 @@
         "title": "Role",
         "description": "User roles in the system."
       },
+      "ScheduledGroupDetailResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "Database ID of the group"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id",
+            "description": "Cognito user ID"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Group display name"
+          },
+          "frequency": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Frequency",
+            "description": "Days of week"
+          },
+          "time_of_day": {
+            "type": "string",
+            "title": "Time Of Day",
+            "description": "Time of day (HH:MM:SS format)"
+          },
+          "goal_type": {
+            "type": "string",
+            "title": "Goal Type",
+            "description": "Goal type"
+          },
+          "goal_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Description",
+            "description": "Goal description"
+          },
+          "who_to_call": {
+            "type": "string",
+            "title": "Who To Call",
+            "description": "Who to call"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "description": "Whether the group is active"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduledGroupMemberResponse"
+            },
+            "type": "array",
+            "title": "Members",
+            "description": "List of group members"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When the group was created"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At",
+            "description": "When the group was last updated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "name",
+          "frequency",
+          "time_of_day",
+          "goal_type",
+          "who_to_call",
+          "is_active",
+          "members",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ScheduledGroupDetailResponse",
+        "description": "Response model for a scheduled group with members."
+      },
+      "ScheduledGroupMemberResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "Database ID of the member"
+          },
+          "group_id": {
+            "type": "integer",
+            "title": "Group Id",
+            "description": "Group ID"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id",
+            "description": "Project/Job ID from CRM"
+          },
+          "goal_completed": {
+            "type": "boolean",
+            "title": "Goal Completed",
+            "description": "Whether the goal has been completed"
+          },
+          "goal_completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Completed At",
+            "description": "Timestamp when goal was completed"
+          },
+          "added_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Added At",
+            "description": "When the project was added to the group"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "group_id",
+          "project_id",
+          "goal_completed",
+          "added_at"
+        ],
+        "title": "ScheduledGroupMemberResponse",
+        "description": "Response model for a single scheduled group member."
+      },
+      "ScheduledGroupResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "Database ID of the group"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id",
+            "description": "Cognito user ID"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Group display name"
+          },
+          "frequency": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Frequency",
+            "description": "Days of week"
+          },
+          "time_of_day": {
+            "type": "string",
+            "title": "Time Of Day",
+            "description": "Time of day (HH:MM:SS format)"
+          },
+          "goal_type": {
+            "type": "string",
+            "title": "Goal Type",
+            "description": "Goal type"
+          },
+          "goal_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Description",
+            "description": "Goal description"
+          },
+          "who_to_call": {
+            "type": "string",
+            "title": "Who To Call",
+            "description": "Who to call"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "description": "Whether the group is active"
+          },
+          "member_count": {
+            "type": "integer",
+            "title": "Member Count",
+            "description": "Number of projects in the group"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When the group was created"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At",
+            "description": "When the group was last updated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "name",
+          "frequency",
+          "time_of_day",
+          "goal_type",
+          "who_to_call",
+          "is_active",
+          "member_count",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ScheduledGroupResponse",
+        "description": "Response model for a scheduled group."
+      },
+      "ScheduledGroupsListResponse": {
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduledGroupResponse"
+            },
+            "type": "array",
+            "title": "Groups",
+            "description": "List of scheduled groups"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Total number of groups"
+          }
+        },
+        "type": "object",
+        "required": [
+          "groups",
+          "total"
+        ],
+        "title": "ScheduledGroupsListResponse",
+        "description": "Response model for listing scheduled groups."
+      },
       "TranscriptMessage": {
         "properties": {
           "role": {
@@ -3490,6 +4698,105 @@
         ],
         "title": "TranscriptMessage",
         "description": "Provider-agnostic transcript message."
+      },
+      "UpdateGroupStatusRequest": {
+        "properties": {
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "description": "Whether the group should be active"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_active"
+        ],
+        "title": "UpdateGroupStatusRequest",
+        "description": "Request model for updating group active status."
+      },
+      "UpdateScheduledGroupRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Group display name"
+          },
+          "frequency": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frequency",
+            "description": "Days of week: ['monday', 'tuesday', etc.]"
+          },
+          "time_of_day": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Of Day",
+            "description": "Time of day to make calls"
+          },
+          "goal_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GoalType"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Type of goal for this group"
+          },
+          "goal_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Description",
+            "description": "User-specified goal description"
+          },
+          "who_to_call": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WhoToCall"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Who to call for this group"
+          }
+        },
+        "type": "object",
+        "title": "UpdateScheduledGroupRequest",
+        "description": "Request model for updating a scheduled group."
       },
       "User": {
         "properties": {
@@ -3639,6 +4946,16 @@
         ],
         "title": "VoiceAIProvider",
         "description": "Available Voice AI providers."
+      },
+      "WhoToCall": {
+        "type": "string",
+        "enum": [
+          "adjuster",
+          "insurance_carrier",
+          "ai_determines"
+        ],
+        "title": "WhoToCall",
+        "description": "Who to call enum for scheduled groups."
       }
     },
     "securitySchemes": {

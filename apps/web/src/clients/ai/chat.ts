@@ -1,7 +1,7 @@
 // Chat client - handles roofing chat API calls with streaming
 
 import type { ChatMessage, ChatRequest } from '@maive/api/client';
-import { getIdToken } from '@/auth';
+import { getAccessToken } from '@/clients/auth';
 import { env } from '@/env';
 
 // Re-export types from the generated client
@@ -18,7 +18,7 @@ export type { ChatMessage, ChatRequest };
 export async function streamRoofingChat(
   messages: ChatMessage[],
 ): Promise<Response> {
-  const token = await getIdToken();
+  const token = await getAccessToken();
   if (!token) throw new Error('Not authenticated');
 
   const chatRequest: ChatRequest = { messages };
@@ -32,6 +32,22 @@ export async function streamRoofingChat(
     credentials: 'include',
     body: JSON.stringify(chatRequest),
   });
+
+  // Handle 401 for streaming endpoint - retry once with fresh token
+  if (response.status === 401) {
+    const newToken = await getAccessToken();
+    if (newToken) {
+      return fetch(`${env.PUBLIC_SERVER_URL}/api/chat/roofing`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${newToken}`,
+        },
+        credentials: 'include',
+        body: JSON.stringify(chatRequest),
+      });
+    }
+  }
 
   if (!response.ok) {
     throw new Error(`Chat request failed: ${response.statusText}`);

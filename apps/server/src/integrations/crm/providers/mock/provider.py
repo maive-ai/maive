@@ -15,7 +15,8 @@ from pathlib import Path
 from src.integrations.crm.base import CRMError, CRMProvider
 from src.integrations.crm.constants import Status
 from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
-from src.integrations.crm.providers.mock.data import get_mock_projects
+from src.integrations.crm.providers.mock.data import get_mock_projects, parse_raw_project_data
+from src.integrations.crm.providers.mock.schemas import MockProject
 from src.integrations.crm.providers.job_nimbus.schemas import FileMetadata
 from src.integrations.crm.schemas import (
     Contact,
@@ -825,31 +826,86 @@ class MockProvider(CRMProvider):
     # Other Mock-specific Methods
     # ========================================================================
 
-    async def create_project(self, project_data: dict) -> None:
+    async def create_project(self, mock_project: MockProject) -> None:
         """
         Create a new demo project (Mock CRM only).
 
         Args:
-            project_data: The project data dict (id will be overridden with generated value)
+            mock_project: The MockProject instance (id will be overridden with generated value)
         """
         # Generate random project ID and override the provided one
-        project_id = uuid.uuid4()
+        project_id = str(uuid.uuid4())
         logger.info("Creating mock project with ID", project_id=project_id)
 
-        # Override id, tenant, and job_id with generated values
-        provider_data = project_data.copy()
-        provider_data["id"] = str(project_id)
-        provider_data["tenant"] = 1
-        provider_data["job_id"] = random.randint(1, 1000000)
+        # Create a copy with the generated project ID
+        mock_project_instance = mock_project.model_copy(update={"id": project_id})
 
-        # Create mock project
-        now = datetime.now(UTC).isoformat()
-        mock_project = Project(
-            provider_data=provider_data,
-            status=Status.IN_PROGRESS,
-            updated_at=now,
+        # Generate job_id
+        job_id = random.randint(1, 1000000)
+
+        # Parse and create properly structured project using shared function
+        project = parse_raw_project_data(
+            mock_project_instance,
+            job_id=job_id,
+            timestamp=None
         )
 
         # Add to in-memory projects list
-        self._projects.append(mock_project)
+        self._projects.append(project)
         logger.info("Successfully created mock project", project_id=project_id)
+
+    async def update_project(self, project_id: str, mock_project: MockProject) -> Project:
+        """
+        Update an existing demo project (Mock CRM only).
+
+        Args:
+            project_id: The unique identifier for the project
+            mock_project: The updated MockProject data
+
+        Returns:
+            Project: The updated project
+
+        Raises:
+            CRMError: If the project is not found
+        """
+        logger.info("Updating mock project", project_id=project_id)
+
+        # Get existing project (will raise CRMError if not found)
+        existing_project = await self.get_project(project_id)
+
+        # Find project index for replacement
+        project_index = next(
+            (i for i, p in enumerate(self._projects) if p.provider_data.get("id") == project_id),
+            None,
+        )
+
+        # Merge new data with existing provider_data
+        # Convert existing provider_data to dict for merging
+        existing_data = existing_project.provider_data.copy()
+        # Get only the fields that were provided in the update (exclude None values)
+        update_data = mock_project.model_dump(by_alias=True, exclude_none=True)
+        existing_data.update(update_data)
+
+        # Create MockProject from merged data, preserving the project_id
+        existing_data["id"] = project_id
+        mock_project_instance = MockProject(**existing_data)
+
+        # Get job_id from existing project
+        job_id = existing_project.provider_data.get("job_id")
+
+        # Parse and create updated project using shared function
+        updated_project = parse_raw_project_data(
+            mock_project_instance,
+            job_id=job_id,
+            timestamp=None  # Will use current time for updated_at
+        )
+
+        # Preserve created_at from original
+        updated_project.created_at = existing_project.created_at
+
+        # Replace in list (index should always exist if get_project succeeded)
+        if project_index is not None:
+            self._projects[project_index] = updated_project
+
+        logger.info("Successfully updated mock project", project_id=project_id)
+        return updated_project
