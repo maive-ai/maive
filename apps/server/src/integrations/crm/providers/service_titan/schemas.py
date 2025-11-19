@@ -11,7 +11,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from src.integrations.crm.constants import EstimateReviewStatus
 
-
 # ============================================================================
 # Service Titan Job Schemas
 # ============================================================================
@@ -79,7 +78,9 @@ class ServiceTitanJob(BaseModel):
         alias="notificationsEnabled",
     )
     created_on: datetime = Field(
-        ..., description="Date/time (in UTC) when the job was created", alias="createdOn"
+        ...,
+        description="Date/time (in UTC) when the job was created",
+        alias="createdOn",
     )
     created_by_id: int = Field(
         ..., description="ID of the user who created the job", alias="createdById"
@@ -89,10 +90,14 @@ class ServiceTitanJob(BaseModel):
         description="Date/time (in UTC) when job was last modified",
         alias="modifiedOn",
     )
-    tag_type_ids: list[int] = Field(..., description="Tags on the job", alias="tagTypeIds")
+    tag_type_ids: list[int] = Field(
+        ..., description="Tags on the job", alias="tagTypeIds"
+    )
     customer_po: str | None = Field(None, description="Customer PO", alias="customerPo")
     invoice_id: int | None = Field(
-        None, description="ID of the invoice associated with this job", alias="invoiceId"
+        None,
+        description="ID of the invoice associated with this job",
+        alias="invoiceId",
     )
     total: float | None = Field(None, description="Total amount of the job")
     summary: str | None = Field(None, description="Job summary")
@@ -116,7 +121,9 @@ class ServiceTitanEstimate(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     id: int = Field(..., description="ID of the estimate")
-    job_id: int | None = Field(None, description="ID of the associated job", alias="jobId")
+    job_id: int | None = Field(
+        None, description="ID of the associated job", alias="jobId"
+    )
     project_id: int | None = Field(
         None, description="ID of the associated project", alias="projectId"
     )
@@ -144,9 +151,13 @@ class ServiceTitanEstimate(BaseModel):
         alias="modifiedOn",
     )
     sold_on: datetime | None = Field(
-        None, description="Date/time (in UTC) when the estimate was sold", alias="soldOn"
+        None,
+        description="Date/time (in UTC) when the estimate was sold",
+        alias="soldOn",
     )
-    sold_by: int | None = Field(None, description="ID of who sold the estimate", alias="soldBy")
+    sold_by: int | None = Field(
+        None, description="ID of who sold the estimate", alias="soldBy"
+    )
     active: bool = Field(..., description="Whether the estimate is active")
     subtotal: float = Field(..., description="Subtotal amount")
     tax: float = Field(..., description="Tax amount")
@@ -163,7 +174,9 @@ class ServiceTitanEstimate(BaseModel):
         None, description="ID of the budget code", alias="budgetCodeId"
     )
     is_change_order: bool = Field(
-        ..., description="Whether this estimate is a change order", alias="isChangeOrder"
+        ...,
+        description="Whether this estimate is a change order",
+        alias="isChangeOrder",
     )
 
 
@@ -214,7 +227,9 @@ class ServiceTitanEstimateItem(BaseModel):
         None, description="Item group root ID", alias="itemGroupRootId"
     )
     created_on: datetime = Field(
-        ..., description="Date/time (in UTC) when the item was created", alias="createdOn"
+        ...,
+        description="Date/time (in UTC) when the item was created",
+        alias="createdOn",
     )
     modified_on: datetime = Field(
         ...,
@@ -246,8 +261,12 @@ class ServiceTitanProject(BaseModel):
     number: str | None = Field(None, description="Project number")
     name: str | None = Field(None, description="Project name")
     status: str | None = Field(None, description="Project status name")
-    status_id: int | None = Field(None, description="Project status ID", alias="statusId")
-    sub_status: str | None = Field(None, description="Project sub-status name", alias="subStatus")
+    status_id: int | None = Field(
+        None, description="Project status ID", alias="statusId"
+    )
+    sub_status: str | None = Field(
+        None, description="Project sub-status name", alias="subStatus"
+    )
     sub_status_id: int | None = Field(
         None, description="Project sub-status ID", alias="subStatusId"
     )
@@ -315,8 +334,12 @@ class ServiceTitanMaterial(BaseModel):
     description: str | None = Field(None, description="Material description")
     cost: float | None = Field(None, description="Material cost")
     price: float | None = Field(None, description="Material price")
-    member_price: float | None = Field(None, description="Member price", alias="memberPrice")
-    add_on_price: float | None = Field(None, description="Add-on price", alias="addOnPrice")
+    member_price: float | None = Field(
+        None, description="Member price", alias="memberPrice"
+    )
+    add_on_price: float | None = Field(
+        None, description="Add-on price", alias="addOnPrice"
+    )
     add_on_member_price: float | None = Field(
         None, description="Add-on member price", alias="addOnMemberPrice"
     )
@@ -337,8 +360,12 @@ class ServiceTitanService(BaseModel):
     display_name: str = Field(..., description="Display name", alias="displayName")
     description: str | None = Field(None, description="Service description")
     price: float | None = Field(None, description="Service price")
-    member_price: float | None = Field(None, description="Member price", alias="memberPrice")
-    add_on_price: float | None = Field(None, description="Add-on price", alias="addOnPrice")
+    member_price: float | None = Field(
+        None, description="Member price", alias="memberPrice"
+    )
+    add_on_price: float | None = Field(
+        None, description="Add-on price", alias="addOnPrice"
+    )
     add_on_member_price: float | None = Field(
         None, description="Add-on member price", alias="addOnMemberPrice"
     )
@@ -357,8 +384,12 @@ class ServiceTitanEquipment(BaseModel):
     description: str | None = Field(None, description="Equipment description")
     cost: float | None = Field(None, description="Equipment cost")
     price: float | None = Field(None, description="Equipment price")
-    member_price: float | None = Field(None, description="Member price", alias="memberPrice")
-    add_on_price: float | None = Field(None, description="Add-on price", alias="addOnPrice")
+    member_price: float | None = Field(
+        None, description="Member price", alias="memberPrice"
+    )
+    add_on_price: float | None = Field(
+        None, description="Add-on price", alias="addOnPrice"
+    )
     add_on_member_price: float | None = Field(
         None, description="Add-on member price", alias="addOnMemberPrice"
     )
@@ -387,7 +418,9 @@ class ServiceTitanEstimateRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     tenant: int = Field(..., description="Tenant ID")
-    job_id: int | None = Field(None, description="Job ID to filter estimates", alias="jobId")
+    job_id: int | None = Field(
+        None, description="Job ID to filter estimates", alias="jobId"
+    )
     project_id: int | None = Field(
         None, description="Project ID to filter estimates", alias="projectId"
     )
@@ -423,8 +456,12 @@ class ServiceTitanUpdateProjectRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     tenant: int = Field(..., description="Tenant ID")
-    project_id: int = Field(..., description="ID of the project to update", alias="projectId")
-    status_id: int | None = Field(None, description="Project status ID", alias="statusId")
+    project_id: int = Field(
+        ..., description="ID of the project to update", alias="projectId"
+    )
+    status_id: int | None = Field(
+        None, description="Project status ID", alias="statusId"
+    )
     sub_status_id: int | None = Field(
         None, description="Project sub status ID", alias="subStatusId"
     )

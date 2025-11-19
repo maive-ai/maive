@@ -1,13 +1,18 @@
 // Voice AI client - handles voice AI API calls
 
 import {
-    Configuration,
-    VoiceAIApi,
-    type ActiveCallResponse,
-    type CallRequest,
-    type CallResponse,
+  Configuration,
+  VoiceAIApi,
+  type ActiveCallResponse,
+  type CallRequest,
+  type CallResponse,
 } from '@maive/api/client';
-import { useMutation, useQuery, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  type UseMutationResult,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 import { env } from '@/env';
 import { baseClient } from '../base';
 
@@ -23,7 +28,7 @@ const createVoiceAIApi = (): VoiceAIApi => {
       basePath: env.PUBLIC_SERVER_URL,
     }),
     undefined,
-    baseClient
+    baseClient,
   );
 };
 
@@ -58,7 +63,9 @@ export async function endCall(callId: string): Promise<void> {
 /**
  * React Query hook for getting active call
  */
-export function useActiveCall(options?: { enabled?: boolean }): UseQueryResult<ActiveCallResponse | null, Error> {
+export function useActiveCall(options?: {
+  enabled?: boolean;
+}): UseQueryResult<ActiveCallResponse | null, Error> {
   return useQuery({
     queryKey: ['active-call'],
     queryFn: getActiveCall,
@@ -72,7 +79,7 @@ export function useActiveCall(options?: { enabled?: boolean }): UseQueryResult<A
  */
 export function useCallStatus(
   callId: string | null,
-  options?: { enabled?: boolean; refetchInterval?: number }
+  options?: { enabled?: boolean; refetchInterval?: number },
 ): UseQueryResult<CallResponse, Error> {
   return useQuery({
     queryKey: ['call-status', callId],

@@ -3,7 +3,10 @@
  * Uses axios-auth-refresh library to handle token refresh logic and request queuing.
  */
 
-import axios, { type AxiosInstance, type InternalAxiosRequestConfig } from 'axios';
+import axios, {
+  type AxiosInstance,
+  type InternalAxiosRequestConfig,
+} from 'axios';
 import createAuthRefreshInterceptor from 'axios-auth-refresh';
 
 import { getAccessToken, refreshAuthLogic } from '@/clients/auth';
@@ -33,7 +36,12 @@ export function createApiClient(): AxiosInstance {
   client.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
       // Skip auth endpoints and requests marked with skipAuthRefresh
-      if (config.url?.includes('auth/') || config.url?.includes('auth.') || config.url?.includes('/auth') || (config as any).skipAuthRefresh) {
+      if (
+        config.url?.includes('auth/') ||
+        config.url?.includes('auth.') ||
+        config.url?.includes('/auth') ||
+        (config as any).skipAuthRefresh
+      ) {
         return config;
       }
 
@@ -44,7 +52,7 @@ export function createApiClient(): AxiosInstance {
 
       return config;
     },
-    (error) => Promise.reject(error)
+    (error) => Promise.reject(error),
   );
 
   return client;

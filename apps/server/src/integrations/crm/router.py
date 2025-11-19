@@ -106,7 +106,9 @@ async def get_all_jobs(
     return result
 
 
-@router.post("/jobs/{job_id}/notes", response_model=Note, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/jobs/{job_id}/notes", response_model=Note, status_code=status.HTTP_201_CREATED
+)
 async def add_job_note(
     job_id: str,
     text: str = Body(..., description="The note text content"),
@@ -154,7 +156,9 @@ async def add_job_note(
 @router.patch("/jobs/{job_id}/status", status_code=status.HTTP_204_NO_CONTENT)
 async def update_job_status(
     job_id: str,
-    status_value: str = Body(..., embed=True, alias="status", description="The new status value"),
+    status_value: str = Body(
+        ..., embed=True, alias="status", description="The new status value"
+    ),
     current_user: User = Depends(get_current_user),
     crm_service: CRMService = Depends(get_crm_service),
 ) -> None:
@@ -187,7 +191,9 @@ async def update_job_status(
 @router.get("/jobs/{job_id}/files")
 async def get_job_files(
     job_id: str,
-    file_filter: str = Query("all", description="Filter by type: 'all', 'images', or 'pdfs'"),
+    file_filter: str = Query(
+        "all", description="Filter by type: 'all', 'images', or 'pdfs'"
+    ),
     current_user: User = Depends(get_current_user),
     crm_service: CRMService = Depends(get_crm_service),
 ):
@@ -220,17 +226,25 @@ async def get_job_files(
     try:
         return await crm_service.crm_provider.get_job_files(job_id, file_filter)
     except CRMError as e:
-        status_code = status.HTTP_501_NOT_IMPLEMENTED if e.error_code == "NOT_SUPPORTED" else status.HTTP_500_INTERNAL_SERVER_ERROR
+        status_code = (
+            status.HTTP_501_NOT_IMPLEMENTED
+            if e.error_code == "NOT_SUPPORTED"
+            else status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
         raise HTTPException(status_code=status_code, detail=e.message)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
 
 
 @router.get("/files/{file_id}/download")
 async def download_file(
     file_id: str,
     filename: str | None = Query(None, description="Optional filename from metadata"),
-    content_type: str | None = Query(None, description="Optional content type from metadata"),
+    content_type: str | None = Query(
+        None, description="Optional content type from metadata"
+    ),
     current_user: User = Depends(get_current_user),
     crm_service: CRMService = Depends(get_crm_service),
 ):
@@ -253,20 +267,32 @@ async def download_file(
         HTTPException: If the file is not found or an error occurs
     """
     try:
-        file_content, resolved_filename, resolved_content_type = await crm_service.crm_provider.download_file(
+        (
+            file_content,
+            resolved_filename,
+            resolved_content_type,
+        ) = await crm_service.crm_provider.download_file(
             file_id, filename, content_type
         )
-        
+
         return StreamingResponse(
             BytesIO(file_content),
             media_type=resolved_content_type,
-            headers={"Content-Disposition": f'attachment; filename="{resolved_filename}"'}
+            headers={
+                "Content-Disposition": f'attachment; filename="{resolved_filename}"'
+            },
         )
     except CRMError as e:
-        status_code = status.HTTP_501_NOT_IMPLEMENTED if e.error_code == "NOT_SUPPORTED" else status.HTTP_500_INTERNAL_SERVER_ERROR
+        status_code = (
+            status.HTTP_501_NOT_IMPLEMENTED
+            if e.error_code == "NOT_SUPPORTED"
+            else status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
         raise HTTPException(status_code=status_code, detail=e.message)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
 
 
 # ========================================================================
@@ -348,7 +374,9 @@ async def get_all_projects(
 @router.patch("/projects/{project_id}/status", status_code=status.HTTP_204_NO_CONTENT)
 async def update_project_status(
     project_id: str,
-    status_value: str = Body(..., embed=True, alias="status", description="The new status value"),
+    status_value: str = Body(
+        ..., embed=True, alias="status", description="The new status value"
+    ),
     current_user: User = Depends(get_current_user),
     crm_service: CRMService = Depends(get_crm_service),
 ) -> None:
@@ -365,7 +393,9 @@ async def update_project_status(
     Raises:
         HTTPException: If the project is not found or an error occurs
     """
-    result = await crm_service.update_project_status(project_id=project_id, status=status_value)
+    result = await crm_service.update_project_status(
+        project_id=project_id, status=status_value
+    )
 
     if isinstance(result, CRMErrorResponse):
         if result.error_code == "NOT_FOUND":
@@ -461,7 +491,11 @@ async def get_all_contacts(
     return result
 
 
-@router.post("/contacts/{contact_id}/notes", response_model=Note, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/contacts/{contact_id}/notes",
+    response_model=Note,
+    status_code=status.HTTP_201_CREATED,
+)
 async def add_contact_note(
     contact_id: str,
     text: str = Body(..., description="The note text content"),

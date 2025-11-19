@@ -40,12 +40,10 @@ interface UseActiveCallPollingOptions {
  * });
  * ```
  */
-export function useActiveCallPolling(options: UseActiveCallPollingOptions = {}) {
-  const {
-    enabled = true,
-    pollingInterval = 2500,
-    onCallEnded,
-  } = options;
+export function useActiveCallPolling(
+  options: UseActiveCallPollingOptions = {},
+) {
+  const { enabled = true, pollingInterval = 2500, onCallEnded } = options;
 
   const previousCallRef = useRef<ActiveCallResponse | null>(null);
   const callbackFiredRef = useRef(false);

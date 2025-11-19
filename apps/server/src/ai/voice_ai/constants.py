@@ -42,4 +42,3 @@ class VoiceAIErrorCode(str, Enum):
     HTTP_ERROR = "HTTP_ERROR"
     INVALID_JSON = "INVALID_JSON"
     UNKNOWN_ERROR = "UNKNOWN_ERROR"
-

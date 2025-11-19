@@ -30,7 +30,7 @@ export default function HeaderBar({ user }: HeaderBarProps) {
     if (user?.name) {
       return user.name
         .split(' ')
-        .map(n => n[0])
+        .map((n) => n[0])
         .join('')
         .toUpperCase()
         .slice(0, 2);
@@ -59,15 +59,15 @@ export default function HeaderBar({ user }: HeaderBarProps) {
     <>
       <header className="flex h-12 shrink-0 items-center justify-end gap-2 bg-neutral-50 px-6 border-b">
         <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-3 rounded-full transition-colors hover:bg-neutral-100 p-1">
-                <Avatar className="h-9 w-9 border-2 border-primary-900">
-                  <AvatarFallback className="bg-primary-900 text-white text-sm font-medium">
-                    {getInitials()}
-                  </AvatarFallback>
-                </Avatar>
-              </button>
-            </DropdownMenuTrigger>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-3 rounded-full transition-colors hover:bg-neutral-100 p-1">
+              <Avatar className="h-9 w-9 border-2 border-primary-900">
+                <AvatarFallback className="bg-primary-900 text-white text-sm font-medium">
+                  {getInitials()}
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-72">
             <DropdownMenuLabel>
               <div className="flex items-center gap-3">
@@ -77,8 +77,12 @@ export default function HeaderBar({ user }: HeaderBarProps) {
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{user?.email}</p>
-                  <p className="text-xs text-muted-foreground">{getOrgName()}</p>
+                  <p className="text-sm font-medium leading-none">
+                    {user?.email}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {getOrgName()}
+                  </p>
                 </div>
               </div>
             </DropdownMenuLabel>

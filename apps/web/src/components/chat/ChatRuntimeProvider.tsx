@@ -86,7 +86,9 @@ const chatAdapter: ChatModelAdapter = {
                 const citationsText = citations
                   .map((citation, index) => {
                     const title = citation.title || citation.url;
-                    const snippet = citation.snippet ? `\n${citation.snippet}` : '';
+                    const snippet = citation.snippet
+                      ? `\n${citation.snippet}`
+                      : '';
                     return `[${index + 1}] [${title}](${citation.url})${snippet}`;
                   })
                   .join('\n\n');
@@ -194,7 +196,7 @@ const chatAdapter: ChatModelAdapter = {
 
                 // Build content with just reasoning summary (no tools, no text)
                 const content: any[] = [];
-                
+
                 if (reasoningSummary && !accumulatedText) {
                   content.push({
                     type: 'tool-call',

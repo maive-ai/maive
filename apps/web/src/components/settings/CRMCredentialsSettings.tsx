@@ -25,8 +25,11 @@ interface CRMCredentialsSettingsProps {
 export function CRMCredentialsSettings({
   onSuccess,
 }: CRMCredentialsSettingsProps) {
-  const [existingCredentials, setExistingCredentials] = useState<CRMCredentials | null>(null);
-  const [selectedProvider, setSelectedProvider] = useState<CRMProvider | null>(null);
+  const [existingCredentials, setExistingCredentials] =
+    useState<CRMCredentials | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<CRMProvider | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingCredentials, setIsFetchingCredentials] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -106,10 +109,16 @@ export function CRMCredentialsSettings({
     try {
       // Step 1: Save credentials
       const credentialsData = buildCredentialsData();
-      console.log('[CRMCredentialsSettings] Calling createCRMCredentials with:', { provider: credentialsData.provider });
+      console.log(
+        '[CRMCredentialsSettings] Calling createCRMCredentials with:',
+        { provider: credentialsData.provider },
+      );
 
       const credentials = await createCRMCredentials(credentialsData);
-      console.log('[CRMCredentialsSettings] Credentials saved successfully:', credentials.id);
+      console.log(
+        '[CRMCredentialsSettings] Credentials saved successfully:',
+        credentials.id,
+      );
 
       // Reset form and update existing credentials
       setJobNimbusApiKey('');
@@ -124,7 +133,10 @@ export function CRMCredentialsSettings({
       // Show success message
       toast.success('✓ Credentials saved successfully!');
     } catch (error) {
-      console.error('[CRMCredentialsSettings] Failed to save or test credentials:', error);
+      console.error(
+        '[CRMCredentialsSettings] Failed to save or test credentials:',
+        error,
+      );
       setIsLoading(false);
 
       // Log the full error for debugging
@@ -132,12 +144,12 @@ export function CRMCredentialsSettings({
         console.error('[CRMCredentialsSettings] Error details:', {
           message: error.message,
           stack: error.stack,
-          name: error.name
+          name: error.name,
         });
       }
 
       toast.error(
-        error instanceof Error ? error.message : 'Failed to save credentials'
+        error instanceof Error ? error.message : 'Failed to save credentials',
       );
     }
   };
@@ -154,7 +166,7 @@ export function CRMCredentialsSettings({
     } catch (error) {
       console.error('Failed to delete credentials:', error);
       toast.error(
-        error instanceof Error ? error.message : 'Failed to delete credentials'
+        error instanceof Error ? error.message : 'Failed to delete credentials',
       );
     } finally {
       setIsDeleting(false);
@@ -167,13 +179,16 @@ export function CRMCredentialsSettings({
       return (
         <div className="flex flex-col items-center justify-center py-12 space-y-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary-900" />
-          <p className="text-sm text-muted-foreground">Loading your CRM configuration...</p>
+          <p className="text-sm text-muted-foreground">
+            Loading your CRM configuration...
+          </p>
         </div>
       );
     }
 
     if (existingCredentials && !selectedProvider) {
-      const isJobNimbus = existingCredentials.provider === CRMProvider.JobNimbus;
+      const isJobNimbus =
+        existingCredentials.provider === CRMProvider.JobNimbus;
       return (
         <div className="space-y-4">
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
@@ -185,12 +200,19 @@ export function CRMCredentialsSettings({
                   className="h-10 object-contain"
                 />
                 <div>
-                  <p className="font-medium">{isJobNimbus ? 'JobNimbus' : 'ServiceTitan'}</p>
+                  <p className="font-medium">
+                    {isJobNimbus ? 'JobNimbus' : 'ServiceTitan'}
+                  </p>
                   <p className="text-sm text-muted-foreground">
-                    {isJobNimbus ? 'API Key: ••••••••••••' : 'Credentials: ••••••••••••'}
+                    {isJobNimbus
+                      ? 'API Key: ••••••••••••'
+                      : 'Credentials: ••••••••••••'}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Connected {new Date(existingCredentials.created_at).toLocaleDateString()}
+                    Connected{' '}
+                    {new Date(
+                      existingCredentials.created_at,
+                    ).toLocaleDateString()}
                   </p>
                 </div>
               </div>
@@ -211,7 +233,9 @@ export function CRMCredentialsSettings({
           </div>
           <Button
             variant="outline"
-            onClick={() => setSelectedProvider(existingCredentials.provider as CRMProvider)}
+            onClick={() =>
+              setSelectedProvider(existingCredentials.provider as CRMProvider)
+            }
             className="w-full"
           >
             Update Credentials
@@ -256,115 +280,125 @@ export function CRMCredentialsSettings({
     const isJobNimbus = selectedProvider === CRMProvider.JobNimbus;
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="flex items-center gap-4 pb-4 border-b">
-            <img
-              src={isJobNimbus ? jobNimbusLogo : serviceTitanLogo}
-              alt={isJobNimbus ? 'JobNimbus' : 'ServiceTitan'}
-              className="h-10 object-contain"
-            />
-            <div className="flex-1">
-              <p className="font-medium">{isJobNimbus ? 'JobNimbus' : 'ServiceTitan'}</p>
-              <p className="text-sm text-muted-foreground">
-                Configure your credentials
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setSelectedProvider(null);
-                setJobNimbusApiKey('');
-                setServiceTitanTenantId('');
-                setServiceTitanClientId('');
-                setServiceTitanClientSecret('');
-                setServiceTitanAppKey('');
-              }}
-            >
-              Change
-            </Button>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="flex items-center gap-4 pb-4 border-b">
+          <img
+            src={isJobNimbus ? jobNimbusLogo : serviceTitanLogo}
+            alt={isJobNimbus ? 'JobNimbus' : 'ServiceTitan'}
+            className="h-10 object-contain"
+          />
+          <div className="flex-1">
+            <p className="font-medium">
+              {isJobNimbus ? 'JobNimbus' : 'ServiceTitan'}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Configure your credentials
+            </p>
           </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setSelectedProvider(null);
+              setJobNimbusApiKey('');
+              setServiceTitanTenantId('');
+              setServiceTitanClientId('');
+              setServiceTitanClientSecret('');
+              setServiceTitanAppKey('');
+            }}
+          >
+            Change
+          </Button>
+        </div>
 
-          {isJobNimbus ? (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="api-key">API Key *</Label>
-                <Input
-                  id="api-key"
-                  type="password"
-                  value={jobNimbusApiKey}
-                  onChange={(e) => setJobNimbusApiKey(e.target.value)}
-                  placeholder="Enter your JobNimbus API key"
-                  required
-                />
-                <p className="text-xs text-muted-foreground">
-                  Find or create an API key by following the instructions in the <a href="https://support.jobnimbus.com/how-do-i-create-an-api-key" target="_blank" rel="noopener noreferrer" className="text-primary-900 underline">JobNimbus documentation</a>
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="tenant-id">Tenant ID *</Label>
-                <Input
-                  id="tenant-id"
-                  value={serviceTitanTenantId}
-                  onChange={(e) => setServiceTitanTenantId(e.target.value)}
-                  placeholder="Enter your ServiceTitan tenant ID"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="client-id">Client ID *</Label>
-                <Input
-                  id="client-id"
-                  value={serviceTitanClientId}
-                  onChange={(e) => setServiceTitanClientId(e.target.value)}
-                  placeholder="Enter your client ID"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="client-secret">Client Secret *</Label>
-                <Input
-                  id="client-secret"
-                  type="password"
-                  value={serviceTitanClientSecret}
-                  onChange={(e) => setServiceTitanClientSecret(e.target.value)}
-                  placeholder="Enter your client secret"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="app-key">App Key *</Label>
-                <Input
-                  id="app-key"
-                  type="password"
-                  value={serviceTitanAppKey}
-                  onChange={(e) => setServiceTitanAppKey(e.target.value)}
-                  placeholder="Enter your app key"
-                  required
-                />
-              </div>
-
+        {isJobNimbus ? (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="api-key">API Key *</Label>
+              <Input
+                id="api-key"
+                type="password"
+                value={jobNimbusApiKey}
+                onChange={(e) => setJobNimbusApiKey(e.target.value)}
+                placeholder="Enter your JobNimbus API key"
+                required
+              />
               <p className="text-xs text-muted-foreground">
-                Find your credentials in ServiceTitan Settings → Integrations →
-                API Application Access
+                Find or create an API key by following the instructions in the{' '}
+                <a
+                  href="https://support.jobnimbus.com/how-do-i-create-an-api-key"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary-900 underline"
+                >
+                  JobNimbus documentation
+                </a>
               </p>
             </div>
-          )}
-
-          <div className="flex justify-end pt-4">
-            <Button type="submit" disabled={isLoading} className="min-w-[180px]">
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Credentials
-            </Button>
           </div>
-        </form>
+        ) : (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="tenant-id">Tenant ID *</Label>
+              <Input
+                id="tenant-id"
+                value={serviceTitanTenantId}
+                onChange={(e) => setServiceTitanTenantId(e.target.value)}
+                placeholder="Enter your ServiceTitan tenant ID"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="client-id">Client ID *</Label>
+              <Input
+                id="client-id"
+                value={serviceTitanClientId}
+                onChange={(e) => setServiceTitanClientId(e.target.value)}
+                placeholder="Enter your client ID"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="client-secret">Client Secret *</Label>
+              <Input
+                id="client-secret"
+                type="password"
+                value={serviceTitanClientSecret}
+                onChange={(e) => setServiceTitanClientSecret(e.target.value)}
+                placeholder="Enter your client secret"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="app-key">App Key *</Label>
+              <Input
+                id="app-key"
+                type="password"
+                value={serviceTitanAppKey}
+                onChange={(e) => setServiceTitanAppKey(e.target.value)}
+                placeholder="Enter your app key"
+                required
+              />
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Find your credentials in ServiceTitan Settings → Integrations →
+              API Application Access
+            </p>
+          </div>
+        )}
+
+        <div className="flex justify-end pt-4">
+          <Button type="submit" disabled={isLoading} className="min-w-[180px]">
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save Credentials
+          </Button>
+        </div>
+      </form>
     );
   };
 

@@ -316,9 +316,7 @@ class ScheduledGroupsRepository:
         )
         return created_members
 
-    async def remove_member(
-        self, group_id: int, user_id: str, project_id: str
-    ) -> bool:
+    async def remove_member(self, group_id: int, user_id: str, project_id: str) -> bool:
         """
         Remove a project from a group.
 
@@ -451,12 +449,10 @@ class ScheduledGroupsRepository:
         Returns:
             int: Number of members
         """
-        stmt = (
-            select(func.count(ScheduledGroupMember.id))
-            .where(ScheduledGroupMember.group_id == group_id)
+        stmt = select(func.count(ScheduledGroupMember.id)).where(
+            ScheduledGroupMember.group_id == group_id
         )
         result = await self.session.execute(stmt)
         count = result.scalar_one() or 0
 
         return count
-

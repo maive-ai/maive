@@ -1,0 +1,4 @@
+# Extend shared Ruff configuration
+extend = "../tools/ruff/ruff.toml"
+
+# No project-specific first-party packages for infra

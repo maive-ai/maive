@@ -13,7 +13,9 @@ from pydantic import BaseModel, Field
 class AddToCallListRequest(BaseModel):
     """Request model for adding projects to call list."""
 
-    project_ids: list[str] = Field(..., description="List of project/job IDs to add to call list")
+    project_ids: list[str] = Field(
+        ..., description="List of project/job IDs to add to call list"
+    )
 
 
 class CallListItemResponse(BaseModel):
@@ -31,7 +33,9 @@ class CallListItemResponse(BaseModel):
 class CallListResponse(BaseModel):
     """Response model for the complete call list."""
 
-    items: list[CallListItemResponse] = Field(..., description="List of call list items")
+    items: list[CallListItemResponse] = Field(
+        ..., description="List of call list items"
+    )
     total: int = Field(..., description="Total number of items in the call list")
 
 

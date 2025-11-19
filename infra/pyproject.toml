@@ -9,3 +9,8 @@ dependencies = [
     "pulumi-docker-build>=0.0.12",
     "pulumi-esc-sdk>=0.12.3",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.8.6",
+]

@@ -53,18 +53,20 @@ class CRMService:
             logger.info("Successfully retrieved job", job_id=job_id)
             return result
         except CRMError as e:
-            logger.error("CRM error getting job", job_id=job_id, error_message=e.message)
+            logger.error(
+                "CRM error getting job", job_id=job_id, error_message=e.message
+            )
             return CRMErrorResponse(
                 error=e.message,
                 error_code=e.error_code,
-                provider=getattr(self.crm_provider, 'provider_name', None)
+                provider=getattr(self.crm_provider, "provider_name", None),
             )
         except Exception as e:
             logger.error("Unexpected error getting job", job_id=job_id, error=str(e))
             return CRMErrorResponse(
                 error=f"Unexpected error: {str(e)}",
                 error_code="UNKNOWN_ERROR",
-                provider=getattr(self.crm_provider, 'provider_name', None)
+                provider=getattr(self.crm_provider, "provider_name", None),
             )
 
     async def get_all_jobs(
@@ -98,14 +100,14 @@ class CRMService:
             return CRMErrorResponse(
                 error=e.message,
                 error_code=e.error_code,
-                provider=getattr(self.crm_provider, 'provider_name', None)
+                provider=getattr(self.crm_provider, "provider_name", None),
             )
         except Exception as e:
             logger.error("Unexpected error getting all jobs", error=str(e))
             return CRMErrorResponse(
                 error=f"Unexpected error: {str(e)}",
                 error_code="UNKNOWN_ERROR",
-                provider=getattr(self.crm_provider, 'provider_name', None)
+                provider=getattr(self.crm_provider, "provider_name", None),
             )
 
     async def update_job_status(
@@ -135,18 +137,22 @@ class CRMService:
             logger.info("Successfully updated status for job", job_id=job_id)
             return None
         except CRMError as e:
-            logger.error("CRM error updating job status", job_id=job_id, error_message=e.message)
+            logger.error(
+                "CRM error updating job status", job_id=job_id, error_message=e.message
+            )
             return CRMErrorResponse(
                 error=e.message,
                 error_code=e.error_code,
-                provider=getattr(self.crm_provider, 'provider_name', None)
+                provider=getattr(self.crm_provider, "provider_name", None),
             )
         except Exception as e:
-            logger.error("Unexpected error updating job status", job_id=job_id, error=str(e))
+            logger.error(
+                "Unexpected error updating job status", job_id=job_id, error=str(e)
+            )
             return CRMErrorResponse(
                 error=f"Unexpected error: {str(e)}",
                 error_code="UNKNOWN_ERROR",
-                provider=getattr(self.crm_provider, 'provider_name', None)
+                provider=getattr(self.crm_provider, "provider_name", None),
             )
 
     # ========================================================================
@@ -169,18 +175,24 @@ class CRMService:
             logger.info("Successfully retrieved project", project_id=project_id)
             return result
         except CRMError as e:
-            logger.error("CRM error getting project", project_id=project_id, error_message=e.message)
+            logger.error(
+                "CRM error getting project",
+                project_id=project_id,
+                error_message=e.message,
+            )
             return CRMErrorResponse(
                 error=e.message,
                 error_code=e.error_code,
-                provider=getattr(self.crm_provider, 'provider_name', None)
+                provider=getattr(self.crm_provider, "provider_name", None),
             )
         except Exception as e:
-            logger.error("Unexpected error getting project", project_id=project_id, error=str(e))
+            logger.error(
+                "Unexpected error getting project", project_id=project_id, error=str(e)
+            )
             return CRMErrorResponse(
                 error=f"Unexpected error: {str(e)}",
                 error_code="UNKNOWN_ERROR",
-                provider=getattr(self.crm_provider, 'provider_name', None)
+                provider=getattr(self.crm_provider, "provider_name", None),
             )
 
     async def get_all_projects(
@@ -214,14 +226,14 @@ class CRMService:
             return CRMErrorResponse(
                 error=e.message,
                 error_code=e.error_code,
-                provider=getattr(self.crm_provider, 'provider_name', None)
+                provider=getattr(self.crm_provider, "provider_name", None),
             )
         except Exception as e:
             logger.error("Unexpected error getting all projects", error=str(e))
             return CRMErrorResponse(
                 error=f"Unexpected error: {str(e)}",
                 error_code="UNKNOWN_ERROR",
-                provider=getattr(self.crm_provider, 'provider_name', None)
+                provider=getattr(self.crm_provider, "provider_name", None),
             )
 
     async def update_project_status(
@@ -242,27 +254,39 @@ class CRMService:
             None on success, CRMErrorResponse on error
         """
         try:
-            logger.info("Updating status for project", project_id=project_id, status=status)
+            logger.info(
+                "Updating status for project", project_id=project_id, status=status
+            )
             await self.crm_provider.update_project_status(
                 project_id=project_id,
                 status=status,
                 **kwargs,
             )
-            logger.info("Successfully updated status for project", project_id=project_id)
+            logger.info(
+                "Successfully updated status for project", project_id=project_id
+            )
             return None
         except CRMError as e:
-            logger.error("CRM error updating project status", project_id=project_id, error_message=e.message)
+            logger.error(
+                "CRM error updating project status",
+                project_id=project_id,
+                error_message=e.message,
+            )
             return CRMErrorResponse(
                 error=e.message,
                 error_code=e.error_code,
-                provider=getattr(self.crm_provider, 'provider_name', None)
+                provider=getattr(self.crm_provider, "provider_name", None),
             )
         except Exception as e:
-            logger.error("Unexpected error updating project status", project_id=project_id, error=str(e))
+            logger.error(
+                "Unexpected error updating project status",
+                project_id=project_id,
+                error=str(e),
+            )
             return CRMErrorResponse(
                 error=f"Unexpected error: {str(e)}",
                 error_code="UNKNOWN_ERROR",
-                provider=getattr(self.crm_provider, 'provider_name', None)
+                provider=getattr(self.crm_provider, "provider_name", None),
             )
 
     # ========================================================================
@@ -285,18 +309,24 @@ class CRMService:
             logger.info("Successfully retrieved contact", contact_id=contact_id)
             return result
         except CRMError as e:
-            logger.error("CRM error getting contact", contact_id=contact_id, error_message=e.message)
+            logger.error(
+                "CRM error getting contact",
+                contact_id=contact_id,
+                error_message=e.message,
+            )
             return CRMErrorResponse(
                 error=e.message,
                 error_code=e.error_code,
-                provider=getattr(self.crm_provider, 'provider_name', None)
+                provider=getattr(self.crm_provider, "provider_name", None),
             )
         except Exception as e:
-            logger.error("Unexpected error getting contact", contact_id=contact_id, error=str(e))
+            logger.error(
+                "Unexpected error getting contact", contact_id=contact_id, error=str(e)
+            )
             return CRMErrorResponse(
                 error=f"Unexpected error: {str(e)}",
                 error_code="UNKNOWN_ERROR",
-                provider=getattr(self.crm_provider, 'provider_name', None)
+                provider=getattr(self.crm_provider, "provider_name", None),
             )
 
     async def get_all_contacts(
@@ -330,14 +360,14 @@ class CRMService:
             return CRMErrorResponse(
                 error=e.message,
                 error_code=e.error_code,
-                provider=getattr(self.crm_provider, 'provider_name', None)
+                provider=getattr(self.crm_provider, "provider_name", None),
             )
         except Exception as e:
             logger.error("Unexpected error getting all contacts", error=str(e))
             return CRMErrorResponse(
                 error=f"Unexpected error: {str(e)}",
                 error_code="UNKNOWN_ERROR",
-                provider=getattr(self.crm_provider, 'provider_name', None)
+                provider=getattr(self.crm_provider, "provider_name", None),
             )
 
     # ========================================================================
@@ -371,19 +401,31 @@ class CRMService:
                 text=text,
                 **kwargs,
             )
-            logger.info("Successfully added note", entity_type=entity_type, entity_id=entity_id)
+            logger.info(
+                "Successfully added note", entity_type=entity_type, entity_id=entity_id
+            )
             return result
         except CRMError as e:
-            logger.error("CRM error adding note", entity_type=entity_type, entity_id=entity_id, error_message=e.message)
+            logger.error(
+                "CRM error adding note",
+                entity_type=entity_type,
+                entity_id=entity_id,
+                error_message=e.message,
+            )
             return CRMErrorResponse(
                 error=e.message,
                 error_code=e.error_code,
-                provider=getattr(self.crm_provider, 'provider_name', None)
+                provider=getattr(self.crm_provider, "provider_name", None),
             )
         except Exception as e:
-            logger.error("Unexpected error adding note", entity_type=entity_type, entity_id=entity_id, error=str(e))
+            logger.error(
+                "Unexpected error adding note",
+                entity_type=entity_type,
+                entity_id=entity_id,
+                error=str(e),
+            )
             return CRMErrorResponse(
                 error=f"Unexpected error: {str(e)}",
                 error_code="UNKNOWN_ERROR",
-                provider=getattr(self.crm_provider, 'provider_name', None)
+                provider=getattr(self.crm_provider, "provider_name", None),
             )

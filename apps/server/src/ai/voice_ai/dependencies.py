@@ -35,4 +35,3 @@ def get_voice_ai_service(
         VoiceAIService: The Voice AI service instance
     """
     return VoiceAIService(voice_ai_provider)
-

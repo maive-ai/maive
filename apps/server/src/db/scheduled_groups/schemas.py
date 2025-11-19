@@ -31,7 +31,9 @@ class WhoToCall(str, Enum):
 class CreateScheduledGroupRequest(BaseModel):
     """Request model for creating a scheduled group."""
 
-    name: str = Field(..., description="Group display name", min_length=1, max_length=255)
+    name: str = Field(
+        ..., description="Group display name", min_length=1, max_length=255
+    )
     frequency: list[str] = Field(
         ...,
         description="Days of week: ['monday', 'tuesday', etc.]",
@@ -40,7 +42,8 @@ class CreateScheduledGroupRequest(BaseModel):
     time_of_day: time = Field(..., description="Time of day to make calls")
     goal_type: GoalType = Field(..., description="Type of goal for this group")
     goal_description: str | None = Field(
-        None, description="User-specified goal description (required if goal_type is user_specified)"
+        None,
+        description="User-specified goal description (required if goal_type is user_specified)",
     )
     who_to_call: WhoToCall = Field(..., description="Who to call for this group")
 
@@ -48,7 +51,9 @@ class CreateScheduledGroupRequest(BaseModel):
 class UpdateScheduledGroupRequest(BaseModel):
     """Request model for updating a scheduled group."""
 
-    name: str | None = Field(None, description="Group display name", min_length=1, max_length=255)
+    name: str | None = Field(
+        None, description="Group display name", min_length=1, max_length=255
+    )
     frequency: list[str] | None = Field(
         None, description="Days of week: ['monday', 'tuesday', etc.]", min_length=1
     )
@@ -57,7 +62,9 @@ class UpdateScheduledGroupRequest(BaseModel):
     goal_description: str | None = Field(
         None, description="User-specified goal description"
     )
-    who_to_call: WhoToCall | None = Field(None, description="Who to call for this group")
+    who_to_call: WhoToCall | None = Field(
+        None, description="Who to call for this group"
+    )
 
 
 class AddProjectsToGroupRequest(BaseModel):
@@ -84,7 +91,9 @@ class ScheduledGroupMemberResponse(BaseModel):
     goal_completed_at: datetime | None = Field(
         None, description="Timestamp when goal was completed"
     )
-    added_at: datetime = Field(..., description="When the project was added to the group")
+    added_at: datetime = Field(
+        ..., description="When the project was added to the group"
+    )
 
 
 class ScheduledGroupResponse(BaseModel):
@@ -126,6 +135,7 @@ class ScheduledGroupDetailResponse(BaseModel):
 class ScheduledGroupsListResponse(BaseModel):
     """Response model for listing scheduled groups."""
 
-    groups: list[ScheduledGroupResponse] = Field(..., description="List of scheduled groups")
+    groups: list[ScheduledGroupResponse] = Field(
+        ..., description="List of scheduled groups"
+    )
     total: int = Field(..., description="Total number of groups")
-

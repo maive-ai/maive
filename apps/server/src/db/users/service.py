@@ -69,7 +69,7 @@ class UserService:
             # Rollback and retry the lookup
             logger.info(
                 "User creation race condition detected, retrying lookup",
-                user_id=user_id
+                user_id=user_id,
             )
             await self.session.rollback()
 
@@ -88,7 +88,9 @@ class UserService:
                 return existing_user, org
             else:
                 # User still doesn't exist - something else went wrong
-                logger.error("User still not found after IntegrityError", user_id=user_id)
+                logger.error(
+                    "User still not found after IntegrityError", user_id=user_id
+                )
                 raise
 
     async def _create_user_and_org(
@@ -141,7 +143,9 @@ class UserService:
                 )
             except IntegrityError:
                 # Race condition: another request created the org between our check and insert
-                logger.info("Organization race condition, retrying lookup", org_name=org_name)
+                logger.info(
+                    "Organization race condition, retrying lookup", org_name=org_name
+                )
                 await self.session.rollback()
 
                 # Re-query for the organization

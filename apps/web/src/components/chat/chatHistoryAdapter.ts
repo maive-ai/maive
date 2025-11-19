@@ -18,12 +18,18 @@ export const chatHistoryAdapter: ThreadHistoryAdapter = {
       const storedMessages = JSON.parse(stored) as StoredMessage[];
       return { messages: storedMessages };
     } catch (error) {
-      console.warn('[Chat History] Failed to load messages from localStorage:', error);
+      console.warn(
+        '[Chat History] Failed to load messages from localStorage:',
+        error,
+      );
       return { messages: [] };
     }
   },
 
-  async append(item: { message: ThreadMessage; parentId: string | null }): Promise<void> {
+  async append(item: {
+    message: ThreadMessage;
+    parentId: string | null;
+  }): Promise<void> {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       const existingMessages = stored
@@ -38,8 +44,10 @@ export const chatHistoryAdapter: ThreadHistoryAdapter = {
       const updatedMessages = [...existingMessages, newMessage];
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedMessages));
     } catch (error) {
-      console.warn('[Chat History] Failed to save message to localStorage:', error);
+      console.warn(
+        '[Chat History] Failed to save message to localStorage:',
+        error,
+      );
     }
   },
 };
-

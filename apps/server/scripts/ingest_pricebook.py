@@ -56,19 +56,26 @@ class PricebookVectorStoreService:
             for vs in vector_stores.data:
                 if vs.name == PRICEBOOK_VECTOR_STORE_NAME:
                     self._vector_store_id = vs.id
-                    logger.info("[PRICEBOOK] Found existing vector store", vector_store_id=vs.id)
+                    logger.info(
+                        "[PRICEBOOK] Found existing vector store", vector_store_id=vs.id
+                    )
                     return vs.id
         except Exception as e:
             logger.error("[PRICEBOOK] Error listing vector stores", error=str(e))
 
         # Create new vector store
         try:
-            logger.info("[PRICEBOOK] Creating new vector store", store_name=PRICEBOOK_VECTOR_STORE_NAME)
+            logger.info(
+                "[PRICEBOOK] Creating new vector store",
+                store_name=PRICEBOOK_VECTOR_STORE_NAME,
+            )
             vector_store = await self.client.vector_stores.create(
                 name=PRICEBOOK_VECTOR_STORE_NAME,
             )
             self._vector_store_id = vector_store.id
-            logger.info("[PRICEBOOK] Created vector store", vector_store_id=vector_store.id)
+            logger.info(
+                "[PRICEBOOK] Created vector store", vector_store_id=vector_store.id
+            )
             return vector_store.id
         except Exception as e:
             logger.error("[PRICEBOOK] Failed to create vector store", error=str(e))
@@ -91,7 +98,10 @@ class PricebookVectorStoreService:
             existing_file_id = await self._find_file_by_name(vector_store_id, filename)
 
             if existing_file_id:
-                logger.info("[PRICEBOOK] Found existing file, deleting", file_id=existing_file_id)
+                logger.info(
+                    "[PRICEBOOK] Found existing file, deleting",
+                    file_id=existing_file_id,
+                )
                 await self._delete_file(existing_file_id)
                 logger.info("[PRICEBOOK] Deleted old file", file_id=existing_file_id)
 
@@ -103,7 +113,11 @@ class PricebookVectorStoreService:
                     purpose="assistants",
                 )
 
-            logger.info("[PRICEBOOK] Uploaded file", file_id=uploaded_file.id, file_name=filename)
+            logger.info(
+                "[PRICEBOOK] Uploaded file",
+                file_id=uploaded_file.id,
+                file_name=filename,
+            )
 
             # Attach file to vector store
             await self.client.vector_stores.files.create(
@@ -111,7 +125,11 @@ class PricebookVectorStoreService:
                 file_id=uploaded_file.id,
             )
 
-            logger.info("[PRICEBOOK] Attached file to vector store", file_id=uploaded_file.id, vector_store_id=vector_store_id)
+            logger.info(
+                "[PRICEBOOK] Attached file to vector store",
+                file_id=uploaded_file.id,
+                vector_store_id=vector_store_id,
+            )
 
             return uploaded_file.id
 
@@ -119,7 +137,9 @@ class PricebookVectorStoreService:
             logger.error("[PRICEBOOK] Failed to upload pricebook file", error=str(e))
             raise
 
-    async def _find_file_by_name(self, vector_store_id: str, filename: str) -> str | None:
+    async def _find_file_by_name(
+        self, vector_store_id: str, filename: str
+    ) -> str | None:
         """Find a file in the vector store by name.
 
         Args:
@@ -177,7 +197,9 @@ class PricebookVectorStoreService:
             return True
 
         except Exception as e:
-            logger.error("[PRICEBOOK] Failed to delete file", file_id=file_id, error=str(e))
+            logger.error(
+                "[PRICEBOOK] Failed to delete file", file_id=file_id, error=str(e)
+            )
             return False
 
     async def get_status(self) -> dict:
@@ -216,7 +238,7 @@ class PricebookVectorStoreService:
             logger.info(
                 "[PRICEBOOK] Vector store status",
                 file_count=file_count,
-                size_mb=round(total_size / 1024 / 1024, 2)
+                size_mb=round(total_size / 1024 / 1024, 2),
             )
 
             return status
@@ -257,7 +279,11 @@ class PricebookVectorStoreService:
                     await self.client.files.delete(f.id)
                     deleted_count += 1
                 except Exception as e:
-                    logger.warning("[PRICEBOOK] Failed deleting file", file_id=getattr(f, 'id', '?'), error=str(e))
+                    logger.warning(
+                        "[PRICEBOOK] Failed deleting file",
+                        file_id=getattr(f, "id", "?"),
+                        error=str(e),
+                    )
 
             has_more = bool(getattr(response, "has_more", False))
             cursor = getattr(response, "last_id", None)
@@ -265,7 +291,7 @@ class PricebookVectorStoreService:
         logger.info(
             "[PRICEBOOK] Cleared files from vector store",
             deleted_count=deleted_count,
-            vector_store_id=vector_store_id
+            vector_store_id=vector_store_id,
         )
         return deleted_count
 
@@ -275,7 +301,9 @@ async def ingest_pricebook():
     service = PricebookVectorStoreService()
 
     # Path to cleaned pricebook file
-    pricebook_path = Path("evals/estimate_deviation/output/pricebook_items_cleaned.json")
+    pricebook_path = Path(
+        "evals/estimate_deviation/output/pricebook_items_cleaned.json"
+    )
 
     if not pricebook_path.exists():
         logger.error("[PRICEBOOK] Pricebook file not found", path=str(pricebook_path))
@@ -317,7 +345,7 @@ async def show_status():
     print(f"File Count: {status['file_count']}")
     print(f"Total Size: {status['total_size_mb']:.2f} MB")
     print(f"Ready: {status['is_ready']}")
-    if status['last_synced']:
+    if status["last_synced"]:
         print(f"Last Synced: {status['last_synced']}")
     print("=" * 60)
 

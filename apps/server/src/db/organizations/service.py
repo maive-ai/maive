@@ -19,9 +19,7 @@ class OrganizationService:
         """
         self.repository = OrganizationRepository(session)
 
-    async def get_or_create_organization_for_email(
-        self, email: str
-    ) -> Organization:
+    async def get_or_create_organization_for_email(self, email: str) -> Organization:
         """
         Get or create an organization for a user based on their email domain.
 

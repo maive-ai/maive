@@ -10,7 +10,7 @@ interface RouterContext {
 export const Route = createRootRouteWithContext<RouterContext>()({
   component: () => (
     // <AssistantUIProvider>
-      <Outlet />
+    <Outlet />
     // </AssistantUIProvider>
   ),
   notFoundComponent: NotFound,

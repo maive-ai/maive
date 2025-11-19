@@ -41,11 +41,10 @@ from datetime import datetime
 from typing import Any
 
 import httpx
-from tqdm import tqdm
-
 from src.ai.rag.schemas import CodeDocumentMetadata, CodeType, JurisdictionLevel
 from src.ai.rag.service import VectorStoreService
 from src.utils.logger import logger
+from tqdm import tqdm
 
 
 class ApifyClient:

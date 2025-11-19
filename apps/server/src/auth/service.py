@@ -285,7 +285,7 @@ class CognitoAuthProvider(AuthProvider):
             return AuthResult(success=True, session=session)
 
         except ClientError as e:
-            logger.error("ClientError during token refresh", error=e.response['Error'])
+            logger.error("ClientError during token refresh", error=e.response["Error"])
             error_code = e.response["Error"]["Code"]
             error_message = e.response["Error"]["Message"]
 
@@ -400,7 +400,9 @@ class CognitoAuthProvider(AuthProvider):
             token_url = urljoin(self.cognito_domain, OAuthEndpoints.TOKEN_ENDPOINT)
             logger.debug("Token URL constructed", token_url=token_url)
             logger.debug("Using Cognito domain", cognito_domain=self.cognito_domain)
-            logger.debug("Using token endpoint", token_endpoint=OAuthEndpoints.TOKEN_ENDPOINT)
+            logger.debug(
+                "Using token endpoint", token_endpoint=OAuthEndpoints.TOKEN_ENDPOINT
+            )
 
             response = requests.post(
                 token_url,
