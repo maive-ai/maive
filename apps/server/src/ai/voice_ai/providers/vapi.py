@@ -74,14 +74,23 @@ class VapiProvider(VoiceAIProvider):
                 external_id=request.customer_id,  # Use external_id for customer_id tracking
             )
             assistant_overrides = self._build_assistant_overrides(request)
-            
+
             # Create call using SDK with typed objects
-            call: VapiCall = await self._client.calls.create(
-                assistant_id=self._vapi_settings.default_assistant_id,
-                phone_number_id=self._vapi_settings.phone_number_id,
-                customer=customer,
-                assistant_overrides=assistant_overrides,
-            )
+            # Use squad_id or assistant_id based on configuration
+            if self._vapi_settings.use_squad:
+                call: VapiCall = await self._client.calls.create(
+                    squad_id=self._vapi_settings.default_assistant_id,
+                    phone_number_id=self._vapi_settings.phone_number_id,
+                    customer=customer,
+                    assistant_overrides=assistant_overrides,
+                )
+            else:
+                call: VapiCall = await self._client.calls.create(
+                    assistant_id=self._vapi_settings.default_assistant_id,
+                    phone_number_id=self._vapi_settings.phone_number_id,
+                    customer=customer,
+                    assistant_overrides=assistant_overrides,
+                )
             
             # Return call response using SDK's Call object directly
             return self._parse_call_response(call)
@@ -228,10 +237,16 @@ class VapiProvider(VoiceAIProvider):
         """Build assistant overrides with customer variables and structured outputs using SDK types."""
         # Extract customer context variables
         variable_values = self._extract_customer_variables(request)
-        
+
+        # Log the variables being passed to Vapi
+        logger.info(
+            "[Vapi Provider] Passing customer context to Vapi assistant",
+            variable_values=variable_values,
+        )
+
         # Build analysis plan with structured data extraction
         analysis_plan = self._build_claim_status_analysis_plan()
-        
+
         # Return typed AssistantOverrides object
         return AssistantOverrides(
             variable_values=variable_values if variable_values else None,
