@@ -69,6 +69,17 @@ export const envSchema = v.object({
   ),
 
   /**
+   * Feature flag to enable/disable call list functionality
+   */
+  PUBLIC_ENABLE_CALL_LIST: v.optional(
+    v.pipe(
+      v.string(),
+      v.transform((s) => s.toLowerCase() === 'true'),
+    ),
+    'false',
+  ),
+
+  /**
    * PostHog API key for analytics
    */
   PUBLIC_POSTHOG_KEY: v.string(),

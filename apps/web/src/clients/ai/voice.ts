@@ -8,26 +8,22 @@ import {
     type CallResponse,
 } from '@maive/api/client';
 import { useMutation, useQuery, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query';
-
-import { getIdToken } from '@/auth';
 import { env } from '@/env';
+import { apiClient } from '@/lib/apiClient';
 
 // Re-export types from the generated client
 export type { ActiveCallResponse, CallRequest, CallResponse };
 
 /**
- * Create a configured Voice AI API instance
+ * Create a configured Voice AI API instance using the shared axios client
  */
-const createVoiceAIApi = async (): Promise<VoiceAIApi> => {
-  const token = await getIdToken();
-  if (!token) throw new Error('Not authenticated');
-
+const createVoiceAIApi = (): VoiceAIApi => {
   return new VoiceAIApi(
     new Configuration({
-      accessToken: token,
       basePath: env.PUBLIC_SERVER_URL,
-      baseOptions: { withCredentials: true },
     }),
+    undefined,
+    apiClient
   );
 };
 
@@ -35,7 +31,7 @@ const createVoiceAIApi = async (): Promise<VoiceAIApi> => {
  * Get call status by call ID
  */
 export async function getCallStatus(callId: string): Promise<CallResponse> {
-  const api = await createVoiceAIApi();
+  const api = createVoiceAIApi();
 
   const response = await api.getCallStatusApiVoiceAiCallsCallIdGet(callId);
   return response.data;
@@ -45,7 +41,7 @@ export async function getCallStatus(callId: string): Promise<CallResponse> {
  * Get user's active call (if any)
  */
 export async function getActiveCall(): Promise<ActiveCallResponse | null> {
-  const api = await createVoiceAIApi();
+  const api = createVoiceAIApi();
   const response = await api.getActiveCallApiVoiceAiCallsActiveGet();
   return response.data; // Will be null if no active call
 }
@@ -54,7 +50,7 @@ export async function getActiveCall(): Promise<ActiveCallResponse | null> {
  * End an ongoing call by call ID
  */
 export async function endCall(callId: string): Promise<void> {
-  const api = await createVoiceAIApi();
+  const api = createVoiceAIApi();
 
   await api.endCallApiVoiceAiCallsCallIdDelete(callId);
 }

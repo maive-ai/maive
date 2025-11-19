@@ -6,6 +6,7 @@ All URIs are relative to *http://localhost*
 |------------- | ------------- | -------------|
 |[**addContactNoteApiCrmContactsContactIdNotesPost**](#addcontactnoteapicrmcontactscontactidnotespost) | **POST** /api/crm/contacts/{contact_id}/notes | Add Contact Note|
 |[**addJobNoteApiCrmJobsJobIdNotesPost**](#addjobnoteapicrmjobsjobidnotespost) | **POST** /api/crm/jobs/{job_id}/notes | Add Job Note|
+|[**createMockProjectApiCrmProjectsPost**](#createmockprojectapicrmprojectspost) | **POST** /api/crm/projects | Create Mock Project|
 |[**downloadFileApiCrmFilesFileIdDownloadGet**](#downloadfileapicrmfilesfileiddownloadget) | **GET** /api/crm/files/{file_id}/download | Download File|
 |[**getAllContactsApiCrmContactsGet**](#getallcontactsapicrmcontactsget) | **GET** /api/crm/contacts | Get All Contacts|
 |[**getAllJobsApiCrmJobsGet**](#getalljobsapicrmjobsget) | **GET** /api/crm/jobs | Get All Jobs|
@@ -15,6 +16,7 @@ All URIs are relative to *http://localhost*
 |[**getJobFilesApiCrmJobsJobIdFilesGet**](#getjobfilesapicrmjobsjobidfilesget) | **GET** /api/crm/jobs/{job_id}/files | Get Job Files|
 |[**getProjectApiCrmProjectsProjectIdGet**](#getprojectapicrmprojectsprojectidget) | **GET** /api/crm/projects/{project_id} | Get Project|
 |[**updateJobStatusApiCrmJobsJobIdStatusPatch**](#updatejobstatusapicrmjobsjobidstatuspatch) | **PATCH** /api/crm/jobs/{job_id}/status | Update Job Status|
+|[**updateMockProjectApiCrmProjectsProjectIdPatch**](#updatemockprojectapicrmprojectsprojectidpatch) | **PATCH** /api/crm/projects/{project_id} | Update Mock Project|
 |[**updateProjectStatusApiCrmProjectsProjectIdStatusPatch**](#updateprojectstatusapicrmprojectsprojectidstatuspatch) | **PATCH** /api/crm/projects/{project_id}/status | Update Project Status|
 
 # **addContactNoteApiCrmContactsContactIdNotesPost**
@@ -110,6 +112,59 @@ const { status, data } = await apiInstance.addJobNoteApiCrmJobsJobIdNotesPost(
 ### Return type
 
 **Note**
+
+### Authorization
+
+[HTTPBearer](../README.md#HTTPBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**201** | Successful Response |  -  |
+|**422** | Validation Error |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **createMockProjectApiCrmProjectsPost**
+> Project createMockProjectApiCrmProjectsPost(mockProject)
+
+Create a new demo project (Mock CRM only).  This endpoint is only available when using the Mock CRM provider. It allows creating demo projects for testing and demonstrations.  Args:     request: The project data to create     current_user: The authenticated user     crm_service: The CRM service instance  Returns:     Project: The created project  Raises:     HTTPException: If not using Mock CRM or an error occurs
+
+### Example
+
+```typescript
+import {
+    CRMApi,
+    Configuration,
+    MockProject
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new CRMApi(configuration);
+
+let mockProject: MockProject; //
+
+const { status, data } = await apiInstance.createMockProjectApiCrmProjectsPost(
+    mockProject
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **mockProject** | **MockProject**|  | |
+
+
+### Return type
+
+**Project**
 
 ### Authorization
 
@@ -615,6 +670,62 @@ void (empty response body)
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 |**204** | Successful Response |  -  |
+|**422** | Validation Error |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **updateMockProjectApiCrmProjectsProjectIdPatch**
+> Project updateMockProjectApiCrmProjectsProjectIdPatch(mockProject)
+
+Update an existing demo project (Mock CRM only).  This endpoint is only available when using the Mock CRM provider. It allows updating demo projects for testing and demonstrations.  Args:     project_id: The unique identifier for the project     request: The updated project data     current_user: The authenticated user     crm_service: The CRM service instance  Returns:     Project: The updated project  Raises:     HTTPException: If not using Mock CRM or an error occurs
+
+### Example
+
+```typescript
+import {
+    CRMApi,
+    Configuration,
+    MockProject
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new CRMApi(configuration);
+
+let projectId: string; // (default to undefined)
+let mockProject: MockProject; //
+
+const { status, data } = await apiInstance.updateMockProjectApiCrmProjectsProjectIdPatch(
+    projectId,
+    mockProject
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **mockProject** | **MockProject**|  | |
+| **projectId** | [**string**] |  | defaults to undefined|
+
+
+### Return type
+
+**Project**
+
+### Authorization
+
+[HTTPBearer](../README.md#HTTPBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | Successful Response |  -  |
 |**422** | Validation Error |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
