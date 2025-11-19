@@ -91,7 +91,10 @@ class ServiceTitanProvider(CRMProvider):
             },
         )
 
-        logger.info("ServiceTitanProvider initialized with dynamic credentials", tenant_id=self.tenant_id)
+        logger.info(
+            "ServiceTitanProvider initialized with dynamic credentials",
+            tenant_id=self.tenant_id,
+        )
         self._access_token: str | None = None
 
     async def _get_access_token(self) -> str:
@@ -123,7 +126,7 @@ class ServiceTitanProvider(CRMProvider):
             logger.error(
                 "Failed to get access token",
                 status_code=e.response.status_code,
-                response_text=e.response.text
+                response_text=e.response.text,
             )
             raise CRMError(
                 error_code="AUTH_FAILED",
@@ -197,7 +200,9 @@ class ServiceTitanProvider(CRMProvider):
         Returns:
             ProjectList: Paginated list of projects
         """
-        logger.info("Getting all Service Titan projects", page=page, page_size=page_size)
+        logger.info(
+            "Getting all Service Titan projects", page=page, page_size=page_size
+        )
 
         # Build query parameters
         params = {
@@ -232,11 +237,17 @@ class ServiceTitanProvider(CRMProvider):
                     # Parse using ProjectResponse schema
                     project_response = ProjectResponse(**project_item)
                     # Transform to universal Project schema
-                    project = self._transform_st_project_to_universal_project(project_response)
+                    project = self._transform_st_project_to_universal_project(
+                        project_response
+                    )
                     projects.append(project)
                 except Exception as e:
                     # Log but don't fail on individual project parsing errors
-                    logger.warning("Failed to parse project", project_id=project_item.get('id'), error=str(e))
+                    logger.warning(
+                        "Failed to parse project",
+                        project_id=project_item.get("id"),
+                        error=str(e),
+                    )
                     continue
 
             return ProjectList(
@@ -249,7 +260,11 @@ class ServiceTitanProvider(CRMProvider):
             )
 
         except httpx.HTTPStatusError as e:
-            logger.error("HTTP error getting projects", status_code=e.response.status_code, response_text=e.response.text)
+            logger.error(
+                "HTTP error getting projects",
+                status_code=e.response.status_code,
+                response_text=e.response.text,
+            )
             raise CRMError(f"Failed to get projects: {e.response.status_code}") from e
         except Exception as e:
             logger.error("Error getting projects", error=str(e))
@@ -443,7 +458,11 @@ class ServiceTitanProvider(CRMProvider):
         Raises:
             CRMError: If the entity type is not supported or entity not found
         """
-        logger.info("Adding note to Service Titan entity", entity_type=entity_type, entity_id=entity_id)
+        logger.info(
+            "Adding note to Service Titan entity",
+            entity_type=entity_type,
+            entity_id=entity_id,
+        )
 
         pin_to_top = kwargs.get("pin_to_top", False)
 
@@ -583,7 +602,11 @@ class ServiceTitanProvider(CRMProvider):
         Raises:
             CRMError: If the project is not found or update fails
         """
-        logger.info("Updating Service Titan project status", project_id=project_id, status=status)
+        logger.info(
+            "Updating Service Titan project status",
+            project_id=project_id,
+            status=status,
+        )
 
         # For Service Titan, we need to call update_project with status_id and sub_status_id
         # The status parameter could be a status name or ID
@@ -615,7 +638,9 @@ class ServiceTitanProvider(CRMProvider):
     # Helper Methods (transformation functions)
     # ========================================================================
 
-    def _transform_st_project_to_universal_project(self, st_project: ProjectResponse) -> Project:
+    def _transform_st_project_to_universal_project(
+        self, st_project: ProjectResponse
+    ) -> Project:
         """
         Transform Service Titan project to universal Project schema.
 
@@ -628,7 +653,9 @@ class ServiceTitanProvider(CRMProvider):
             status=st_project.status or "Unknown",
             status_id=str(st_project.status_id) if st_project.status_id else None,
             sub_status=st_project.sub_status,
-            sub_status_id=str(st_project.sub_status_id) if st_project.sub_status_id else None,
+            sub_status_id=str(st_project.sub_status_id)
+            if st_project.sub_status_id
+            else None,
             workflow_type="Project",
             description=None,  # Projects don't have description in ST
             customer_id=str(st_project.customer_id) if st_project.customer_id else None,
@@ -742,10 +769,14 @@ class ServiceTitanProvider(CRMProvider):
             if e.response.status_code == 404:
                 raise CRMError(f"Project with ID {project_id} not found", "NOT_FOUND")
             else:
-                logger.error("HTTP error fetching project", project_id=project_id, error=str(e))
+                logger.error(
+                    "HTTP error fetching project", project_id=project_id, error=str(e)
+                )
                 raise CRMError(f"Failed to fetch project status: {e}", "HTTP_ERROR")
         except Exception as e:
-            logger.error("Unexpected error fetching project", project_id=project_id, error=str(e))
+            logger.error(
+                "Unexpected error fetching project", project_id=project_id, error=str(e)
+            )
             raise CRMError(f"Failed to fetch project status: {str(e)}", "UNKNOWN_ERROR")
 
     async def get_appointment_status(
@@ -766,7 +797,9 @@ class ServiceTitanProvider(CRMProvider):
         try:
             url = f"{self.base_api_url}{ServiceTitanEndpoints.APPOINTMENT_BY_ID.format(tenant_id=self.tenant_id, id=appointment_id)}"
 
-            logger.debug("Fetching appointment status for ID", appointment_id=appointment_id)
+            logger.debug(
+                "Fetching appointment status for ID", appointment_id=appointment_id
+            )
 
             response = await self._make_authenticated_request("GET", url)
             response.raise_for_status()
@@ -782,10 +815,18 @@ class ServiceTitanProvider(CRMProvider):
                     f"Appointment with ID {appointment_id} not found", "NOT_FOUND"
                 )
             else:
-                logger.error("HTTP error fetching appointment", appointment_id=appointment_id, error=str(e))
+                logger.error(
+                    "HTTP error fetching appointment",
+                    appointment_id=appointment_id,
+                    error=str(e),
+                )
                 raise CRMError(f"Failed to fetch appointment status: {e}", "HTTP_ERROR")
         except Exception as e:
-            logger.error("Unexpected error fetching appointment", appointment_id=appointment_id, error=str(e))
+            logger.error(
+                "Unexpected error fetching appointment",
+                appointment_id=appointment_id,
+                error=str(e),
+            )
             raise CRMError(
                 f"Failed to fetch appointment status: {str(e)}", "UNKNOWN_ERROR"
             )
@@ -922,7 +963,7 @@ class ServiceTitanProvider(CRMProvider):
                 "Fetching form submissions for form IDs",
                 form_ids=form_ids,
                 status=status,
-                owners=owners
+                owners=owners,
             )
             logger.debug("Request URL", url=url)
             logger.debug("Request params", params=params)
@@ -1016,10 +1057,18 @@ class ServiceTitanProvider(CRMProvider):
             if e.response.status_code == 404:
                 raise CRMError(f"Estimate with ID {estimate_id} not found", "NOT_FOUND")
             else:
-                logger.error("HTTP error fetching estimate", estimate_id=estimate_id, error=str(e))
+                logger.error(
+                    "HTTP error fetching estimate",
+                    estimate_id=estimate_id,
+                    error=str(e),
+                )
                 raise CRMError(f"Failed to fetch estimate: {e}", "HTTP_ERROR")
         except Exception as e:
-            logger.error("Unexpected error fetching estimate", estimate_id=estimate_id, error=str(e))
+            logger.error(
+                "Unexpected error fetching estimate",
+                estimate_id=estimate_id,
+                error=str(e),
+            )
             raise CRMError(f"Failed to fetch estimate: {str(e)}", "UNKNOWN_ERROR")
 
     async def get_estimates(
@@ -1193,10 +1242,14 @@ class ServiceTitanProvider(CRMProvider):
             if e.response.status_code == 404:
                 raise CRMError(f"Job with ID {job_id} not found", "NOT_FOUND")
             else:
-                logger.error("HTTP error adding note to job", job_id=job_id, error=str(e))
+                logger.error(
+                    "HTTP error adding note to job", job_id=job_id, error=str(e)
+                )
                 raise CRMError(f"Failed to add note to job: {e}", "HTTP_ERROR")
         except Exception as e:
-            logger.error("Unexpected error adding note to job", job_id=job_id, error=str(e))
+            logger.error(
+                "Unexpected error adding note to job", job_id=job_id, error=str(e)
+            )
             raise CRMError(f"Failed to add note to job: {str(e)}", "UNKNOWN_ERROR")
 
     async def update_project_claim_status(self, job_id: int, claim_status: str) -> None:
@@ -1218,7 +1271,7 @@ class ServiceTitanProvider(CRMProvider):
             "[ServiceTitanProvider] Claim status update not supported",
             job_id=job_id,
             claim_status=claim_status,
-            note="This would require custom field implementation"
+            note="This would require custom field implementation",
         )
 
     async def get_job_hold_reasons(
@@ -1327,13 +1380,17 @@ class ServiceTitanProvider(CRMProvider):
                     f"Job {job_id} is not in a canceled state", "INVALID_STATE"
                 )
             else:
-                logger.error("HTTP error removing cancellation from job", job_id=job_id, error=str(e))
+                logger.error(
+                    "HTTP error removing cancellation from job",
+                    job_id=job_id,
+                    error=str(e),
+                )
                 raise CRMError(f"Failed to remove cancellation: {e}", "HTTP_ERROR")
         except Exception as e:
             logger.error(
                 "Unexpected error removing cancellation from job",
                 job_id=job_id,
-                error=str(e)
+                error=str(e),
             )
             raise CRMError(f"Failed to remove cancellation: {str(e)}", "UNKNOWN_ERROR")
 
@@ -1374,7 +1431,7 @@ class ServiceTitanProvider(CRMProvider):
             response.raise_for_status()
 
             data = response.json()
-            logger.info("Found project substatuses", count=len(data.get('data', [])))
+            logger.info("Found project substatuses", count=len(data.get("data", [])))
 
             return ProjectSubStatusListResponse(**data)
 
@@ -1419,10 +1476,18 @@ class ServiceTitanProvider(CRMProvider):
                     f"Project with ID {request.project_id} not found", "NOT_FOUND"
                 )
             else:
-                logger.error("HTTP error fetching project", project_id=request.project_id, error=str(e))
+                logger.error(
+                    "HTTP error fetching project",
+                    project_id=request.project_id,
+                    error=str(e),
+                )
                 raise CRMError(f"Failed to fetch project: {e}", "HTTP_ERROR")
         except Exception as e:
-            logger.error("Unexpected error fetching project", project_id=request.project_id, error=str(e))
+            logger.error(
+                "Unexpected error fetching project",
+                project_id=request.project_id,
+                error=str(e),
+            )
             raise CRMError(f"Failed to fetch project: {str(e)}", "UNKNOWN_ERROR")
 
     async def update_project(self, request: UpdateProjectRequest) -> ProjectResponse:
@@ -1464,7 +1529,7 @@ class ServiceTitanProvider(CRMProvider):
             logger.debug(
                 "Updating project with data",
                 project_id=request.project_id,
-                request_body=request_body
+                request_body=request_body,
             )
 
             response = await self._make_authenticated_request(
@@ -1483,7 +1548,7 @@ class ServiceTitanProvider(CRMProvider):
                 "HTTP error updating project",
                 status_code=e.response.status_code,
                 project_id=request.project_id,
-                error_body=error_body
+                error_body=error_body,
             )
 
             if e.response.status_code == 404:
@@ -1498,7 +1563,11 @@ class ServiceTitanProvider(CRMProvider):
             else:
                 raise CRMError(f"Failed to update project: {error_body}", "HTTP_ERROR")
         except Exception as e:
-            logger.error("Unexpected error updating project", project_id=request.project_id, error=str(e))
+            logger.error(
+                "Unexpected error updating project",
+                project_id=request.project_id,
+                error=str(e),
+            )
             raise CRMError(f"Failed to update project: {str(e)}", "UNKNOWN_ERROR")
 
     async def add_project_note(
@@ -1546,13 +1615,17 @@ class ServiceTitanProvider(CRMProvider):
                 logger.error(
                     "HTTP error adding note to project",
                     project_id=project_id,
-                    error_body=error_body
+                    error_body=error_body,
                 )
                 raise CRMError(
                     f"Failed to add note to project: {error_body}", "HTTP_ERROR"
                 )
         except Exception as e:
-            logger.error("Unexpected error adding note to project", project_id=project_id, error=str(e))
+            logger.error(
+                "Unexpected error adding note to project",
+                project_id=project_id,
+                error=str(e),
+            )
             raise CRMError(f"Failed to add note to project: {str(e)}", "UNKNOWN_ERROR")
 
     async def get_form_submissions(
@@ -1600,8 +1673,7 @@ class ServiceTitanProvider(CRMProvider):
 
             data = response.json()
             logger.info(
-                "Successfully fetched form submissions",
-                count=len(data.get('data', []))
+                "Successfully fetched form submissions", count=len(data.get("data", []))
             )
 
             return FormSubmissionListResponse(**data)
@@ -1648,13 +1720,15 @@ class ServiceTitanProvider(CRMProvider):
             response.raise_for_status()
 
             data = response.json()
-            logger.info("Found materials", count=len(data.get('data', [])))
+            logger.info("Found materials", count=len(data.get("data", [])))
 
             return MaterialsListResponse(**data)
 
         except httpx.HTTPStatusError as e:
             error_body = e.response.text
-            logger.error("HTTP error fetching pricebook materials", error_body=error_body)
+            logger.error(
+                "HTTP error fetching pricebook materials", error_body=error_body
+            )
             raise CRMError(
                 f"Failed to fetch pricebook materials: {error_body}", "HTTP_ERROR"
             )
@@ -1694,13 +1768,15 @@ class ServiceTitanProvider(CRMProvider):
             response.raise_for_status()
 
             data = response.json()
-            logger.info("Found services", count=len(data.get('data', [])))
+            logger.info("Found services", count=len(data.get("data", [])))
 
             return ServicesListResponse(**data)
 
         except httpx.HTTPStatusError as e:
             error_body = e.response.text
-            logger.error("HTTP error fetching pricebook services", error_body=error_body)
+            logger.error(
+                "HTTP error fetching pricebook services", error_body=error_body
+            )
             raise CRMError(
                 f"Failed to fetch pricebook services: {error_body}", "HTTP_ERROR"
             )
@@ -1740,13 +1816,15 @@ class ServiceTitanProvider(CRMProvider):
             response.raise_for_status()
 
             data = response.json()
-            logger.info("Found equipment items", count=len(data.get('data', [])))
+            logger.info("Found equipment items", count=len(data.get("data", [])))
 
             return EquipmentListResponse(**data)
 
         except httpx.HTTPStatusError as e:
             error_body = e.response.text
-            logger.error("HTTP error fetching pricebook equipment", error_body=error_body)
+            logger.error(
+                "HTTP error fetching pricebook equipment", error_body=error_body
+            )
             raise CRMError(
                 f"Failed to fetch pricebook equipment: {error_body}", "HTTP_ERROR"
             )

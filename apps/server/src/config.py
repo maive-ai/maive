@@ -23,7 +23,8 @@ class AppSettings(BaseSettings):
         default="http://localhost:3000", description="Frontend base URL"
     )
     server_base_url: str = Field(
-        default="http://localhost:8080", description="Server base URL for MCP and internal APIs"
+        default="http://localhost:8080",
+        description="Server base URL for MCP and internal APIs",
     )
 
     # AWS Configuration

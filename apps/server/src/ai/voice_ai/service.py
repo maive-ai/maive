@@ -42,7 +42,9 @@ class VoiceAIService:
             logger.info("Creating outbound call", phone_number=request.phone_number)
             result = await self.voice_ai_provider.create_outbound_call(request)
             logger.info(
-                "Successfully created call", call_id=result.call_id, status=result.status
+                "Successfully created call",
+                call_id=result.call_id,
+                status=result.status,
             )
             return result
         except VoiceAIError as e:
@@ -76,11 +78,15 @@ class VoiceAIService:
             logger.info("Getting status for call", call_id=call_id)
             result = await self.voice_ai_provider.get_call_status(call_id)
             logger.info(
-                "Successfully retrieved status for call", call_id=call_id, status=result.status
+                "Successfully retrieved status for call",
+                call_id=call_id,
+                status=result.status,
             )
             return result
         except VoiceAIError as e:
-            logger.error("Voice AI error getting call", call_id=call_id, error_message=e.message)
+            logger.error(
+                "Voice AI error getting call", call_id=call_id, error_message=e.message
+            )
             return VoiceAIErrorResponse(
                 error=e.message,
                 error_code=e.error_code,
@@ -94,7 +100,9 @@ class VoiceAIService:
                 provider=getattr(self.voice_ai_provider, "provider_name", None),
             )
 
-    async def end_call(self, call_id: str, control_url: str | None = None) -> bool | VoiceAIErrorResponse:
+    async def end_call(
+        self, call_id: str, control_url: str | None = None
+    ) -> bool | VoiceAIErrorResponse:
         """
         End an ongoing call programmatically.
 
@@ -107,11 +115,15 @@ class VoiceAIService:
         """
         try:
             logger.info("Ending call", call_id=call_id)
-            result = await self.voice_ai_provider.end_call(call_id, control_url=control_url)
+            result = await self.voice_ai_provider.end_call(
+                call_id, control_url=control_url
+            )
             logger.info("Successfully ended call", call_id=call_id)
             return result
         except VoiceAIError as e:
-            logger.error("Voice AI error ending call", call_id=call_id, error_message=e.message)
+            logger.error(
+                "Voice AI error ending call", call_id=call_id, error_message=e.message
+            )
             return VoiceAIErrorResponse(
                 error=e.message,
                 error_code=e.error_code,

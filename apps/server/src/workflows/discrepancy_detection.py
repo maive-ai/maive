@@ -92,20 +92,14 @@ class DiscrepancyDetectionWorkflow:
             # Get project_id from provider_data for Service Titan
             project_id = job.provider_data.get("project_id")
             if not project_id:
-                raise CRMError(
-                    f"Job {job_id} has no associated project", "NO_PROJECT"
-                )
+                raise CRMError(f"Job {job_id} has no associated project", "NO_PROJECT")
 
             # Step 2: Get the sold estimate (try job first, then project)
             logger.info("\nStep 2: Getting sold estimate")
             selected_estimate = await self._find_sold_estimate(job_id, project_id)
 
-            logger.info(
-                "✅ Selected estimate", estimate_id=selected_estimate.id
-            )
-            logger.info(
-                "   Name", estimate_name=selected_estimate.name or "(no name)"
-            )
+            logger.info("✅ Selected estimate", estimate_id=selected_estimate.id)
+            logger.info("   Name", estimate_name=selected_estimate.name or "(no name)")
             logger.info(
                 "   Total",
                 total=f"${selected_estimate.subtotal + selected_estimate.tax:,.2f}",
@@ -156,17 +150,13 @@ class DiscrepancyDetectionWorkflow:
                     form_submission
                 )
             else:
-                logger.info(
-                    "\nStep 4: Fetching form submission for job", job_id=job_id
-                )
+                logger.info("\nStep 4: Fetching form submission for job", job_id=job_id)
                 notes_to_production = await self._fetch_form_submission(job_id)
 
             if notes_to_production:
                 logger.info("✅ Found Notes to Production data")
             else:
-                logger.warning(
-                    "⚠️ No Notes to Production found for job", job_id=job_id
-                )
+                logger.warning("⚠️ No Notes to Production found for job", job_id=job_id)
                 notes_to_production = {"message": "No Notes to Production found"}
 
             # Step 5: Analyze audio/transcript with AI
@@ -181,9 +171,7 @@ class DiscrepancyDetectionWorkflow:
 
             logger.info("✅ Analysis complete")
             logger.info("   Needs Review", needs_review=review_result.needs_review)
-            logger.info(
-                "   Explanation", explanation=review_result.hold_explanation
-            )
+            logger.info("   Explanation", explanation=review_result.hold_explanation)
 
             # Step 6: Conditional project hold
             if review_result.needs_review:
@@ -572,9 +560,7 @@ async def main():
             print("=" * 60)
 
         except Exception as e:
-            logger.error(
-                "Failed to process job", job_id=args.job_id, error=str(e)
-            )
+            logger.error("Failed to process job", job_id=args.job_id, error=str(e))
             raise
 
         return

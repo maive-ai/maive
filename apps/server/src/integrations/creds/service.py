@@ -128,7 +128,10 @@ class CRMCredentialsService:
                     organization_id=organization_id,
                     secret_arn=secret_arn,
                 )
-            elif error_code == "InvalidRequestException" and "scheduled for deletion" in str(e):
+            elif (
+                error_code == "InvalidRequestException"
+                and "scheduled for deletion" in str(e)
+            ):
                 # Secret is scheduled for deletion, restore it and update with NEW credentials
                 logger.info(
                     "Secret scheduled for deletion, restoring and updating with new credentials",

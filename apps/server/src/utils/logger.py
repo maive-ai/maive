@@ -53,7 +53,7 @@ class Logger(logging.LoggerAdapter):
             file_info = f"{frame.f_back.f_code.co_filename}:{frame.f_back.f_lineno}"
         else:
             file_info = "unknown:0"
-        
+
         kwargs["file"] = file_info
         self.log(logging.ERROR, msg, *args, **kwargs)
 
@@ -66,7 +66,7 @@ class Logger(logging.LoggerAdapter):
             file_info = f"{frame.f_back.f_code.co_filename}:{frame.f_back.f_lineno}"
         else:
             file_info = "unknown:0"
-        
+
         kwargs["file"] = file_info
         self.log(logging.ERROR, msg, *args, exc_info=exc_info, **kwargs)
 
@@ -76,7 +76,7 @@ class Logger(logging.LoggerAdapter):
         exc_info = kwargs.pop("exc_info", None)
         stack_info = kwargs.pop("stack_info", None)
         stacklevel = kwargs.pop("stacklevel", None)
-        
+
         result_kwargs = {}
         if kwargs:
             result_kwargs["extra"] = kwargs
@@ -86,7 +86,7 @@ class Logger(logging.LoggerAdapter):
             result_kwargs["stack_info"] = stack_info
         if stacklevel is not None:
             result_kwargs["stacklevel"] = stacklevel
-            
+
         return msg, result_kwargs
 
 

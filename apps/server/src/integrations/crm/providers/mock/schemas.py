@@ -58,7 +58,9 @@ class MockProject(BaseModel):
     insurance_contact_email: str | None = Field(
         None, alias="insuranceContactEmail", description="Insurance contact email"
     )
-    adjuster_name: str | None = Field(None, alias="adjusterName", description="Adjuster name")
+    adjuster_name: str | None = Field(
+        None, alias="adjusterName", description="Adjuster name"
+    )
     adjuster_contact: ContactInfo | None = Field(
         None, alias="adjusterContact", description="Adjuster contact"
     )
@@ -73,4 +75,3 @@ class MockProject(BaseModel):
     )
     notes: list[MockNote] | None = Field(None, description="Project notes")
     status: str = Field(default="In Progress", description="Project status")
-

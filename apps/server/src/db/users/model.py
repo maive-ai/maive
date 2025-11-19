@@ -30,7 +30,11 @@ class User(Base):
 
     # Email address (for reference and org creation)
     email: Mapped[str] = mapped_column(
-        String(255), nullable=False, unique=True, index=True, comment="User email address"
+        String(255),
+        nullable=False,
+        unique=True,
+        index=True,
+        comment="User email address",
     )
 
     # Foreign key to organization

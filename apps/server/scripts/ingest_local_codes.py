@@ -94,10 +94,16 @@ class IngestionSummary(BaseModel):
     """Summary of document ingestion results."""
 
     total_documents: int = Field(..., description="Total number of documents processed")
-    successful: int = Field(default=0, description="Number of successfully ingested documents")
+    successful: int = Field(
+        default=0, description="Number of successfully ingested documents"
+    )
     failed: int = Field(default=0, description="Number of failed documents")
-    errors: list[IngestionError] = Field(default_factory=list, description="List of errors")
-    file_ids: list[str] = Field(default_factory=list, description="List of uploaded file IDs")
+    errors: list[IngestionError] = Field(
+        default_factory=list, description="List of errors"
+    )
+    file_ids: list[str] = Field(
+        default_factory=list, description="List of uploaded file IDs"
+    )
 
 
 class LocalCodeIngestionService:
@@ -165,24 +171,30 @@ class LocalCodeIngestionService:
 
                 if dry_run:
                     # Check if file already exists (for informational purposes)
-                    vector_store_id = await self.vector_store.get_or_create_vector_store()
+                    vector_store_id = (
+                        await self.vector_store.get_or_create_vector_store()
+                    )
                     existing_file_id = await self.vector_store.find_file_id_by_filename(
                         vector_store_id=vector_store_id,
                         filename=filename,
                     )
-                    
+
                     action = "Replace" if existing_file_id else "Upload"
                     logger.info(
                         f"[DRY RUN] Would {action.lower()}: {metadata.jurisdiction_name} "
                         f"({len(content)} chars) as {filename}"
                     )
                     if existing_file_id:
-                        logger.info(f"[DRY RUN] Would delete existing file {existing_file_id}")
-                    
+                        logger.info(
+                            f"[DRY RUN] Would delete existing file {existing_file_id}"
+                        )
+
                     summary.successful += 1
                 else:
                     # Check for existing file and delete if found
-                    vector_store_id = await self.vector_store.get_or_create_vector_store()
+                    vector_store_id = (
+                        await self.vector_store.get_or_create_vector_store()
+                    )
                     existing_file_id = await self.vector_store.find_file_id_by_filename(
                         vector_store_id=vector_store_id,
                         filename=filename,
@@ -205,10 +217,8 @@ class LocalCodeIngestionService:
                     summary.successful += 1
                     summary.file_ids.append(file_id)
 
-                    logger.info(
-                        f"Ingested: {metadata.jurisdiction_name} ({file_id})"
-                    )
-                    
+                    logger.info(f"Ingested: {metadata.jurisdiction_name} ({file_id})")
+
                     # Add delay between uploads to avoid rate limiting
                     if idx < len(json_files):  # Don't delay after last file
                         await asyncio.sleep(1)
@@ -264,9 +274,9 @@ class LocalCodeIngestionService:
                     try:
                         with open(json_file, "r", encoding="utf-8") as f:
                             data = json.load(f)
-                        
+
                         file_city_slug = data.get("metadata", {}).get("city_slug", "")
-                        
+
                         if file_city_slug != city_filter:
                             continue
                     except (json.JSONDecodeError, KeyError):
@@ -404,7 +414,9 @@ class LocalCodeIngestionService:
                     # Indent content slightly more than heading
                     indent = "  " * (section.depth + 1)
                     indented_content = "\n".join(
-                        f"{indent}{line}" for line in cleaned.split("\n") if line.strip()
+                        f"{indent}{line}"
+                        for line in cleaned.split("\n")
+                        if line.strip()
                     )
                     text_parts.append(indented_content)
                     text_parts.append("")  # Empty line after content
@@ -423,22 +435,22 @@ class LocalCodeIngestionService:
         from bs4 import BeautifulSoup
 
         # Parse HTML and remove unwanted tags (more robust than regex)
-        soup = BeautifulSoup(html, 'html.parser')
-        for tag in soup(['script', 'style', 'meta', 'link']):
+        soup = BeautifulSoup(html, "html.parser")
+        for tag in soup(["script", "style", "meta", "link"]):
             tag.decompose()
 
         # Extract text (automatically decodes ALL HTML entities, not just common ones)
-        text = soup.get_text(separator='\n')
+        text = soup.get_text(separator="\n")
 
         # Normalize whitespace within each line
-        text = re.sub(r'[ \t]+', ' ', text)  # Multiple spaces/tabs to single space
+        text = re.sub(r"[ \t]+", " ", text)  # Multiple spaces/tabs to single space
 
         # Clean up lines and remove empty ones
         lines = [line.strip() for line in text.splitlines() if line.strip()]
-        text = '\n'.join(lines)
+        text = "\n".join(lines)
 
         # Normalize multiple newlines to max 2 (paragraph breaks)
-        text = re.sub(r'\n{3,}', '\n\n', text)
+        text = re.sub(r"\n{3,}", "\n\n", text)
 
         return text
 
@@ -603,4 +615,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

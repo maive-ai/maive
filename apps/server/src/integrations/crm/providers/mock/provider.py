@@ -15,7 +15,10 @@ from pathlib import Path
 from src.integrations.crm.base import CRMError, CRMProvider
 from src.integrations.crm.constants import Status
 from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
-from src.integrations.crm.providers.mock.data import get_mock_projects, parse_raw_project_data
+from src.integrations.crm.providers.mock.data import (
+    get_mock_projects,
+    parse_raw_project_data,
+)
 from src.integrations.crm.providers.mock.schemas import MockProject
 from src.integrations.crm.providers.job_nimbus.schemas import FileMetadata
 from src.integrations.crm.schemas import (
@@ -115,33 +118,40 @@ class MockProvider(CRMProvider):
             for job in jobs:
                 # Customer name filter (partial, case-insensitive)
                 if "customer_name" in filters:
-                    if filters["customer_name"].lower() not in (job.customer_name or "").lower():
+                    if (
+                        filters["customer_name"].lower()
+                        not in (job.customer_name or "").lower()
+                    ):
                         continue
-                
+
                 # Job ID filter (exact match)
                 if "job_id" in filters:
                     if job.id != filters["job_id"]:
                         continue
-                
+
                 # Address filter (partial, case-insensitive)
                 if "address" in filters:
                     full_address = f"{job.address_line1 or ''} {job.city or ''} {job.state or ''} {job.postal_code or ''}"
                     if filters["address"].lower() not in full_address.lower():
                         continue
-                
+
                 # Claim number filter (exact match from provider_data)
                 if "claim_number" in filters:
-                    job_claim = job.provider_data.get("claimNumber") if job.provider_data else None
+                    job_claim = (
+                        job.provider_data.get("claimNumber")
+                        if job.provider_data
+                        else None
+                    )
                     if job_claim != filters["claim_number"]:
                         continue
-                
+
                 # Status filter (exact match)
                 if "status" in filters:
                     if job.status != filters["status"]:
                         continue
-                
+
                 filtered_jobs.append(job)
-            
+
             jobs = filtered_jobs
 
         # Apply pagination
@@ -499,49 +509,59 @@ class MockProvider(CRMProvider):
     # File Methods
     # ========================================================================
 
-    async def get_job_files(self, job_id: str, file_filter: str = "all") -> list[FileMetadata]:
+    async def get_job_files(
+        self, job_id: str, file_filter: str = "all"
+    ) -> list[FileMetadata]:
         """
         Get files attached to a specific job with optional type filtering.
-        
+
         For mock CRM, files are organized in subdirectories by job ID:
         files/{job_id}/file.pdf
-        
+
         Args:
             job_id: The job ID to get files for
             file_filter: Filter by type - "all", "images", or "pdfs" (default: "all")
-            
+
         Returns:
             List of file metadata objects (filtered by type if specified)
-            
+
         Raises:
             CRMError: If the job is not found
         """
-        logger.info("[MockProvider] Getting files for job", job_id=job_id, file_filter=file_filter)
-        
+        logger.info(
+            "[MockProvider] Getting files for job",
+            job_id=job_id,
+            file_filter=file_filter,
+        )
+
         # Validate job exists (will raise CRMError if not found)
         await self.get_job(job_id)
-        
+
         # Get job-specific files directory
         job_files_dir = Path(__file__).parent / "files" / job_id
-        
+
         if not job_files_dir.exists():
-            logger.info("[MockProvider] No files directory for job", job_id=job_id, dir_path=str(job_files_dir))
+            logger.info(
+                "[MockProvider] No files directory for job",
+                job_id=job_id,
+                dir_path=str(job_files_dir),
+            )
             return []
-        
+
         # Scan directory for all files
         all_files = []
         for idx, file_path in enumerate(sorted(job_files_dir.iterdir())):
             if not file_path.is_file():
                 continue
-            
+
             # Determine content type based on extension
             content_type, _ = mimetypes.guess_type(file_path.name)
             if not content_type:
                 content_type = "application/octet-stream"
-            
+
             # Get file stats
             file_stats = os.stat(file_path)
-            
+
             # Create FileMetadata with job-specific file ID
             all_files.append(
                 FileMetadata(
@@ -549,71 +569,82 @@ class MockProvider(CRMProvider):
                     filename=file_path.name,
                     content_type=content_type,
                     size=file_stats.st_size,
-                    record_type_name="Document" if content_type.startswith("application/") else "Image",
+                    record_type_name="Document"
+                    if content_type.startswith("application/")
+                    else "Image",
                     description=f"Mock {content_type.split('/')[-1].upper()} file",
                     date_created=int(file_stats.st_ctime),
                     created_by_name="Mock User",
                     is_private=False,
                 )
             )
-        
+
         # Apply client-side filtering by type
         if file_filter == "images":
-            filtered_files = [f for f in all_files if f.content_type.startswith("image/")]
+            filtered_files = [
+                f for f in all_files if f.content_type.startswith("image/")
+            ]
         elif file_filter == "pdfs":
-            filtered_files = [f for f in all_files if f.content_type == "application/pdf"]
+            filtered_files = [
+                f for f in all_files if f.content_type == "application/pdf"
+            ]
         else:
             filtered_files = all_files
-        
-        logger.info("[MockProvider] Returning files", count=len(filtered_files), file_filter=file_filter)
+
+        logger.info(
+            "[MockProvider] Returning files",
+            count=len(filtered_files),
+            file_filter=file_filter,
+        )
         return filtered_files
-    
-    async def get_specific_job_file(self, job_id: str, file_id: str) -> FileMetadata | None:
+
+    async def get_specific_job_file(
+        self, job_id: str, file_id: str
+    ) -> FileMetadata | None:
         """
         Get a specific file by ID from a job.
-        
+
         Args:
             job_id: The job ID
             file_id: The file ID
-            
+
         Returns:
             FileMetadata if found, None otherwise
         """
-        logger.info("[MockProvider] Getting specific file", job_id=job_id, file_id=file_id)
-        
+        logger.info(
+            "[MockProvider] Getting specific file", job_id=job_id, file_id=file_id
+        )
+
         # Get all files for the job
         all_files = await self.get_job_files(job_id)
-        
+
         # Find the specific file
         file = next((f for f in all_files if f.id == file_id), None)
-        
+
         if not file:
             logger.warning("[MockProvider] File not found", file_id=file_id)
-        
+
         return file
-    
+
     async def download_file(
-        self,
-        file_id: str,
-        filename: str | None = None,
-        content_type: str | None = None
+        self, file_id: str, filename: str | None = None, content_type: str | None = None
     ) -> tuple[bytes, str, str]:
         """
         Download a file from the mock CRM.
-        
+
         Args:
             file_id: The file ID (format: {job_id}_file_{idx})
             filename: Optional filename override
             content_type: Optional content type override
-            
+
         Returns:
             Tuple of (file_content, filename, content_type)
-            
+
         Raises:
             CRMError: If the file is not found
         """
         logger.info("[MockProvider] Downloading file", file_id=file_id)
-        
+
         # Parse job_id from file ID (format: {job_id}_file_{idx})
         parts = file_id.rsplit("_file_", 1)
         if len(parts) != 2:
@@ -621,9 +652,9 @@ class MockProvider(CRMProvider):
                 error_code="INVALID_ID",
                 message=f"Invalid file ID format: {file_id}. Expected format: {{job_id}}_file_{{idx}}",
             )
-        
+
         job_id = parts[0]
-        
+
         # Get file metadata using existing method
         file_metadata = await self.get_specific_job_file(job_id, file_id)
         if not file_metadata:
@@ -631,11 +662,11 @@ class MockProvider(CRMProvider):
                 error_code="NOT_FOUND",
                 message=f"File with ID {file_id} not found",
             )
-        
+
         # Construct file path using job_id and filename from metadata
         job_files_dir = Path(__file__).parent / "files" / job_id
         file_path = job_files_dir / file_metadata.filename
-        
+
         # Read file content
         try:
             with open(file_path, "rb") as f:
@@ -650,12 +681,17 @@ class MockProvider(CRMProvider):
                 error_code="READ_ERROR",
                 message=f"Failed to read file: {str(e)}",
             )
-        
+
         # Use provided values or values from metadata
         final_filename = filename or file_metadata.filename
         final_content_type = content_type or file_metadata.content_type
-        
-        logger.info("[MockProvider] File downloaded", file_id=file_id, file_name=final_filename, size=len(content))
+
+        logger.info(
+            "[MockProvider] File downloaded",
+            file_id=file_id,
+            file_name=final_filename,
+            size=len(content),
+        )
         return content, final_filename, final_content_type
 
     # ========================================================================
@@ -845,16 +881,16 @@ class MockProvider(CRMProvider):
 
         # Parse and create properly structured project using shared function
         project = parse_raw_project_data(
-            mock_project_instance,
-            job_id=job_id,
-            timestamp=None
+            mock_project_instance, job_id=job_id, timestamp=None
         )
 
         # Add to in-memory projects list
         self._projects.append(project)
         logger.info("Successfully created mock project", project_id=project_id)
 
-    async def update_project(self, project_id: str, mock_project: MockProject) -> Project:
+    async def update_project(
+        self, project_id: str, mock_project: MockProject
+    ) -> Project:
         """
         Update an existing demo project (Mock CRM only).
 
@@ -875,7 +911,11 @@ class MockProvider(CRMProvider):
 
         # Find project index for replacement
         project_index = next(
-            (i for i, p in enumerate(self._projects) if p.provider_data.get("id") == project_id),
+            (
+                i
+                for i, p in enumerate(self._projects)
+                if p.provider_data.get("id") == project_id
+            ),
             None,
         )
 
@@ -897,7 +937,7 @@ class MockProvider(CRMProvider):
         updated_project = parse_raw_project_data(
             mock_project_instance,
             job_id=job_id,
-            timestamp=None  # Will use current time for updated_at
+            timestamp=None,  # Will use current time for updated_at
         )
 
         # Preserve created_at from original

@@ -1,6 +1,5 @@
 """ServiceTitan MCP server - exposes CRM tools via Model Context Protocol."""
 
-
 from typing import Any
 
 from fastmcp import FastMCP
@@ -36,13 +35,13 @@ mcp = FastMCP(name="ServiceTitan CRM", auth=auth)
 async def get_job(job_id: str) -> dict[str, Any]:
     """
     Get a specific job by ID from ServiceTitan.
-    
+
     Use this tool to retrieve detailed information about a job, including customer details,
     status, location, and other relevant data.
-    
+
     Args:
         job_id: The unique identifier for the job (ServiceTitan job ID)
-        
+
     Returns:
         A dictionary containing the job details including:
         - id: Job ID
@@ -51,7 +50,7 @@ async def get_job(job_id: str) -> dict[str, Any]:
         - customer_name: Name of the customer
         - address: Job location
         - And other job-related information
-        
+
     Example:
         get_job(job_id="12345")
     """
@@ -61,9 +60,16 @@ async def get_job(job_id: str) -> dict[str, Any]:
         return job.model_dump()
 
     except CRMError as e:
-        logger.error("[MCP ServiceTitan] CRM error getting job", job_id=job_id, error_message=e.message)
+        logger.error(
+            "[MCP ServiceTitan] CRM error getting job",
+            job_id=job_id,
+            error_message=e.message,
+        )
         raise Exception(f"Failed to get job: {e.message}")
     except Exception as e:
-        logger.error("[MCP ServiceTitan] Unexpected error getting job", job_id=job_id, error=str(e))
+        logger.error(
+            "[MCP ServiceTitan] Unexpected error getting job",
+            job_id=job_id,
+            error=str(e),
+        )
         raise Exception(f"Failed to get job: {str(e)}")
-

@@ -196,6 +196,7 @@ async def clear_call_list(
             detail=f"Failed to clear call list: {str(e)}",
         )
 
+
 @router.patch("/{project_id}/completed", response_model=CallListItemResponse)
 async def mark_call_completed(
     project_id: str,

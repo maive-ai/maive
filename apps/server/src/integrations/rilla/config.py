@@ -21,8 +21,7 @@ class RillaSettings(BaseSettings):
     # Rilla configuration
     api_key: str = Field(description="Rilla API key for authentication")
     base_url: str = Field(
-        default="https://customer.rillavoice.com", 
-        description="Rilla API base URL"
+        default="https://customer.rillavoice.com", description="Rilla API base URL"
     )
     timeout: int = Field(default=30, description="Request timeout in seconds")
 

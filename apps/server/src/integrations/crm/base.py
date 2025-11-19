@@ -12,7 +12,15 @@ provider_data field of each universal schema.
 from abc import ABC, abstractmethod
 from typing import Any
 
-from src.integrations.crm.schemas import Contact, ContactList, Job, JobList, Note, Project, ProjectList
+from src.integrations.crm.schemas import (
+    Contact,
+    ContactList,
+    Job,
+    JobList,
+    Note,
+    Project,
+    ProjectList,
+)
 
 
 class CRMProvider(ABC):
@@ -237,15 +245,11 @@ class CRMProvider(ABC):
             CRMError: If the provider doesn't support file operations
         """
         raise CRMError(
-            "This CRM provider does not support file operations",
-            "NOT_SUPPORTED"
+            "This CRM provider does not support file operations", "NOT_SUPPORTED"
         )
 
     async def download_file(
-        self, 
-        file_id: str, 
-        filename: str | None = None, 
-        content_type: str | None = None
+        self, file_id: str, filename: str | None = None, content_type: str | None = None
     ) -> tuple[bytes, str, str]:
         """
         Download a file's content.
@@ -265,8 +269,7 @@ class CRMProvider(ABC):
             CRMError: If the provider doesn't support file operations
         """
         raise CRMError(
-            "This CRM provider does not support file operations",
-            "NOT_SUPPORTED"
+            "This CRM provider does not support file operations", "NOT_SUPPORTED"
         )
 
 

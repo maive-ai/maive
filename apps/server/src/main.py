@@ -28,7 +28,7 @@ def get_version():
 # Initialize MCP server and app first (needed for lifespan)
 try:
     crm_mcp = get_crm_mcp_server()
-    crm_mcp_app = crm_mcp.http_app(path='')
+    crm_mcp_app = crm_mcp.http_app(path="")
     logger.info("CRM MCP app created")
 except Exception as e:
     logger.warning("Failed to create CRM MCP app", error=str(e))

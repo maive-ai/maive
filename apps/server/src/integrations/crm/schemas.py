@@ -43,8 +43,12 @@ class Job(BaseModel):
 
     # Dates (ISO format strings for universality)
     created_at: str | None = Field(None, description="Creation timestamp (ISO format)")
-    updated_at: str | None = Field(None, description="Last update timestamp (ISO format)")
-    completed_at: str | None = Field(None, description="Completion timestamp (ISO format)")
+    updated_at: str | None = Field(
+        None, description="Last update timestamp (ISO format)"
+    )
+    completed_at: str | None = Field(
+        None, description="Completion timestamp (ISO format)"
+    )
 
     # Sales/team
     sales_rep_id: str | None = Field(None, description="Sales representative ID")
@@ -57,7 +61,9 @@ class Job(BaseModel):
     )
 
     # Notes/activities
-    notes: list["Note"] | None = Field(None, description="List of notes/activities for this job")
+    notes: list["Note"] | None = Field(
+        None, description="List of notes/activities for this job"
+    )
 
 
 class JobList(BaseModel):
@@ -74,7 +80,9 @@ class JobList(BaseModel):
 class Contact(BaseModel):
     """Universal contact/customer model that works across all CRM providers."""
 
-    id: str = Field(..., description="Unique contact identifier (provider-specific format)")
+    id: str = Field(
+        ..., description="Unique contact identifier (provider-specific format)"
+    )
     first_name: str | None = Field(None, description="First name")
     last_name: str | None = Field(None, description="Last name")
     company: str | None = Field(None, description="Company name")
@@ -100,7 +108,9 @@ class Contact(BaseModel):
 
     # Dates
     created_at: str | None = Field(None, description="Creation timestamp (ISO format)")
-    updated_at: str | None = Field(None, description="Last update timestamp (ISO format)")
+    updated_at: str | None = Field(
+        None, description="Last update timestamp (ISO format)"
+    )
 
     # Provider-specific data
     provider: CRMProvider = Field(..., description="CRM provider name")
@@ -128,7 +138,9 @@ class Project(BaseModel):
     the same entity.
     """
 
-    id: str = Field(..., description="Unique project identifier (provider-specific format)")
+    id: str = Field(
+        ..., description="Unique project identifier (provider-specific format)"
+    )
     name: str | None = Field(None, description="Project name/title")
     number: str | None = Field(None, description="Project number")
     status: str = Field(..., description="Current project status (provider-specific)")
@@ -153,7 +165,9 @@ class Project(BaseModel):
 
     # Dates (ISO format strings for universality)
     created_at: str | None = Field(None, description="Creation timestamp (ISO format)")
-    updated_at: str | None = Field(None, description="Last update timestamp (ISO format)")
+    updated_at: str | None = Field(
+        None, description="Last update timestamp (ISO format)"
+    )
     start_date: str | None = Field(None, description="Project start date (ISO format)")
     target_completion_date: str | None = Field(
         None, description="Target completion date (ISO format)"
@@ -165,10 +179,16 @@ class Project(BaseModel):
     # Insurance/claim information
     claim_number: str | None = Field(None, description="Insurance claim number")
     date_of_loss: str | None = Field(None, description="Date of loss (ISO format)")
-    insurance_company: str | None = Field(None, description="Insurance company/carrier name")
+    insurance_company: str | None = Field(
+        None, description="Insurance company/carrier name"
+    )
     adjuster_name: str | None = Field(None, description="Insurance adjuster name")
-    adjuster_phone: str | None = Field(None, description="Insurance adjuster phone number")
-    adjuster_email: str | None = Field(None, description="Insurance adjuster email address")
+    adjuster_phone: str | None = Field(
+        None, description="Insurance adjuster phone number"
+    )
+    adjuster_email: str | None = Field(
+        None, description="Insurance adjuster email address"
+    )
 
     # Sales/team
     sales_rep_id: str | None = Field(None, description="Sales representative ID")
@@ -179,9 +199,11 @@ class Project(BaseModel):
     provider_data: dict[str, Any] = Field(
         default_factory=dict, description="Provider-specific data"
     )
-    
+
     # Notes/activities
-    notes: list["Note"] | None = Field(None, description="List of notes/activities for this project")
+    notes: list["Note"] | None = Field(
+        None, description="List of notes/activities for this project"
+    )
 
 
 class ProjectList(BaseModel):
@@ -201,11 +223,15 @@ class Note(BaseModel):
     id: str | None = Field(None, description="Note identifier")
     text: str = Field(..., description="Note text content")
     entity_id: str = Field(..., description="ID of the entity this note belongs to")
-    entity_type: str = Field(..., description="Type of entity (job, contact, project, etc.)")
+    entity_type: str = Field(
+        ..., description="Type of entity (job, contact, project, etc.)"
+    )
     created_by_id: str | None = Field(None, description="Creator identifier")
     created_by_name: str | None = Field(None, description="Creator name")
     created_at: str = Field(..., description="Creation timestamp (ISO format)")
-    updated_at: str | None = Field(None, description="Last update timestamp (ISO format)")
+    updated_at: str | None = Field(
+        None, description="Last update timestamp (ISO format)"
+    )
     is_pinned: bool = Field(default=False, description="Whether the note is pinned")
 
     # Provider-specific data
@@ -229,14 +255,20 @@ class ProjectStatusResponse(BaseModel):
     project_id: str = Field(..., description="Unique project identifier")
     status: Status = Field(..., description="Current project status")
     provider: CRMProvider = Field(..., description="CRM provider")
-    updated_at: datetime | None = Field(None, description="Last status update timestamp")
-    provider_data: dict[str, Any] | None = Field(None, description="Provider-specific data")
+    updated_at: datetime | None = Field(
+        None, description="Last status update timestamp"
+    )
+    provider_data: dict[str, Any] | None = Field(
+        None, description="Provider-specific data"
+    )
 
 
 class ProjectStatusListResponse(BaseModel):
     """Response model for multiple project statuses."""
 
-    projects: list[ProjectStatusResponse] = Field(..., description="List of project statuses")
+    projects: list[ProjectStatusResponse] = Field(
+        ..., description="List of project statuses"
+    )
     total_count: int = Field(..., description="Total number of projects")
     provider: CRMProvider = Field(..., description="CRM provider")
 
@@ -261,10 +293,16 @@ class EstimatesRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     tenant: int = Field(..., description="Tenant ID")
-    job_id: int | None = Field(None, description="Job ID to filter estimates", alias="jobId")
-    project_id: int | None = Field(None, description="Project ID to filter estimates", alias="projectId")
+    job_id: int | None = Field(
+        None, description="Job ID to filter estimates", alias="jobId"
+    )
+    project_id: int | None = Field(
+        None, description="Project ID to filter estimates", alias="projectId"
+    )
     page: int | None = Field(None, description="Page number for pagination")
-    page_size: int | None = Field(None, description="Page size for pagination (max 50)", le=50, alias="pageSize")
+    page_size: int | None = Field(
+        None, description="Page size for pagination (max 50)", le=50, alias="pageSize"
+    )
     ids: str | None = Field(None, description="Comma separated string of estimate IDs")
 
 
@@ -280,28 +318,82 @@ class JobResponse(BaseModel):
 
     id: int = Field(..., description="ID of the job")
     job_number: str = Field(..., description="Job number", alias="jobNumber")
-    project_id: int | None = Field(None, description="ID of the job's project", alias="projectId")
-    customer_id: int = Field(..., description="ID of the job's customer", alias="customerId")
-    location_id: int = Field(..., description="ID of the job's location", alias="locationId")
+    project_id: int | None = Field(
+        None, description="ID of the job's project", alias="projectId"
+    )
+    customer_id: int = Field(
+        ..., description="ID of the job's customer", alias="customerId"
+    )
+    location_id: int = Field(
+        ..., description="ID of the job's location", alias="locationId"
+    )
     job_status: str = Field(..., description="Status of the job", alias="jobStatus")
-    completed_on: datetime | None = Field(None, description="Date/time (in UTC) when the job was completed", alias="completedOn")
-    business_unit_id: int = Field(..., description="ID of the job's business unit", alias="businessUnitId")
+    completed_on: datetime | None = Field(
+        None,
+        description="Date/time (in UTC) when the job was completed",
+        alias="completedOn",
+    )
+    business_unit_id: int = Field(
+        ..., description="ID of the job's business unit", alias="businessUnitId"
+    )
     job_type_id: int = Field(..., description="ID of job type", alias="jobTypeId")
     priority: str = Field(..., description="Priority of the job")
-    campaign_id: int = Field(..., description="ID of the job's campaign", alias="campaignId")
-    appointment_count: int = Field(..., description="Number of appointments on the job", alias="appointmentCount")
-    first_appointment_id: int = Field(..., description="ID of the first appointment on the job", alias="firstAppointmentId")
-    last_appointment_id: int = Field(..., description="ID of the last appointment on the job", alias="lastAppointmentId")
-    recall_for_id: int | None = Field(None, description="ID of the job for which this job is a recall", alias="recallForId")
-    warranty_id: int | None = Field(None, description="ID of the job for which this job is a warranty", alias="warrantyId")
-    no_charge: bool = Field(..., description="Whether the job is a no-charge job", alias="noCharge")
-    notifications_enabled: bool = Field(..., description="Whether notifications will be sent to customers", alias="notificationsEnabled")
-    created_on: datetime = Field(..., description="Date/time (in UTC) when the job was created", alias="createdOn")
-    created_by_id: int = Field(..., description="ID of the user who created the job", alias="createdById")
-    modified_on: datetime = Field(..., description="Date/time (in UTC) when job was last modified", alias="modifiedOn")
-    tag_type_ids: list[int] = Field(..., description="Tags on the job", alias="tagTypeIds")
+    campaign_id: int = Field(
+        ..., description="ID of the job's campaign", alias="campaignId"
+    )
+    appointment_count: int = Field(
+        ..., description="Number of appointments on the job", alias="appointmentCount"
+    )
+    first_appointment_id: int = Field(
+        ...,
+        description="ID of the first appointment on the job",
+        alias="firstAppointmentId",
+    )
+    last_appointment_id: int = Field(
+        ...,
+        description="ID of the last appointment on the job",
+        alias="lastAppointmentId",
+    )
+    recall_for_id: int | None = Field(
+        None,
+        description="ID of the job for which this job is a recall",
+        alias="recallForId",
+    )
+    warranty_id: int | None = Field(
+        None,
+        description="ID of the job for which this job is a warranty",
+        alias="warrantyId",
+    )
+    no_charge: bool = Field(
+        ..., description="Whether the job is a no-charge job", alias="noCharge"
+    )
+    notifications_enabled: bool = Field(
+        ...,
+        description="Whether notifications will be sent to customers",
+        alias="notificationsEnabled",
+    )
+    created_on: datetime = Field(
+        ...,
+        description="Date/time (in UTC) when the job was created",
+        alias="createdOn",
+    )
+    created_by_id: int = Field(
+        ..., description="ID of the user who created the job", alias="createdById"
+    )
+    modified_on: datetime = Field(
+        ...,
+        description="Date/time (in UTC) when job was last modified",
+        alias="modifiedOn",
+    )
+    tag_type_ids: list[int] = Field(
+        ..., description="Tags on the job", alias="tagTypeIds"
+    )
     customer_po: str | None = Field(None, description="Customer PO", alias="customerPo")
-    invoice_id: int | None = Field(None, description="ID of the invoice associated with this job", alias="invoiceId")
+    invoice_id: int | None = Field(
+        None,
+        description="ID of the invoice associated with this job",
+        alias="invoiceId",
+    )
     total: float | None = Field(None, description="Total amount of the job")
     summary: str | None = Field(None, description="Job summary")
 
@@ -310,27 +402,63 @@ class EstimateResponse(BaseModel):
     """Response model for Service Titan estimate information."""
 
     id: int = Field(..., description="ID of the estimate")
-    job_id: int | None = Field(None, description="ID of the associated job", alias="jobId")
-    project_id: int | None = Field(None, description="ID of the associated project", alias="projectId")
-    location_id: int | None = Field(None, description="ID of the location", alias="locationId")
-    customer_id: int | None = Field(None, description="ID of the customer", alias="customerId")
+    job_id: int | None = Field(
+        None, description="ID of the associated job", alias="jobId"
+    )
+    project_id: int | None = Field(
+        None, description="ID of the associated project", alias="projectId"
+    )
+    location_id: int | None = Field(
+        None, description="ID of the location", alias="locationId"
+    )
+    customer_id: int | None = Field(
+        None, description="ID of the customer", alias="customerId"
+    )
     name: str | None = Field(None, description="Name of the estimate")
     job_number: str | None = Field(None, description="Job number", alias="jobNumber")
     status: EstimateStatus | None = Field(None, description="Status of the estimate")
-    review_status: EstimateReviewStatus = Field(..., description="Review status of the estimate", alias="reviewStatus")
+    review_status: EstimateReviewStatus = Field(
+        ..., description="Review status of the estimate", alias="reviewStatus"
+    )
     summary: str | None = Field(None, description="Summary of the estimate")
-    created_on: datetime = Field(..., description="Date/time (in UTC) when the estimate was created", alias="createdOn")
-    modified_on: datetime = Field(..., description="Date/time (in UTC) when estimate was last modified", alias="modifiedOn")
-    sold_on: datetime | None = Field(None, description="Date/time (in UTC) when the estimate was sold", alias="soldOn")
-    sold_by: int | None = Field(None, description="ID of who sold the estimate", alias="soldBy")
+    created_on: datetime = Field(
+        ...,
+        description="Date/time (in UTC) when the estimate was created",
+        alias="createdOn",
+    )
+    modified_on: datetime = Field(
+        ...,
+        description="Date/time (in UTC) when estimate was last modified",
+        alias="modifiedOn",
+    )
+    sold_on: datetime | None = Field(
+        None,
+        description="Date/time (in UTC) when the estimate was sold",
+        alias="soldOn",
+    )
+    sold_by: int | None = Field(
+        None, description="ID of who sold the estimate", alias="soldBy"
+    )
     active: bool = Field(..., description="Whether the estimate is active")
     subtotal: float = Field(..., description="Subtotal amount")
     tax: float = Field(..., description="Tax amount")
-    business_unit_id: int | None = Field(None, description="ID of the business unit", alias="businessUnitId")
-    business_unit_name: str | None = Field(None, description="Name of the business unit", alias="businessUnitName")
-    is_recommended: bool = Field(..., description="Whether this estimate is recommended", alias="isRecommended")
-    budget_code_id: int | None = Field(None, description="ID of the budget code", alias="budgetCodeId")
-    is_change_order: bool = Field(..., description="Whether this estimate is a change order", alias="isChangeOrder")
+    business_unit_id: int | None = Field(
+        None, description="ID of the business unit", alias="businessUnitId"
+    )
+    business_unit_name: str | None = Field(
+        None, description="Name of the business unit", alias="businessUnitName"
+    )
+    is_recommended: bool = Field(
+        ..., description="Whether this estimate is recommended", alias="isRecommended"
+    )
+    budget_code_id: int | None = Field(
+        None, description="ID of the budget code", alias="budgetCodeId"
+    )
+    is_change_order: bool = Field(
+        ...,
+        description="Whether this estimate is a change order",
+        alias="isChangeOrder",
+    )
 
 
 class SkuModel(BaseModel):
@@ -341,9 +469,17 @@ class SkuModel(BaseModel):
     display_name: str = Field(..., description="Display name", alias="displayName")
     type: str = Field(..., description="SKU type")
     sold_hours: float = Field(..., description="Sold hours", alias="soldHours")
-    general_ledger_account_id: int = Field(..., description="General ledger account ID", alias="generalLedgerAccountId")
-    general_ledger_account_name: str = Field(..., description="General ledger account name", alias="generalLedgerAccountName")
-    modified_on: datetime = Field(..., description="Date/time (in UTC) when SKU was last modified", alias="modifiedOn")
+    general_ledger_account_id: int = Field(
+        ..., description="General ledger account ID", alias="generalLedgerAccountId"
+    )
+    general_ledger_account_name: str = Field(
+        ..., description="General ledger account name", alias="generalLedgerAccountName"
+    )
+    modified_on: datetime = Field(
+        ...,
+        description="Date/time (in UTC) when SKU was last modified",
+        alias="modifiedOn",
+    )
 
 
 class EstimateItemResponse(BaseModel):
@@ -353,26 +489,48 @@ class EstimateItemResponse(BaseModel):
     sku: SkuModel = Field(..., description="SKU details")
     sku_account: str = Field(..., description="SKU account", alias="skuAccount")
     description: str = Field(..., description="Item description")
-    membership_type_id: int | None = Field(None, description="Membership type ID", alias="membershipTypeId")
+    membership_type_id: int | None = Field(
+        None, description="Membership type ID", alias="membershipTypeId"
+    )
     qty: float = Field(..., description="Quantity")
     unit_rate: float = Field(..., description="Unit rate", alias="unitRate")
     total: float = Field(..., description="Total amount")
     unit_cost: float = Field(..., description="Unit cost", alias="unitCost")
     total_cost: float = Field(..., description="Total cost", alias="totalCost")
-    item_group_name: str | None = Field(None, description="Item group name", alias="itemGroupName")
-    item_group_root_id: int | None = Field(None, description="Item group root ID", alias="itemGroupRootId")
-    created_on: datetime = Field(..., description="Date/time (in UTC) when the item was created", alias="createdOn")
-    modified_on: datetime = Field(..., description="Date/time (in UTC) when the item was last modified", alias="modifiedOn")
+    item_group_name: str | None = Field(
+        None, description="Item group name", alias="itemGroupName"
+    )
+    item_group_root_id: int | None = Field(
+        None, description="Item group root ID", alias="itemGroupRootId"
+    )
+    created_on: datetime = Field(
+        ...,
+        description="Date/time (in UTC) when the item was created",
+        alias="createdOn",
+    )
+    modified_on: datetime = Field(
+        ...,
+        description="Date/time (in UTC) when the item was last modified",
+        alias="modifiedOn",
+    )
     chargeable: bool | None = Field(None, description="Whether the item is chargeable")
-    invoice_item_id: int | None = Field(None, description="The invoice item which was created from this estimate item", alias="invoiceItemId")
-    budget_code_id: int | None = Field(None, description="Budget code ID", alias="budgetCodeId")
+    invoice_item_id: int | None = Field(
+        None,
+        description="The invoice item which was created from this estimate item",
+        alias="invoiceItemId",
+    )
+    budget_code_id: int | None = Field(
+        None, description="Budget code ID", alias="budgetCodeId"
+    )
 
 
 class EstimatesListResponse(BaseModel):
     """Response model for estimates list."""
 
     estimates: list[EstimateResponse] = Field(..., description="List of estimates")
-    total_count: int | None = Field(None, description="Total count of estimates (if requested)")
+    total_count: int | None = Field(
+        None, description="Total count of estimates (if requested)"
+    )
     page: int | None = Field(None, description="Current page number")
     page_size: int | None = Field(None, description="Page size")
     has_more: bool | None = Field(None, description="Whether there are more estimates")
@@ -382,18 +540,31 @@ class EstimateItemsRequest(BaseModel):
     """Request model for getting estimate items."""
 
     tenant: int = Field(..., description="Tenant ID")
-    estimate_id: int | None = Field(None, description="Estimate ID to filter items", alias="estimateId")
-    ids: str | None = Field(None, description="Comma separated string of item IDs (max 50)")
-    active: str | None = Field(None, description="Filter by active status (True, False, Any)")
+    estimate_id: int | None = Field(
+        None, description="Estimate ID to filter items", alias="estimateId"
+    )
+    ids: str | None = Field(
+        None, description="Comma separated string of item IDs (max 50)"
+    )
+    active: str | None = Field(
+        None, description="Filter by active status (True, False, Any)"
+    )
     page: int | None = Field(None, description="Page number for pagination")
-    page_size: int | None = Field(None, description="Page size for pagination (default 50)", le=50, alias="pageSize")
+    page_size: int | None = Field(
+        None,
+        description="Page size for pagination (default 50)",
+        le=50,
+        alias="pageSize",
+    )
 
 
 class EstimateItemsResponse(BaseModel):
     """Response model for estimate items list."""
 
     items: list[EstimateItemResponse] = Field(..., description="List of estimate items")
-    total_count: int | None = Field(None, description="Total count of items (if requested)")
+    total_count: int | None = Field(
+        None, description="Total count of items (if requested)"
+    )
     page: int = Field(..., description="Current page number")
     page_size: int = Field(..., description="Page size")
     has_more: bool = Field(..., description="Whether there are more items")
@@ -414,38 +585,60 @@ class AddJobNoteRequest(BaseModel):
     tenant: int = Field(..., description="Tenant ID")
     job_id: int = Field(..., description="ID of the job to add note to", alias="jobId")
     text: str = Field(..., description="Text content of the note")
-    pin_to_top: bool | None = Field(None, description="Whether to pin the note to the top", alias="pinToTop")
+    pin_to_top: bool | None = Field(
+        None, description="Whether to pin the note to the top", alias="pinToTop"
+    )
 
 
 class JobNoteResponse(BaseModel):
     """Response model for job note."""
-    
+
     model_config = {"populate_by_name": True}
 
     text: str = Field(..., description="Text content of the note")
-    is_pinned: bool = Field(..., description="Whether the note is pinned to the top", alias="isPinned")
-    created_by_id: int = Field(..., description="ID of user who created this note", alias="createdById")
-    created_on: datetime = Field(..., description="Date/time (in UTC) the note was created", alias="createdOn")
-    modified_on: datetime = Field(..., description="Date/time (in UTC) the note was modified", alias="modifiedOn")
+    is_pinned: bool = Field(
+        ..., description="Whether the note is pinned to the top", alias="isPinned"
+    )
+    created_by_id: int = Field(
+        ..., description="ID of user who created this note", alias="createdById"
+    )
+    created_on: datetime = Field(
+        ..., description="Date/time (in UTC) the note was created", alias="createdOn"
+    )
+    modified_on: datetime = Field(
+        ..., description="Date/time (in UTC) the note was modified", alias="modifiedOn"
+    )
 
 
 class AddProjectNoteRequest(BaseModel):
     """Request model for adding a note to a project."""
 
     tenant: int = Field(..., description="Tenant ID")
-    project_id: int = Field(..., description="ID of the project to add note to", alias="projectId")
+    project_id: int = Field(
+        ..., description="ID of the project to add note to", alias="projectId"
+    )
     text: str = Field(..., description="Text content of the note")
-    pin_to_top: bool | None = Field(None, description="Whether to pin the note to the top", alias="pinToTop")
+    pin_to_top: bool | None = Field(
+        None, description="Whether to pin the note to the top", alias="pinToTop"
+    )
 
 
 class ProjectNoteResponse(BaseModel):
     """Response model for project note."""
 
     text: str = Field(..., description="Text content of the note")
-    is_pinned: bool = Field(..., description="Whether the note is pinned to the top", alias="isPinned")
-    created_by_id: int = Field(..., description="ID of user who created this note", alias="createdById")
-    created_on: datetime = Field(..., description="Date/time (in UTC) the note was created", alias="createdOn")
-    modified_on: datetime = Field(..., description="Date/time (in UTC) the note was modified", alias="modifiedOn")
+    is_pinned: bool = Field(
+        ..., description="Whether the note is pinned to the top", alias="isPinned"
+    )
+    created_by_id: int = Field(
+        ..., description="ID of user who created this note", alias="createdById"
+    )
+    created_on: datetime = Field(
+        ..., description="Date/time (in UTC) the note was created", alias="createdOn"
+    )
+    modified_on: datetime = Field(
+        ..., description="Date/time (in UTC) the note was modified", alias="modifiedOn"
+    )
 
 
 class JobHoldReasonResponse(BaseModel):
@@ -454,18 +647,34 @@ class JobHoldReasonResponse(BaseModel):
     id: int = Field(..., description="Job Hold Reason ID")
     name: str = Field(..., description="Job Hold Reason Name")
     active: bool = Field(..., description="Job Hold Reason Active Status")
-    created_on: datetime = Field(..., description="Date/time (in UTC) when the reason was created", alias="createdOn")
-    modified_on: datetime = Field(..., description="Date/time (in UTC) when reason was last modified", alias="modifiedOn")
+    created_on: datetime = Field(
+        ...,
+        description="Date/time (in UTC) when the reason was created",
+        alias="createdOn",
+    )
+    modified_on: datetime = Field(
+        ...,
+        description="Date/time (in UTC) when reason was last modified",
+        alias="modifiedOn",
+    )
 
 
 class JobHoldReasonsListResponse(BaseModel):
     """Response model for paginated list of job hold reasons."""
 
     page: int = Field(..., description="From which page this output has started")
-    page_size: int = Field(..., description="Page size for this query", alias="pageSize")
-    has_more: bool = Field(..., description="True if there are more records", alias="hasMore")
-    total_count: int | None = Field(None, description="Total count of records for this query", alias="totalCount")
-    data: list[JobHoldReasonResponse] = Field(..., description="The collection of result items")
+    page_size: int = Field(
+        ..., description="Page size for this query", alias="pageSize"
+    )
+    has_more: bool = Field(
+        ..., description="True if there are more records", alias="hasMore"
+    )
+    total_count: int | None = Field(
+        None, description="Total count of records for this query", alias="totalCount"
+    )
+    data: list[JobHoldReasonResponse] = Field(
+        ..., description="The collection of result items"
+    )
 
 
 class HoldJobRequest(BaseModel):
@@ -484,7 +693,11 @@ class ProjectSubStatusResponse(BaseModel):
     name: str = Field(..., description="Name of the project sub status")
     status_id: int = Field(..., description="Id of the parent status", alias="statusId")
     order: int = Field(..., description="Order of the project status")
-    modified_on: datetime = Field(..., description="Date/time (in UTC) when project sub status was last modified", alias="modifiedOn")
+    modified_on: datetime = Field(
+        ...,
+        description="Date/time (in UTC) when project sub status was last modified",
+        alias="modifiedOn",
+    )
     active: bool = Field(..., description="When true, project sub status is active")
 
 
@@ -492,10 +705,18 @@ class ProjectSubStatusListResponse(BaseModel):
     """Response model for paginated list of project sub statuses."""
 
     page: int = Field(..., description="From which page this output has started")
-    page_size: int = Field(..., description="Page size for this query", alias="pageSize")
-    has_more: bool = Field(..., description="True if there are more records", alias="hasMore")
-    total_count: int | None = Field(None, description="Total count of records for this query", alias="totalCount")
-    data: list[ProjectSubStatusResponse] = Field(..., description="The collection of result items")
+    page_size: int = Field(
+        ..., description="Page size for this query", alias="pageSize"
+    )
+    has_more: bool = Field(
+        ..., description="True if there are more records", alias="hasMore"
+    )
+    total_count: int | None = Field(
+        None, description="Total count of records for this query", alias="totalCount"
+    )
+    data: list[ProjectSubStatusResponse] = Field(
+        ..., description="The collection of result items"
+    )
 
 
 class ExternalDataItem(BaseModel):
@@ -511,7 +732,9 @@ class ProjectByIdRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     tenant: int = Field(..., description="Tenant ID")
-    project_id: int = Field(..., description="ID of the project to retrieve", alias="projectId")
+    project_id: int = Field(
+        ..., description="ID of the project to retrieve", alias="projectId"
+    )
 
 
 class ProjectResponse(BaseModel):
@@ -523,21 +746,45 @@ class ProjectResponse(BaseModel):
     number: str | None = Field(None, description="Project number")
     name: str | None = Field(None, description="Project name")
     status: str | None = Field(None, description="Project status name")
-    status_id: int | None = Field(None, description="Project status ID", alias="statusId")
-    sub_status: str | None = Field(None, description="Project sub status name", alias="subStatus")
-    sub_status_id: int | None = Field(None, description="Project sub status ID", alias="subStatusId")
+    status_id: int | None = Field(
+        None, description="Project status ID", alias="statusId"
+    )
+    sub_status: str | None = Field(
+        None, description="Project sub status name", alias="subStatus"
+    )
+    sub_status_id: int | None = Field(
+        None, description="Project sub status ID", alias="subStatusId"
+    )
     summary: str | None = Field(None, description="Project summary")
     customer_id: int | None = Field(None, description="Customer ID", alias="customerId")
     location_id: int | None = Field(None, description="Location ID", alias="locationId")
-    business_unit_id: int | None = Field(None, description="Business unit ID", alias="businessUnitId")
-    project_manager_id: int | None = Field(None, description="Project manager ID", alias="projectManagerId")
-    start_date: datetime | None = Field(None, description="Project start date", alias="startDate")
-    target_completion_date: datetime | None = Field(None, description="Target completion date", alias="targetCompletionDate")
-    actual_completion_date: datetime | None = Field(None, description="Actual completion date", alias="actualCompletionDate")
-    created_on: datetime | None = Field(None, description="Date/time (in UTC) when created", alias="createdOn")
-    created_by_id: int | None = Field(None, description="ID of user who created the project", alias="createdById")
-    modified_on: datetime | None = Field(None, description="Date/time (in UTC) when last modified", alias="modifiedOn")
-    external_data: list[dict[str, Any]] | None = Field(None, description="External data", alias="externalData")
+    business_unit_id: int | None = Field(
+        None, description="Business unit ID", alias="businessUnitId"
+    )
+    project_manager_id: int | None = Field(
+        None, description="Project manager ID", alias="projectManagerId"
+    )
+    start_date: datetime | None = Field(
+        None, description="Project start date", alias="startDate"
+    )
+    target_completion_date: datetime | None = Field(
+        None, description="Target completion date", alias="targetCompletionDate"
+    )
+    actual_completion_date: datetime | None = Field(
+        None, description="Actual completion date", alias="actualCompletionDate"
+    )
+    created_on: datetime | None = Field(
+        None, description="Date/time (in UTC) when created", alias="createdOn"
+    )
+    created_by_id: int | None = Field(
+        None, description="ID of user who created the project", alias="createdById"
+    )
+    modified_on: datetime | None = Field(
+        None, description="Date/time (in UTC) when last modified", alias="modifiedOn"
+    )
+    external_data: list[dict[str, Any]] | None = Field(
+        None, description="External data", alias="externalData"
+    )
 
 
 class FormSubmissionOwnerFilter(BaseModel):
@@ -553,11 +800,19 @@ class FormSubmissionsRequest(BaseModel):
     model_config = {"populate_by_name": True}
 
     tenant: int = Field(..., description="Tenant ID")
-    form_id: int | None = Field(None, description="Form ID to filter by", alias="formId")
+    form_id: int | None = Field(
+        None, description="Form ID to filter by", alias="formId"
+    )
     page: int = Field(default=1, description="Page number for pagination")
-    page_size: int = Field(default=50, description="Page size for pagination", alias="pageSize")
-    status: str | None = Field(None, description="Status filter (Started, Completed, Any)")
-    owners: list[FormSubmissionOwnerFilter] | None = Field(None, description="List of owner filters")
+    page_size: int = Field(
+        default=50, description="Page size for pagination", alias="pageSize"
+    )
+    status: str | None = Field(
+        None, description="Status filter (Started, Completed, Any)"
+    )
+    owners: list[FormSubmissionOwnerFilter] | None = Field(
+        None, description="List of owner filters"
+    )
 
 
 class ProjectSubStatusesRequest(BaseModel):
@@ -567,10 +822,16 @@ class ProjectSubStatusesRequest(BaseModel):
 
     tenant: int = Field(..., description="Tenant ID")
     name: str | None = Field(None, description="Filter by sub status name")
-    status_id: int | None = Field(None, description="Filter by parent status ID", alias="statusId")
-    active: str | None = Field(default="True", description="Active status filter (True, False, Any)")
+    status_id: int | None = Field(
+        None, description="Filter by parent status ID", alias="statusId"
+    )
+    active: str | None = Field(
+        default="True", description="Active status filter (True, False, Any)"
+    )
     page: int | None = Field(None, description="Page number for pagination")
-    page_size: int | None = Field(None, description="Page size for pagination", alias="pageSize")
+    page_size: int | None = Field(
+        None, description="Page size for pagination", alias="pageSize"
+    )
 
 
 class UpdateProjectRequest(BaseModel):
@@ -579,12 +840,20 @@ class UpdateProjectRequest(BaseModel):
     model_config = {"populate_by_name": True}
 
     tenant: int = Field(..., description="Tenant ID")
-    project_id: int = Field(..., description="ID of the project to update", alias="projectId")
-    status_id: int | None = Field(None, description="Project status ID", alias="statusId")
-    sub_status_id: int | None = Field(None, description="Project sub status ID", alias="subStatusId")
+    project_id: int = Field(
+        ..., description="ID of the project to update", alias="projectId"
+    )
+    status_id: int | None = Field(
+        None, description="Project status ID", alias="statusId"
+    )
+    sub_status_id: int | None = Field(
+        None, description="Project sub status ID", alias="subStatusId"
+    )
     name: str | None = Field(None, description="Project name")
     summary: str | None = Field(None, description="Project summary (HTML)")
-    external_data: list[ExternalDataItem] | None = Field(None, description="External data to attach to project", alias="externalData")
+    external_data: list[ExternalDataItem] | None = Field(
+        None, description="External data to attach to project", alias="externalData"
+    )
 
 
 # Pricebook models
@@ -601,14 +870,26 @@ class MaterialResponse(BaseModel):
     description: str | None = Field(None, description="Material description")
     cost: float | None = Field(None, description="Material cost")
     price: float | None = Field(None, description="Material price")
-    member_price: float | None = Field(None, description="Member price", alias="memberPrice")
-    add_on_price: float | None = Field(None, description="Add-on price", alias="addOnPrice")
-    add_on_member_price: float | None = Field(None, description="Add-on member price", alias="addOnMemberPrice")
+    member_price: float | None = Field(
+        None, description="Member price", alias="memberPrice"
+    )
+    add_on_price: float | None = Field(
+        None, description="Add-on price", alias="addOnPrice"
+    )
+    add_on_member_price: float | None = Field(
+        None, description="Add-on member price", alias="addOnMemberPrice"
+    )
     active: bool = Field(..., description="Whether the material is active")
-    primary_vendor: dict[str, Any] | None = Field(None, description="Primary vendor info", alias="primaryVendor")
-    other_vendors: list[dict[str, Any]] | None = Field(None, description="Other vendors", alias="otherVendors")
+    primary_vendor: dict[str, Any] | None = Field(
+        None, description="Primary vendor info", alias="primaryVendor"
+    )
+    other_vendors: list[dict[str, Any]] | None = Field(
+        None, description="Other vendors", alias="otherVendors"
+    )
     manufacturer: str | None = Field(None, description="Manufacturer name")
-    manufacturer_number: str | None = Field(None, description="Manufacturer part number", alias="manufacturerNumber")
+    manufacturer_number: str | None = Field(
+        None, description="Manufacturer part number", alias="manufacturerNumber"
+    )
     cost_type: str | None = Field(None, description="Cost type", alias="costType")
     item_url: str | None = Field(None, description="Item URL", alias="itemUrl")
 
@@ -623,13 +904,21 @@ class ServiceResponse(BaseModel):
     display_name: str = Field(..., description="Display name", alias="displayName")
     description: str | None = Field(None, description="Service description")
     price: float | None = Field(None, description="Service price")
-    member_price: float | None = Field(None, description="Member price", alias="memberPrice")
-    add_on_price: float | None = Field(None, description="Add-on price", alias="addOnPrice")
-    add_on_member_price: float | None = Field(None, description="Add-on member price", alias="addOnMemberPrice")
+    member_price: float | None = Field(
+        None, description="Member price", alias="memberPrice"
+    )
+    add_on_price: float | None = Field(
+        None, description="Add-on price", alias="addOnPrice"
+    )
+    add_on_member_price: float | None = Field(
+        None, description="Add-on member price", alias="addOnMemberPrice"
+    )
     active: bool = Field(..., description="Whether the service is active")
     warranty_id: int | None = Field(None, description="Warranty ID", alias="warrantyId")
     account: str | None = Field(None, description="Account name/code")
-    categories: list[dict[str, Any]] | None = Field(None, description="Service categories")
+    categories: list[dict[str, Any]] | None = Field(
+        None, description="Service categories"
+    )
     taxable: bool | None = Field(None, description="Whether the service is taxable")
     hours: float | None = Field(None, description="Service hours")
 
@@ -644,15 +933,27 @@ class EquipmentResponse(BaseModel):
     display_name: str = Field(..., description="Display name", alias="displayName")
     description: str | None = Field(None, description="Equipment description")
     price: float | None = Field(None, description="Equipment price")
-    member_price: float | None = Field(None, description="Member price", alias="memberPrice")
-    add_on_price: float | None = Field(None, description="Add-on price", alias="addOnPrice")
-    add_on_member_price: float | None = Field(None, description="Add-on member price", alias="addOnMemberPrice")
+    member_price: float | None = Field(
+        None, description="Member price", alias="memberPrice"
+    )
+    add_on_price: float | None = Field(
+        None, description="Add-on price", alias="addOnPrice"
+    )
+    add_on_member_price: float | None = Field(
+        None, description="Add-on member price", alias="addOnMemberPrice"
+    )
     active: bool = Field(..., description="Whether the equipment is active")
     cost: float | None = Field(None, description="Equipment cost")
     manufacturer: str | None = Field(None, description="Manufacturer name")
-    model_number: str | None = Field(None, description="Model number", alias="modelNumber")
-    primary_vendor: dict[str, Any] | None = Field(None, description="Primary vendor info", alias="primaryVendor")
-    other_vendors: list[dict[str, Any]] | None = Field(None, description="Other vendors", alias="otherVendors")
+    model_number: str | None = Field(
+        None, description="Model number", alias="modelNumber"
+    )
+    primary_vendor: dict[str, Any] | None = Field(
+        None, description="Primary vendor info", alias="primaryVendor"
+    )
+    other_vendors: list[dict[str, Any]] | None = Field(
+        None, description="Other vendors", alias="otherVendors"
+    )
 
 
 class PricebookItemsRequest(BaseModel):
@@ -662,8 +963,15 @@ class PricebookItemsRequest(BaseModel):
 
     tenant: int = Field(..., description="Tenant ID")
     page: int = Field(default=1, description="Page number for pagination")
-    page_size: int = Field(default=50, le=50, description="Page size for pagination (max 50)", alias="pageSize")
-    active: str = Field(default="True", description="Filter by active status (True, False, Any)")
+    page_size: int = Field(
+        default=50,
+        le=50,
+        description="Page size for pagination (max 50)",
+        alias="pageSize",
+    )
+    active: str = Field(
+        default="True", description="Filter by active status (True, False, Any)"
+    )
 
 
 class MaterialsListResponse(BaseModel):
@@ -674,8 +982,12 @@ class MaterialsListResponse(BaseModel):
     data: list[MaterialResponse] = Field(..., description="List of materials")
     page: int = Field(..., description="Current page number")
     page_size: int = Field(..., description="Page size", alias="pageSize")
-    total_count: int | None = Field(None, description="Total count of materials", alias="totalCount")
-    has_more: bool = Field(..., description="Whether there are more pages", alias="hasMore")
+    total_count: int | None = Field(
+        None, description="Total count of materials", alias="totalCount"
+    )
+    has_more: bool = Field(
+        ..., description="Whether there are more pages", alias="hasMore"
+    )
 
 
 class ServicesListResponse(BaseModel):
@@ -686,8 +998,12 @@ class ServicesListResponse(BaseModel):
     data: list[ServiceResponse] = Field(..., description="List of services")
     page: int = Field(..., description="Current page number")
     page_size: int = Field(..., description="Page size", alias="pageSize")
-    total_count: int | None = Field(None, description="Total count of services", alias="totalCount")
-    has_more: bool = Field(..., description="Whether there are more pages", alias="hasMore")
+    total_count: int | None = Field(
+        None, description="Total count of services", alias="totalCount"
+    )
+    has_more: bool = Field(
+        ..., description="Whether there are more pages", alias="hasMore"
+    )
 
 
 class EquipmentListResponse(BaseModel):
@@ -698,8 +1014,12 @@ class EquipmentListResponse(BaseModel):
     data: list[EquipmentResponse] = Field(..., description="List of equipment")
     page: int = Field(..., description="Current page number")
     page_size: int = Field(..., description="Page size", alias="pageSize")
-    total_count: int | None = Field(None, description="Total count of equipment", alias="totalCount")
-    has_more: bool = Field(..., description="Whether there are more pages", alias="hasMore")
+    total_count: int | None = Field(
+        None, description="Total count of equipment", alias="totalCount"
+    )
+    has_more: bool = Field(
+        ..., description="Whether there are more pages", alias="hasMore"
+    )
 
 
 # ============================================================================

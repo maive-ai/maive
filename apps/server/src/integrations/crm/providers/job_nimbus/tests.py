@@ -21,15 +21,8 @@ SAMPLE_JN_JOB = {
     "createdByName": "John Doe",
     "dateCreated": int(time.time()),
     "dateUpdated": int(time.time()),
-    "location": {
-        "id": 111,
-        "name": "Main Office"
-    },
-    "owners": [
-        {
-            "id": "user_789"
-        }
-    ],
+    "location": {"id": 111, "name": "Main Office"},
+    "owners": [{"id": "user_789"}],
     "isActive": True,
     "isArchived": False,
     "name": "Roof Repair - Smith Residence",
@@ -49,22 +42,9 @@ SAMPLE_JN_JOB = {
     "stateText": "TX",
     "countryName": "USA",
     "zip": "78701",
-    "geo": {
-        "lat": 30.2672,
-        "lon": -97.7431
-    },
-    "related": [
-        {
-            "id": "customer_456",
-            "name": "John Smith",
-            "type": "contact"
-        }
-    ],
-    "primary": {
-        "id": "customer_456",
-        "name": "John Smith",
-        "type": "contact"
-    }
+    "geo": {"lat": 30.2672, "lon": -97.7431},
+    "related": [{"id": "customer_456", "name": "John Smith", "type": "contact"}],
+    "primary": {"id": "customer_456", "name": "John Smith", "type": "contact"},
 }
 
 SAMPLE_JN_CONTACT = {
@@ -76,10 +56,7 @@ SAMPLE_JN_CONTACT = {
     "createdByName": "John Doe",
     "dateCreated": int(time.time()),
     "dateUpdated": int(time.time()),
-    "location": {
-        "id": 111,
-        "name": "Main Office"
-    },
+    "location": {"id": 111, "name": "Main Office"},
     "owners": [],
     "isActive": True,
     "isArchived": False,
@@ -93,7 +70,7 @@ SAMPLE_JN_CONTACT = {
     "city": "Dallas",
     "stateText": "TX",
     "zip": "75201",
-    "contactType": "customer"
+    "contactType": "customer",
 }
 
 SAMPLE_JN_ACTIVITY = {
@@ -105,7 +82,7 @@ SAMPLE_JN_ACTIVITY = {
     "dateCreated": int(time.time()),
     "dateUpdated": int(time.time()),
     "body": "This is a test note",
-    "related": ["test_job_123"]
+    "related": ["test_job_123"],
 }
 
 
@@ -114,11 +91,12 @@ def job_nimbus_provider():
     """Create a JobNimbus provider instance with mocked config."""
     from src.integrations.crm.config import JobNimbusConfig
 
-    with patch("src.integrations.crm.providers.job_nimbus.provider.get_crm_settings") as mock_settings:
+    with patch(
+        "src.integrations.crm.providers.job_nimbus.provider.get_crm_settings"
+    ) as mock_settings:
         # Create a real JobNimbusConfig instance
         mock_jn_config = JobNimbusConfig(
-            api_key="test_api_key",
-            base_api_url="https://api.jobnimbus.com"
+            api_key="test_api_key", base_api_url="https://api.jobnimbus.com"
         )
 
         mock_config = MagicMock()
@@ -140,7 +118,9 @@ class TestJobNimbusUniversalInterface:
         mock_response.json.return_value = SAMPLE_JN_JOB
         mock_response.raise_for_status = MagicMock()
 
-        with patch.object(job_nimbus_provider, "_make_request", return_value=mock_response):
+        with patch.object(
+            job_nimbus_provider, "_make_request", return_value=mock_response
+        ):
             job = await job_nimbus_provider.get_job("test_job_123")
 
         # Verify universal schema fields
@@ -179,12 +159,12 @@ class TestJobNimbusUniversalInterface:
         mock_response.status_code = 404
 
         mock_http_error = httpx.HTTPStatusError(
-            message="Not Found",
-            request=MagicMock(),
-            response=mock_response
+            message="Not Found", request=MagicMock(), response=mock_response
         )
 
-        with patch.object(job_nimbus_provider, "_make_request", side_effect=mock_http_error):
+        with patch.object(
+            job_nimbus_provider, "_make_request", side_effect=mock_http_error
+        ):
             with pytest.raises(CRMError) as exc_info:
                 await job_nimbus_provider.get_job("nonexistent_job")
 
@@ -195,17 +175,20 @@ class TestJobNimbusUniversalInterface:
     async def test_get_all_jobs_success(self, job_nimbus_provider):
         """Test get_all_jobs returns paginated JobList."""
         mock_jobs_list = {
-            "results": [SAMPLE_JN_JOB, {**SAMPLE_JN_JOB, "jnid": "test_job_456", "name": "Another Job"}],
-            "meta": {
-                "total": 2
-            }
+            "results": [
+                SAMPLE_JN_JOB,
+                {**SAMPLE_JN_JOB, "jnid": "test_job_456", "name": "Another Job"},
+            ],
+            "meta": {"total": 2},
         }
 
         mock_response = MagicMock()
         mock_response.json.return_value = mock_jobs_list
         mock_response.raise_for_status = MagicMock()
 
-        with patch.object(job_nimbus_provider, "_make_request", return_value=mock_response):
+        with patch.object(
+            job_nimbus_provider, "_make_request", return_value=mock_response
+        ):
             job_list = await job_nimbus_provider.get_all_jobs(page=1, page_size=10)
 
         # Verify JobList structure
@@ -227,8 +210,7 @@ class TestJobNimbusUniversalInterface:
         """Test get_all_jobs pagination works correctly."""
         # Create 15 sample jobs
         jobs = [
-            {**SAMPLE_JN_JOB, "jnid": f"job_{i}", "name": f"Job {i}"}
-            for i in range(15)
+            {**SAMPLE_JN_JOB, "jnid": f"job_{i}", "name": f"Job {i}"} for i in range(15)
         ]
         mock_jobs_list = {"results": jobs, "meta": {"total": 15}}
 
@@ -236,7 +218,9 @@ class TestJobNimbusUniversalInterface:
         mock_response.json.return_value = mock_jobs_list
         mock_response.raise_for_status = MagicMock()
 
-        with patch.object(job_nimbus_provider, "_make_request", return_value=mock_response):
+        with patch.object(
+            job_nimbus_provider, "_make_request", return_value=mock_response
+        ):
             # Get page 2 with page_size=5
             job_list = await job_nimbus_provider.get_all_jobs(page=2, page_size=5)
 
@@ -258,7 +242,9 @@ class TestJobNimbusUniversalInterface:
         mock_response.json.return_value = SAMPLE_JN_JOB
         mock_response.raise_for_status = MagicMock()
 
-        with patch.object(job_nimbus_provider, "_make_request", return_value=mock_response):
+        with patch.object(
+            job_nimbus_provider, "_make_request", return_value=mock_response
+        ):
             project = await job_nimbus_provider.get_project("test_job_123")
 
         # Verify universal Project schema fields
@@ -272,17 +258,18 @@ class TestJobNimbusUniversalInterface:
     @pytest.mark.asyncio
     async def test_get_all_projects_success(self, job_nimbus_provider):
         """Test get_all_projects returns ProjectList (alias to jobs)."""
-        mock_jobs_list = {
-            "results": [SAMPLE_JN_JOB],
-            "meta": {"total": 1}
-        }
+        mock_jobs_list = {"results": [SAMPLE_JN_JOB], "meta": {"total": 1}}
 
         mock_response = MagicMock()
         mock_response.json.return_value = mock_jobs_list
         mock_response.raise_for_status = MagicMock()
 
-        with patch.object(job_nimbus_provider, "_make_request", return_value=mock_response):
-            project_list = await job_nimbus_provider.get_all_projects(page=1, page_size=10)
+        with patch.object(
+            job_nimbus_provider, "_make_request", return_value=mock_response
+        ):
+            project_list = await job_nimbus_provider.get_all_projects(
+                page=1, page_size=10
+            )
 
         # Verify ProjectList structure
         assert len(project_list.projects) == 1
@@ -301,7 +288,9 @@ class TestJobNimbusUniversalInterface:
         mock_response.json.return_value = SAMPLE_JN_CONTACT
         mock_response.raise_for_status = MagicMock()
 
-        with patch.object(job_nimbus_provider, "_make_request", return_value=mock_response):
+        with patch.object(
+            job_nimbus_provider, "_make_request", return_value=mock_response
+        ):
             contact = await job_nimbus_provider.get_contact("contact_abc")
 
         # Verify universal Contact schema fields
@@ -329,16 +318,23 @@ class TestJobNimbusUniversalInterface:
     async def test_get_all_contacts_success(self, job_nimbus_provider):
         """Test get_all_contacts returns paginated ContactList."""
         mock_contacts_list = {
-            "results": [SAMPLE_JN_CONTACT, {**SAMPLE_JN_CONTACT, "jnid": "contact_def", "displayName": "Bob User"}],
-            "meta": {"total": 2}
+            "results": [
+                SAMPLE_JN_CONTACT,
+                {**SAMPLE_JN_CONTACT, "jnid": "contact_def", "displayName": "Bob User"},
+            ],
+            "meta": {"total": 2},
         }
 
         mock_response = MagicMock()
         mock_response.json.return_value = mock_contacts_list
         mock_response.raise_for_status = MagicMock()
 
-        with patch.object(job_nimbus_provider, "_make_request", return_value=mock_response):
-            contact_list = await job_nimbus_provider.get_all_contacts(page=1, page_size=10)
+        with patch.object(
+            job_nimbus_provider, "_make_request", return_value=mock_response
+        ):
+            contact_list = await job_nimbus_provider.get_all_contacts(
+                page=1, page_size=10
+            )
 
         # Verify ContactList structure
         assert len(contact_list.contacts) == 2
@@ -360,11 +356,11 @@ class TestJobNimbusUniversalInterface:
         mock_response.json.return_value = SAMPLE_JN_ACTIVITY
         mock_response.raise_for_status = MagicMock()
 
-        with patch.object(job_nimbus_provider, "_make_request", return_value=mock_response):
+        with patch.object(
+            job_nimbus_provider, "_make_request", return_value=mock_response
+        ):
             note = await job_nimbus_provider.add_note(
-                entity_id="test_job_123",
-                entity_type="job",
-                text="This is a test note"
+                entity_id="test_job_123", entity_type="job", text="This is a test note"
             )
 
         # Verify universal Note schema
@@ -387,13 +383,18 @@ class TestJobNimbusUniversalInterface:
     async def test_update_job_status_success(self, job_nimbus_provider):
         """Test update_job_status updates job via PATCH."""
         mock_response = MagicMock()
-        mock_response.json.return_value = {**SAMPLE_JN_JOB, "status": 10, "statusName": "Completed"}
+        mock_response.json.return_value = {
+            **SAMPLE_JN_JOB,
+            "status": 10,
+            "statusName": "Completed",
+        }
         mock_response.raise_for_status = MagicMock()
 
-        with patch.object(job_nimbus_provider, "_make_request", return_value=mock_response) as mock_request:
+        with patch.object(
+            job_nimbus_provider, "_make_request", return_value=mock_response
+        ) as mock_request:
             await job_nimbus_provider.update_job_status(
-                job_id="test_job_123",
-                status="10"
+                job_id="test_job_123", status="10"
             )
 
             # Verify PATCH request was made
@@ -411,10 +412,11 @@ class TestJobNimbusUniversalInterface:
         mock_response.json.return_value = {**SAMPLE_JN_JOB, "status": 10}
         mock_response.raise_for_status = MagicMock()
 
-        with patch.object(job_nimbus_provider, "_make_request", return_value=mock_response) as mock_request:
+        with patch.object(
+            job_nimbus_provider, "_make_request", return_value=mock_response
+        ) as mock_request:
             await job_nimbus_provider.update_project_status(
-                project_id="test_job_123",
-                status="10"
+                project_id="test_job_123", status="10"
             )
 
             # Verify PATCH request was made (same as update_job_status)
@@ -460,7 +462,9 @@ class TestJobNimbusTransformations:
         mock_response.json.return_value = minimal_job
         mock_response.raise_for_status = MagicMock()
 
-        with patch.object(job_nimbus_provider, "_make_request", return_value=mock_response):
+        with patch.object(
+            job_nimbus_provider, "_make_request", return_value=mock_response
+        ):
             job = await job_nimbus_provider.get_job("minimal_job")
 
         # Should handle missing optional fields gracefully
@@ -494,7 +498,9 @@ class TestJobNimbusTransformations:
         mock_response.json.return_value = minimal_contact
         mock_response.raise_for_status = MagicMock()
 
-        with patch.object(job_nimbus_provider, "_make_request", return_value=mock_response):
+        with patch.object(
+            job_nimbus_provider, "_make_request", return_value=mock_response
+        ):
             contact = await job_nimbus_provider.get_contact("minimal_contact")
 
         # Should handle missing optional fields gracefully
@@ -515,12 +521,12 @@ class TestJobNimbusErrorHandling:
         mock_response.status_code = 500
 
         mock_http_error = httpx.HTTPStatusError(
-            message="Internal Server Error",
-            request=MagicMock(),
-            response=mock_response
+            message="Internal Server Error", request=MagicMock(), response=mock_response
         )
 
-        with patch.object(job_nimbus_provider, "_make_request", side_effect=mock_http_error):
+        with patch.object(
+            job_nimbus_provider, "_make_request", side_effect=mock_http_error
+        ):
             with pytest.raises(CRMError) as exc_info:
                 await job_nimbus_provider.get_job("test_job")
 
@@ -529,7 +535,9 @@ class TestJobNimbusErrorHandling:
     @pytest.mark.asyncio
     async def test_generic_error_handling(self, job_nimbus_provider):
         """Test generic exception handling."""
-        with patch.object(job_nimbus_provider, "_make_request", side_effect=Exception("Network error")):
+        with patch.object(
+            job_nimbus_provider, "_make_request", side_effect=Exception("Network error")
+        ):
             with pytest.raises(CRMError) as exc_info:
                 await job_nimbus_provider.get_job("test_job")
 
