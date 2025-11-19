@@ -23,12 +23,29 @@ export function useCallAudioStream(listenUrl: string | null) {
   const volumeIntervalRef = useRef<number | null>(null);
   const isConnectingRef = useRef(false);
 
+  // Note: THESE SETTINGS NEED TO BE TUNED BASED ON THE AGENT
+  // The following settings work for an agent that was STT -> TTS -> Audio Stream, but they sound bad after switching to a speech-to-speech agent.
+  /*
+  - Input Codec: Int16
+  - Channels: 1
+  - Sample Rate: 32000
+  - Flush Time: 150
+  - FFT Size: 256
+  */
+ // Good settings for a speech-to-speech agent
+ /*
+ - Input Codec: Int16
+ - Channels: 1
+ - Sample Rate: 48000
+ - Flush Time: 150
+ - FFT Size: 256
+ */
   const setupPlayer = (): void => {
     // Initialize PCMPlayer with built-in analyser
     const player = new PCMPlayer({
       inputCodec: 'Int16',
       channels: 1,
-      sampleRate: 32000, // Match Vapi's stream format
+      sampleRate: 48000, // Match Vapi's stream format
       flushTime: 150, // Increased buffer to reduce crackling
       fftSize: FFT_SIZE,
     });
@@ -86,7 +103,22 @@ export function useCallAudioStream(listenUrl: string | null) {
   };
 
   const connect = () => {
-    if (!listenUrl || wsRef.current || isConnectingRef.current) return;
+    if (!listenUrl) {
+      console.warn('[Audio Stream] Cannot connect: No listenUrl provided');
+      return;
+    }
+
+    if (wsRef.current) {
+      console.warn('[Audio Stream] Cannot connect: WebSocket already exists', {
+        readyState: wsRef.current.readyState,
+      });
+      return;
+    }
+
+    if (isConnectingRef.current) {
+      console.warn('[Audio Stream] Cannot connect: Already connecting');
+      return;
+    }
 
     console.log('[Audio Stream] Attempting to connect to:', listenUrl);
     isConnectingRef.current = true;
