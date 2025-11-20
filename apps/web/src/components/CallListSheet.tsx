@@ -63,22 +63,34 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   useEffect(() => {
     if (callListData && projectsData && !isLoadingProjects) {
       const missingProjects = callListData.items.filter(
-        (item) => !projectsData.projects.some((p) => p.id === item.project_id)
+        (item) =>
+          !projectsData.projects.some((p) => p.id === item.project_id) &&
+          !cleanedProjectIds.has(item.project_id)
       );
 
       if (missingProjects.length > 0) {
+        // Track that we're cleaning these projects
+        setCleanedProjectIds(
+          (prev) =>
+            new Set([...prev, ...missingProjects.map((item) => item.project_id)])
+        );
+
         // Remove each missing project from the call list
         missingProjects.forEach((item) => {
           removeFromCallList.mutate(item.project_id);
         });
       }
     }
-  }, [callListData, projectsData, isLoadingProjects, removeFromCallList]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [callListData, projectsData, isLoadingProjects]);
   const [removingProjectId, setRemovingProjectId] = useState<string | null>(
     null,
   );
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
+  const [cleanedProjectIds, setCleanedProjectIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   // Power dialer state
   const [isDialerActive, setIsDialerActive] = useState(false);
