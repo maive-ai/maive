@@ -29,7 +29,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { env } from '@/env';
-import { useProjectSearch } from '@/hooks/useProjectSearch';
 
 export const Route = createFileRoute('/_authed/projects')({
   component: Projects,
@@ -38,12 +37,16 @@ export const Route = createFileRoute('/_authed/projects')({
 function Projects() {
   const [page, setPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(50);
-  const { data, isLoading, isError, error } = useFetchProjects(page, pageSize);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const { data, isLoading, isError, error } = useFetchProjects(
+    page,
+    pageSize,
+    searchQuery || null,
+  );
   const { data: callListData } = useCallList();
   const { data: scheduledGroupsData } = useScheduledGroups();
   const addToCallList = useAddToCallList();
   const addProjectsToGroup = useAddProjectsToGroup();
-  const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSelectMode, setIsSelectMode] = useState<boolean>(false);
   const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(
     new Set(),
@@ -123,8 +126,13 @@ function Projects() {
     setSelectedProjectIds(new Set());
   };
 
-  // Filter projects based on search query
-  const filteredProjects = useProjectSearch(data?.projects, searchQuery);
+  const handleSearchChange = (value: string): void => {
+    setSearchQuery(value);
+    setPage(1); // Reset to first page when search changes
+  };
+
+  // Use projects directly from API (already filtered on backend)
+  const projects = data?.projects || [];
 
   // Loading State
   if (isLoading) {
@@ -289,22 +297,21 @@ function Projects() {
             type="text"
             placeholder="Search by name, address, phone, or claim number..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="pl-10 h-12 text-base"
           />
         </div>
         {searchQuery && (
           <p className="text-sm text-gray-600 mt-2">
-            {filteredProjects.length}{' '}
-            {filteredProjects.length === 1 ? 'result' : 'results'} found on this
-            page
-            {data && ` (${data.total_count} total projects)`}
+            {data?.total_count || 0}{' '}
+            {data?.total_count === 1 ? 'result' : 'results'} found
+            {data && ` (showing page ${page} of ${Math.ceil(data.total_count / pageSize) || 1})`}
           </p>
         )}
       </div>
 
       {/* No Results State */}
-      {searchQuery && filteredProjects.length === 0 ? (
+      {searchQuery && projects.length === 0 && !isLoading ? (
         <div className="flex flex-col items-center justify-center py-12">
           <div className="rounded-full bg-gray-100 p-4 mb-4">
             <FileSearch className="size-8 text-gray-400" />
@@ -320,7 +327,7 @@ function Projects() {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProjects.map((project) => (
+            {projects.map((project) => (
               <ProjectCard
                 key={project.id}
                 project={project}
@@ -338,9 +345,10 @@ function Projects() {
               <div className="text-sm text-gray-600">
                 {searchQuery ? (
                   <>
-                    Showing {filteredProjects.length}{' '}
-                    {filteredProjects.length === 1 ? 'result' : 'results'} on
-                    page {page} of {Math.ceil(data.total_count / pageSize) || 1}
+                    Showing {projects.length}{' '}
+                    {projects.length === 1 ? 'result' : 'results'} on page {page}{' '}
+                    of {Math.ceil(data.total_count / pageSize) || 1} (
+                    {data.total_count} total {data.total_count === 1 ? 'result' : 'results'})
                   </>
                 ) : (
                   <>

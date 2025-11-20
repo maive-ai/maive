@@ -342,6 +342,7 @@ async def get_project(
 async def get_all_projects(
     page: int = Query(1, ge=1, description="Page number (1-indexed)"),
     page_size: int = Query(50, ge=1, le=100, description="Number of items per page"),
+    search: str | None = Query(None, description="Search query to filter projects by name, address, phone, or claim number"),
     current_user: User = Depends(get_current_user),
     crm_service: CRMService = Depends(get_crm_service),
 ) -> ProjectList:
@@ -353,6 +354,7 @@ async def get_all_projects(
     Args:
         page: Page number (1-indexed)
         page_size: Number of items per page (max 100)
+        search: Optional search query to filter projects
         crm_service: The CRM service instance from dependency injection
 
     Returns:
@@ -361,7 +363,12 @@ async def get_all_projects(
     Raises:
         HTTPException: If an error occurs while fetching projects
     """
-    result = await crm_service.get_all_projects(page=page, page_size=page_size)
+    # Convert search query to filters
+    filters = None
+    if search and search.strip():
+        filters = {"search": search.strip()}
+    
+    result = await crm_service.get_all_projects(filters=filters, page=page, page_size=page_size)
 
     if isinstance(result, CRMErrorResponse):
         raise HTTPException(
