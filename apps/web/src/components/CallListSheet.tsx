@@ -410,7 +410,6 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
                           listenUrl={listenUrl}
                           canEndCall={canEndCall}
                           onEndCall={handleEndCall}
-                          onDisconnect={() => setListenUrl(null)}
                           isEndingCall={endCallMutation.isPending}
                         />
                       ) : (

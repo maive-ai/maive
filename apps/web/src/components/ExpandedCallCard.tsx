@@ -2,26 +2,31 @@ import {
   CheckCircle2,
   Clock,
   FileText,
+  Headphones,
   Loader2,
   MapPin,
   Phone,
   PhoneCall,
+  PhoneOff,
   User,
 } from 'lucide-react';
+import { useState } from 'react';
 
-import { CallAudioVisualizer } from '@/components/call/CallAudioVisualizer';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
   Item,
-  ItemActions,
   ItemContent,
-  ItemFooter,
   ItemHeader,
   ItemMedia,
   ItemTitle,
 } from '@/components/ui/item';
-import { Spinner } from '@/components/ui/spinner';
+import { Toggle } from '@/components/ui/toggle';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { formatPhoneNumber, getStatusColor } from '@/lib/utils';
 
 interface ExpandedCallCardProps {
@@ -42,7 +47,6 @@ interface ExpandedCallCardProps {
 
   // Actions
   onEndCall: () => void;
-  onDisconnect: () => void;
   isEndingCall: boolean;
 }
 
@@ -57,32 +61,91 @@ export function ExpandedCallCard({
   listenUrl,
   canEndCall,
   onEndCall,
-  onDisconnect,
   isEndingCall,
 }: ExpandedCallCardProps) {
+  const [isListening, setIsListening] = useState(true); // Default to listening
+
+  const canListen = callStatus === 'in_progress' && listenUrl;
+
   return (
     <Item variant="outline" className="flex-col items-start">
-      {/* Header with status badge */}
+      {/* Header with status badge and call controls */}
       <ItemHeader>
-        <Badge className={`${getStatusColor(projectStatus)} pointer-events-none`}>
-          {projectStatus}
-        </Badge>
-        {callStatus && (
-          <div className="flex items-center gap-2">
-            {callStatus === 'in_progress' ? (
-              <PhoneCall className="size-4 text-green-600 animate-pulse" />
-            ) : callStatus === 'ringing' ? (
-              <Loader2 className="size-4 text-blue-600 animate-spin" />
-            ) : callStatus === 'queued' ? (
-              <Clock className="size-4 text-blue-600" />
-            ) : (
-              <CheckCircle2 className="size-4 text-gray-600" />
-            )}
-            <span className="text-xs font-medium text-gray-600 capitalize">
-              {callStatus === 'in_progress' ? 'Connected' : callStatus}
-            </span>
+        <div className="flex items-center gap-2">
+          <Badge className={`${getStatusColor(projectStatus)} pointer-events-none`}>
+            {projectStatus}
+          </Badge>
+          {callStatus && (
+            <div className="flex items-center gap-2">
+              {callStatus === 'in_progress' ? (
+                <PhoneCall className="size-4 text-green-600 animate-pulse" />
+              ) : callStatus === 'ringing' ? (
+                <Loader2 className="size-4 text-blue-600 animate-spin" />
+              ) : callStatus === 'queued' ? (
+                <Clock className="size-4 text-blue-600" />
+              ) : (
+                <CheckCircle2 className="size-4 text-gray-600" />
+              )}
+              <span className="text-xs font-medium text-gray-600 capitalize">
+                {callStatus === 'in_progress' ? 'Connected' : callStatus}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Call control buttons */}
+        <TooltipProvider>
+          <div className="flex items-center gap-1">
+            {/* Live Listen Toggle */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Toggle
+                  pressed={!!(isListening && canListen)}
+                  onPressedChange={setIsListening}
+                  disabled={!canListen}
+                  size="sm"
+                  aria-label="Toggle live listen"
+                >
+                  <Headphones className="size-4" />
+                </Toggle>
+              </TooltipTrigger>
+              <TooltipContent>
+                {!canListen
+                  ? 'Live listen available when connected'
+                  : isListening
+                    ? 'Stop listening'
+                    : 'Listen to call'}
+              </TooltipContent>
+            </Tooltip>
+
+            {/* End Call Button */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Toggle
+                  pressed={false}
+                  onPressedChange={onEndCall}
+                  disabled={isEndingCall || !canEndCall}
+                  size="sm"
+                  aria-label="End call"
+                  className="data-[state=on]:bg-destructive data-[state=on]:text-destructive-foreground hover:bg-destructive/90 hover:text-destructive-foreground"
+                >
+                  {isEndingCall ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <PhoneOff className="size-4" />
+                  )}
+                </Toggle>
+              </TooltipTrigger>
+              <TooltipContent>
+                {isEndingCall
+                  ? 'Ending call...'
+                  : !canEndCall
+                    ? 'Connecting...'
+                    : 'End call'}
+              </TooltipContent>
+            </Tooltip>
           </div>
-        )}
+        </TooltipProvider>
       </ItemHeader>
 
       {/* Main content with contact info */}
@@ -140,89 +203,16 @@ export function ExpandedCallCard({
             approval and schedule next steps.
           </p>
         </div>
-      </div>
 
-      {/* Call status message */}
-      {callStatus && (
-        <div
-          className={`w-full rounded-lg p-3 mt-3 flex items-start gap-3 ${
-            callStatus === 'in_progress'
-              ? 'bg-green-50 border border-green-200'
-              : callStatus === 'ringing' || callStatus === 'queued'
-                ? 'bg-blue-50 border border-blue-200'
-                : 'bg-gray-50 border border-gray-200'
-          }`}
-        >
-          <div className="flex-1">
-            <p
-              className={`text-sm font-medium ${
-                callStatus === 'in_progress'
-                  ? 'text-green-900'
-                  : callStatus === 'ringing' || callStatus === 'queued'
-                    ? 'text-blue-900'
-                    : 'text-gray-900'
-              }`}
-            >
-              {callStatus === 'queued' && 'Call queued'}
-              {callStatus === 'ringing' && 'Call ringing...'}
-              {callStatus === 'in_progress' && 'Call in progress'}
-              {!['queued', 'ringing', 'in_progress'].includes(callStatus) &&
-                'Call started'}
-            </p>
-            <p
-              className={`text-xs mt-0.5 ${
-                callStatus === 'in_progress'
-                  ? 'text-green-700'
-                  : callStatus === 'ringing' || callStatus === 'queued'
-                    ? 'text-blue-700'
-                    : 'text-gray-700'
-              }`}
-            >
-              {callStatus === 'queued' && 'Waiting in queue...'}
-              {callStatus === 'ringing' && 'Waiting for answer...'}
-              {callStatus === 'in_progress' &&
-                'Connected - You can now listen to the call'}
-              {!['queued', 'ringing', 'in_progress'].includes(callStatus) &&
-                `Status: ${callStatus}`}
-            </p>
+        {/* Audio visualization when listening */}
+        {isListening && canListen && (
+          <div className="mt-3 pt-3 border-t">
+            <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
+              <Headphones className="size-3" />
+              <span>Listening to call...</span>
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Call controls footer */}
-      <ItemFooter className="pt-3">
-        <ItemActions className="w-full">
-          <Button
-            onClick={onEndCall}
-            variant="destructive"
-            size="sm"
-            disabled={isEndingCall || !canEndCall}
-            className="flex-1"
-          >
-            {isEndingCall ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                Ending Call...
-              </>
-            ) : !canEndCall ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                Connecting...
-              </>
-            ) : (
-              'End Call'
-            )}
-          </Button>
-        </ItemActions>
-      </ItemFooter>
-
-      {/* Live Listen Audio Visualizer */}
-      <div className="w-full">
-        <CallAudioVisualizer
-          listenUrl={listenUrl}
-          callStatus={callStatus}
-          onDisconnect={onDisconnect}
-        />
+        )}
       </div>
     </Item>
   );
