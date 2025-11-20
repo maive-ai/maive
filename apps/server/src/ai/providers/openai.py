@@ -553,11 +553,15 @@ class OpenAIProvider(AIProvider):
                             if vector_store_ids:
                                 for vs_id in vector_store_ids:
                                     try:
-                                        vs_file = await client.vector_stores.files.retrieve(
-                                            vector_store_id=vs_id,
-                                            file_id=file_id,
+                                        vs_file = (
+                                            await client.vector_stores.files.retrieve(
+                                                vector_store_id=vs_id,
+                                                file_id=file_id,
+                                            )
                                         )
-                                        attrs = getattr(vs_file, "attributes", None) or {}
+                                        attrs = (
+                                            getattr(vs_file, "attributes", None) or {}
+                                        )
                                         if isinstance(attrs, dict):
                                             source_url = attrs.get("source_url")
                                             document_title = attrs.get("document_title")
