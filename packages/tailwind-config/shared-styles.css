@@ -3,6 +3,11 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {
+  html,
+  body,
+  #app {
+    @apply h-full overflow-hidden;
+  }
   button,
   [role='button'],
   [type='button'],
