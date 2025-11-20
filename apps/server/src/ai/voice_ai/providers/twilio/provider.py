@@ -19,6 +19,29 @@ from src.config import get_app_settings
 from src.utils.logger import logger
 
 
+def map_twilio_status(twilio_status: str) -> CallStatus:
+    """
+    Map Twilio call status to internal CallStatus enum.
+
+    Args:
+        twilio_status: Twilio status string (case-insensitive)
+
+    Returns:
+        Internal CallStatus enum value
+    """
+    status_map = {
+        "queued": CallStatus.QUEUED,
+        "ringing": CallStatus.RINGING,
+        "in-progress": CallStatus.IN_PROGRESS,
+        "completed": CallStatus.ENDED,
+        "busy": CallStatus.BUSY,
+        "no-answer": CallStatus.NO_ANSWER,
+        "failed": CallStatus.FAILED,
+        "canceled": CallStatus.CANCELED,
+    }
+    return status_map.get(twilio_status.lower(), CallStatus.FAILED)
+
+
 class TwilioProvider(BaseVoiceAIProvider):
     """Twilio implementation of VoiceAIProvider interface."""
 
@@ -74,7 +97,7 @@ class TwilioProvider(BaseVoiceAIProvider):
 
             return CallResponse(
                 call_id=call.sid,
-                status=self._map_status(call.status),
+                status=map_twilio_status(call.status),
                 provider=VoiceAIProviderEnum.TWILIO,
                 created_at=call.date_created,
                 messages=[],
@@ -136,28 +159,6 @@ class TwilioProvider(BaseVoiceAIProvider):
             logger.error("[TWILIO] Failed to end call", call_sid=call_id, error=str(e))
             raise VoiceAIError(f"Failed to end Twilio call: {e}") from e
 
-    def _map_status(self, twilio_status: str) -> CallStatus:
-        """
-        Map Twilio call status to internal CallStatus enum.
-
-        Args:
-            twilio_status: Twilio status string
-
-        Returns:
-            Internal CallStatus enum value
-        """
-        status_map = {
-            "queued": CallStatus.QUEUED,
-            "ringing": CallStatus.RINGING,
-            "in-progress": CallStatus.IN_PROGRESS,
-            "completed": CallStatus.ENDED,
-            "busy": CallStatus.BUSY,
-            "no-answer": CallStatus.NO_ANSWER,
-            "failed": CallStatus.FAILED,
-            "canceled": CallStatus.CANCELED,
-        }
-        return status_map.get(twilio_status, CallStatus.FAILED)
-
     def _serialize_call(self, call: CallInstance) -> dict[str, Any]:
         """
         Serialize Twilio CallInstance to dictionary.
@@ -196,7 +197,7 @@ class TwilioProvider(BaseVoiceAIProvider):
         """
         return CallResponse(
             call_id=call.sid,
-            status=self._map_status(call.status),
+            status=map_twilio_status(call.status),
             provider=VoiceAIProviderEnum.TWILIO,
             created_at=call.date_created
             if isinstance(call.date_created, datetime)

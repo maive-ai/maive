@@ -32,7 +32,10 @@ class CallRequest(BaseModel):
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )
-    job_id: int | str | None = Field(None, description="Job/Project ID (int for Service Titan, str for JobNimbus/Mock)")
+    job_id: int | str | None = Field(
+        None,
+        description="Job/Project ID (int for Service Titan, str for JobNimbus/Mock)",
+    )
     tenant: int | None = Field(None, description="Tenant ID")
 
 
@@ -62,7 +65,7 @@ class PaymentDetails(BaseModel):
     @classmethod
     def from_vapi(cls, vapi_payment: Any) -> "PaymentDetails":
         """Create from Vapi payment details."""
-        from src.ai.voice_ai.providers.vapi_schemas import VapiPaymentDetails
+        from src.ai.voice_ai.providers.vapi.schemas import VapiPaymentDetails
 
         if isinstance(vapi_payment, VapiPaymentDetails):
             return cls(
@@ -90,7 +93,7 @@ class RequiredActions(BaseModel):
     @classmethod
     def from_vapi(cls, vapi_actions: Any) -> "RequiredActions":
         """Create from Vapi required actions."""
-        from src.ai.voice_ai.providers.vapi_schemas import VapiRequiredActions
+        from src.ai.voice_ai.providers.vapi.schemas import VapiRequiredActions
 
         if isinstance(vapi_actions, VapiRequiredActions):
             return cls(
@@ -170,7 +173,7 @@ class TranscriptMessage(BaseModel):
 
 class CallResponse(BaseModel):
     """Response model for call information."""
-    
+
     model_config = {"arbitrary_types_allowed": True}
 
     call_id: str = Field(..., description="Unique call identifier")
@@ -184,8 +187,7 @@ class CallResponse(BaseModel):
         None, description="Typed analysis data (extracted from provider_data)"
     )
     messages: list[TranscriptMessage] = Field(
-        default_factory=list,
-        description="Transcript messages from the call"
+        default_factory=list, description="Transcript messages from the call"
     )
 
 
@@ -200,12 +202,9 @@ class ActiveCallResponse(BaseModel):
     phone_number: str = Field(..., description="Phone number being called")
     listen_url: str | None = Field(None, description="URL to listen to the call")
     started_at: str = Field(..., description="Call start timestamp (ISO format)")
-    provider_data: Any = Field(
-        None, description="Provider-specific data for the call"
-    )
+    provider_data: Any = Field(None, description="Provider-specific data for the call")
     transcript: list[TranscriptMessage] = Field(
-        default_factory=list,
-        description="Transcript messages from the call"
+        default_factory=list, description="Transcript messages from the call"
     )
 
 

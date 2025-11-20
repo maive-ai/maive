@@ -39,12 +39,12 @@ class TwilioWebhooks:
     @property
     def status_callback(self) -> str:
         """URL for call status updates."""
-        return f"{self._base_url}/api/voice-ai/webhooks/twilio/status"
+        return f"{self._base_url}/api/voice-ai/twilio/webhooks/status"
 
     @property
     def recording_status_callback(self) -> str:
         """URL for recording availability."""
-        return f"{self._base_url}/api/voice-ai/webhooks/twilio/recording"
+        return f"{self._base_url}/api/voice-ai/twilio/webhooks/recording"
 
     def twiml_url(self, conference_name: str = "default") -> str:
         """
@@ -56,4 +56,4 @@ class TwilioWebhooks:
         Returns:
             TwiML endpoint URL
         """
-        return f"{self._base_url}/api/voice-ai/twiml/join-conference?conference_name={conference_name}"
+        return f"{self._base_url}/api/voice-ai/twilio/twiml/join-conference?conference_name={conference_name}"

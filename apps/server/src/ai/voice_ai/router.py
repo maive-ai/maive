@@ -11,7 +11,12 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from src.ai.voice_ai.constants import VoiceAIErrorCode
 from src.ai.voice_ai.dependencies import get_voice_ai_service
-from src.ai.voice_ai.schemas import ActiveCallResponse, CallResponse, VoiceAIErrorResponse
+from src.ai.voice_ai.providers.twilio.router import router as twilio_router
+from src.ai.voice_ai.schemas import (
+    ActiveCallResponse,
+    CallResponse,
+    VoiceAIErrorResponse,
+)
 from src.ai.voice_ai.service import VoiceAIService
 from src.auth.dependencies import get_current_user
 from src.auth.schemas import User
@@ -19,6 +24,9 @@ from src.db.calls.repository import CallRepository
 from src.db.dependencies import get_call_repository
 
 router = APIRouter(prefix="/voice-ai", tags=["Voice AI"])
+
+# Include Twilio provider-specific router
+router.include_router(twilio_router)
 
 
 @router.get("/calls/active", response_model=ActiveCallResponse | None)
@@ -126,7 +134,9 @@ async def end_call(
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Call not found")
 
     if call.user_id != current_user.id:
-        raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail="Not authorized to end this call")
+        raise HTTPException(
+            status_code=HTTPStatus.FORBIDDEN, detail="Not authorized to end this call"
+        )
 
     # If call is already ended, return success (idempotent)
     if not call.is_active:
@@ -136,21 +146,32 @@ async def end_call(
     # Extract control URL from stored provider data
     control_url = None
     if call.provider_data and isinstance(call.provider_data, dict):
-        monitor = call.provider_data.get('monitor', {})
-        control_url = monitor.get('control_url')
+        monitor = call.provider_data.get("monitor", {})
+        control_url = monitor.get("control_url")
 
     # If control URL not in database, the service will fetch it from the provider
     # This handles the case where the call was created but control URL wasn't available yet
     if control_url:
-        logger.info("[End Call] Using control URL from database", call_id=call_id, control_url=control_url)
+        logger.info(
+            "[End Call] Using control URL from database",
+            call_id=call_id,
+            control_url=control_url,
+        )
     else:
-        logger.info("[End Call] No control URL in database, will fetch from provider", call_id=call_id)
+        logger.info(
+            "[End Call] No control URL in database, will fetch from provider",
+            call_id=call_id,
+        )
 
     # Try to end call via Vapi (will fetch control URL if not provided)
     result = await voice_ai_service.end_call(call_id, control_url=control_url)
 
     if isinstance(result, VoiceAIErrorResponse):
-        logger.error("[End Call] Failed to end call via Vapi", call_id=call_id, error=result.error)
+        logger.error(
+            "[End Call] Failed to end call via Vapi",
+            call_id=call_id,
+            error=result.error,
+        )
         # If Vapi fails, still mark as ended in DB so UI can update
         # The monitoring task will sync the actual state
         await call_repository.end_call(
@@ -160,7 +181,7 @@ async def end_call(
         await call_repository.session.commit()
         raise HTTPException(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-            detail=f"Failed to end call: {result.error}"
+            detail=f"Failed to end call: {result.error}",
         )
 
     # Vapi succeeded - now update database
@@ -169,7 +190,9 @@ async def end_call(
         final_status=CallStatus.ENDED,
     )
     await call_repository.session.commit()
-    logger.info("[End Call] Successfully ended call and updated database", call_id=call_id)
+    logger.info(
+        "[End Call] Successfully ended call and updated database", call_id=call_id
+    )
 
     # Success - 204 No Content response
     return None

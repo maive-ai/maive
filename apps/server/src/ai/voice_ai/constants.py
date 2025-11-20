@@ -33,6 +33,7 @@ class VoiceAIProvider(str, Enum):
     """Available Voice AI providers."""
 
     VAPI = "vapi"
+    TWILIO = "twilio"
 
 
 class VoiceAIErrorCode(str, Enum):
@@ -42,4 +43,3 @@ class VoiceAIErrorCode(str, Enum):
     HTTP_ERROR = "HTTP_ERROR"
     INVALID_JSON = "INVALID_JSON"
     UNKNOWN_ERROR = "UNKNOWN_ERROR"
-
