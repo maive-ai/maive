@@ -40,10 +40,42 @@ interface CallListSheetProps {
 }
 
 export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
-  const { data: callListData, isLoading: isLoadingCallList } = useCallList();
+  const { data: callListData, isLoading: isLoadingCallList, refetch } =
+    useCallList();
+
+  // Refetch call list when sheet opens
+  useEffect(() => {
+    if (open) {
+      refetch();
+    }
+  }, [open, refetch]);
   const { data: projectsData, isLoading: isLoadingProjects } =
     useFetchProjects();
   const removeFromCallList = useRemoveFromCallList();
+
+  // Auto-clean call list: remove items whose projects no longer exist
+  useEffect(() => {
+    if (callListData && projectsData && !isLoadingProjects) {
+      console.log('[CallListSheet] Call list items:', callListData.items.length);
+      console.log('[CallListSheet] Projects loaded:', projectsData.projects.length);
+
+      const missingProjects = callListData.items.filter(
+        (item) => !projectsData.projects.some((p) => p.id === item.project_id)
+      );
+
+      if (missingProjects.length > 0) {
+        console.warn(
+          '[CallListSheet] Auto-cleaning call list - removing projects that no longer exist:',
+          missingProjects.map((item) => item.project_id)
+        );
+
+        // Remove each missing project from the call list
+        missingProjects.forEach((item) => {
+          removeFromCallList.mutate(item.project_id);
+        });
+      }
+    }
+  }, [callListData, projectsData, isLoadingProjects, removeFromCallList]);
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
   const [removingProjectId, setRemovingProjectId] = useState<string | null>(
     null,
