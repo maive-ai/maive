@@ -1935,56 +1935,6 @@ export interface TranscriptMessage {
     'duration_seconds'?: number | null;
 }
 /**
- * Request schema for assigning a Twilio phone number.
- * @export
- * @interface TwilioConfigCreate
- */
-export interface TwilioConfigCreate {
-    /**
-     * Twilio phone number in E.164 format (+1...)
-     * @type {string}
-     * @memberof TwilioConfigCreate
-     */
-    'phone_number': string;
-}
-/**
- * Response schema for Twilio configuration.
- * @export
- * @interface TwilioConfigResponse
- */
-export interface TwilioConfigResponse {
-    /**
-     * 
-     * @type {number}
-     * @memberof TwilioConfigResponse
-     */
-    'id': number;
-    /**
-     * 
-     * @type {string}
-     * @memberof TwilioConfigResponse
-     */
-    'organization_id': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof TwilioConfigResponse
-     */
-    'phone_number': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof TwilioConfigResponse
-     */
-    'created_at': string;
-    /**
-     * 
-     * @type {string}
-     * @memberof TwilioConfigResponse
-     */
-    'updated_at': string;
-}
-/**
  * Request model for updating group active status.
  * @export
  * @interface UpdateGroupStatusRequest
@@ -5308,252 +5258,6 @@ export class ScheduledGroupsApi extends BaseAPI {
 
 
 /**
- * TelephonyConfigApi - axios parameter creator
- * @export
- */
-export const TelephonyConfigApiAxiosParamCreator = function (configuration?: Configuration) {
-    return {
-        /**
-         * Assign Twilio phone number to organization.  Args:     data: Phone number assignment data     current_user: Current authenticated user     service: Twilio configuration service  Returns:     Created or updated configuration  Raises:     HTTPException: If assignment fails
-         * @summary Assign Phone Number
-         * @param {TwilioConfigCreate} twilioConfigCreate 
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        assignPhoneNumberApiTelephonyConfigPost: async (twilioConfigCreate: TwilioConfigCreate, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'twilioConfigCreate' is not null or undefined
-            assertParamExists('assignPhoneNumberApiTelephonyConfigPost', 'twilioConfigCreate', twilioConfigCreate)
-            const localVarPath = `/api/telephony/config`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-            // authentication HTTPBearer required
-            // http bearer authentication required
-            await setBearerAuthToObject(localVarHeaderParameter, configuration)
-
-
-    
-            localVarHeaderParameter['Content-Type'] = 'application/json';
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            localVarRequestOptions.data = serializeDataIfNeeded(twilioConfigCreate, localVarRequestOptions, configuration)
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * Remove phone number assignment.  Args:     current_user: Current authenticated user     service: Twilio configuration service
-         * @summary Delete Phone Config
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        deletePhoneConfigApiTelephonyConfigDelete: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            const localVarPath = `/api/telephony/config`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-            // authentication HTTPBearer required
-            // http bearer authentication required
-            await setBearerAuthToObject(localVarHeaderParameter, configuration)
-
-
-    
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * Get Twilio phone number for organization.  Args:     current_user: Current authenticated user     service: Twilio configuration service  Returns:     Organization\'s Twilio configuration  Raises:     HTTPException: If no phone number is configured
-         * @summary Get Phone Config
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        getPhoneConfigApiTelephonyConfigGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            const localVarPath = `/api/telephony/config`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-            // authentication HTTPBearer required
-            // http bearer authentication required
-            await setBearerAuthToObject(localVarHeaderParameter, configuration)
-
-
-    
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-    }
-};
-
-/**
- * TelephonyConfigApi - functional programming interface
- * @export
- */
-export const TelephonyConfigApiFp = function(configuration?: Configuration) {
-    const localVarAxiosParamCreator = TelephonyConfigApiAxiosParamCreator(configuration)
-    return {
-        /**
-         * Assign Twilio phone number to organization.  Args:     data: Phone number assignment data     current_user: Current authenticated user     service: Twilio configuration service  Returns:     Created or updated configuration  Raises:     HTTPException: If assignment fails
-         * @summary Assign Phone Number
-         * @param {TwilioConfigCreate} twilioConfigCreate 
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async assignPhoneNumberApiTelephonyConfigPost(twilioConfigCreate: TwilioConfigCreate, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TwilioConfigResponse>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.assignPhoneNumberApiTelephonyConfigPost(twilioConfigCreate, options);
-            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['TelephonyConfigApi.assignPhoneNumberApiTelephonyConfigPost']?.[localVarOperationServerIndex]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
-        },
-        /**
-         * Remove phone number assignment.  Args:     current_user: Current authenticated user     service: Twilio configuration service
-         * @summary Delete Phone Config
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async deletePhoneConfigApiTelephonyConfigDelete(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.deletePhoneConfigApiTelephonyConfigDelete(options);
-            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['TelephonyConfigApi.deletePhoneConfigApiTelephonyConfigDelete']?.[localVarOperationServerIndex]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
-        },
-        /**
-         * Get Twilio phone number for organization.  Args:     current_user: Current authenticated user     service: Twilio configuration service  Returns:     Organization\'s Twilio configuration  Raises:     HTTPException: If no phone number is configured
-         * @summary Get Phone Config
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async getPhoneConfigApiTelephonyConfigGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TwilioConfigResponse>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getPhoneConfigApiTelephonyConfigGet(options);
-            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['TelephonyConfigApi.getPhoneConfigApiTelephonyConfigGet']?.[localVarOperationServerIndex]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
-        },
-    }
-};
-
-/**
- * TelephonyConfigApi - factory interface
- * @export
- */
-export const TelephonyConfigApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
-    const localVarFp = TelephonyConfigApiFp(configuration)
-    return {
-        /**
-         * Assign Twilio phone number to organization.  Args:     data: Phone number assignment data     current_user: Current authenticated user     service: Twilio configuration service  Returns:     Created or updated configuration  Raises:     HTTPException: If assignment fails
-         * @summary Assign Phone Number
-         * @param {TwilioConfigCreate} twilioConfigCreate 
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        assignPhoneNumberApiTelephonyConfigPost(twilioConfigCreate: TwilioConfigCreate, options?: RawAxiosRequestConfig): AxiosPromise<TwilioConfigResponse> {
-            return localVarFp.assignPhoneNumberApiTelephonyConfigPost(twilioConfigCreate, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * Remove phone number assignment.  Args:     current_user: Current authenticated user     service: Twilio configuration service
-         * @summary Delete Phone Config
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        deletePhoneConfigApiTelephonyConfigDelete(options?: RawAxiosRequestConfig): AxiosPromise<void> {
-            return localVarFp.deletePhoneConfigApiTelephonyConfigDelete(options).then((request) => request(axios, basePath));
-        },
-        /**
-         * Get Twilio phone number for organization.  Args:     current_user: Current authenticated user     service: Twilio configuration service  Returns:     Organization\'s Twilio configuration  Raises:     HTTPException: If no phone number is configured
-         * @summary Get Phone Config
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        getPhoneConfigApiTelephonyConfigGet(options?: RawAxiosRequestConfig): AxiosPromise<TwilioConfigResponse> {
-            return localVarFp.getPhoneConfigApiTelephonyConfigGet(options).then((request) => request(axios, basePath));
-        },
-    };
-};
-
-/**
- * TelephonyConfigApi - object-oriented interface
- * @export
- * @class TelephonyConfigApi
- * @extends {BaseAPI}
- */
-export class TelephonyConfigApi extends BaseAPI {
-    /**
-     * Assign Twilio phone number to organization.  Args:     data: Phone number assignment data     current_user: Current authenticated user     service: Twilio configuration service  Returns:     Created or updated configuration  Raises:     HTTPException: If assignment fails
-     * @summary Assign Phone Number
-     * @param {TwilioConfigCreate} twilioConfigCreate 
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof TelephonyConfigApi
-     */
-    public assignPhoneNumberApiTelephonyConfigPost(twilioConfigCreate: TwilioConfigCreate, options?: RawAxiosRequestConfig) {
-        return TelephonyConfigApiFp(this.configuration).assignPhoneNumberApiTelephonyConfigPost(twilioConfigCreate, options).then((request) => request(this.axios, this.basePath));
-    }
-
-    /**
-     * Remove phone number assignment.  Args:     current_user: Current authenticated user     service: Twilio configuration service
-     * @summary Delete Phone Config
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof TelephonyConfigApi
-     */
-    public deletePhoneConfigApiTelephonyConfigDelete(options?: RawAxiosRequestConfig) {
-        return TelephonyConfigApiFp(this.configuration).deletePhoneConfigApiTelephonyConfigDelete(options).then((request) => request(this.axios, this.basePath));
-    }
-
-    /**
-     * Get Twilio phone number for organization.  Args:     current_user: Current authenticated user     service: Twilio configuration service  Returns:     Organization\'s Twilio configuration  Raises:     HTTPException: If no phone number is configured
-     * @summary Get Phone Config
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof TelephonyConfigApi
-     */
-    public getPhoneConfigApiTelephonyConfigGet(options?: RawAxiosRequestConfig) {
-        return TelephonyConfigApiFp(this.configuration).getPhoneConfigApiTelephonyConfigGet(options).then((request) => request(this.axios, this.basePath));
-    }
-}
-
-
-
-/**
  * TwilioApi - axios parameter creator
  * @export
  */
@@ -6021,40 +5725,6 @@ export const WorkflowsApiAxiosParamCreator = function (configuration?: Configura
                 options: localVarRequestOptions,
             };
         },
-        /**
-         * Start autodialer background loop.  Returns immediately while calls continue in background.  Args:     current_user: The authenticated user  Returns:     dict with status
-         * @summary Start Autodialer
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        startAutodialerApiWorkflowsAutodialerStartPost: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            const localVarPath = `/api/workflows/autodialer/start`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-            // authentication HTTPBearer required
-            // http bearer authentication required
-            await setBearerAuthToObject(localVarHeaderParameter, configuration)
-
-
-    
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
     }
 };
 
@@ -6078,18 +5748,6 @@ export const WorkflowsApiFp = function(configuration?: Configuration) {
             const localVarOperationServerBasePath = operationServerMap['WorkflowsApi.callAndWriteResultsToCrmApiWorkflowsCallAndWriteResultsToCrmPost']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
-        /**
-         * Start autodialer background loop.  Returns immediately while calls continue in background.  Args:     current_user: The authenticated user  Returns:     dict with status
-         * @summary Start Autodialer
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async startAutodialerApiWorkflowsAutodialerStartPost(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<{ [key: string]: string | null; }>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.startAutodialerApiWorkflowsAutodialerStartPost(options);
-            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['WorkflowsApi.startAutodialerApiWorkflowsAutodialerStartPost']?.[localVarOperationServerIndex]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
-        },
     }
 };
 
@@ -6109,15 +5767,6 @@ export const WorkflowsApiFactory = function (configuration?: Configuration, base
          */
         callAndWriteResultsToCrmApiWorkflowsCallAndWriteResultsToCrmPost(callRequest: CallRequest, options?: RawAxiosRequestConfig): AxiosPromise<CallResponse> {
             return localVarFp.callAndWriteResultsToCrmApiWorkflowsCallAndWriteResultsToCrmPost(callRequest, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * Start autodialer background loop.  Returns immediately while calls continue in background.  Args:     current_user: The authenticated user  Returns:     dict with status
-         * @summary Start Autodialer
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        startAutodialerApiWorkflowsAutodialerStartPost(options?: RawAxiosRequestConfig): AxiosPromise<{ [key: string]: string | null; }> {
-            return localVarFp.startAutodialerApiWorkflowsAutodialerStartPost(options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -6139,17 +5788,6 @@ export class WorkflowsApi extends BaseAPI {
      */
     public callAndWriteResultsToCrmApiWorkflowsCallAndWriteResultsToCrmPost(callRequest: CallRequest, options?: RawAxiosRequestConfig) {
         return WorkflowsApiFp(this.configuration).callAndWriteResultsToCrmApiWorkflowsCallAndWriteResultsToCrmPost(callRequest, options).then((request) => request(this.axios, this.basePath));
-    }
-
-    /**
-     * Start autodialer background loop.  Returns immediately while calls continue in background.  Args:     current_user: The authenticated user  Returns:     dict with status
-     * @summary Start Autodialer
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof WorkflowsApi
-     */
-    public startAutodialerApiWorkflowsAutodialerStartPost(options?: RawAxiosRequestConfig) {
-        return WorkflowsApiFp(this.configuration).startAutodialerApiWorkflowsAutodialerStartPost(options).then((request) => request(this.axios, this.basePath));
     }
 }
 

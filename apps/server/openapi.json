@@ -279,96 +279,6 @@
         ]
       }
     },
-    "/api/telephony/config": {
-      "get": {
-        "tags": [
-          "Telephony Config"
-        ],
-        "summary": "Get Phone Config",
-        "description": "Get Twilio phone number for organization.\n\nArgs:\n    current_user: Current authenticated user\n    service: Twilio configuration service\n\nReturns:\n    Organization's Twilio configuration\n\nRaises:\n    HTTPException: If no phone number is configured",
-        "operationId": "get_phone_config_api_telephony_config_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TwilioConfigResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      },
-      "post": {
-        "tags": [
-          "Telephony Config"
-        ],
-        "summary": "Assign Phone Number",
-        "description": "Assign Twilio phone number to organization.\n\nArgs:\n    data: Phone number assignment data\n    current_user: Current authenticated user\n    service: Twilio configuration service\n\nReturns:\n    Created or updated configuration\n\nRaises:\n    HTTPException: If assignment fails",
-        "operationId": "assign_phone_number_api_telephony_config_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TwilioConfigCreate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TwilioConfigResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      },
-      "delete": {
-        "tags": [
-          "Telephony Config"
-        ],
-        "summary": "Delete Phone Config",
-        "description": "Remove phone number assignment.\n\nArgs:\n    current_user: Current authenticated user\n    service: Twilio configuration service",
-        "operationId": "delete_phone_config_api_telephony_config_delete",
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
     "/api/crm/jobs/{job_id}": {
       "get": {
         "tags": [
@@ -1998,37 +1908,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/api/workflows/autodialer/start": {
-      "post": {
-        "tags": [
-          "Workflows"
-        ],
-        "summary": "Start Autodialer",
-        "description": "Start autodialer background loop.\n\nReturns immediately while calls continue in background.\n\nArgs:\n    current_user: The authenticated user\n\nReturns:\n    dict with status",
-        "operationId": "start_autodialer_api_workflows_autodialer_start_post",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "type": "object",
-                  "title": "Response Start Autodialer Api Workflows Autodialer Start Post"
                 }
               }
             }
@@ -4851,57 +4730,6 @@
         ],
         "title": "TranscriptMessage",
         "description": "Provider-agnostic transcript message."
-      },
-      "TwilioConfigCreate": {
-        "properties": {
-          "phone_number": {
-            "type": "string",
-            "title": "Phone Number",
-            "description": "Twilio phone number in E.164 format (+1...)"
-          }
-        },
-        "type": "object",
-        "required": [
-          "phone_number"
-        ],
-        "title": "TwilioConfigCreate",
-        "description": "Request schema for assigning a Twilio phone number."
-      },
-      "TwilioConfigResponse": {
-        "properties": {
-          "id": {
-            "type": "integer",
-            "title": "Id"
-          },
-          "organization_id": {
-            "type": "string",
-            "title": "Organization Id"
-          },
-          "phone_number": {
-            "type": "string",
-            "title": "Phone Number"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Updated At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "organization_id",
-          "phone_number",
-          "created_at",
-          "updated_at"
-        ],
-        "title": "TwilioConfigResponse",
-        "description": "Response schema for Twilio configuration."
       },
       "UpdateGroupStatusRequest": {
         "properties": {
