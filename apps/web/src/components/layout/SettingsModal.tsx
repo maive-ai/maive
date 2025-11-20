@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 import { useIsMaiveUser } from '@/auth';
 import { CRMCredentialsSettings } from '@/components/settings/CRMCredentialsSettings';
-import { TwilioConfigSettings } from '@/components/settings/TwilioConfigSettings';
+import { PhoneNumberSettings } from '@/components/settings/PhoneNumberSettings';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -104,7 +104,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               )}
 
               {activeTab === 'twilio' && (
-                <TwilioConfigSettings onSuccess={() => onOpenChange(false)} />
+                <PhoneNumberSettings onSuccess={() => onOpenChange(false)} />
               )}
 
               {activeTab === 'developer' && (
