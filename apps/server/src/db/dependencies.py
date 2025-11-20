@@ -11,6 +11,7 @@ from src.db.call_list.repository import CallListRepository
 from src.db.calls.repository import CallRepository
 from src.db.database import get_db
 from src.db.scheduled_groups.repository import ScheduledGroupsRepository
+from src.db.threads.repository import ThreadRepository
 
 
 def get_call_repository(
@@ -56,3 +57,18 @@ def get_scheduled_groups_repository(
         ScheduledGroupsRepository: Repository instance with injected session
     """
     return ScheduledGroupsRepository(session)
+
+
+def get_thread_repository(
+    session: AsyncSession = Depends(get_db),
+) -> ThreadRepository:
+    """
+    FastAPI dependency for getting the thread repository.
+
+    Args:
+        session: Database session from get_db dependency
+
+    Returns:
+        ThreadRepository: Repository instance with injected session
+    """
+    return ThreadRepository(session)

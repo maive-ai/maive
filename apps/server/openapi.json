@@ -1841,6 +1841,501 @@
         }
       }
     },
+    "/api/threads": {
+      "post": {
+        "tags": [
+          "Threads"
+        ],
+        "summary": "Create Thread",
+        "description": "Create a new thread.\n\nArgs:\n    request: Request containing optional thread ID and title\n    current_user: The authenticated user\n    thread_repository: The thread repository instance from dependency injection\n\nReturns:\n    ThreadResponse: The created thread\n\nRaises:\n    HTTPException: If an error occurs creating the thread",
+        "operationId": "create_thread_api_threads_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateThreadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Threads"
+        ],
+        "summary": "List Threads",
+        "description": "List all threads for the current user.\n\nArgs:\n    include_archived: Whether to include archived threads (default: True)\n    current_user: The authenticated user\n    thread_repository: The thread repository instance from dependency injection\n\nReturns:\n    ThreadListResponse: List of threads\n\nRaises:\n    HTTPException: If an error occurs retrieving threads",
+        "operationId": "list_threads_api_threads_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "include_archived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Include Archived"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/threads/{thread_id}": {
+      "get": {
+        "tags": [
+          "Threads"
+        ],
+        "summary": "Get Thread",
+        "description": "Get a specific thread.\n\nArgs:\n    thread_id: Thread UUID\n    current_user: The authenticated user\n    thread_repository: The thread repository instance from dependency injection\n\nReturns:\n    ThreadResponse: The thread\n\nRaises:\n    HTTPException: If thread not found or an error occurs",
+        "operationId": "get_thread_api_threads__thread_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Threads"
+        ],
+        "summary": "Delete Thread",
+        "description": "Delete a thread and all its messages.\n\nArgs:\n    thread_id: Thread UUID\n    current_user: The authenticated user\n    thread_repository: The thread repository instance from dependency injection\n\nRaises:\n    HTTPException: If thread not found or an error occurs",
+        "operationId": "delete_thread_api_threads__thread_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/threads/{thread_id}/title": {
+      "patch": {
+        "tags": [
+          "Threads"
+        ],
+        "summary": "Update Thread Title",
+        "description": "Update a thread's title.\n\nArgs:\n    thread_id: Thread UUID\n    request: Request containing new title\n    current_user: The authenticated user\n    thread_repository: The thread repository instance from dependency injection\n\nReturns:\n    ThreadResponse: The updated thread\n\nRaises:\n    HTTPException: If thread not found or an error occurs",
+        "operationId": "update_thread_title_api_threads__thread_id__title_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateThreadTitleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/threads/{thread_id}/archive": {
+      "patch": {
+        "tags": [
+          "Threads"
+        ],
+        "summary": "Archive Thread",
+        "description": "Archive a thread.\n\nArgs:\n    thread_id: Thread UUID\n    current_user: The authenticated user\n    thread_repository: The thread repository instance from dependency injection\n\nReturns:\n    ThreadResponse: The archived thread\n\nRaises:\n    HTTPException: If thread not found or an error occurs",
+        "operationId": "archive_thread_api_threads__thread_id__archive_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/threads/{thread_id}/unarchive": {
+      "patch": {
+        "tags": [
+          "Threads"
+        ],
+        "summary": "Unarchive Thread",
+        "description": "Unarchive a thread.\n\nArgs:\n    thread_id: Thread UUID\n    current_user: The authenticated user\n    thread_repository: The thread repository instance from dependency injection\n\nReturns:\n    ThreadResponse: The unarchived thread\n\nRaises:\n    HTTPException: If thread not found or an error occurs",
+        "operationId": "unarchive_thread_api_threads__thread_id__unarchive_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/threads/{thread_id}/generate-title": {
+      "post": {
+        "tags": [
+          "Threads"
+        ],
+        "summary": "Generate Thread Title",
+        "description": "Generate a title for a thread using AI based on messages.\n\nReturns an SSE stream with the generated title for assistant-ui compatibility.\n\nArgs:\n    thread_id: Thread UUID\n    request: Request containing messages to generate title from\n    current_user: The authenticated user\n    thread_repository: The thread repository instance from dependency injection\n\nReturns:\n    StreamingResponse: SSE stream with generated title\n\nRaises:\n    HTTPException: If thread not found or an error occurs",
+        "operationId": "generate_thread_title_api_threads__thread_id__generate_title_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateTitleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/threads/{thread_id}/messages": {
+      "get": {
+        "tags": [
+          "Threads"
+        ],
+        "summary": "Get Messages",
+        "description": "Get all messages for a thread.\n\nArgs:\n    thread_id: Thread UUID\n    current_user: The authenticated user\n    thread_repository: The thread repository instance from dependency injection\n\nReturns:\n    MessageListResponse: List of messages ordered by created_at\n\nRaises:\n    HTTPException: If thread not found or an error occurs",
+        "operationId": "get_messages_api_threads__thread_id__messages_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Threads"
+        ],
+        "summary": "Create Message",
+        "description": "Create a new message in a thread.\n\nArgs:\n    thread_id: Thread UUID\n    request: Request containing message data\n    current_user: The authenticated user\n    thread_repository: The thread repository instance from dependency injection\n\nReturns:\n    MessageResponse: The created message\n\nRaises:\n    HTTPException: If thread not found or an error occurs",
+        "operationId": "create_message_api_threads__thread_id__messages_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/workflows/call-and-write-results-to-crm": {
       "post": {
         "tags": [
@@ -3038,6 +3533,34 @@
         "title": "ContactList",
         "description": "Universal contact list response with pagination."
       },
+      "CreateMessageRequest": {
+        "properties": {
+          "message_id": {
+            "type": "string",
+            "title": "Message Id",
+            "description": "Message UUID"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "description": "Message role: user, assistant, or system"
+          },
+          "content": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Content",
+            "description": "Message content (ThreadMessage format)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message_id",
+          "role",
+          "content"
+        ],
+        "title": "CreateMessageRequest",
+        "description": "Request model for creating a new message."
+      },
       "CreateScheduledGroupRequest": {
         "properties": {
           "name": {
@@ -3093,6 +3616,50 @@
         ],
         "title": "CreateScheduledGroupRequest",
         "description": "Request model for creating a scheduled group."
+      },
+      "CreateThreadRequest": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Thread title",
+            "default": "New Chat"
+          },
+          "thread_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thread Id",
+            "description": "Optional specific thread ID (UUID)"
+          }
+        },
+        "type": "object",
+        "title": "CreateThreadRequest",
+        "description": "Request model for creating a new thread."
+      },
+      "GenerateTitleRequest": {
+        "properties": {
+          "messages": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Messages",
+            "description": "Messages to generate title from"
+          }
+        },
+        "type": "object",
+        "required": [
+          "messages"
+        ],
+        "title": "GenerateTitleRequest",
+        "description": "Request model for generating a thread title from messages."
       },
       "GoalType": {
         "type": "string",
@@ -3461,6 +4028,71 @@
         "type": "object",
         "title": "MarkCallCompletedRequest",
         "description": "Request model for marking a call as completed."
+      },
+      "MessageListResponse": {
+        "properties": {
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/MessageResponse"
+            },
+            "type": "array",
+            "title": "Messages",
+            "description": "List of messages"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Total number of messages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "messages",
+          "total"
+        ],
+        "title": "MessageListResponse",
+        "description": "Response model for list of messages."
+      },
+      "MessageResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Message UUID"
+          },
+          "thread_id": {
+            "type": "string",
+            "title": "Thread Id",
+            "description": "Thread UUID"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "description": "Message role"
+          },
+          "content": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Content",
+            "description": "Message content"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When the message was created"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "thread_id",
+          "role",
+          "content",
+          "created_at"
+        ],
+        "title": "MessageResponse",
+        "description": "Response model for a single message."
       },
       "MockNote": {
         "properties": {
@@ -4660,6 +5292,77 @@
         "title": "ScheduledGroupsListResponse",
         "description": "Response model for listing scheduled groups."
       },
+      "ThreadListResponse": {
+        "properties": {
+          "threads": {
+            "items": {
+              "$ref": "#/components/schemas/ThreadResponse"
+            },
+            "type": "array",
+            "title": "Threads",
+            "description": "List of threads"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Total number of threads"
+          }
+        },
+        "type": "object",
+        "required": [
+          "threads",
+          "total"
+        ],
+        "title": "ThreadListResponse",
+        "description": "Response model for list of threads."
+      },
+      "ThreadResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Thread UUID"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id",
+            "description": "Cognito user ID"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Thread title"
+          },
+          "archived": {
+            "type": "boolean",
+            "title": "Archived",
+            "description": "Whether thread is archived"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When the thread was created"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At",
+            "description": "When the thread was last updated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "title",
+          "archived",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ThreadResponse",
+        "description": "Response model for a single thread."
+      },
       "TranscriptMessage": {
         "properties": {
           "role": {
@@ -4797,6 +5500,22 @@
         "type": "object",
         "title": "UpdateScheduledGroupRequest",
         "description": "Request model for updating a scheduled group."
+      },
+      "UpdateThreadTitleRequest": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Title",
+            "description": "New thread title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "title": "UpdateThreadTitleRequest",
+        "description": "Request model for updating a thread's title."
       },
       "User": {
         "properties": {

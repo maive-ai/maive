@@ -7,6 +7,7 @@ from src.db.call_list.model import CallListItem  # noqa: F401
 
 # Import all models to ensure they're registered with Base.metadata
 from src.db.calls.model import Call  # noqa: F401
+from src.db.threads.model import Message, Thread  # noqa: F401
 
 # Import our database configuration and models
 from src.db.database import Base, get_database_url

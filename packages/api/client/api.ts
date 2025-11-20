@@ -13,15 +13,15 @@
  */
 
 
-import type { Configuration } from './configuration';
-import type { AxiosPromise, AxiosInstance, RawAxiosRequestConfig } from 'axios';
+import type { AxiosInstance, AxiosPromise, RawAxiosRequestConfig } from 'axios';
 import globalAxios from 'axios';
+import type { Configuration } from './configuration';
 // Some imports not used depending on template conditions
 // @ts-ignore
-import { DUMMY_BASE_URL, assertParamExists, setApiKeyToObject, setBasicAuthToObject, setBearerAuthToObject, setOAuthToObject, setSearchParams, serializeDataIfNeeded, toPathString, createRequestFunction } from './common';
 import type { RequestArgs } from './base';
+import { DUMMY_BASE_URL, assertParamExists, createRequestFunction, serializeDataIfNeeded, setBearerAuthToObject, setSearchParams, toPathString } from './common';
 // @ts-ignore
-import { BASE_PATH, COLLECTION_FORMATS, BaseAPI, RequiredError, operationServerMap } from './base';
+import { BASE_PATH, BaseAPI, RequiredError, operationServerMap } from './base';
 
 /**
  * Response model for the user\'s currently active call.
@@ -834,6 +834,31 @@ export interface ContactList {
 
 
 /**
+ * Request model for creating a new message.
+ * @export
+ * @interface CreateMessageRequest
+ */
+export interface CreateMessageRequest {
+    /**
+     * Message UUID
+     * @type {string}
+     * @memberof CreateMessageRequest
+     */
+    'message_id': string;
+    /**
+     * Message role: user, assistant, or system
+     * @type {string}
+     * @memberof CreateMessageRequest
+     */
+    'role': string;
+    /**
+     * Message content (ThreadMessage format)
+     * @type {{ [key: string]: any; }}
+     * @memberof CreateMessageRequest
+     */
+    'content': { [key: string]: any; };
+}
+/**
  * Request model for creating a scheduled group.
  * @export
  * @interface CreateScheduledGroupRequest
@@ -878,6 +903,38 @@ export interface CreateScheduledGroupRequest {
 }
 
 
+/**
+ * Request model for creating a new thread.
+ * @export
+ * @interface CreateThreadRequest
+ */
+export interface CreateThreadRequest {
+    /**
+     * Thread title
+     * @type {string}
+     * @memberof CreateThreadRequest
+     */
+    'title'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CreateThreadRequest
+     */
+    'thread_id'?: string | null;
+}
+/**
+ * Request model for generating a thread title from messages.
+ * @export
+ * @interface GenerateTitleRequest
+ */
+export interface GenerateTitleRequest {
+    /**
+     * Messages to generate title from
+     * @type {Array<{ [key: string]: any; }>}
+     * @memberof GenerateTitleRequest
+     */
+    'messages': Array<{ [key: string]: any; }>;
+}
 /**
  * Goal type enum for scheduled groups.
  * @export
@@ -1118,6 +1175,62 @@ export interface MarkCallCompletedRequest {
      * @memberof MarkCallCompletedRequest
      */
     'completed'?: boolean;
+}
+/**
+ * Response model for list of messages.
+ * @export
+ * @interface MessageListResponse
+ */
+export interface MessageListResponse {
+    /**
+     * List of messages
+     * @type {Array<MessageResponse>}
+     * @memberof MessageListResponse
+     */
+    'messages': Array<MessageResponse>;
+    /**
+     * Total number of messages
+     * @type {number}
+     * @memberof MessageListResponse
+     */
+    'total': number;
+}
+/**
+ * Response model for a single message.
+ * @export
+ * @interface MessageResponse
+ */
+export interface MessageResponse {
+    /**
+     * Message UUID
+     * @type {string}
+     * @memberof MessageResponse
+     */
+    'id': string;
+    /**
+     * Thread UUID
+     * @type {string}
+     * @memberof MessageResponse
+     */
+    'thread_id': string;
+    /**
+     * Message role
+     * @type {string}
+     * @memberof MessageResponse
+     */
+    'role': string;
+    /**
+     * Message content
+     * @type {{ [key: string]: any; }}
+     * @memberof MessageResponse
+     */
+    'content': { [key: string]: any; };
+    /**
+     * When the message was created
+     * @type {string}
+     * @memberof MessageResponse
+     */
+    'created_at': string;
 }
 /**
  * Simple note for mock projects.
@@ -1904,6 +2017,68 @@ export interface StatusId {
 export interface SubStatusId {
 }
 /**
+ * Response model for list of threads.
+ * @export
+ * @interface ThreadListResponse
+ */
+export interface ThreadListResponse {
+    /**
+     * List of threads
+     * @type {Array<ThreadResponse>}
+     * @memberof ThreadListResponse
+     */
+    'threads': Array<ThreadResponse>;
+    /**
+     * Total number of threads
+     * @type {number}
+     * @memberof ThreadListResponse
+     */
+    'total': number;
+}
+/**
+ * Response model for a single thread.
+ * @export
+ * @interface ThreadResponse
+ */
+export interface ThreadResponse {
+    /**
+     * Thread UUID
+     * @type {string}
+     * @memberof ThreadResponse
+     */
+    'id': string;
+    /**
+     * Cognito user ID
+     * @type {string}
+     * @memberof ThreadResponse
+     */
+    'user_id': string;
+    /**
+     * Thread title
+     * @type {string}
+     * @memberof ThreadResponse
+     */
+    'title': string;
+    /**
+     * Whether thread is archived
+     * @type {boolean}
+     * @memberof ThreadResponse
+     */
+    'archived': boolean;
+    /**
+     * When the thread was created
+     * @type {string}
+     * @memberof ThreadResponse
+     */
+    'created_at': string;
+    /**
+     * When the thread was last updated
+     * @type {string}
+     * @memberof ThreadResponse
+     */
+    'updated_at': string;
+}
+/**
  * Provider-agnostic transcript message.
  * @export
  * @interface TranscriptMessage
@@ -1992,6 +2167,19 @@ export interface UpdateScheduledGroupRequest {
 }
 
 
+/**
+ * Request model for updating a thread\'s title.
+ * @export
+ * @interface UpdateThreadTitleRequest
+ */
+export interface UpdateThreadTitleRequest {
+    /**
+     * New thread title
+     * @type {string}
+     * @memberof UpdateThreadTitleRequest
+     */
+    'title': string;
+}
 /**
  * User information.
  * @export
@@ -5251,6 +5439,805 @@ export class ScheduledGroupsApi extends BaseAPI {
      */
     public updateScheduledGroupApiScheduledGroupsGroupIdPut(groupId: number, updateScheduledGroupRequest: UpdateScheduledGroupRequest, options?: RawAxiosRequestConfig) {
         return ScheduledGroupsApiFp(this.configuration).updateScheduledGroupApiScheduledGroupsGroupIdPut(groupId, updateScheduledGroupRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+
+/**
+ * ThreadsApi - axios parameter creator
+ * @export
+ */
+export const ThreadsApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * Archive a thread.  Args:     thread_id: Thread UUID     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     ThreadResponse: The archived thread  Raises:     HTTPException: If thread not found or an error occurs
+         * @summary Archive Thread
+         * @param {string} threadId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        archiveThreadApiThreadsThreadIdArchivePatch: async (threadId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'threadId' is not null or undefined
+            assertParamExists('archiveThreadApiThreadsThreadIdArchivePatch', 'threadId', threadId)
+            const localVarPath = `/api/threads/{thread_id}/archive`
+                .replace(`{${"thread_id"}}`, encodeURIComponent(String(threadId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'PATCH', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Create a new message in a thread.  Args:     thread_id: Thread UUID     request: Request containing message data     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     MessageResponse: The created message  Raises:     HTTPException: If thread not found or an error occurs
+         * @summary Create Message
+         * @param {string} threadId 
+         * @param {CreateMessageRequest} createMessageRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createMessageApiThreadsThreadIdMessagesPost: async (threadId: string, createMessageRequest: CreateMessageRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'threadId' is not null or undefined
+            assertParamExists('createMessageApiThreadsThreadIdMessagesPost', 'threadId', threadId)
+            // verify required parameter 'createMessageRequest' is not null or undefined
+            assertParamExists('createMessageApiThreadsThreadIdMessagesPost', 'createMessageRequest', createMessageRequest)
+            const localVarPath = `/api/threads/{thread_id}/messages`
+                .replace(`{${"thread_id"}}`, encodeURIComponent(String(threadId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(createMessageRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Create a new thread.  Args:     request: Request containing optional thread ID and title     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     ThreadResponse: The created thread  Raises:     HTTPException: If an error occurs creating the thread
+         * @summary Create Thread
+         * @param {CreateThreadRequest} createThreadRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createThreadApiThreadsPost: async (createThreadRequest: CreateThreadRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'createThreadRequest' is not null or undefined
+            assertParamExists('createThreadApiThreadsPost', 'createThreadRequest', createThreadRequest)
+            const localVarPath = `/api/threads`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(createThreadRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Delete a thread and all its messages.  Args:     thread_id: Thread UUID     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Raises:     HTTPException: If thread not found or an error occurs
+         * @summary Delete Thread
+         * @param {string} threadId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        deleteThreadApiThreadsThreadIdDelete: async (threadId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'threadId' is not null or undefined
+            assertParamExists('deleteThreadApiThreadsThreadIdDelete', 'threadId', threadId)
+            const localVarPath = `/api/threads/{thread_id}`
+                .replace(`{${"thread_id"}}`, encodeURIComponent(String(threadId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Generate a title for a thread using AI based on messages.  Returns an SSE stream with the generated title for assistant-ui compatibility.  Args:     thread_id: Thread UUID     request: Request containing messages to generate title from     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     StreamingResponse: SSE stream with generated title  Raises:     HTTPException: If thread not found or an error occurs
+         * @summary Generate Thread Title
+         * @param {string} threadId 
+         * @param {GenerateTitleRequest} generateTitleRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        generateThreadTitleApiThreadsThreadIdGenerateTitlePost: async (threadId: string, generateTitleRequest: GenerateTitleRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'threadId' is not null or undefined
+            assertParamExists('generateThreadTitleApiThreadsThreadIdGenerateTitlePost', 'threadId', threadId)
+            // verify required parameter 'generateTitleRequest' is not null or undefined
+            assertParamExists('generateThreadTitleApiThreadsThreadIdGenerateTitlePost', 'generateTitleRequest', generateTitleRequest)
+            const localVarPath = `/api/threads/{thread_id}/generate-title`
+                .replace(`{${"thread_id"}}`, encodeURIComponent(String(threadId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(generateTitleRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Get all messages for a thread.  Args:     thread_id: Thread UUID     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     MessageListResponse: List of messages ordered by created_at  Raises:     HTTPException: If thread not found or an error occurs
+         * @summary Get Messages
+         * @param {string} threadId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getMessagesApiThreadsThreadIdMessagesGet: async (threadId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'threadId' is not null or undefined
+            assertParamExists('getMessagesApiThreadsThreadIdMessagesGet', 'threadId', threadId)
+            const localVarPath = `/api/threads/{thread_id}/messages`
+                .replace(`{${"thread_id"}}`, encodeURIComponent(String(threadId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Get a specific thread.  Args:     thread_id: Thread UUID     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     ThreadResponse: The thread  Raises:     HTTPException: If thread not found or an error occurs
+         * @summary Get Thread
+         * @param {string} threadId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getThreadApiThreadsThreadIdGet: async (threadId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'threadId' is not null or undefined
+            assertParamExists('getThreadApiThreadsThreadIdGet', 'threadId', threadId)
+            const localVarPath = `/api/threads/{thread_id}`
+                .replace(`{${"thread_id"}}`, encodeURIComponent(String(threadId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * List all threads for the current user.  Args:     include_archived: Whether to include archived threads (default: True)     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     ThreadListResponse: List of threads  Raises:     HTTPException: If an error occurs retrieving threads
+         * @summary List Threads
+         * @param {boolean} [includeArchived] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        listThreadsApiThreadsGet: async (includeArchived?: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/threads`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            if (includeArchived !== undefined) {
+                localVarQueryParameter['include_archived'] = includeArchived;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Unarchive a thread.  Args:     thread_id: Thread UUID     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     ThreadResponse: The unarchived thread  Raises:     HTTPException: If thread not found or an error occurs
+         * @summary Unarchive Thread
+         * @param {string} threadId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        unarchiveThreadApiThreadsThreadIdUnarchivePatch: async (threadId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'threadId' is not null or undefined
+            assertParamExists('unarchiveThreadApiThreadsThreadIdUnarchivePatch', 'threadId', threadId)
+            const localVarPath = `/api/threads/{thread_id}/unarchive`
+                .replace(`{${"thread_id"}}`, encodeURIComponent(String(threadId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'PATCH', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Update a thread\'s title.  Args:     thread_id: Thread UUID     request: Request containing new title     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     ThreadResponse: The updated thread  Raises:     HTTPException: If thread not found or an error occurs
+         * @summary Update Thread Title
+         * @param {string} threadId 
+         * @param {UpdateThreadTitleRequest} updateThreadTitleRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateThreadTitleApiThreadsThreadIdTitlePatch: async (threadId: string, updateThreadTitleRequest: UpdateThreadTitleRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'threadId' is not null or undefined
+            assertParamExists('updateThreadTitleApiThreadsThreadIdTitlePatch', 'threadId', threadId)
+            // verify required parameter 'updateThreadTitleRequest' is not null or undefined
+            assertParamExists('updateThreadTitleApiThreadsThreadIdTitlePatch', 'updateThreadTitleRequest', updateThreadTitleRequest)
+            const localVarPath = `/api/threads/{thread_id}/title`
+                .replace(`{${"thread_id"}}`, encodeURIComponent(String(threadId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'PATCH', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(updateThreadTitleRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * ThreadsApi - functional programming interface
+ * @export
+ */
+export const ThreadsApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = ThreadsApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * Archive a thread.  Args:     thread_id: Thread UUID     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     ThreadResponse: The archived thread  Raises:     HTTPException: If thread not found or an error occurs
+         * @summary Archive Thread
+         * @param {string} threadId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async archiveThreadApiThreadsThreadIdArchivePatch(threadId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ThreadResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.archiveThreadApiThreadsThreadIdArchivePatch(threadId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ThreadsApi.archiveThreadApiThreadsThreadIdArchivePatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Create a new message in a thread.  Args:     thread_id: Thread UUID     request: Request containing message data     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     MessageResponse: The created message  Raises:     HTTPException: If thread not found or an error occurs
+         * @summary Create Message
+         * @param {string} threadId 
+         * @param {CreateMessageRequest} createMessageRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async createMessageApiThreadsThreadIdMessagesPost(threadId: string, createMessageRequest: CreateMessageRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<MessageResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.createMessageApiThreadsThreadIdMessagesPost(threadId, createMessageRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ThreadsApi.createMessageApiThreadsThreadIdMessagesPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Create a new thread.  Args:     request: Request containing optional thread ID and title     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     ThreadResponse: The created thread  Raises:     HTTPException: If an error occurs creating the thread
+         * @summary Create Thread
+         * @param {CreateThreadRequest} createThreadRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async createThreadApiThreadsPost(createThreadRequest: CreateThreadRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ThreadResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.createThreadApiThreadsPost(createThreadRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ThreadsApi.createThreadApiThreadsPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Delete a thread and all its messages.  Args:     thread_id: Thread UUID     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Raises:     HTTPException: If thread not found or an error occurs
+         * @summary Delete Thread
+         * @param {string} threadId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async deleteThreadApiThreadsThreadIdDelete(threadId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.deleteThreadApiThreadsThreadIdDelete(threadId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ThreadsApi.deleteThreadApiThreadsThreadIdDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Generate a title for a thread using AI based on messages.  Returns an SSE stream with the generated title for assistant-ui compatibility.  Args:     thread_id: Thread UUID     request: Request containing messages to generate title from     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     StreamingResponse: SSE stream with generated title  Raises:     HTTPException: If thread not found or an error occurs
+         * @summary Generate Thread Title
+         * @param {string} threadId 
+         * @param {GenerateTitleRequest} generateTitleRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async generateThreadTitleApiThreadsThreadIdGenerateTitlePost(threadId: string, generateTitleRequest: GenerateTitleRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<any>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.generateThreadTitleApiThreadsThreadIdGenerateTitlePost(threadId, generateTitleRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ThreadsApi.generateThreadTitleApiThreadsThreadIdGenerateTitlePost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Get all messages for a thread.  Args:     thread_id: Thread UUID     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     MessageListResponse: List of messages ordered by created_at  Raises:     HTTPException: If thread not found or an error occurs
+         * @summary Get Messages
+         * @param {string} threadId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getMessagesApiThreadsThreadIdMessagesGet(threadId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<MessageListResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getMessagesApiThreadsThreadIdMessagesGet(threadId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ThreadsApi.getMessagesApiThreadsThreadIdMessagesGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Get a specific thread.  Args:     thread_id: Thread UUID     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     ThreadResponse: The thread  Raises:     HTTPException: If thread not found or an error occurs
+         * @summary Get Thread
+         * @param {string} threadId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getThreadApiThreadsThreadIdGet(threadId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ThreadResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getThreadApiThreadsThreadIdGet(threadId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ThreadsApi.getThreadApiThreadsThreadIdGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * List all threads for the current user.  Args:     include_archived: Whether to include archived threads (default: True)     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     ThreadListResponse: List of threads  Raises:     HTTPException: If an error occurs retrieving threads
+         * @summary List Threads
+         * @param {boolean} [includeArchived] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async listThreadsApiThreadsGet(includeArchived?: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ThreadListResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.listThreadsApiThreadsGet(includeArchived, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ThreadsApi.listThreadsApiThreadsGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Unarchive a thread.  Args:     thread_id: Thread UUID     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     ThreadResponse: The unarchived thread  Raises:     HTTPException: If thread not found or an error occurs
+         * @summary Unarchive Thread
+         * @param {string} threadId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async unarchiveThreadApiThreadsThreadIdUnarchivePatch(threadId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ThreadResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.unarchiveThreadApiThreadsThreadIdUnarchivePatch(threadId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ThreadsApi.unarchiveThreadApiThreadsThreadIdUnarchivePatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Update a thread\'s title.  Args:     thread_id: Thread UUID     request: Request containing new title     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     ThreadResponse: The updated thread  Raises:     HTTPException: If thread not found or an error occurs
+         * @summary Update Thread Title
+         * @param {string} threadId 
+         * @param {UpdateThreadTitleRequest} updateThreadTitleRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async updateThreadTitleApiThreadsThreadIdTitlePatch(threadId: string, updateThreadTitleRequest: UpdateThreadTitleRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ThreadResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.updateThreadTitleApiThreadsThreadIdTitlePatch(threadId, updateThreadTitleRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ThreadsApi.updateThreadTitleApiThreadsThreadIdTitlePatch']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+    }
+};
+
+/**
+ * ThreadsApi - factory interface
+ * @export
+ */
+export const ThreadsApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = ThreadsApiFp(configuration)
+    return {
+        /**
+         * Archive a thread.  Args:     thread_id: Thread UUID     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     ThreadResponse: The archived thread  Raises:     HTTPException: If thread not found or an error occurs
+         * @summary Archive Thread
+         * @param {string} threadId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        archiveThreadApiThreadsThreadIdArchivePatch(threadId: string, options?: RawAxiosRequestConfig): AxiosPromise<ThreadResponse> {
+            return localVarFp.archiveThreadApiThreadsThreadIdArchivePatch(threadId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Create a new message in a thread.  Args:     thread_id: Thread UUID     request: Request containing message data     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     MessageResponse: The created message  Raises:     HTTPException: If thread not found or an error occurs
+         * @summary Create Message
+         * @param {string} threadId 
+         * @param {CreateMessageRequest} createMessageRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createMessageApiThreadsThreadIdMessagesPost(threadId: string, createMessageRequest: CreateMessageRequest, options?: RawAxiosRequestConfig): AxiosPromise<MessageResponse> {
+            return localVarFp.createMessageApiThreadsThreadIdMessagesPost(threadId, createMessageRequest, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Create a new thread.  Args:     request: Request containing optional thread ID and title     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     ThreadResponse: The created thread  Raises:     HTTPException: If an error occurs creating the thread
+         * @summary Create Thread
+         * @param {CreateThreadRequest} createThreadRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createThreadApiThreadsPost(createThreadRequest: CreateThreadRequest, options?: RawAxiosRequestConfig): AxiosPromise<ThreadResponse> {
+            return localVarFp.createThreadApiThreadsPost(createThreadRequest, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Delete a thread and all its messages.  Args:     thread_id: Thread UUID     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Raises:     HTTPException: If thread not found or an error occurs
+         * @summary Delete Thread
+         * @param {string} threadId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        deleteThreadApiThreadsThreadIdDelete(threadId: string, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.deleteThreadApiThreadsThreadIdDelete(threadId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Generate a title for a thread using AI based on messages.  Returns an SSE stream with the generated title for assistant-ui compatibility.  Args:     thread_id: Thread UUID     request: Request containing messages to generate title from     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     StreamingResponse: SSE stream with generated title  Raises:     HTTPException: If thread not found or an error occurs
+         * @summary Generate Thread Title
+         * @param {string} threadId 
+         * @param {GenerateTitleRequest} generateTitleRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        generateThreadTitleApiThreadsThreadIdGenerateTitlePost(threadId: string, generateTitleRequest: GenerateTitleRequest, options?: RawAxiosRequestConfig): AxiosPromise<any> {
+            return localVarFp.generateThreadTitleApiThreadsThreadIdGenerateTitlePost(threadId, generateTitleRequest, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Get all messages for a thread.  Args:     thread_id: Thread UUID     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     MessageListResponse: List of messages ordered by created_at  Raises:     HTTPException: If thread not found or an error occurs
+         * @summary Get Messages
+         * @param {string} threadId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getMessagesApiThreadsThreadIdMessagesGet(threadId: string, options?: RawAxiosRequestConfig): AxiosPromise<MessageListResponse> {
+            return localVarFp.getMessagesApiThreadsThreadIdMessagesGet(threadId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Get a specific thread.  Args:     thread_id: Thread UUID     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     ThreadResponse: The thread  Raises:     HTTPException: If thread not found or an error occurs
+         * @summary Get Thread
+         * @param {string} threadId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getThreadApiThreadsThreadIdGet(threadId: string, options?: RawAxiosRequestConfig): AxiosPromise<ThreadResponse> {
+            return localVarFp.getThreadApiThreadsThreadIdGet(threadId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * List all threads for the current user.  Args:     include_archived: Whether to include archived threads (default: True)     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     ThreadListResponse: List of threads  Raises:     HTTPException: If an error occurs retrieving threads
+         * @summary List Threads
+         * @param {boolean} [includeArchived] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        listThreadsApiThreadsGet(includeArchived?: boolean, options?: RawAxiosRequestConfig): AxiosPromise<ThreadListResponse> {
+            return localVarFp.listThreadsApiThreadsGet(includeArchived, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Unarchive a thread.  Args:     thread_id: Thread UUID     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     ThreadResponse: The unarchived thread  Raises:     HTTPException: If thread not found or an error occurs
+         * @summary Unarchive Thread
+         * @param {string} threadId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        unarchiveThreadApiThreadsThreadIdUnarchivePatch(threadId: string, options?: RawAxiosRequestConfig): AxiosPromise<ThreadResponse> {
+            return localVarFp.unarchiveThreadApiThreadsThreadIdUnarchivePatch(threadId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Update a thread\'s title.  Args:     thread_id: Thread UUID     request: Request containing new title     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     ThreadResponse: The updated thread  Raises:     HTTPException: If thread not found or an error occurs
+         * @summary Update Thread Title
+         * @param {string} threadId 
+         * @param {UpdateThreadTitleRequest} updateThreadTitleRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateThreadTitleApiThreadsThreadIdTitlePatch(threadId: string, updateThreadTitleRequest: UpdateThreadTitleRequest, options?: RawAxiosRequestConfig): AxiosPromise<ThreadResponse> {
+            return localVarFp.updateThreadTitleApiThreadsThreadIdTitlePatch(threadId, updateThreadTitleRequest, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * ThreadsApi - object-oriented interface
+ * @export
+ * @class ThreadsApi
+ * @extends {BaseAPI}
+ */
+export class ThreadsApi extends BaseAPI {
+    /**
+     * Archive a thread.  Args:     thread_id: Thread UUID     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     ThreadResponse: The archived thread  Raises:     HTTPException: If thread not found or an error occurs
+     * @summary Archive Thread
+     * @param {string} threadId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ThreadsApi
+     */
+    public archiveThreadApiThreadsThreadIdArchivePatch(threadId: string, options?: RawAxiosRequestConfig) {
+        return ThreadsApiFp(this.configuration).archiveThreadApiThreadsThreadIdArchivePatch(threadId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Create a new message in a thread.  Args:     thread_id: Thread UUID     request: Request containing message data     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     MessageResponse: The created message  Raises:     HTTPException: If thread not found or an error occurs
+     * @summary Create Message
+     * @param {string} threadId 
+     * @param {CreateMessageRequest} createMessageRequest 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ThreadsApi
+     */
+    public createMessageApiThreadsThreadIdMessagesPost(threadId: string, createMessageRequest: CreateMessageRequest, options?: RawAxiosRequestConfig) {
+        return ThreadsApiFp(this.configuration).createMessageApiThreadsThreadIdMessagesPost(threadId, createMessageRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Create a new thread.  Args:     request: Request containing optional thread ID and title     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     ThreadResponse: The created thread  Raises:     HTTPException: If an error occurs creating the thread
+     * @summary Create Thread
+     * @param {CreateThreadRequest} createThreadRequest 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ThreadsApi
+     */
+    public createThreadApiThreadsPost(createThreadRequest: CreateThreadRequest, options?: RawAxiosRequestConfig) {
+        return ThreadsApiFp(this.configuration).createThreadApiThreadsPost(createThreadRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Delete a thread and all its messages.  Args:     thread_id: Thread UUID     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Raises:     HTTPException: If thread not found or an error occurs
+     * @summary Delete Thread
+     * @param {string} threadId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ThreadsApi
+     */
+    public deleteThreadApiThreadsThreadIdDelete(threadId: string, options?: RawAxiosRequestConfig) {
+        return ThreadsApiFp(this.configuration).deleteThreadApiThreadsThreadIdDelete(threadId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Generate a title for a thread using AI based on messages.  Returns an SSE stream with the generated title for assistant-ui compatibility.  Args:     thread_id: Thread UUID     request: Request containing messages to generate title from     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     StreamingResponse: SSE stream with generated title  Raises:     HTTPException: If thread not found or an error occurs
+     * @summary Generate Thread Title
+     * @param {string} threadId 
+     * @param {GenerateTitleRequest} generateTitleRequest 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ThreadsApi
+     */
+    public generateThreadTitleApiThreadsThreadIdGenerateTitlePost(threadId: string, generateTitleRequest: GenerateTitleRequest, options?: RawAxiosRequestConfig) {
+        return ThreadsApiFp(this.configuration).generateThreadTitleApiThreadsThreadIdGenerateTitlePost(threadId, generateTitleRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Get all messages for a thread.  Args:     thread_id: Thread UUID     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     MessageListResponse: List of messages ordered by created_at  Raises:     HTTPException: If thread not found or an error occurs
+     * @summary Get Messages
+     * @param {string} threadId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ThreadsApi
+     */
+    public getMessagesApiThreadsThreadIdMessagesGet(threadId: string, options?: RawAxiosRequestConfig) {
+        return ThreadsApiFp(this.configuration).getMessagesApiThreadsThreadIdMessagesGet(threadId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Get a specific thread.  Args:     thread_id: Thread UUID     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     ThreadResponse: The thread  Raises:     HTTPException: If thread not found or an error occurs
+     * @summary Get Thread
+     * @param {string} threadId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ThreadsApi
+     */
+    public getThreadApiThreadsThreadIdGet(threadId: string, options?: RawAxiosRequestConfig) {
+        return ThreadsApiFp(this.configuration).getThreadApiThreadsThreadIdGet(threadId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * List all threads for the current user.  Args:     include_archived: Whether to include archived threads (default: True)     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     ThreadListResponse: List of threads  Raises:     HTTPException: If an error occurs retrieving threads
+     * @summary List Threads
+     * @param {boolean} [includeArchived] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ThreadsApi
+     */
+    public listThreadsApiThreadsGet(includeArchived?: boolean, options?: RawAxiosRequestConfig) {
+        return ThreadsApiFp(this.configuration).listThreadsApiThreadsGet(includeArchived, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Unarchive a thread.  Args:     thread_id: Thread UUID     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     ThreadResponse: The unarchived thread  Raises:     HTTPException: If thread not found or an error occurs
+     * @summary Unarchive Thread
+     * @param {string} threadId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ThreadsApi
+     */
+    public unarchiveThreadApiThreadsThreadIdUnarchivePatch(threadId: string, options?: RawAxiosRequestConfig) {
+        return ThreadsApiFp(this.configuration).unarchiveThreadApiThreadsThreadIdUnarchivePatch(threadId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Update a thread\'s title.  Args:     thread_id: Thread UUID     request: Request containing new title     current_user: The authenticated user     thread_repository: The thread repository instance from dependency injection  Returns:     ThreadResponse: The updated thread  Raises:     HTTPException: If thread not found or an error occurs
+     * @summary Update Thread Title
+     * @param {string} threadId 
+     * @param {UpdateThreadTitleRequest} updateThreadTitleRequest 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ThreadsApi
+     */
+    public updateThreadTitleApiThreadsThreadIdTitlePatch(threadId: string, updateThreadTitleRequest: UpdateThreadTitleRequest, options?: RawAxiosRequestConfig) {
+        return ThreadsApiFp(this.configuration).updateThreadTitleApiThreadsThreadIdTitlePatch(threadId, updateThreadTitleRequest, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
