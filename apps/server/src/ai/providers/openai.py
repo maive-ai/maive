@@ -502,15 +502,17 @@ class OpenAIProvider(AIProvider):
         self,
         annotation: dict | AnnotationURLCitation,
         client: AsyncOpenAI,
+        vector_store_ids: list[str] | None = None,
     ) -> SearchCitation | None:
         """Parse an annotation event into a SearchCitation.
 
         Args:
             annotation: The annotation from OpenAI (dict or object)
             client: OpenAI client for fetching file metadata
+            vector_store_ids: Optional vector store IDs to retrieve file attributes
 
         Returns:
-            SearchCitation if it's a web citation, None if it's a file citation or unknown
+            SearchCitation with source URL (for both web and file citations), None if unknown
         """
         try:
             # Handle dict format annotations
@@ -529,7 +531,7 @@ class OpenAIProvider(AIProvider):
                     )
 
                 elif ann_type == "file_citation":
-                    # Log RAG file hits for debugging (don't expose to user)
+                    # Parse file citation and retrieve source URL from metadata
                     file_id = annotation.get("file_citation", {}).get(
                         "file_id"
                     ) or annotation.get("file_id")
@@ -538,25 +540,65 @@ class OpenAIProvider(AIProvider):
                     )
 
                     if file_id:
-                        # Try to fetch file metadata for logging
+                        # Try to fetch file metadata and attributes from vector store
                         filename = None
+                        source_url = None
+                        document_title = None
+
                         try:
                             meta = await client.files.retrieve(file_id)
                             filename = getattr(meta, "filename", None)
+
+                            # Retrieve attributes from vector store to get source_url
+                            if vector_store_ids:
+                                for vs_id in vector_store_ids:
+                                    try:
+                                        vs_file = await client.vector_stores.files.retrieve(
+                                            vector_store_id=vs_id,
+                                            file_id=file_id,
+                                        )
+                                        attrs = getattr(vs_file, "attributes", None) or {}
+                                        if isinstance(attrs, dict):
+                                            source_url = attrs.get("source_url")
+                                            document_title = attrs.get("document_title")
+                                            if source_url:
+                                                break  # Found it, stop searching
+                                    except Exception:
+                                        # File not in this vector store, try next
+                                        continue
+
                             logger.debug(
                                 "[OPENAI] RAG file cited",
                                 file_id=file_id,
                                 file_name=filename,
                                 quoted=quoted_text[:100],
+                                source_url=source_url,
                             )
+
+                            # Return citation with source URL if available
+                            if source_url:
+                                return SearchCitation(
+                                    url=source_url,
+                                    title=document_title or filename,
+                                    snippet=quoted_text[:200] if quoted_text else None,
+                                    accessed_at=None,
+                                )
+                            else:
+                                # No source URL available, skip this citation
+                                logger.debug(
+                                    "[OPENAI] No source_url for file, skipping citation",
+                                    file_id=file_id,
+                                )
+                                return None
+
                         except Exception as e:
                             logger.debug(
                                 "[OPENAI] Failed to retrieve file metadata",
                                 file_id=file_id,
                                 error=str(e),
                             )
+                            return None
 
-                    # Don't expose file citations to users - they're internal RAG files
                     return None
                 else:
                     logger.debug(
@@ -1195,9 +1237,10 @@ class OpenAIProvider(AIProvider):
                         citation = await self._parse_annotation_to_citation(
                             annotation=event.annotation,
                             client=client,
+                            vector_store_ids=vector_store_ids,
                         )
 
-                        # Add citation if it's a web citation (file citations return None)
+                        # Add citation if it has a source URL (web or file with source_url)
                         if citation:
                             citations.append(citation)
 
