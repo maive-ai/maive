@@ -304,3 +304,36 @@ class CallRepository:
             list[Call]: List of call records for the project
         """
         return await self.get_call_history(project_id=project_id, limit=limit)
+
+    async def update_call_recording(
+        self, call_id: str, recording_url: str
+    ) -> Call | None:
+        """
+        Update call with recording URL.
+
+        Args:
+            call_id: Provider call ID
+            recording_url: URL to the call recording
+
+        Returns:
+            Call | None: Updated call record if found, None otherwise
+        """
+        call = await self.get_call_by_call_id(call_id)
+        if not call:
+            logger.warning(
+                "[CallRepository] Cannot update recording: call not found",
+                call_id=call_id,
+            )
+            return None
+
+        call.recording_url = recording_url
+        call.updated_at = datetime.now(UTC)
+
+        await self.session.flush()
+        await self.session.refresh(call)
+
+        logger.info(
+            "[CallRepository] Updated call recording",
+            call_id=call_id,
+        )
+        return call

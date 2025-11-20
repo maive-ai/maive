@@ -62,6 +62,9 @@ class Call(Base):
     listen_url: Mapped[str | None] = mapped_column(
         Text, nullable=True, comment="WebSocket URL for listening to call"
     )
+    recording_url: Mapped[str | None] = mapped_column(
+        Text, nullable=True, comment="URL to the call recording"
+    )
 
     # Timestamps
     started_at: Mapped[datetime] = mapped_column(
@@ -140,6 +143,7 @@ class Call(Base):
             "phone_number": self.phone_number,
             "is_active": self.is_active,
             "listen_url": self.listen_url,
+            "recording_url": self.recording_url,
             "started_at": self.started_at.isoformat() if self.started_at else None,
             "ended_at": self.ended_at.isoformat() if self.ended_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
