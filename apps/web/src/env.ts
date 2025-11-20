@@ -80,6 +80,17 @@ export const envSchema = v.object({
   ),
 
   /**
+   * Feature flag to enable/disable schedule functionality
+   */
+  PUBLIC_ENABLE_SCHEDULE: v.optional(
+    v.pipe(
+      v.string(),
+      v.transform((s) => s.toLowerCase() === 'true'),
+    ),
+    'false',
+  ),
+
+  /**
    * PostHog API key for analytics
    */
   PUBLIC_POSTHOG_KEY: v.string(),
