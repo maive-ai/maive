@@ -1,4 +1,4 @@
-import { Home, Info, PhoneOff, ShieldCheck, Trash2 } from 'lucide-react';
+import { Home, Pause, PhoneOff, Play, ShieldCheck, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { isValidPhoneNumber } from 'react-phone-number-input';
 
@@ -7,7 +7,6 @@ import { useCallList, useRemoveFromCallList } from '@/clients/callList';
 import { useFetchProjects } from '@/clients/crm';
 import { useCallAndWriteToCrm } from '@/clients/workflows';
 import { ExpandedCallCard } from '@/components/ExpandedCallCard';
-import { PowerDialerControl } from '@/components/PowerDialerControl';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,12 +19,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog';
 import {
   Empty,
   EmptyDescription,
@@ -41,7 +34,6 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
   SheetTitle
 } from '@/components/ui/sheet';
 import { Spinner } from '@/components/ui/spinner';
@@ -82,7 +74,6 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
       }
     }
   }, [callListData, projectsData, isLoadingProjects, removeFromCallList]);
-  const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
   const [removingProjectId, setRemovingProjectId] = useState<string | null>(
     null,
   );
@@ -323,33 +314,47 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[400px] sm:w-[540px] bg-white [&>button]:hidden">
-        <SheetHeader className="pb-4">
-          <div className="flex items-center gap-2">
-            <SheetTitle>Call List</SheetTitle>
-            <button
-              onClick={() => setIsInfoDialogOpen(true)}
-              className="p-1 rounded-full hover:bg-gray-100 transition-colors"
-              aria-label="Call list information"
-            >
-              <Info className="size-4 text-gray-500" />
-            </button>
-          </div>
-        </SheetHeader>
+        {/* Centered Start Dialing button */}
+        <div className="flex justify-center pt-4 pb-4">
+          <Button
+            onClick={handleToggleDialer}
+            disabled={
+              isLoadingCallList ||
+              isLoadingProjects ||
+              callAndWriteToCrmMutation.isPending ||
+              callListItems.length === 0
+            }
+            size="sm"
+            variant={isDialerActive ? 'destructive' : 'default'}
+            className="gap-2"
+          >
+            {isDialerActive ? (
+              <>
+                <Pause className="size-4" />
+                Stop Dialing
+              </>
+            ) : (
+              <>
+                <Play className="size-4" />
+                Start Dialing
+              </>
+            )}
+          </Button>
+        </div>
 
-        {/* Power Dialer Control */}
-        <PowerDialerControl
-          isActive={isDialerActive}
-          onToggle={handleToggleDialer}
-          currentIndex={currentDialingIndex}
-          totalContacts={callListItems.length}
-          disabled={
-            isLoadingCallList ||
-            isLoadingProjects ||
-            callAndWriteToCrmMutation.isPending
-          }
-        />
+        {/* Call List Title and Count - Aligned with card edges */}
+        <div className="px-2 pb-3 flex items-baseline justify-between">
+          <SheetTitle className="text-base font-semibold">Call List</SheetTitle>
+          <p className="text-sm text-gray-500">
+            {callListItems.length === 0
+              ? 'No contacts'
+              : isDialerActive
+                ? `Calling ${currentDialingIndex + 1} of ${callListItems.length}`
+                : `${callListItems.length} contact${callListItems.length !== 1 ? 's' : ''} ready`}
+          </p>
+        </div>
 
-        <div className="mt-6 flex flex-col h-[calc(100vh-220px)]">
+        <div className="flex flex-col h-[calc(100vh-170px)]">
           {/* Call list items */}
           <div className="flex-1 overflow-y-auto px-2">
             {isLoadingCallList || isLoadingProjects ? (
@@ -491,15 +496,6 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
           </div>
         </div>
       </SheetContent>
-
-      {/* Info Dialog */}
-      <Dialog open={isInfoDialogOpen} onOpenChange={setIsInfoDialogOpen}>
-        <DialogContent className="bg-white">
-          <DialogHeader>
-            <DialogTitle>Call List Information</DialogTitle>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
