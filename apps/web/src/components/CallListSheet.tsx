@@ -1,4 +1,4 @@
-import { Info, PhoneOff, X } from 'lucide-react';
+import { Home, Info, PhoneOff, ShieldCheck, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { isValidPhoneNumber } from 'react-phone-number-input';
 
@@ -8,6 +8,16 @@ import { useFetchProjects } from '@/clients/crm';
 import { useCallAndWriteToCrm } from '@/clients/workflows';
 import { ExpandedCallCard } from '@/components/ExpandedCallCard';
 import { PowerDialerControl } from '@/components/PowerDialerControl';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,11 +35,8 @@ import {
 } from '@/components/ui/empty';
 import {
   Item,
-  ItemContent,
   ItemGroup,
-  ItemHeader,
-  ItemSeparator,
-  ItemTitle
+  ItemHeader
 } from '@/components/ui/item';
 import {
   Sheet,
@@ -79,6 +86,8 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   const [removingProjectId, setRemovingProjectId] = useState<string | null>(
     null,
   );
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
 
   // Power dialer state
   const [isDialerActive, setIsDialerActive] = useState(false);
@@ -108,8 +117,17 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   );
 
   const handleRemove = (projectId: string) => {
-    setRemovingProjectId(projectId);
-    removeFromCallList.mutate(projectId);
+    setProjectToDelete(projectId);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (projectToDelete) {
+      setRemovingProjectId(projectToDelete);
+      removeFromCallList.mutate(projectToDelete);
+      setDeleteDialogOpen(false);
+      setProjectToDelete(null);
+    }
   };
 
   // Poll for active call status
@@ -304,7 +322,7 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[400px] sm:w-[540px] bg-white">
+      <SheetContent side="right" className="w-[400px] sm:w-[540px] bg-white [&>button]:hidden">
         <SheetHeader className="pb-4">
           <div className="flex items-center gap-2">
             <SheetTitle>Call List</SheetTitle>
@@ -394,8 +412,7 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
                     isDialerActive && index === currentDialingIndex;
 
                   return (
-                    <div key={item.id}>
-                      {index > 0 && <ItemSeparator />}
+                    <div key={item.id} className="mb-3">
                       {isExpanded ? (
                         <ExpandedCallCard
                           adjusterName={adjusterName}
@@ -413,7 +430,7 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
                           isEndingCall={endCallMutation.isPending}
                         />
                       ) : (
-                        <Item variant="default" className="relative">
+                        <Item variant="outline" className="relative rounded-lg">
                           {/* Header with status badge and remove button */}
                           <ItemHeader>
                             <Badge
@@ -424,24 +441,39 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
                             <button
                               onClick={() => handleRemove(item.project_id)}
                               disabled={removingProjectId === item.project_id}
-                              className="p-1 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="p-1 rounded-full hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               aria-label="Remove from call list"
                             >
                               {removingProjectId === item.project_id ? (
                                 <Spinner className="size-4 text-gray-400" />
                               ) : (
-                                <X className="size-4 text-gray-400 hover:text-gray-600" />
+                                <Trash2 className="size-4 text-gray-500 hover:text-red-600" />
                               )}
                             </button>
                           </ItemHeader>
 
-                          {/* Main content - compact layout */}
-                          <ItemContent>
-                            <ItemTitle>{adjusterName}</ItemTitle>
-                            <div className="text-sm text-gray-600">
-                              {customerName}
+                          {/* Main content - two columns */}
+                          <div className="w-full grid grid-cols-2 gap-4 pt-2">
+                            {/* Left: Homeowner */}
+                            <div className="flex items-center gap-2">
+                              <Home className="size-4 text-gray-400 shrink-0" />
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">
+                                  {customerName}
+                                </p>
+                              </div>
                             </div>
-                          </ItemContent>
+
+                            {/* Right: Adjuster */}
+                            <div className="flex items-center gap-2">
+                              <ShieldCheck className="size-4 text-gray-400 shrink-0" />
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">
+                                  {adjusterName}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
                         </Item>
                       )}
                     </div>
@@ -468,6 +500,28 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
           </DialogHeader>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove from call list?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove this project from your call list. You can add it
+              back later if needed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 }
