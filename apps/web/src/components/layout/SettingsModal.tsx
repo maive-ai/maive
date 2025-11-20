@@ -1,5 +1,10 @@
-import { useAuth } from '@/auth';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { Code, Phone, Unplug } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+import { useIsMaiveUser } from '@/auth';
 import { CRMCredentialsSettings } from '@/components/settings/CRMCredentialsSettings';
+import { TwilioConfigSettings } from '@/components/settings/TwilioConfigSettings';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -9,9 +14,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { Code, Unplug } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
 
 
 interface SettingsModalProps {
@@ -19,17 +21,12 @@ interface SettingsModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type SettingsTab = 'crm' | 'developer';
+type SettingsTab = 'crm' | 'twilio' | 'developer';
 
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
-  const { user } = useAuth();
+  const isMaiveUser = useIsMaiveUser();
   const [activeTab, setActiveTab] = useState<SettingsTab>('crm');
   const [companyName, setCompanyName] = useState<string>('');
-
-  // Check if user is from maive.ai domain
-  const isMaiveUser = useMemo(() => {
-    return user?.email?.endsWith('@maive.ai') ?? false;
-  }, [user]);
 
   useEffect(() => {
     const savedCompanyName = localStorage.getItem('companyName');
@@ -72,6 +69,20 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
               {isMaiveUser && (
                 <button
+                  onClick={() => setActiveTab('twilio')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    activeTab === 'twilio'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  }`}
+                >
+                  <Phone className="h-4 w-4" />
+                  Twilio Phone
+                </button>
+              )}
+
+              {isMaiveUser && (
+                <button
                   onClick={() => setActiveTab('developer')}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                     activeTab === 'developer'
@@ -89,6 +100,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             <div className="flex-1 overflow-y-auto p-6">
               {activeTab === 'crm' && (
                 <CRMCredentialsSettings onSuccess={() => onOpenChange(false)} />
+              )}
+
+              {activeTab === 'twilio' && (
+                <TwilioConfigSettings onSuccess={() => onOpenChange(false)} />
               )}
 
               {activeTab === 'developer' && (
