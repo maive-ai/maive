@@ -85,5 +85,12 @@ export const navItems: NavItem[] = allNavItems.filter((item) => {
     }
   }
 
+  // Filter out schedule if schedule is disabled
+  if (!env.PUBLIC_ENABLE_SCHEDULE) {
+    if (item.label === 'Schedule') {
+      return false;
+    }
+  }
+
   return true;
 });
