@@ -35,8 +35,8 @@ export function useCallAudioStream(listenUrl: string | null) {
   - Flush Time: 150
   - FFT Size: 256
   */
- // Good settings for a speech-to-speech agent
- /*
+  // Good settings for a speech-to-speech agent
+  /*
  - Input Codec: Int16
  - Channels: 1
  - Sample Rate: 48000
@@ -77,13 +77,21 @@ export function useCallAudioStream(listenUrl: string | null) {
 
       // Log every 100th message to track data flow without spamming
       if (messageCountRef.current % 100 === 0) {
-        console.log('[Audio Stream] Received messages:', messageCountRef.current,
-                   'Latest size:', event.data.byteLength, 'bytes');
+        console.log(
+          '[Audio Stream] Received messages:',
+          messageCountRef.current,
+          'Latest size:',
+          event.data.byteLength,
+          'bytes',
+        );
       }
 
       playerRef.current?.feed(event.data);
     } else {
-      console.warn('[Audio Stream] Received non-ArrayBuffer message:', typeof event.data);
+      console.warn(
+        '[Audio Stream] Received non-ArrayBuffer message:',
+        typeof event.data,
+      );
     }
   };
 
@@ -94,10 +102,14 @@ export function useCallAudioStream(listenUrl: string | null) {
       const ws = wsRef.current;
 
       if (ws && ws.readyState === WebSocket.OPEN) {
-        if (timeSinceLastMessage > 10000) { // 10 seconds without data
-          console.warn('[Audio Stream] No audio data received for',
-                      Math.round(timeSinceLastMessage / 1000),
-                      'seconds. WebSocket state:', ws.readyState);
+        if (timeSinceLastMessage > 10000) {
+          // 10 seconds without data
+          console.warn(
+            '[Audio Stream] No audio data received for',
+            Math.round(timeSinceLastMessage / 1000),
+            'seconds. WebSocket state:',
+            ws.readyState,
+          );
         }
       }
     }, 5000);
@@ -126,11 +138,17 @@ export function useCallAudioStream(listenUrl: string | null) {
   };
 
   const handleWebSocketClose = (event: CloseEvent): void => {
-    console.log('[Audio Stream] WebSocket closed',
-               'Code:', event.code,
-               'Reason:', event.reason || 'none',
-               'Clean:', event.wasClean,
-               'Total messages received:', messageCountRef.current);
+    console.log(
+      '[Audio Stream] WebSocket closed',
+      'Code:',
+      event.code,
+      'Reason:',
+      event.reason || 'none',
+      'Clean:',
+      event.wasClean,
+      'Total messages received:',
+      messageCountRef.current,
+    );
     isConnectingRef.current = false;
     stopHealthCheck();
     stopVolumeMonitoring();
@@ -161,13 +179,18 @@ export function useCallAudioStream(listenUrl: string | null) {
       const readyState = wsRef.current.readyState;
       // WebSocket.CLOSED (3) or WebSocket.CLOSING (2) - clean it up and reconnect
       if (readyState === WebSocket.CLOSED || readyState === WebSocket.CLOSING) {
-        console.log('[Audio Stream] Cleaning up stale WebSocket before reconnecting');
+        console.log(
+          '[Audio Stream] Cleaning up stale WebSocket before reconnecting',
+        );
         disconnect();
       } else {
         // WebSocket.CONNECTING (0) or WebSocket.OPEN (1) - don't interrupt
-        console.warn('[Audio Stream] Cannot connect: WebSocket already active', {
-          readyState,
-        });
+        console.warn(
+          '[Audio Stream] Cannot connect: WebSocket already active',
+          {
+            readyState,
+          },
+        );
         return;
       }
     }
@@ -245,7 +268,10 @@ export function useCallAudioStream(listenUrl: string | null) {
   };
 
   const disconnect = () => {
-    console.log('[Audio Stream] Disconnecting... Total messages received:', messageCountRef.current);
+    console.log(
+      '[Audio Stream] Disconnecting... Total messages received:',
+      messageCountRef.current,
+    );
     stopHealthCheck();
     stopVolumeMonitoring();
     cleanupWebSocket();
