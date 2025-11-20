@@ -9,6 +9,7 @@ from http import HTTPStatus
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from src.ai.voice_ai.config import get_voice_ai_settings
 from src.ai.voice_ai.constants import VoiceAIErrorCode
 from src.ai.voice_ai.dependencies import get_voice_ai_service
 from src.ai.voice_ai.providers.twilio.router import router as twilio_router
@@ -16,6 +17,7 @@ from src.ai.voice_ai.schemas import (
     ActiveCallResponse,
     CallResponse,
     VoiceAIErrorResponse,
+    VoiceAIProviderResponse,
 )
 from src.ai.voice_ai.service import VoiceAIService
 from src.auth.dependencies import get_current_user
@@ -27,6 +29,18 @@ router = APIRouter(prefix="/voice-ai", tags=["Voice AI"])
 
 # Include Twilio provider-specific router
 router.include_router(twilio_router)
+
+
+@router.get("/provider", response_model=VoiceAIProviderResponse)
+async def get_provider() -> VoiceAIProviderResponse:
+    """
+    Get the configured Voice AI provider.
+
+    Returns:
+        VoiceAIProviderResponse: Provider configuration
+    """
+    settings = get_voice_ai_settings()
+    return VoiceAIProviderResponse(provider=settings.provider.value)
 
 
 @router.get("/calls/active", response_model=ActiveCallResponse | None)

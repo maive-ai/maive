@@ -111,3 +111,33 @@ class TwilioVoiceClient:
             Updated CallInstance with status 'completed'
         """
         return await self.update_call(call_sid, status="completed")
+
+    async def create_conference_call(
+        self,
+        to: str,
+        from_: str,
+        conference_url: str,
+        recording_callback: str,
+        status_callback: str,
+    ) -> CallInstance:
+        """
+        Create a call that joins a conference with recording.
+
+        Args:
+            to: Phone number to call
+            from_: Twilio phone number to call from
+            conference_url: TwiML URL for conference join
+            recording_callback: URL for recording status
+            status_callback: URL for call status
+
+        Returns:
+            CallInstance from Twilio SDK
+        """
+        return await self.create_call(
+            to=to,
+            from_=from_,
+            url=conference_url,
+            record=True,
+            recording_status_callback=recording_callback,
+            status_callback=status_callback,
+        )

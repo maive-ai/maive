@@ -12,7 +12,9 @@ from twilio.jwt.access_token import AccessToken
 from twilio.jwt.access_token.grants import VoiceGrant
 from twilio.twiml.voice_response import VoiceResponse
 
-from src.ai.voice_ai.providers.twilio.config import TwilioGlobalConfig
+from src.ai.voice_ai.providers.twilio.client import TwilioVoiceClient
+from src.ai.voice_ai.providers.twilio.config import TwilioGlobalConfig, TwilioWebhooks
+from src.ai.voice_ai.providers.twilio.dependencies import get_twilio_voice_client
 from src.ai.voice_ai.providers.twilio.provider import map_twilio_status
 from src.auth.dependencies import get_current_user
 from src.auth.schemas import User
@@ -36,6 +38,83 @@ async def status_webhook(
 
     await call_repository.update_call_status(call_id=CallSid, status=internal_status)
     await call_repository.session.commit()
+
+    return Response(status_code=HTTPStatus.OK)
+
+
+@router.post("/webhooks/bridge", include_in_schema=False)
+async def bridge_webhook(
+    CallSid: str = Form(...),
+    CallStatus: str = Form(...),
+    call_repository: CallRepository = Depends(get_call_repository),
+    twilio_client: TwilioVoiceClient = Depends(get_twilio_voice_client),
+) -> Response:
+    """
+    Handle browser call answered - create customer call to bridge them.
+
+    When browser answers, this webhook creates the customer call
+    and bridges both into the same conference.
+    """
+    logger.info("[TWILIO] Bridge webhook", call_sid=CallSid, status=CallStatus)
+
+    # Only proceed if browser answered
+    if CallStatus != "in-progress":
+        logger.info(
+            "[TWILIO] Bridge webhook - browser not answered yet",
+            call_sid=CallSid,
+            status=CallStatus,
+        )
+        return Response(status_code=HTTPStatus.OK)
+
+    # Fetch call from database to get conference and customer info
+    call = await call_repository.get_call_by_call_id(CallSid)
+    if not call:
+        logger.warning("[TWILIO] Bridge webhook - call not found", call_sid=CallSid)
+        return Response(status_code=HTTPStatus.OK)
+
+    # Extract conference and customer phone from provider_data
+    if not call.provider_data:
+        logger.warning("[TWILIO] Bridge webhook - no provider_data", call_sid=CallSid)
+        return Response(status_code=HTTPStatus.OK)
+
+    conference_name = call.provider_data.get("conference_name")
+    customer_phone = call.provider_data.get("customer_phone")
+    user_phone = call.provider_data.get("user_phone")
+
+    if not all([conference_name, customer_phone, user_phone]):
+        logger.warning(
+            "[TWILIO] Bridge webhook - missing required info", call_sid=CallSid
+        )
+        return Response(status_code=HTTPStatus.OK)
+
+    # Create customer call to join conference
+    try:
+        webhooks = TwilioWebhooks()
+
+        customer_call = await twilio_client.create_conference_call(
+            to=customer_phone,
+            from_=user_phone,
+            conference_url=webhooks.twiml_url(conference_name),
+            recording_callback=webhooks.recording_status_callback,
+            status_callback=webhooks.status_callback,
+        )
+
+        logger.info(
+            "[TWILIO] Customer call created for bridge",
+            customer_call_sid=customer_call.sid,
+            browser_call_sid=CallSid,
+        )
+
+        # Update call record with customer call SID
+        call.provider_data["customer_call_sid"] = customer_call.sid
+        await call_repository.session.commit()
+
+    except Exception as e:
+        logger.error(
+            "[TWILIO] Failed to bridge customer call",
+            browser_call_sid=CallSid,
+            error=str(e),
+        )
 
     return Response(status_code=HTTPStatus.OK)
 

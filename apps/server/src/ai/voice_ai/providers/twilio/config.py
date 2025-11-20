@@ -46,6 +46,11 @@ class TwilioWebhooks:
         """URL for recording availability."""
         return f"{self._base_url}/api/voice-ai/twilio/webhooks/recording"
 
+    @property
+    def bridge_callback(self) -> str:
+        """URL for bridge callback when browser answers."""
+        return f"{self._base_url}/api/voice-ai/twilio/webhooks/bridge"
+
     def twiml_url(self, conference_name: str = "default") -> str:
         """
         Get TwiML URL for joining a conference.
