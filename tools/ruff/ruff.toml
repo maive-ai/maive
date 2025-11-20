@@ -1,0 +1,27 @@
+# Shared Ruff configuration for all Python projects in the monorepo
+# Target Python version for lint rules
+target-version = "py313"
+
+# Exclude build and virtual-env dirs
+exclude = [
+  ".git",
+  "__pycache__",
+  ".venv",
+  "build",
+  "dist",
+]
+
+# Enable import sorting rules (isort)
+[lint]
+select = [
+  "I",  # isort - import sorting
+]
+
+# Ignore specific rules
+extend-ignore = [
+  "B008",  # Do not perform function call in argument defaults (FastAPI Depends)
+]
+
+# Configure import sorting behavior
+[lint.isort]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]

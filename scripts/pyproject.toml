@@ -9,3 +9,8 @@ dependencies = [
     "playwright>=1.55.0",
     "playwright-stealth>=2.0.0",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.8.6",
+]

@@ -31,16 +31,28 @@ interface CallListSheetProps {
 
 export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   const { data: callListData, isLoading: isLoadingCallList } = useCallList();
-  const { data: projectsData, isLoading: isLoadingProjects } = useFetchProjects();
+  const { data: projectsData, isLoading: isLoadingProjects } =
+    useFetchProjects();
   const removeFromCallList = useRemoveFromCallList();
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
-  const [removingProjectId, setRemovingProjectId] = useState<string | null>(null);
+  const [removingProjectId, setRemovingProjectId] = useState<string | null>(
+    null,
+  );
 
-  const callListItems = useMemo(() => callListData?.items || [], [callListData?.items]);
-  const projects = useMemo(() => projectsData?.projects || [], [projectsData?.projects]);
+  const callListItems = useMemo(
+    () => callListData?.items || [],
+    [callListData?.items],
+  );
+  const projects = useMemo(
+    () => projectsData?.projects || [],
+    [projectsData?.projects],
+  );
 
   // Create a map of project IDs to projects for quick lookup
-  const projectMap = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
+  const projectMap = useMemo(
+    () => new Map(projects.map((p) => [p.id, p])),
+    [projects],
+  );
 
   const handleRemove = (projectId: string) => {
     setRemovingProjectId(projectId);
@@ -49,7 +61,10 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
 
   // Clear removing state when the item is actually gone from the list
   useEffect(() => {
-    if (removingProjectId && !callListItems.some(item => item.project_id === removingProjectId)) {
+    if (
+      removingProjectId &&
+      !callListItems.some((item) => item.project_id === removingProjectId)
+    ) {
       setRemovingProjectId(null);
     }
   }, [removingProjectId, callListItems]);
@@ -68,9 +83,7 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
               <Info className="size-4 text-gray-500" />
             </button>
           </div>
-          <SheetDescription>
-            Projects queued for batch calling
-          </SheetDescription>
+          <SheetDescription>Projects queued for batch calling</SheetDescription>
         </SheetHeader>
 
         <div className="mt-6 flex flex-col h-[calc(100vh-140px)]">
@@ -80,7 +93,9 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
               <div className="flex flex-col items-center justify-center py-12 gap-3">
                 <Spinner className="size-8 text-gray-400" />
                 <p className="text-gray-500">
-                  {isLoadingProjects ? 'Loading projects...' : 'Loading call list...'}
+                  {isLoadingProjects
+                    ? 'Loading projects...'
+                    : 'Loading call list...'}
                 </p>
               </div>
             ) : callListItems.length === 0 ? (
@@ -109,7 +124,9 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
                   <Card key={item.id} className="p-5 shadow-sm">
                     {/* Top row: Badge and close button */}
                     <div className="flex justify-between items-center mb-2">
-                      <Badge className={`${getStatusColor(project.status)} pointer-events-none`}>
+                      <Badge
+                        className={`${getStatusColor(project.status)} pointer-events-none`}
+                      >
                         {project.status}
                       </Badge>
                       <button
@@ -141,7 +158,9 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
                         <p className="text-sm font-semibold text-gray-700">
                           Phone
                         </p>
-                        <p className="text-sm text-gray-900">{formatPhoneNumber(adjusterPhone)}</p>
+                        <p className="text-sm text-gray-900">
+                          {formatPhoneNumber(adjusterPhone)}
+                        </p>
                       </div>
                     </div>
                   </Card>
@@ -153,10 +172,8 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
           {/* Actions */}
           <div className="pt-6 mt-6 px-4 space-y-4 border-t">
             {/* AutoDialer */}
-            {callListItems.length > 0 && (
-              <AutoDialer />
-            )}
-            
+            {callListItems.length > 0 && <AutoDialer />}
+
             <Button
               onClick={() => onOpenChange(false)}
               variant="outline"

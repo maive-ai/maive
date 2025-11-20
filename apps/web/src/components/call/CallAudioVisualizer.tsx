@@ -11,21 +11,30 @@ interface CallAudioVisualizerProps {
   onDisconnect?: () => void;
 }
 
-export function CallAudioVisualizer({ listenUrl, callStatus, onDisconnect }: CallAudioVisualizerProps) {
-  const { volumeLevel, isConnected, error, connect, disconnect } = useCallAudioStream(listenUrl);
+export function CallAudioVisualizer({
+  listenUrl,
+  callStatus,
+  onDisconnect,
+}: CallAudioVisualizerProps) {
+  const { volumeLevel, isConnected, error, connect, disconnect } =
+    useCallAudioStream(listenUrl);
   const [bars, setBars] = useState(Array(50).fill(5));
-  
+
   // Only allow connection when call is actually in progress
   const canConnect = callStatus === 'in_progress';
-  
+
   const updateBars = useCallback((volume: number) => {
-    setBars(Array(50).fill(0).map(() => Math.random() * volume * 150));
+    setBars(
+      Array(50)
+        .fill(0)
+        .map(() => Math.random() * volume * 150),
+    );
   }, []);
-  
+
   const resetBars = useCallback(() => {
     setBars(Array(50).fill(5));
   }, []);
-  
+
   // Update bars based on volume level
   useEffect(() => {
     if (isConnected) {
@@ -34,31 +43,43 @@ export function CallAudioVisualizer({ listenUrl, callStatus, onDisconnect }: Cal
       resetBars();
     }
   }, [volumeLevel, isConnected, updateBars, resetBars]);
-  
+
   // Auto-disconnect when listenUrl is removed
   useEffect(() => {
     if (!listenUrl && isConnected) {
       disconnect();
     }
   }, [listenUrl, isConnected, disconnect]);
-  
+
   const handleToggle = () => {
+    console.log('[CallAudioVisualizer] Toggle clicked', {
+      isConnected,
+      canConnect,
+      callStatus,
+      listenUrl,
+    });
+
     if (isConnected) {
+      console.log('[CallAudioVisualizer] Disconnecting...');
       disconnect();
       onDisconnect?.();
     } else if (canConnect) {
+      console.log('[CallAudioVisualizer] Connecting...');
       connect();
+    } else {
+      console.warn('[CallAudioVisualizer] Cannot connect - conditions not met');
     }
   };
-  
+
   const micPulseAnimation = {
     scale: [1, 1.2, 1],
     opacity: [1, 0.8, 1],
-    transition: { duration: 0.8, repeat: Infinity }
+    transition: { duration: 0.8, repeat: Infinity },
   };
-  
-  if (!listenUrl) return null;
-  
+
+  // Only show the component when call is in progress and we have a listen URL
+  if (!listenUrl || callStatus !== 'in_progress') return null;
+
   return (
     <div className="border-t pt-4">
       <div className="flex flex-col items-center justify-center p-6 rounded">
@@ -71,7 +92,12 @@ export function CallAudioVisualizer({ listenUrl, callStatus, onDisconnect }: Cal
               exit={{ opacity: 0, scale: 0.8 }}
               transition={{ duration: 0.5 }}
             >
-              <svg width="100%" height="100%" viewBox="0 0 1000 200" preserveAspectRatio="xMidYMid meet">
+              <svg
+                width="100%"
+                height="100%"
+                viewBox="0 0 1000 200"
+                preserveAspectRatio="xMidYMid meet"
+              >
                 {bars.map((height, index) => (
                   <g key={index}>
                     <rect
@@ -94,14 +120,14 @@ export function CallAudioVisualizer({ listenUrl, callStatus, onDisconnect }: Cal
             </motion.div>
           )}
         </AnimatePresence>
-        
+
         <motion.div
           className="mt-4 flex flex-col items-center gap-2"
           animate={isConnected && volumeLevel === 0 ? micPulseAnimation : {}}
         >
-          <Button 
+          <Button
             onClick={handleToggle}
-            variant={isConnected ? "destructive" : "outline"}
+            variant={isConnected ? 'destructive' : 'outline'}
             size="lg"
             className="flex items-center gap-2"
             disabled={!isConnected && !canConnect}
@@ -146,13 +172,10 @@ export function CallAudioVisualizer({ listenUrl, callStatus, onDisconnect }: Cal
               )}
             </AnimatePresence>
           </Button>
-          
-          {error && (
-            <p className="text-sm text-red-600">{error}</p>
-          )}
+
+          {error && <p className="text-sm text-red-600">{error}</p>}
         </motion.div>
       </div>
     </div>
   );
 }
-

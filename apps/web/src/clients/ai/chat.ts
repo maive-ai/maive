@@ -1,7 +1,7 @@
 // Chat client - handles roofing chat API calls with streaming
 
 import type { ChatMessage, ChatRequest } from '@maive/api/client';
-import { getAccessToken } from '@/lib/apiClient';
+import { getAccessToken } from '@/clients/auth';
 import { env } from '@/env';
 
 // Re-export types from the generated client

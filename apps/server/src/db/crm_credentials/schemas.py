@@ -14,7 +14,9 @@ class CRMCredentialsBase(BaseModel):
 class CRMCredentialsCreate(CRMCredentialsBase):
     """Schema for creating CRM credentials."""
 
-    credentials: dict = Field(..., description="CRM API credentials (will be encrypted)")
+    credentials: dict = Field(
+        ..., description="CRM API credentials (will be encrypted)"
+    )
 
 
 class CRMCredentials(CRMCredentialsBase):

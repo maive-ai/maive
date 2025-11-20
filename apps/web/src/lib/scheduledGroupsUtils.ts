@@ -97,4 +97,3 @@ export function formatGoalType(goalType: string): string {
 export function formatWhoToCall(whoToCall: string): string {
   return WHO_TO_CALL_MAP[whoToCall] || whoToCall;
 }
-

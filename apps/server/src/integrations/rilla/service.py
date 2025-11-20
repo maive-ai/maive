@@ -32,7 +32,9 @@ class RillaService:
         """
         self.rilla_client = rilla_client
 
-    async def export_conversations(self, request: ConversationsExportRequest) -> ConversationsExportResponse:
+    async def export_conversations(
+        self, request: ConversationsExportRequest
+    ) -> ConversationsExportResponse:
         """
         Export conversations with business logic.
 
@@ -43,15 +45,23 @@ class RillaService:
             ConversationsExportResponse: The exported conversations data
         """
         try:
-            logger.info("Exporting conversations", from_date=str(request.from_date), to_date=str(request.to_date))
+            logger.info(
+                "Exporting conversations",
+                from_date=str(request.from_date),
+                to_date=str(request.to_date),
+            )
             result = await self.rilla_client.export_conversations(request)
-            logger.info("Successfully exported conversations", count=len(result.conversations))
+            logger.info(
+                "Successfully exported conversations", count=len(result.conversations)
+            )
             return result
         except Exception as e:
             logger.error("Error exporting conversations", error=str(e))
             raise
 
-    async def export_all_conversations(self, request: ConversationsExportRequest) -> ConversationsExportResponse:
+    async def export_all_conversations(
+        self, request: ConversationsExportRequest
+    ) -> ConversationsExportResponse:
         """
         Export ALL conversations across all pages concurrently.
 
@@ -62,7 +72,11 @@ class RillaService:
             ConversationsExportResponse: All conversations from all pages
         """
         try:
-            logger.info("Exporting ALL conversations", from_date=str(request.from_date), to_date=str(request.to_date))
+            logger.info(
+                "Exporting ALL conversations",
+                from_date=str(request.from_date),
+                to_date=str(request.to_date),
+            )
 
             # First, get page 1 to determine total pages
             first_request = ConversationsExportRequest(
@@ -75,7 +89,11 @@ class RillaService:
             )
             first_result = await self.rilla_client.export_conversations(first_request)
 
-            logger.info("Found conversations across pages", total_conversations=first_result.total_conversations, total_pages=first_result.total_pages)
+            logger.info(
+                "Found conversations across pages",
+                total_conversations=first_result.total_conversations,
+                total_pages=first_result.total_pages,
+            )
 
             if first_result.total_pages <= 1:
                 # Only one page, return as is
@@ -95,9 +113,13 @@ class RillaService:
                 remaining_requests.append(page_request)
 
             # Execute all remaining page requests concurrently
-            logger.info("Fetching additional pages concurrently", page_count=len(remaining_requests))
+            logger.info(
+                "Fetching additional pages concurrently",
+                page_count=len(remaining_requests),
+            )
             remaining_tasks = [
-                self.rilla_client.export_conversations(req) for req in remaining_requests
+                self.rilla_client.export_conversations(req)
+                for req in remaining_requests
             ]
             remaining_results = await asyncio.gather(*remaining_tasks)
 
@@ -106,7 +128,10 @@ class RillaService:
             for result in remaining_results:
                 all_conversations.extend(result.conversations)
 
-            logger.info("Successfully collected conversations from all pages", count=len(all_conversations))
+            logger.info(
+                "Successfully collected conversations from all pages",
+                count=len(all_conversations),
+            )
 
             # Return combined result
             return ConversationsExportResponse(
@@ -131,7 +156,11 @@ class RillaService:
             TeamsExportResponse: The exported teams data
         """
         try:
-            logger.info("Exporting teams", from_date=str(request.from_date), to_date=str(request.to_date))
+            logger.info(
+                "Exporting teams",
+                from_date=str(request.from_date),
+                to_date=str(request.to_date),
+            )
             result = await self.rilla_client.export_teams(request)
             logger.info("Successfully exported teams", count=len(result.teams))
             return result
@@ -150,7 +179,11 @@ class RillaService:
             UsersExportResponse: The exported users data
         """
         try:
-            logger.info("Exporting users", from_date=str(request.from_date), to_date=str(request.to_date))
+            logger.info(
+                "Exporting users",
+                from_date=str(request.from_date),
+                to_date=str(request.to_date),
+            )
             result = await self.rilla_client.export_users(request)
             logger.info("Successfully exported users", count=len(result.users))
             return result
@@ -193,10 +226,11 @@ class RillaService:
         # Filter to conversations matching this specific appointment (if appointment_id provided)
         if appointment_id is not None:
             filtered_conversations = [
-                conv for conv in response.conversations
+                conv
+                for conv in response.conversations
                 if conv.crm_event_id == appointment_id
             ]
             # Return filtered response (keep pagination metadata but update conversations)
             response.conversations = filtered_conversations
-        
+
         return response

@@ -43,11 +43,12 @@ class VapiSettings(BaseSettings):
     base_url: str = Field(
         default="https://api.vapi.ai", description="Vapi API base URL"
     )
-    phone_number_id: str = Field(
-        description="Vapi phone number ID for outbound calls"
-    )
+    phone_number_id: str = Field(description="Vapi phone number ID for outbound calls")
     default_assistant_id: str = Field(
-        description="Default Vapi assistant ID for outbound calls"
+        description="Default Vapi assistant ID or squad ID for outbound calls"
+    )
+    use_squad: bool = Field(
+        default=False, description="Whether to use squad instead of assistant"
     )
 
     # Vapi-specific settings
@@ -87,9 +88,14 @@ def get_vapi_settings() -> VapiSettings:
         _vapi_settings = VapiSettings()
         logger.info("VapiSettings loaded")
         if _vapi_settings.phone_number_id:
-            logger.info("Vapi Phone Number ID", phone_number_id=_vapi_settings.phone_number_id)
+            logger.info(
+                "Vapi Phone Number ID", phone_number_id=_vapi_settings.phone_number_id
+            )
         if _vapi_settings.default_assistant_id:
-            logger.info("Vapi Default Assistant ID", default_assistant_id=_vapi_settings.default_assistant_id)
+            logger.info(
+                "Vapi Default Assistant ID",
+                default_assistant_id=_vapi_settings.default_assistant_id,
+            )
     return _vapi_settings
 
 
@@ -113,4 +119,3 @@ def set_vapi_settings(settings: VapiSettings) -> None:
     """
     global _vapi_settings
     _vapi_settings = settings
-

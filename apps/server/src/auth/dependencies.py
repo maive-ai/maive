@@ -103,8 +103,7 @@ async def get_current_user(
     # Look up or create user in database to get persistent org assignment
     user_service = UserService(db)
     db_user, db_org = await user_service.get_or_create_user(
-        user_id=user.id,
-        email=user.email
+        user_id=user.id, email=user.email
     )
 
     # Update the user object with the persistent organization_id

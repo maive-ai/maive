@@ -7,7 +7,12 @@ interface ShinyTextProps {
   className?: string;
 }
 
-const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 2, className = '' }) => {
+const ShinyText: React.FC<ShinyTextProps> = ({
+  text,
+  disabled = false,
+  speed = 2,
+  className = '',
+}) => {
   const animationDuration = `${speed}s`;
 
   return (
@@ -20,7 +25,7 @@ const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 2
         WebkitBackgroundClip: 'text',
         WebkitTextFillColor: 'transparent',
         backgroundClip: 'text',
-        animationDuration: animationDuration
+        animationDuration: animationDuration,
       }}
     >
       {text}

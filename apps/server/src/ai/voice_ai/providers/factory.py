@@ -57,4 +57,3 @@ def set_voice_ai_provider(provider: VoiceAIProvider) -> None:
     """
     global _voice_ai_provider
     _voice_ai_provider = provider
-

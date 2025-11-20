@@ -1,13 +1,35 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { AlertCircle, Building2, FileText, Loader2, Plus, Search, Trash2, User } from 'lucide-react';
+import {
+  AlertCircle,
+  Building2,
+  FileText,
+  Loader2,
+  Plus,
+  Search,
+  Trash2,
+  User,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { useCreateMockProject, useFetchProjects, useUpdateMockProject, type MockNote, type MockProject, type Project } from '@/clients/crm';
+import {
+  useCreateMockProject,
+  useFetchProjects,
+  useUpdateMockProject,
+  type MockNote,
+  type MockProject,
+  type Project,
+} from '@/clients/crm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { env } from '@/env';
 import { useProjectSearch } from '@/hooks/useProjectSearch';
@@ -36,16 +58,19 @@ function CreateProject() {
 
   // Mode toggle state
   const [isEditMode, setIsEditMode] = useState(false);
-  
+
   // Edit mode state
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  
+
   // Search state
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Filter projects based on search query
-  const filteredProjects = useProjectSearch(projectsData?.projects, searchQuery);
+  const filteredProjects = useProjectSearch(
+    projectsData?.projects,
+    searchQuery,
+  );
 
   // Form state
   const [customerName, setCustomerName] = useState('');
@@ -56,11 +81,13 @@ function CreateProject() {
   const [dateOfLoss, setDateOfLoss] = useState('');
   const [insuranceAgency, setInsuranceAgency] = useState('');
   const [insuranceContactName, setInsuranceContactName] = useState('');
-  const [insuranceContactPhone, setInsuranceContactPhone] = useState(DEFAULT_PHONE);
+  const [insuranceContactPhone, setInsuranceContactPhone] =
+    useState(DEFAULT_PHONE);
   const [insuranceContactEmail, setInsuranceContactEmail] = useState('');
   const [adjusterName, setAdjusterName] = useState('');
   const [adjusterContactName, setAdjusterContactName] = useState('');
-  const [adjusterContactPhone, setAdjusterContactPhone] = useState(DEFAULT_PHONE);
+  const [adjusterContactPhone, setAdjusterContactPhone] =
+    useState(DEFAULT_PHONE);
   const [adjusterContactEmail, setAdjusterContactEmail] = useState('');
   const [notes, setNotes] = useState<MockNote[]>([]);
   const [newNoteText, setNewNoteText] = useState('');
@@ -95,41 +122,45 @@ function CreateProject() {
   // Handle project selection for editing
   useEffect(() => {
     if (isEditMode && selectedProjectId && projectsData) {
-      const project = projectsData.projects.find((p) => p.id === selectedProjectId);
+      const project = projectsData.projects.find(
+        (p) => p.id === selectedProjectId,
+      );
       if (project) {
         setSelectedProject(project);
-        
+
         // Populate form with project data
         setCustomerName(project.customer_name || '');
-        
+
         // Reconstruct address from components
         const addressParts = [
           project.address_line1,
           project.city,
-          project.state && project.postal_code ? `${project.state} ${project.postal_code}` : project.state || project.postal_code
+          project.state && project.postal_code
+            ? `${project.state} ${project.postal_code}`
+            : project.state || project.postal_code,
         ].filter(Boolean);
         setAddress(addressParts.join(', ') || DEFAULT_ADDRESS);
-        
+
         setPhone(project.provider_data?.phone || DEFAULT_PHONE);
         setEmail(project.provider_data?.email || '');
         setClaimNumber(project.claim_number || '');
         setDateOfLoss(project.date_of_loss || '');
         setInsuranceAgency(project.insurance_company || '');
-        
+
         // Get insurance contact from provider_data
         const insuranceContact = project.provider_data?.insuranceContact;
         setInsuranceContactName(insuranceContact?.name || '');
         setInsuranceContactPhone(insuranceContact?.phone || DEFAULT_PHONE);
         setInsuranceContactEmail(insuranceContact?.email || '');
-        
+
         setAdjusterName(project.adjuster_name || '');
-        
+
         // Get adjuster contact from provider_data
         const adjusterContact = project.provider_data?.adjusterContact;
         setAdjusterContactName(adjusterContact?.name || '');
         setAdjusterContactPhone(adjusterContact?.phone || DEFAULT_PHONE);
         setAdjusterContactEmail(adjusterContact?.email || '');
-        
+
         // Load notes from provider_data
         const projectNotes = project.provider_data?.notes || [];
         setNotes(Array.isArray(projectNotes) ? projectNotes : []);
@@ -152,12 +183,12 @@ function CreateProject() {
           </p>
         </div>
       </div>
-    );  
+    );
   }
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
-    
+
     const projectData: MockProject = {
       customerName,
       address,
@@ -191,12 +222,16 @@ function CreateProject() {
       // Navigate to projects page on success
       navigate({ to: '/projects' });
     } catch (error) {
-      console.error(`Failed to ${selectedProject ? 'update' : 'create'} project:`, error);
+      console.error(
+        `Failed to ${selectedProject ? 'update' : 'create'} project:`,
+        error,
+      );
     }
   };
 
   const isFormValid = customerName.trim() && (!isEditMode || selectedProject);
-  const isLoading = createProjectMutation.isPending || updateProjectMutation.isPending;
+  const isLoading =
+    createProjectMutation.isPending || updateProjectMutation.isPending;
 
   return (
     <div className="flex h-full bg-white p-6">
@@ -251,12 +286,14 @@ function CreateProject() {
                       className="pl-10"
                     />
                   </div>
-                  
+
                   {/* Search Results */}
                   {searchQuery && (
                     <div className="mt-2">
                       <p className="text-sm text-gray-600 mb-2">
-                        {filteredProjects.length} {filteredProjects.length === 1 ? 'result' : 'results'} found
+                        {filteredProjects.length}{' '}
+                        {filteredProjects.length === 1 ? 'result' : 'results'}{' '}
+                        found
                       </p>
                       {filteredProjects.length > 0 ? (
                         <div className="space-y-2 max-h-[500px] overflow-y-auto border rounded-md">
@@ -269,18 +306,24 @@ function CreateProject() {
                                 setSearchQuery('');
                               }}
                               className={`w-full text-left p-3 hover:bg-gray-50 border-b last:border-b-0 transition-colors ${
-                                selectedProjectId === project.id ? 'bg-blue-50' : ''
+                                selectedProjectId === project.id
+                                  ? 'bg-blue-50'
+                                  : ''
                               }`}
                             >
                               <div className="font-medium text-sm">
-                                {project.customer_name || project.name || project.id}
+                                {project.customer_name ||
+                                  project.name ||
+                                  project.id}
                               </div>
                               <div className="text-xs text-gray-500 mt-1">
                                 {project.provider_data?.address && (
                                   <span>{project.provider_data.address}</span>
                                 )}
                                 {project.claim_number && (
-                                  <span className="ml-2">• Claim: {project.claim_number}</span>
+                                  <span className="ml-2">
+                                    • Claim: {project.claim_number}
+                                  </span>
                                 )}
                               </div>
                             </button>
@@ -293,14 +336,16 @@ function CreateProject() {
                       )}
                     </div>
                   )}
-                  
+
                   {/* Selected Project Display */}
                   {selectedProject && !searchQuery && (
                     <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="font-medium text-sm">
-                            {selectedProject.customer_name || selectedProject.name || selectedProject.id}
+                            {selectedProject.customer_name ||
+                              selectedProject.name ||
+                              selectedProject.id}
                           </p>
                           {selectedProject.provider_data?.address && (
                             <p className="text-xs text-gray-600 mt-1">
@@ -334,7 +379,9 @@ function CreateProject() {
               <div className="space-y-4">
                 <div className="flex items-center gap-2 mb-4">
                   <Building2 className="size-5 text-gray-500" />
-                  <h3 className="text-lg font-semibold text-gray-900">Customer Information</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Customer Information
+                  </h3>
                 </div>
 
                 <div className="space-y-4 pl-7">
@@ -389,7 +436,9 @@ function CreateProject() {
               <div className="border-t pt-6 space-y-4">
                 <div className="flex items-center gap-2 mb-4">
                   <FileText className="size-5 text-gray-500" />
-                  <h3 className="text-lg font-semibold text-gray-900">Claim Information</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Claim Information
+                  </h3>
                 </div>
 
                 <div className="space-y-4 pl-7">
@@ -429,7 +478,9 @@ function CreateProject() {
               <div className="border-t pt-6 space-y-4">
                 <div className="flex items-center gap-2 mb-4">
                   <User className="size-5 text-gray-500" />
-                  <h3 className="text-lg font-semibold text-gray-900">Insurance Contact</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Insurance Contact
+                  </h3>
                 </div>
 
                 <div className="space-y-4 pl-7">
@@ -471,7 +522,9 @@ function CreateProject() {
               <div className="border-t pt-6 space-y-4">
                 <div className="flex items-center gap-2 mb-4">
                   <User className="size-5 text-gray-500" />
-                  <h3 className="text-lg font-semibold text-gray-900">Adjuster Information</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Adjuster Information
+                  </h3>
                 </div>
 
                 <div className="space-y-4 pl-7">
@@ -523,7 +576,9 @@ function CreateProject() {
               <div className="border-t pt-6 space-y-4">
                 <div className="flex items-center gap-2 mb-4">
                   <FileText className="size-5 text-gray-500" />
-                  <h3 className="text-lg font-semibold text-gray-900">Project Details</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Project Details
+                  </h3>
                 </div>
 
                 <div className="space-y-4 pl-7">
@@ -555,7 +610,10 @@ function CreateProject() {
                                 value={note.text}
                                 onChange={(e) => {
                                   const updatedNotes = [...notes];
-                                  updatedNotes[index] = { ...note, text: e.target.value };
+                                  updatedNotes[index] = {
+                                    ...note,
+                                    text: e.target.value,
+                                  };
                                   setNotes(updatedNotes);
                                 }}
                                 placeholder="Note text..."
@@ -567,7 +625,9 @@ function CreateProject() {
                                 variant="outline"
                                 size="icon"
                                 onClick={() => {
-                                  const updatedNotes = notes.filter((_, i) => i !== index);
+                                  const updatedNotes = notes.filter(
+                                    (_, i) => i !== index,
+                                  );
                                   setNotes(updatedNotes);
                                 }}
                                 className="shrink-0"
@@ -578,7 +638,7 @@ function CreateProject() {
                           ))}
                         </div>
                       )}
-                      
+
                       {/* Add New Note */}
                       <div className="flex gap-2">
                         <Textarea
@@ -594,7 +654,10 @@ function CreateProject() {
                           size="icon"
                           onClick={() => {
                             if (newNoteText.trim()) {
-                              setNotes([{ text: newNoteText.trim() }, ...notes]);
+                              setNotes([
+                                { text: newNoteText.trim() },
+                                ...notes,
+                              ]);
                               setNewNoteText('');
                             }
                           }}
@@ -629,8 +692,10 @@ function CreateProject() {
                       <Loader2 className="size-4 mr-2 animate-spin" />
                       {selectedProject ? 'Updating...' : 'Creating...'}
                     </>
+                  ) : selectedProject ? (
+                    'Update Project'
                   ) : (
-                    selectedProject ? 'Update Project' : 'Create Project'
+                    'Create Project'
                   )}
                 </Button>
               </div>
@@ -641,4 +706,3 @@ function CreateProject() {
     </div>
   );
 }
-

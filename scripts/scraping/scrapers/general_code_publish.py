@@ -195,6 +195,7 @@ def _scrape_section_content(
     # Extract anchor ID from hash-bang URLs (e.g., "#!/path/file.html#1.01" -> "1.01")
     # For hash-bang URLs, we need the part after the last # in the fragment
     from urllib.parse import urlparse
+
     parsed = urlparse(item["url"])
 
     if parsed.fragment and "#" in parsed.fragment:

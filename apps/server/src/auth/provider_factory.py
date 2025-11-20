@@ -5,8 +5,8 @@ This module provides a factory function to create the appropriate auth provider
 based on configuration.
 """
 
-from src.auth.service import CognitoAuthProvider, AuthProvider
 from src.auth.config import get_auth_settings
+from src.auth.service import AuthProvider, CognitoAuthProvider
 
 
 def create_auth_provider() -> AuthProvider:

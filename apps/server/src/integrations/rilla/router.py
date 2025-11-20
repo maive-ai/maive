@@ -45,7 +45,7 @@ async def export_conversations(
     """
     result = await rilla_service.export_conversations(request)
 
-    if hasattr(result, 'error') and result.error:
+    if hasattr(result, "error") and result.error:
         raise HTTPException(status_code=500, detail=result.error)
 
     return result
@@ -73,7 +73,7 @@ async def export_teams(
     """
     result = await rilla_service.export_teams(request)
 
-    if hasattr(result, 'error') and result.error:
+    if hasattr(result, "error") and result.error:
         raise HTTPException(status_code=500, detail=result.error)
 
     return result
@@ -101,7 +101,7 @@ async def export_users(
     """
     result = await rilla_service.export_users(request)
 
-    if hasattr(result, 'error') and result.error:
+    if hasattr(result, "error") and result.error:
         raise HTTPException(status_code=500, detail=result.error)
 
     return result

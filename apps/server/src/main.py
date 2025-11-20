@@ -13,8 +13,8 @@ from src.db.scheduled_groups.router import router as scheduled_groups_router
 from src.integrations.creds.router import router as creds_router
 from src.integrations.crm.mcp import get_crm_mcp_server
 from src.integrations.crm.router import router as crm_router
-from src.workflows.router import router as workflows_router
 from src.utils.logger import logger
+from src.workflows.router import router as workflows_router
 
 
 def get_version():
@@ -28,7 +28,7 @@ def get_version():
 # Initialize MCP server and app first (needed for lifespan)
 try:
     crm_mcp = get_crm_mcp_server()
-    crm_mcp_app = crm_mcp.http_app(path='')
+    crm_mcp_app = crm_mcp.http_app(path="")
     logger.info("CRM MCP app created")
 except Exception as e:
     logger.warning("Failed to create CRM MCP app", error=str(e))

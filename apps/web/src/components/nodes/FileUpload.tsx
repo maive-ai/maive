@@ -10,14 +10,17 @@ type UploadProgress = {
   percentage: number;
 };
 
-const uploadFile = async (file: File, options?: { onProgress?: (progress: UploadProgress) => void }): Promise<{ success: boolean; message: string; key?: string }> => {
+const uploadFile = async (
+  file: File,
+  options?: { onProgress?: (progress: UploadProgress) => void },
+): Promise<{ success: boolean; message: string; key?: string }> => {
   // Simulate upload progress
   if (options?.onProgress) {
     for (let i = 0; i <= 100; i += 10) {
       setTimeout(() => options.onProgress!({ percentage: i }), i * 10);
     }
   }
-  
+
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve({

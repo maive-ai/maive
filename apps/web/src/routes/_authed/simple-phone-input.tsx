@@ -7,11 +7,11 @@ import { useCallAndWriteToCrm } from '@/clients/workflows';
 import { E164PhoneInput } from '@/components/E164PhoneInput';
 import { Button } from '@/components/ui/button';
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 
@@ -55,7 +55,9 @@ function SimplePhoneInput() {
         <Card className="w-full">
           <CardHeader>
             <CardTitle>Call Details</CardTitle>
-            <CardDescription>Enter phone number to initiate call</CardDescription>
+            <CardDescription>
+              Enter phone number to initiate call
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -101,7 +103,8 @@ function SimplePhoneInput() {
                     Failed to create call
                   </p>
                   <p className="text-sm text-red-700">
-                    {createCallMutation.error?.message || 'An unexpected error occurred'}
+                    {createCallMutation.error?.message ||
+                      'An unexpected error occurred'}
                   </p>
                 </div>
               </div>
@@ -111,7 +114,9 @@ function SimplePhoneInput() {
               onClick={handleStartCall}
               className="w-full"
               size="lg"
-              disabled={createCallMutation.isPending || !phoneNumber || !isValid}
+              disabled={
+                createCallMutation.isPending || !phoneNumber || !isValid
+              }
             >
               {createCallMutation.isPending ? (
                 <>

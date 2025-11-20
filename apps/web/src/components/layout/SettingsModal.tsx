@@ -10,11 +10,10 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogTitle
+  DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-
 
 interface SettingsModalProps {
   open: boolean;
@@ -49,7 +48,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             {/* Sidebar */}
             <div className="w-64 bg-primary-200 p-4 space-y-1 rounded-l-lg">
               <div className="px-3 py-2 mb-4">
-                <DialogTitle className="text-lg font-semibold">Settings</DialogTitle>
+                <DialogTitle className="text-lg font-semibold">
+                  Settings
+                </DialogTitle>
                 <DialogDescription className="text-sm">
                   Configure your application
                 </DialogDescription>
@@ -126,7 +127,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                       />
                     </div>
                     <div className="flex justify-end gap-3 pt-4">
-                      <Button variant="outline" onClick={() => onOpenChange(false)}>
+                      <Button
+                        variant="outline"
+                        onClick={() => onOpenChange(false)}
+                      >
                         Cancel
                       </Button>
                       <Button onClick={handleSave}>Save</Button>
@@ -141,4 +145,3 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     </Dialog>
   );
 }
-

@@ -69,32 +69,38 @@ async def stream_roofing_chat(
     logger.info(
         "Chat request from user",
         user_id=str(current_user.id),
-        message_count=len(request.messages)
+        message_count=len(request.messages),
     )
 
     # Convert messages to OpenAI format
     messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
-    
+
     # Log user input for remote debugging
     user_messages = [msg for msg in request.messages if msg.role == "user"]
     if user_messages:
         latest_user_input = user_messages[-1].content
-        logger.info("[USER_INPUT]", user_id=str(current_user.id), input=latest_user_input)
+        logger.info(
+            "[USER_INPUT]", user_id=str(current_user.id), input=latest_user_input
+        )
 
     # Create async generator for SSE
     async def event_generator():
         """Generate SSE events from chat stream with tool calls, citations and reasoning."""
         heartbeat_interval = 20.0
         stream_finished = False
-        
+
         # Track all output for logging
         accumulated_output = ""
-        reasoning_summaries_by_id: dict[str, str] = {}  # Track unique reasoning summaries
+        reasoning_summaries_by_id: dict[
+            str, str
+        ] = {}  # Track unique reasoning summaries
         accumulated_citations: list[dict] = []
         tool_calls_used: list[str] = []
 
         try:
-            stream = chat_service.stream_chat_response(messages, user_auth_token=user_auth_token)
+            stream = chat_service.stream_chat_response(
+                messages, user_auth_token=user_auth_token
+            )
             stream_iter = stream.__aiter__()
             next_chunk_task = asyncio.create_task(stream_iter.__anext__())
 
@@ -116,7 +122,9 @@ async def stream_roofing_chat(
                     # Send reasoning summaries first so UI can reflect thinking state
                     for reasoning_summary in chunk.reasoning_summaries:
                         # Track unique reasoning summaries by ID (overwrites incremental updates)
-                        reasoning_summaries_by_id[reasoning_summary.id] = reasoning_summary.summary
+                        reasoning_summaries_by_id[reasoning_summary.id] = (
+                            reasoning_summary.summary
+                        )
                         yield SSEEvent(
                             event="reasoning_summary",
                             data=reasoning_summary.model_dump_json(),
@@ -162,7 +170,7 @@ async def stream_roofing_chat(
             # Send done signal if not already sent
             if not stream_finished:
                 yield SSEEvent(event="done", data="complete").format()
-            
+
             # Log complete interaction for remote debugging
             if reasoning_summaries_by_id:
                 # Log final reasoning summaries (one per unique ID)
@@ -170,32 +178,32 @@ async def stream_roofing_chat(
                 logger.info(
                     "[REASONING_OUTPUT]",
                     user_id=str(current_user.id),
-                    reasoning=reasoning_text
+                    reasoning=reasoning_text,
                 )
-            
+
             if accumulated_output:
                 logger.info(
                     "[AGENT_OUTPUT]",
                     user_id=str(current_user.id),
-                    output=accumulated_output
+                    output=accumulated_output,
                 )
-            
+
             if tool_calls_used:
                 logger.info(
-                    "[TOOLS_USED]",
-                    user_id=str(current_user.id),
-                    tools=tool_calls_used
+                    "[TOOLS_USED]", user_id=str(current_user.id), tools=tool_calls_used
                 )
-            
+
             if accumulated_citations:
                 logger.info(
                     "[CITATIONS]",
                     user_id=str(current_user.id),
-                    citations=accumulated_citations
+                    citations=accumulated_citations,
                 )
 
         except Exception as e:
-            logger.error("Error in chat stream", error=str(e), error_type=type(e).__name__)
+            logger.error(
+                "Error in chat stream", error=str(e), error_type=type(e).__name__
+            )
             yield SSEEvent(event="error", data=str(e)).format()
         finally:
             if "next_chunk_task" in locals() and next_chunk_task:

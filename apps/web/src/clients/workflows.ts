@@ -6,9 +6,13 @@ import {
   type CallRequest,
   type CallResponse,
 } from '@maive/api/client';
-import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQueryClient,
+  type UseMutationResult,
+} from '@tanstack/react-query';
 
-import { apiClient } from '@/lib/apiClient';
+import { baseClient } from './base';
 import { env } from '@/env';
 
 // Re-export types from the generated client
@@ -23,7 +27,7 @@ const createWorkflowsApi = (): WorkflowsApi => {
       basePath: env.PUBLIC_SERVER_URL,
     }),
     undefined,
-    apiClient
+    baseClient,
   );
 };
 
@@ -35,16 +39,20 @@ export async function callAndWriteToCrm(
 ): Promise<CallResponse> {
   const api = createWorkflowsApi();
 
-  const response = await api.callAndWriteResultsToCrmApiWorkflowsCallAndWriteResultsToCrmPost(request);
+  const response =
+    await api.callAndWriteResultsToCrmApiWorkflowsCallAndWriteResultsToCrmPost(
+      request,
+    );
   return response.data;
 }
-
 
 /**
  * React Query mutation hook for creating outbound calls
  * @param projectId - Optional project ID to invalidate queries after call completes
  */
-export function useCallAndWriteToCrm(projectId?: string): UseMutationResult<CallResponse, Error, CallRequest> {
+export function useCallAndWriteToCrm(
+  projectId?: string,
+): UseMutationResult<CallResponse, Error, CallRequest> {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -55,7 +63,9 @@ export function useCallAndWriteToCrm(projectId?: string): UseMutationResult<Call
 
       // Invalidate project queries to refetch updated status
       if (projectId) {
-        await queryClient.invalidateQueries({ queryKey: ['project-status', projectId] });
+        await queryClient.invalidateQueries({
+          queryKey: ['project-status', projectId],
+        });
       }
       await queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
@@ -64,4 +74,3 @@ export function useCallAndWriteToCrm(projectId?: string): UseMutationResult<Call
     },
   });
 }
-

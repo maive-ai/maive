@@ -34,7 +34,9 @@ async def ingest_pricebook():
     client = get_gemini_client()
 
     # Path to cleaned pricebook file
-    pricebook_path = Path("evals/estimate_deviation/output/pricebook_items_cleaned.json")
+    pricebook_path = Path(
+        "evals/estimate_deviation/output/pricebook_items_cleaned.json"
+    )
 
     if not pricebook_path.exists():
         logger.error("[PRICEBOOK] Pricebook file not found", path=str(pricebook_path))
@@ -50,7 +52,9 @@ async def ingest_pricebook():
 
     if file_size_mb > 100:
         logger.error("[PRICEBOOK] File too large", size_mb=round(file_size_mb, 2))
-        print(f"\n❌ Error: File size ({file_size_mb:.2f} MB) exceeds Gemini limit (100 MB)")
+        print(
+            f"\n❌ Error: File size ({file_size_mb:.2f} MB) exceeds Gemini limit (100 MB)"
+        )
         return
 
     try:
@@ -66,7 +70,9 @@ async def ingest_pricebook():
 
         if not store_name:
             logger.info("[PRICEBOOK] Creating new File Search store")
-            store_name = await client.create_file_search_store(PRICEBOOK_STORE_DISPLAY_NAME)
+            store_name = await client.create_file_search_store(
+                PRICEBOOK_STORE_DISPLAY_NAME
+            )
             logger.info("[PRICEBOOK] Created store", store_name=store_name)
 
         # Upload file to store
@@ -86,7 +92,10 @@ async def ingest_pricebook():
             operation = await client.get_operation(operation)
 
             if operation.done:
-                logger.info("[PRICEBOOK] Upload operation completed", operation_name=operation.name)
+                logger.info(
+                    "[PRICEBOOK] Upload operation completed",
+                    operation_name=operation.name,
+                )
                 break
 
             elapsed = time.time() - start_time
@@ -184,4 +193,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -818,4 +818,3 @@ def run_parallel_lister(
         print(f"  {state.upper()}: {count} {item_type}")
     print(f"  Total: {sum(results.values())} {item_type}")
     print(f"{'=' * 60}\n")
-

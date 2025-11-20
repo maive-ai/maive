@@ -153,4 +153,3 @@ export function getAdjusterInfo(project: {
 
   return { name, phone };
 }
-

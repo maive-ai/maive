@@ -141,7 +141,11 @@ class RillaClient:
         Raises:
             RillaAPIError: For API errors
         """
-        logger.info("Exporting teams", from_date=str(request.from_date), to_date=str(request.to_date))
+        logger.info(
+            "Exporting teams",
+            from_date=str(request.from_date),
+            to_date=str(request.to_date),
+        )
 
         # Use Pydantic's serialization with aliases
         api_request = request.model_dump(by_alias=True, exclude_none=True, mode="json")
@@ -168,7 +172,11 @@ class RillaClient:
         Raises:
             RillaAPIError: For API errors
         """
-        logger.info("Exporting users", from_date=str(request.from_date), to_date=str(request.to_date))
+        logger.info(
+            "Exporting users",
+            from_date=str(request.from_date),
+            to_date=str(request.to_date),
+        )
 
         # Use Pydantic's serialization with aliases
         api_request = request.model_dump(by_alias=True, exclude_none=True, mode="json")

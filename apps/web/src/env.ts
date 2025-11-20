@@ -87,7 +87,10 @@ export const envSchema = v.object({
   /**
    * PostHog host URL (defaults to cloud)
    */
-  PUBLIC_POSTHOG_HOST: v.optional(v.pipe(v.string(), v.url()), 'https://app.posthog.com'),
+  PUBLIC_POSTHOG_HOST: v.optional(
+    v.pipe(v.string(), v.url()),
+    'https://app.posthog.com',
+  ),
 });
 
 export const env = v.parse(envSchema, import.meta.env);

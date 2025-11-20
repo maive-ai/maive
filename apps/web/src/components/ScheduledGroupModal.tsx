@@ -103,7 +103,8 @@ export function ScheduledGroupModal({
     }
 
     if (goalType === 'user_specified' && !goalDescription.trim()) {
-      newErrors.goalDescription = 'Goal description is required for user specified goals';
+      newErrors.goalDescription =
+        'Goal description is required for user specified goals';
     }
 
     setErrors(newErrors);
@@ -155,7 +156,9 @@ export function ScheduledGroupModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-white max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Edit Group' : 'Create Scheduled Group'}</DialogTitle>
+          <DialogTitle>
+            {isEditMode ? 'Edit Group' : 'Create Scheduled Group'}
+          </DialogTitle>
           <DialogDescription>
             Configure the schedule and goals for this group
           </DialogDescription>
@@ -172,7 +175,9 @@ export function ScheduledGroupModal({
               placeholder="e.g., Weekly Status Checks"
               className={errors.name ? 'border-red-500' : ''}
             />
-            {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
+            {errors.name && (
+              <p className="text-sm text-red-500">{errors.name}</p>
+            )}
           </div>
 
           {/* Frequency - Days of Week */}
@@ -214,7 +219,10 @@ export function ScheduledGroupModal({
           {/* Goal Type */}
           <div className="space-y-2">
             <Label htmlFor="goalType">Goal</Label>
-            <Select value={goalType} onValueChange={(value) => setGoalType(value as GoalType)}>
+            <Select
+              value={goalType}
+              onValueChange={(value) => setGoalType(value as GoalType)}
+            >
               <SelectTrigger id="goalType" className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -286,4 +294,3 @@ export function ScheduledGroupModal({
     </Dialog>
   );
 }
-

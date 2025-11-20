@@ -138,6 +138,20 @@ pnpm lint:fix               # auto-fix eslint issues
 pnpx codemod pnpm/catalog   # migrate dependencies to pnpm-workspace.yaml
 ```
 
+### CI Checks
+
+Our CI pipeline runs formatting, linting (including import sorting), and type checking on all code. If the CI checks fail on your PR, run this command to auto-fix most issues:
+
+```bash
+pnpm format:fix && pnpm lint:fix
+```
+
+This will:
+- Fix code formatting (Prettier for TypeScript/JavaScript, Ruff for Python)
+- Fix linting issues and sort imports (ESLint for TypeScript/JavaScript, Ruff for Python)
+
+After running this, commit the changes and push again. Note that `typecheck` errors must be fixed manually.
+
 ## Other Notes
 
 ### Tanstack Router

@@ -39,7 +39,10 @@ class RoofingChatService:
             self._vector_store_id = (
                 await self._vector_store_service.get_or_create_vector_store()
             )
-            logger.info("Initialized vector store for RAG", vector_store_id=self._vector_store_id)
+            logger.info(
+                "Initialized vector store for RAG",
+                vector_store_id=self._vector_store_id,
+            )
         return self._vector_store_id
 
     def _build_system_prompt(self) -> str:
@@ -88,7 +91,7 @@ class RoofingChatService:
             logger.info(
                 "Streaming chat with RAG enabled",
                 message_count=len(messages),
-                vector_store_id=vector_store_id
+                vector_store_id=vector_store_id,
             )
 
             # Stream response from provider with web search and file search

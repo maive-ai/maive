@@ -22,7 +22,7 @@ import {
   type UseMutationResult,
 } from '@tanstack/react-query';
 
-import { apiClient } from '@/lib/apiClient';
+import { baseClient } from './base';
 import { env } from '@/env';
 
 // Re-export types from the generated client
@@ -48,7 +48,7 @@ const createScheduledGroupsApi = (): ScheduledGroupsApi => {
       basePath: env.PUBLIC_SERVER_URL,
     }),
     undefined,
-    apiClient
+    baseClient,
   );
 };
 
@@ -56,10 +56,11 @@ const createScheduledGroupsApi = (): ScheduledGroupsApi => {
  * Create a new scheduled group
  */
 export async function createScheduledGroup(
-  request: CreateScheduledGroupRequest
+  request: CreateScheduledGroupRequest,
 ): Promise<ScheduledGroupResponse> {
   const api = createScheduledGroupsApi();
-  const response = await api.createScheduledGroupApiScheduledGroupsPost(request);
+  const response =
+    await api.createScheduledGroupApiScheduledGroupsPost(request);
   console.log(`[Scheduled Groups Client] Created group: ${response.data.name}`);
   return response.data;
 }
@@ -70,7 +71,9 @@ export async function createScheduledGroup(
 export async function fetchScheduledGroups(): Promise<ScheduledGroupsListResponse> {
   const api = createScheduledGroupsApi();
   const response = await api.listScheduledGroupsApiScheduledGroupsGet();
-  console.log(`[Scheduled Groups Client] Fetched ${response.data.total} groups`);
+  console.log(
+    `[Scheduled Groups Client] Fetched ${response.data.total} groups`,
+  );
   return response.data;
 }
 
@@ -78,12 +81,13 @@ export async function fetchScheduledGroups(): Promise<ScheduledGroupsListRespons
  * Get a scheduled group with its members
  */
 export async function fetchScheduledGroupDetail(
-  groupId: number
+  groupId: number,
 ): Promise<ScheduledGroupDetailResponse> {
   const api = createScheduledGroupsApi();
-  const response = await api.getScheduledGroupApiScheduledGroupsGroupIdGet(groupId);
+  const response =
+    await api.getScheduledGroupApiScheduledGroupsGroupIdGet(groupId);
   console.log(
-    `[Scheduled Groups Client] Fetched group ${groupId} with ${response.data.members.length} members`
+    `[Scheduled Groups Client] Fetched group ${groupId} with ${response.data.members.length} members`,
   );
   return response.data;
 }
@@ -93,12 +97,12 @@ export async function fetchScheduledGroupDetail(
  */
 export async function updateScheduledGroup(
   groupId: number,
-  request: UpdateScheduledGroupRequest
+  request: UpdateScheduledGroupRequest,
 ): Promise<ScheduledGroupResponse> {
   const api = createScheduledGroupsApi();
   const response = await api.updateScheduledGroupApiScheduledGroupsGroupIdPut(
     groupId,
-    request
+    request,
   );
   console.log(`[Scheduled Groups Client] Updated group ${groupId}`);
   return response.data;
@@ -118,15 +122,18 @@ export async function deleteScheduledGroup(groupId: number): Promise<void> {
  */
 export async function toggleGroupActive(
   groupId: number,
-  isActive: boolean
+  isActive: boolean,
 ): Promise<ScheduledGroupResponse> {
   const api = createScheduledGroupsApi();
   const request: UpdateGroupStatusRequest = { is_active: isActive };
-  const response = await api.toggleGroupActiveApiScheduledGroupsGroupIdActivePatch(
-    groupId,
-    request
+  const response =
+    await api.toggleGroupActiveApiScheduledGroupsGroupIdActivePatch(
+      groupId,
+      request,
+    );
+  console.log(
+    `[Scheduled Groups Client] Toggled group ${groupId} active: ${isActive}`,
   );
-  console.log(`[Scheduled Groups Client] Toggled group ${groupId} active: ${isActive}`);
   return response.data;
 }
 
@@ -135,16 +142,17 @@ export async function toggleGroupActive(
  */
 export async function addProjectsToGroup(
   groupId: number,
-  projectIds: string[]
+  projectIds: string[],
 ): Promise<ScheduledGroupDetailResponse> {
   const api = createScheduledGroupsApi();
   const request: AddProjectsToGroupRequest = { project_ids: projectIds };
-  const response = await api.addProjectsToGroupApiScheduledGroupsGroupIdMembersPost(
-    groupId,
-    request
-  );
+  const response =
+    await api.addProjectsToGroupApiScheduledGroupsGroupIdMembersPost(
+      groupId,
+      request,
+    );
   console.log(
-    `[Scheduled Groups Client] Added ${projectIds.length} projects to group ${groupId}`
+    `[Scheduled Groups Client] Added ${projectIds.length} projects to group ${groupId}`,
   );
   return response.data;
 }
@@ -154,14 +162,16 @@ export async function addProjectsToGroup(
  */
 export async function removeProjectFromGroup(
   groupId: number,
-  projectId: string
+  projectId: string,
 ): Promise<void> {
   const api = createScheduledGroupsApi();
   await api.removeProjectFromGroupApiScheduledGroupsGroupIdMembersProjectIdDelete(
     groupId,
-    projectId
+    projectId,
   );
-  console.log(`[Scheduled Groups Client] Removed project ${projectId} from group ${groupId}`);
+  console.log(
+    `[Scheduled Groups Client] Removed project ${projectId} from group ${groupId}`,
+  );
 }
 
 /**
@@ -170,17 +180,17 @@ export async function removeProjectFromGroup(
 export async function markGoalCompleted(
   groupId: number,
   projectId: string,
-  completed: boolean = true
+  completed: boolean = true,
 ): Promise<ScheduledGroupMemberResponse> {
   const api = createScheduledGroupsApi();
   const response =
     await api.markGoalCompletedApiScheduledGroupsGroupIdMembersProjectIdCompletedPatch(
       groupId,
       projectId,
-      completed
+      completed,
     );
   console.log(
-    `[Scheduled Groups Client] Marked goal ${completed ? 'completed' : 'not completed'} for project ${projectId}`
+    `[Scheduled Groups Client] Marked goal ${completed ? 'completed' : 'not completed'} for project ${projectId}`,
   );
   return response.data;
 }
@@ -188,7 +198,10 @@ export async function markGoalCompleted(
 /**
  * React Query hook for fetching scheduled groups
  */
-export function useScheduledGroups(): UseQueryResult<ScheduledGroupsListResponse, Error> {
+export function useScheduledGroups(): UseQueryResult<
+  ScheduledGroupsListResponse,
+  Error
+> {
   return useQuery({
     queryKey: ['scheduledGroups'],
     queryFn: () => fetchScheduledGroups(),
@@ -200,7 +213,7 @@ export function useScheduledGroups(): UseQueryResult<ScheduledGroupsListResponse
  * React Query hook for fetching a single scheduled group detail
  */
 export function useScheduledGroupDetail(
-  groupId: number | null
+  groupId: number | null,
 ): UseQueryResult<ScheduledGroupDetailResponse, Error> {
   return useQuery({
     queryKey: ['scheduledGroup', groupId],
@@ -221,7 +234,8 @@ export function useCreateScheduledGroup(): UseMutationResult<
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (request: CreateScheduledGroupRequest) => createScheduledGroup(request),
+    mutationFn: (request: CreateScheduledGroupRequest) =>
+      createScheduledGroup(request),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scheduledGroups'] });
     },
@@ -239,10 +253,13 @@ export function useUpdateScheduledGroup(): UseMutationResult<
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ groupId, request }) => updateScheduledGroup(groupId, request),
+    mutationFn: ({ groupId, request }) =>
+      updateScheduledGroup(groupId, request),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['scheduledGroups'] });
-      queryClient.invalidateQueries({ queryKey: ['scheduledGroup', variables.groupId] });
+      queryClient.invalidateQueries({
+        queryKey: ['scheduledGroup', variables.groupId],
+      });
     },
   });
 }
@@ -250,7 +267,11 @@ export function useUpdateScheduledGroup(): UseMutationResult<
 /**
  * React Query mutation for deleting a scheduled group
  */
-export function useDeleteScheduledGroup(): UseMutationResult<void, Error, number> {
+export function useDeleteScheduledGroup(): UseMutationResult<
+  void,
+  Error,
+  number
+> {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -275,7 +296,9 @@ export function useToggleGroupActive(): UseMutationResult<
     mutationFn: ({ groupId, isActive }) => toggleGroupActive(groupId, isActive),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['scheduledGroups'] });
-      queryClient.invalidateQueries({ queryKey: ['scheduledGroup', variables.groupId] });
+      queryClient.invalidateQueries({
+        queryKey: ['scheduledGroup', variables.groupId],
+      });
     },
   });
 }
@@ -291,10 +314,13 @@ export function useAddProjectsToGroup(): UseMutationResult<
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ groupId, projectIds }) => addProjectsToGroup(groupId, projectIds),
+    mutationFn: ({ groupId, projectIds }) =>
+      addProjectsToGroup(groupId, projectIds),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['scheduledGroups'] });
-      queryClient.invalidateQueries({ queryKey: ['scheduledGroup', variables.groupId] });
+      queryClient.invalidateQueries({
+        queryKey: ['scheduledGroup', variables.groupId],
+      });
     },
   });
 }
@@ -310,10 +336,13 @@ export function useRemoveProjectFromGroup(): UseMutationResult<
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ groupId, projectId }) => removeProjectFromGroup(groupId, projectId),
+    mutationFn: ({ groupId, projectId }) =>
+      removeProjectFromGroup(groupId, projectId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['scheduledGroups'] });
-      queryClient.invalidateQueries({ queryKey: ['scheduledGroup', variables.groupId] });
+      queryClient.invalidateQueries({
+        queryKey: ['scheduledGroup', variables.groupId],
+      });
     },
   });
 }
@@ -333,7 +362,9 @@ export function useMarkGoalCompleted(): UseMutationResult<
       markGoalCompleted(groupId, projectId, completed),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['scheduledGroups'] });
-      queryClient.invalidateQueries({ queryKey: ['scheduledGroup', variables.groupId] });
+      queryClient.invalidateQueries({
+        queryKey: ['scheduledGroup', variables.groupId],
+      });
     },
   });
 }

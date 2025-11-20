@@ -1,8 +1,13 @@
 {
-  "name": "infra",
+  "name": "@maive/infra",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "postinstall": "uv sync"
+    "postinstall": "uv sync",
+    "format": "uv run ruff format . --check",
+    "format:check": "uv run ruff format . --check",
+    "format:fix": "uv run ruff format .",
+    "lint": "uv run ruff check .",
+    "lint:fix": "uv run ruff check . --fix"
   }
 }

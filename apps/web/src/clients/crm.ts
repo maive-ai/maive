@@ -8,10 +8,16 @@ import {
   type Project,
   type ProjectList,
 } from '@maive/api/client';
-import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseMutationResult,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 
 import { env } from '@/env';
-import { apiClient } from '@/lib/apiClient';
+import { baseClient } from './base';
 
 // Re-export types from the generated client
 export type { MockNote, MockProject, Project, ProjectList };
@@ -25,19 +31,22 @@ const createCRMApi = (): CRMApi => {
       basePath: env.PUBLIC_SERVER_URL,
     }),
     undefined,
-    apiClient
+    baseClient,
   );
 };
 
 /**
  * Fetch all projects from CRM using universal interface
  */
-export async function fetchAllProjects(page: number = 1, pageSize: number = 50): Promise<ProjectList> {
+export async function fetchAllProjects(
+  page: number = 1,
+  pageSize: number = 50,
+): Promise<ProjectList> {
   const api = createCRMApi();
 
   const response = await api.getAllProjectsApiCrmProjectsGet(page, pageSize);
   console.log(
-    `[CRM Client] Fetched ${response.data.total_count} projects (page ${page})`
+    `[CRM Client] Fetched ${response.data.total_count} projects (page ${page})`,
   );
   return response.data;
 }
@@ -49,7 +58,7 @@ export async function fetchProject(projectId: string): Promise<Project> {
   const api = createCRMApi();
   const response = await api.getProjectApiCrmProjectsProjectIdGet(projectId);
   console.log(
-    `[CRM Client] Fetched project ${projectId} - Status: ${response.data.status}`
+    `[CRM Client] Fetched project ${projectId} - Status: ${response.data.status}`,
   );
   return response.data;
 }
@@ -58,7 +67,10 @@ export async function fetchProject(projectId: string): Promise<Project> {
  * React Query hook for fetching all projects
  * Polls every 30 seconds to keep data fresh
  */
-export function useFetchProjects(page: number = 1, pageSize: number = 50): UseQueryResult<ProjectList, Error> {
+export function useFetchProjects(
+  page: number = 1,
+  pageSize: number = 50,
+): UseQueryResult<ProjectList, Error> {
   return useQuery({
     queryKey: ['projects', page, pageSize],
     queryFn: () => fetchAllProjects(page, pageSize),
@@ -72,7 +84,9 @@ export function useFetchProjects(page: number = 1, pageSize: number = 50): UseQu
  * React Query hook for fetching a single project
  * Polls every 30 seconds to keep data fresh
  */
-export function useFetchProject(projectId: string): UseQueryResult<Project, Error> {
+export function useFetchProject(
+  projectId: string,
+): UseQueryResult<Project, Error> {
   return useQuery({
     queryKey: ['project', projectId],
     queryFn: () => fetchProject(projectId),
@@ -110,18 +124,24 @@ export async function fetchJobFiles(jobId: string): Promise<FileMetadata[]> {
 /**
  * Download a specific file with authentication
  */
-export async function downloadFile(fileId: string, filename?: string, contentType?: string): Promise<void> {
+export async function downloadFile(
+  fileId: string,
+  filename?: string,
+  contentType?: string,
+): Promise<void> {
   const api = createCRMApi();
-  
+
   const response = await api.downloadFileApiCrmFilesFileIdDownloadGet(
     fileId,
     filename || null,
     contentType || null,
-    { responseType: 'blob' }
+    { responseType: 'blob' },
   );
-  
+
   // Trigger browser download
-  const blob = new Blob([response.data], { type: contentType || 'application/octet-stream' });
+  const blob = new Blob([response.data], {
+    type: contentType || 'application/octet-stream',
+  });
   const downloadUrl = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = downloadUrl;
@@ -135,7 +155,9 @@ export async function downloadFile(fileId: string, filename?: string, contentTyp
 /**
  * React Query hook for fetching job files
  */
-export function useFetchJobFiles(jobId: string): UseQueryResult<FileMetadata[], Error> {
+export function useFetchJobFiles(
+  jobId: string,
+): UseQueryResult<FileMetadata[], Error> {
   return useQuery({
     queryKey: ['job-files', jobId],
     queryFn: () => fetchJobFiles(jobId),
@@ -148,11 +170,13 @@ export function useFetchJobFiles(jobId: string): UseQueryResult<FileMetadata[], 
  * Create a mock project (Mock CRM only)
  */
 export async function createMockProject(
-  projectData: MockProject
+  projectData: MockProject,
 ): Promise<Project> {
   const api = createCRMApi();
   const response = await api.createMockProjectApiCrmProjectsPost(projectData);
-  console.log(`[CRM Client] Created mock project: ${response.data.customer_name}`);
+  console.log(
+    `[CRM Client] Created mock project: ${response.data.customer_name}`,
+  );
   return response.data;
 }
 
@@ -180,11 +204,16 @@ export function useCreateMockProject(): UseMutationResult<
  */
 export async function updateMockProject(
   projectId: string,
-  projectData: MockProject
+  projectData: MockProject,
 ): Promise<Project> {
   const api = createCRMApi();
-  const response = await api.updateMockProjectApiCrmProjectsProjectIdPatch(projectId, projectData);
-  console.log(`[CRM Client] Updated mock project: ${response.data.customer_name}`);
+  const response = await api.updateMockProjectApiCrmProjectsProjectIdPatch(
+    projectId,
+    projectData,
+  );
+  console.log(
+    `[CRM Client] Updated mock project: ${response.data.customer_name}`,
+  );
   return response.data;
 }
 
@@ -199,11 +228,14 @@ export function useUpdateMockProject(): UseMutationResult<
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ projectId, projectData }) => updateMockProject(projectId, projectData),
+    mutationFn: ({ projectId, projectData }) =>
+      updateMockProject(projectId, projectData),
     onSuccess: (_data, variables) => {
       // Invalidate both the projects list and the specific project
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-      queryClient.invalidateQueries({ queryKey: ['project', variables.projectId] });
+      queryClient.invalidateQueries({
+        queryKey: ['project', variables.projectId],
+      });
     },
   });
 }

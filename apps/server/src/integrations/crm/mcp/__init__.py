@@ -19,8 +19,8 @@ def get_crm_mcp_server() -> FastMCP:
     """
     logger.info("Loading JobNimbus MCP server (multi-tenant)")
     from src.integrations.crm.providers.job_nimbus.mcp import mcp
+
     return mcp
 
 
 __all__ = ["get_crm_mcp_server"]
-

@@ -7,7 +7,6 @@ This module implements the VoiceAIProvider interface for Vapi.
 from http import HTTPStatus
 from typing import Any
 
-from vapi.types.analysis import Analysis
 import httpx
 import phonenumbers
 from vapi import AsyncVapi
@@ -15,19 +14,27 @@ from vapi.types import (
     AnalysisPlan,
     AssistantOverrides,
     BotMessage,
-    Call as VapiCall,
     CallMessagesItem,
     CreateCustomerDto,
     JsonSchema,
     StructuredDataPlan,
     UserMessage,
 )
+from vapi.types import (
+    Call as VapiCall,
+)
+from vapi.types.analysis import Analysis
 
 from src.ai.voice_ai.base import VoiceAIError, VoiceAIProvider
 from src.ai.voice_ai.config import get_vapi_settings, get_voice_ai_settings
 from src.ai.voice_ai.constants import CallStatus, VoiceAIErrorCode
 from src.ai.voice_ai.constants import VoiceAIProvider as VoiceAIProviderEnum
-from src.ai.voice_ai.schemas import AnalysisData, CallRequest, CallResponse, ClaimStatusData
+from src.ai.voice_ai.schemas import (
+    AnalysisData,
+    CallRequest,
+    CallResponse,
+    ClaimStatusData,
+)
 from src.integrations.crm.constants import Status
 from src.utils.logger import logger
 
@@ -64,7 +71,9 @@ class VapiProvider(VoiceAIProvider):
         Raises:
             VoiceAIError: If the call creation fails
         """
-        logger.info("[Vapi Provider] Creating outbound call", phone_number=request.phone_number)
+        logger.info(
+            "[Vapi Provider] Creating outbound call", phone_number=request.phone_number
+        )
 
         try:
             # Build typed objects for SDK
@@ -74,18 +83,27 @@ class VapiProvider(VoiceAIProvider):
                 external_id=request.customer_id,  # Use external_id for customer_id tracking
             )
             assistant_overrides = self._build_assistant_overrides(request)
-            
+
             # Create call using SDK with typed objects
-            call: VapiCall = await self._client.calls.create(
-                assistant_id=self._vapi_settings.default_assistant_id,
-                phone_number_id=self._vapi_settings.phone_number_id,
-                customer=customer,
-                assistant_overrides=assistant_overrides,
-            )
-            
+            # Use squad_id or assistant_id based on configuration
+            if self._vapi_settings.use_squad:
+                call: VapiCall = await self._client.calls.create(
+                    squad_id=self._vapi_settings.default_assistant_id,
+                    phone_number_id=self._vapi_settings.phone_number_id,
+                    customer=customer,
+                    assistant_overrides=assistant_overrides,
+                )
+            else:
+                call: VapiCall = await self._client.calls.create(
+                    assistant_id=self._vapi_settings.default_assistant_id,
+                    phone_number_id=self._vapi_settings.phone_number_id,
+                    customer=customer,
+                    assistant_overrides=assistant_overrides,
+                )
+
             # Return call response using SDK's Call object directly
             return self._parse_call_response(call)
-            
+
         except Exception as e:
             error_msg = f"Error creating call: {str(e)}"
             logger.error("[Vapi Provider] Error creating call", error=str(e))
@@ -107,10 +125,10 @@ class VapiProvider(VoiceAIProvider):
         try:
             # Get call using SDK
             call = await self._client.calls.get(id=call_id)
-            
+
             # Return call response using SDK's Call object directly
             return self._parse_call_response(call)
-            
+
         except Exception as e:
             error_msg = f"Error getting call status: {str(e)}"
             logger.error("[Vapi Provider] Error getting call status", error=str(e))
@@ -156,7 +174,9 @@ class VapiProvider(VoiceAIProvider):
         headers = {"Content-Type": "application/json"}
         payload = {"type": "end-call"}
 
-        logger.info("[Vapi Provider] Sending end-call to control URL", control_url=control_url)
+        logger.info(
+            "[Vapi Provider] Sending end-call to control URL", control_url=control_url
+        )
 
         try:
             async with httpx.AsyncClient(
@@ -172,7 +192,11 @@ class VapiProvider(VoiceAIProvider):
                     error_msg = (
                         f"Failed to end call: {response.status_code} - {response.text}"
                     )
-                    logger.error("[Vapi Provider] Failed to end call", status_code=response.status_code, response_text=response.text)
+                    logger.error(
+                        "[Vapi Provider] Failed to end call",
+                        status_code=response.status_code,
+                        response_text=response.text,
+                    )
                     raise VoiceAIError(
                         error_msg, error_code=VoiceAIErrorCode.HTTP_ERROR
                     )
@@ -184,7 +208,6 @@ class VapiProvider(VoiceAIProvider):
             error_msg = f"HTTP error ending call: {str(e)}"
             logger.error("[Vapi Provider] HTTP error ending call", error=str(e))
             raise VoiceAIError(error_msg, error_code=VoiceAIErrorCode.HTTP_ERROR)
-
 
     def _format_phone_number(self, phone_number: str) -> str:
         """
@@ -228,10 +251,16 @@ class VapiProvider(VoiceAIProvider):
         """Build assistant overrides with customer variables and structured outputs using SDK types."""
         # Extract customer context variables
         variable_values = self._extract_customer_variables(request)
-        
+
+        # Log the variables being passed to Vapi
+        logger.info(
+            "[Vapi Provider] Passing customer context to Vapi assistant",
+            variable_values=variable_values,
+        )
+
         # Build analysis plan with structured data extraction
         analysis_plan = self._build_claim_status_analysis_plan()
-        
+
         # Return typed AssistantOverrides object
         return AssistantOverrides(
             variable_values=variable_values if variable_values else None,
@@ -241,7 +270,7 @@ class VapiProvider(VoiceAIProvider):
     def _extract_customer_variables(self, request: CallRequest) -> dict[str, Any]:
         """Extract customer context variables from request using Pydantic model_dump."""
         # Use model_dump to get all fields, excluding None values and specific fields
-        # we don't want in variable_values (phone_number is used for customer, 
+        # we don't want in variable_values (phone_number is used for customer,
         # metadata is handled separately, customer_id goes in main metadata)
         return request.model_dump(
             exclude_none=True,
@@ -257,11 +286,11 @@ class VapiProvider(VoiceAIProvider):
                 "call_outcome": {
                     "type": "string",
                     "enum": [
-                        "completed",      # Successfully determined claim status
-                        "voicemail",      # Reached voicemail
-                        "gatekeeper",     # Blocked by gatekeeper  
-                        "inconclusive",   # Call happened but couldn't determine status
-                        "no_answer"       # No connection established
+                        "completed",  # Successfully determined claim status
+                        "voicemail",  # Reached voicemail
+                        "gatekeeper",  # Blocked by gatekeeper
+                        "inconclusive",  # Call happened but couldn't determine status
+                        "no_answer",  # No connection established
                     ],
                     "description": "Result of the claim status inquiry call",
                 },
@@ -322,7 +351,7 @@ class VapiProvider(VoiceAIProvider):
             schema_=schema,
             timeout_seconds=30,
         )
-        
+
         # Return typed AnalysisPlan object
         return AnalysisPlan(structured_data_plan=structured_data_plan)
 
@@ -353,13 +382,17 @@ class VapiProvider(VoiceAIProvider):
         analysis: Analysis = call.analysis
 
         if analysis is not None:
-            _structured_data = ClaimStatusData.from_vapi(analysis.structured_data) if analysis.structured_data is not None else None
+            _structured_data = (
+                ClaimStatusData.from_vapi(analysis.structured_data)
+                if analysis.structured_data is not None
+                else None
+            )
             analysis_data = AnalysisData(
                 summary=analysis.summary,
                 structured_data=_structured_data,
                 success_evaluation=analysis.success_evaluation,
             )
-            
+
         return CallResponse(
             call_id=call.id,
             status=status,
@@ -370,32 +403,31 @@ class VapiProvider(VoiceAIProvider):
             messages=messages,
         )
 
-    def _parse_messages(
-        self, 
-        vapi_messages: list[CallMessagesItem]
-    ) -> list:
+    def _parse_messages(self, vapi_messages: list[CallMessagesItem]) -> list:
         """
         Parse Vapi-specific message types into provider-agnostic format.
-        
+
         Args:
             vapi_messages: List of Vapi CallMessagesItem (UserMessage, BotMessage, etc.)
-            
+
         Returns:
             List of provider-agnostic TranscriptMessage objects
         """
         from src.ai.voice_ai.schemas import TranscriptMessage
-        
+
         messages = []
         for msg in vapi_messages:
             # Only process UserMessage and BotMessage (which have transcript content)
             if isinstance(msg, (UserMessage, BotMessage)):
                 # Unpack Vapi message directly into our schema
-                messages.append(TranscriptMessage(
-                    role=msg.role,
-                    content=msg.message,
-                    timestamp_seconds=msg.seconds_from_start,
-                    duration_seconds=msg.duration,
-                ))
+                messages.append(
+                    TranscriptMessage(
+                        role=msg.role,
+                        content=msg.message,
+                        timestamp_seconds=msg.seconds_from_start,
+                        duration_seconds=msg.duration,
+                    )
+                )
             # ToolCallMessage, SystemMessage, etc. don't have user/bot transcript content
-        
+
         return messages

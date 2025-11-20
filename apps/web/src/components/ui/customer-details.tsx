@@ -5,18 +5,18 @@ import MondayLogo from '@maive/brand/logos/integrations/monday/monday_logo.png';
 import ServiceTitanLogo from '@maive/brand/logos/integrations/servicetitan/ServiceTitan_Logo_Black_2.png';
 
 import {
-    AlertTriangle,
-    Building2,
-    Calendar,
-    CheckCircle,
-    Clock,
-    DollarSign,
-    FileText,
-    Mail,
-    MapPin,
-    Phone,
-    User,
-    XCircle,
+  AlertTriangle,
+  Building2,
+  Calendar,
+  CheckCircle,
+  Clock,
+  DollarSign,
+  FileText,
+  Mail,
+  MapPin,
+  Phone,
+  User,
+  XCircle,
 } from 'lucide-react';
 import { Button } from './button';
 import { Label } from './label';

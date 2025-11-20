@@ -15,7 +15,6 @@ from src.db.crm_credentials.model import OrganizationCRMCredentials
 from src.db.crm_credentials.schemas import CRMCredentialsCreate
 from src.utils.logger import logger
 
-
 # In-memory TTL cache: 1000 orgs max, 5 min TTL (300 seconds)
 _credentials_cache: TTLCache = TTLCache(maxsize=1000, ttl=300)
 
@@ -128,7 +127,10 @@ class CRMCredentialsService:
                     organization_id=organization_id,
                     secret_arn=secret_arn,
                 )
-            elif error_code == "InvalidRequestException" and "scheduled for deletion" in str(e):
+            elif (
+                error_code == "InvalidRequestException"
+                and "scheduled for deletion" in str(e)
+            ):
                 # Secret is scheduled for deletion, restore it and update with NEW credentials
                 logger.info(
                     "Secret scheduled for deletion, restoring and updating with new credentials",

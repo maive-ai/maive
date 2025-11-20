@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import BinaryIO
 
-from openai import AsyncOpenAI, APIError
+from openai import APIError, AsyncOpenAI
 
 from src.ai.openai.config import get_openai_settings
 from src.ai.rag.schemas import CodeDocumentMetadata, VectorStoreStatus
@@ -134,7 +134,9 @@ class VectorStoreService:
                             break  # Success, exit retry loop
                         except APIError as e:
                             if e.status_code == 500 and attempt < max_retries - 1:
-                                wait_time = retry_delay * (2 ** attempt)  # Exponential backoff
+                                wait_time = retry_delay * (
+                                    2**attempt
+                                )  # Exponential backoff
                                 logger.warning(
                                     "OpenAI 500 error attaching file, retrying",
                                     file_id=uploaded_file.id,
@@ -153,9 +155,15 @@ class VectorStoreService:
                     )
                     try:
                         await self.client.files.delete(uploaded_file.id)
-                        logger.info("Cleaned up orphaned file", file_id=uploaded_file.id)
+                        logger.info(
+                            "Cleaned up orphaned file", file_id=uploaded_file.id
+                        )
                     except Exception as delete_error:
-                        logger.error("Failed to cleanup file", file_id=uploaded_file.id, error=str(delete_error))
+                        logger.error(
+                            "Failed to cleanup file",
+                            file_id=uploaded_file.id,
+                            error=str(delete_error),
+                        )
                     raise attach_error
 
                 logger.info(
@@ -365,7 +373,11 @@ class VectorStoreService:
                     await self.client.files.delete(f.id)
                     deleted_count += 1
                 except Exception as e:
-                    logger.warning("Failed deleting file", file_id=getattr(f, 'id', '?'), error=str(e))
+                    logger.warning(
+                        "Failed deleting file",
+                        file_id=getattr(f, "id", "?"),
+                        error=str(e),
+                    )
 
             has_more = bool(getattr(response, "has_more", False))
             cursor = getattr(response, "last_id", None)

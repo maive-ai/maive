@@ -257,7 +257,9 @@ async def test_get_call_history(repository, mock_session, sample_call):
 
 
 @pytest.mark.asyncio
-async def test_get_call_history_with_project_filter(repository, mock_session, sample_call):
+async def test_get_call_history_with_project_filter(
+    repository, mock_session, sample_call
+):
     """Test getting call history filtered by project."""
     # Setup
     mock_result = MagicMock()
