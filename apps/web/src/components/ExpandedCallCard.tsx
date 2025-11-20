@@ -10,7 +10,7 @@ import {
   PhoneOff,
   User,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import {
@@ -27,6 +27,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useCallAudioStream } from '@/hooks/useCallAudioStream';
 import { formatPhoneNumber, getStatusColor } from '@/lib/utils';
 
 interface ExpandedCallCardProps {
@@ -64,8 +65,40 @@ export function ExpandedCallCard({
   isEndingCall,
 }: ExpandedCallCardProps) {
   const [isListening, setIsListening] = useState(true); // Default to listening
+  const { volumeLevel, isConnected, connect, disconnect } =
+    useCallAudioStream(listenUrl);
 
   const canListen = callStatus === 'in_progress' && listenUrl;
+
+  // Auto-connect when call becomes in progress (default to listening)
+  useEffect(() => {
+    if (canListen && isListening && !isConnected) {
+      connect();
+    }
+  }, [canListen, isListening, isConnected, connect]);
+
+  // Disconnect when toggled off
+  useEffect(() => {
+    if (!isListening && isConnected) {
+      disconnect();
+    }
+  }, [isListening, isConnected, disconnect]);
+
+  // Auto-disconnect when listenUrl is removed
+  useEffect(() => {
+    if (!listenUrl && isConnected) {
+      disconnect();
+    }
+  }, [listenUrl, isConnected, disconnect]);
+
+  const handleListenToggle = (pressed: boolean) => {
+    setIsListening(pressed);
+    if (pressed && canListen) {
+      connect();
+    } else if (isConnected) {
+      disconnect();
+    }
+  };
 
   return (
     <Item variant="outline" className="flex-col items-start">
@@ -100,8 +133,8 @@ export function ExpandedCallCard({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Toggle
-                  pressed={!!(isListening && canListen)}
-                  onPressedChange={setIsListening}
+                  pressed={isConnected}
+                  onPressedChange={handleListenToggle}
                   disabled={!canListen}
                   size="sm"
                   aria-label="Toggle live listen"
@@ -112,7 +145,7 @@ export function ExpandedCallCard({
               <TooltipContent>
                 {!canListen
                   ? 'Live listen available when connected'
-                  : isListening
+                  : isConnected
                     ? 'Stop listening'
                     : 'Listen to call'}
               </TooltipContent>
@@ -205,11 +238,16 @@ export function ExpandedCallCard({
         </div>
 
         {/* Audio visualization when listening */}
-        {isListening && canListen && (
+        {isConnected && (
           <div className="mt-3 pt-3 border-t">
-            <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
-              <Headphones className="size-3" />
+            <div className="flex items-center gap-2 text-xs text-green-600 mb-2">
+              <Headphones className="size-3 animate-pulse" />
               <span>Listening to call...</span>
+              {volumeLevel > 0 && (
+                <span className="text-gray-500">
+                  Volume: {Math.round(volumeLevel * 100)}%
+                </span>
+              )}
             </div>
           </div>
         )}
