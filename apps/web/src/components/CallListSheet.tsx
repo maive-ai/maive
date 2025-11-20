@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { useCallList, useRemoveFromCallList } from '@/clients/callList';
 import { useFetchProjects } from '@/clients/crm';
+import { AutoDialer } from '@/components/AutoDialer';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -150,9 +151,15 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
           </div>
 
           {/* Actions */}
-          <div className="pt-12 mt-12 px-4">
+          <div className="pt-6 mt-6 px-4 space-y-4 border-t">
+            {/* AutoDialer */}
+            {callListItems.length > 0 && (
+              <AutoDialer />
+            )}
+            
             <Button
               onClick={() => onOpenChange(false)}
+              variant="outline"
               className="w-full"
             >
               Close
