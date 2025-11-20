@@ -20,13 +20,20 @@ def create_voice_ai_provider() -> VoiceAIProvider:
         VoiceAIProvider: The configured Voice AI provider instance
 
     Raises:
-        ValueError: If the configured provider is not supported
+        ValueError: If the configured provider is not supported or if Twilio
+            is configured (TwilioProvider requires user context and should be
+            created via get_twilio_provider dependency instead)
     """
     settings = get_voice_ai_settings()
 
     if settings.provider == VoiceAIProviderEnum.VAPI:
         logger.info("Creating Vapi Voice AI provider")
         return VapiProvider()
+    elif settings.provider == VoiceAIProviderEnum.TWILIO:
+        raise ValueError(
+            "TwilioProvider cannot be created via factory - it requires user context. "
+            "Use get_voice_ai_provider_dependency which handles user-specific Twilio setup."
+        )
     else:
         raise ValueError(f"Unsupported Voice AI provider: {settings.provider}")
 

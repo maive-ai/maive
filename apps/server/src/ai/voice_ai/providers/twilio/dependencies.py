@@ -39,42 +39,20 @@ def get_twilio_voice_client() -> TwilioVoiceClient:
 async def get_user_phone_number(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> str:
+) -> str | None:
     """
     Get phone number for current user.
+
+    Returns None if not configured (safe for Vapi users).
+    Caller should check and raise error if phone number is required.
 
     Args:
         current_user: Current authenticated user
         session: Database session
 
     Returns:
-        User's phone number
-
-    Raises:
-        HTTPException: If no phone number is configured
+        User's phone number or None if not configured
     """
     service = PhoneNumberService(session)
     config = await service.get_phone_number(current_user.id)
-    if not config:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No phone number configured for user",
-        )
-    return config.phone_number
-
-
-async def get_twilio_provider(
-    client: Client = Depends(get_twilio_client),
-    phone_number: str = Depends(get_user_phone_number),
-) -> TwilioProvider:
-    """
-    Create TwilioProvider with global client + user phone.
-
-    Args:
-        client: Global Twilio client
-        phone_number: User's phone number
-
-    Returns:
-        Configured TwilioProvider instance
-    """
-    return TwilioProvider(client, phone_number)
+    return config.phone_number if config else None
