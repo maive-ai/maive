@@ -2152,6 +2152,19 @@ export type VoiceAIProvider = typeof VoiceAIProvider[keyof typeof VoiceAIProvide
 
 
 /**
+ * Response model for voice AI provider configuration.
+ * @export
+ * @interface VoiceAIProviderResponse
+ */
+export interface VoiceAIProviderResponse {
+    /**
+     * Voice AI provider name
+     * @type {string}
+     * @memberof VoiceAIProviderResponse
+     */
+    'provider': string;
+}
+/**
  * Who to call enum for scheduled groups.
  * @export
  * @enum {string}
@@ -5769,6 +5782,36 @@ export const VoiceAIApiAxiosParamCreator = function (configuration?: Configurati
             };
         },
         /**
+         * Get the configured Voice AI provider.  Returns:     VoiceAIProviderResponse: Provider configuration
+         * @summary Get Provider
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getProviderApiVoiceAiProviderGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/voice-ai/provider`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
          * Generate Twilio Access Token for browser calling.
          * @summary Get Token
          * @param {*} [options] Override http request option.
@@ -5851,6 +5894,18 @@ export const VoiceAIApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
+         * Get the configured Voice AI provider.  Returns:     VoiceAIProviderResponse: Provider configuration
+         * @summary Get Provider
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getProviderApiVoiceAiProviderGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<VoiceAIProviderResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getProviderApiVoiceAiProviderGet(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['VoiceAIApi.getProviderApiVoiceAiProviderGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
          * Generate Twilio Access Token for browser calling.
          * @summary Get Token
          * @param {*} [options] Override http request option.
@@ -5900,6 +5955,15 @@ export const VoiceAIApiFactory = function (configuration?: Configuration, basePa
          */
         getCallStatusApiVoiceAiCallsCallIdGet(callId: string, options?: RawAxiosRequestConfig): AxiosPromise<CallResponse> {
             return localVarFp.getCallStatusApiVoiceAiCallsCallIdGet(callId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Get the configured Voice AI provider.  Returns:     VoiceAIProviderResponse: Provider configuration
+         * @summary Get Provider
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getProviderApiVoiceAiProviderGet(options?: RawAxiosRequestConfig): AxiosPromise<VoiceAIProviderResponse> {
+            return localVarFp.getProviderApiVoiceAiProviderGet(options).then((request) => request(axios, basePath));
         },
         /**
          * Generate Twilio Access Token for browser calling.
@@ -5953,6 +6017,17 @@ export class VoiceAIApi extends BaseAPI {
      */
     public getCallStatusApiVoiceAiCallsCallIdGet(callId: string, options?: RawAxiosRequestConfig) {
         return VoiceAIApiFp(this.configuration).getCallStatusApiVoiceAiCallsCallIdGet(callId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Get the configured Voice AI provider.  Returns:     VoiceAIProviderResponse: Provider configuration
+     * @summary Get Provider
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof VoiceAIApi
+     */
+    public getProviderApiVoiceAiProviderGet(options?: RawAxiosRequestConfig) {
+        return VoiceAIApiFp(this.configuration).getProviderApiVoiceAiProviderGet(options).then((request) => request(this.axios, this.basePath));
     }
 
     /**

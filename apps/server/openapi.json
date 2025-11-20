@@ -1202,6 +1202,28 @@
         ]
       }
     },
+    "/api/voice-ai/provider": {
+      "get": {
+        "tags": [
+          "Voice AI"
+        ],
+        "summary": "Get Provider",
+        "description": "Get the configured Voice AI provider.\n\nReturns:\n    VoiceAIProviderResponse: Provider configuration",
+        "operationId": "get_provider_api_voice_ai_provider_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceAIProviderResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/voice-ai/calls/active": {
       "get": {
         "tags": [
@@ -5115,6 +5137,21 @@
         ],
         "title": "VoiceAIProvider",
         "description": "Available Voice AI providers."
+      },
+      "VoiceAIProviderResponse": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "title": "Provider",
+            "description": "Voice AI provider name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider"
+        ],
+        "title": "VoiceAIProviderResponse",
+        "description": "Response model for voice AI provider configuration."
       },
       "WhoToCall": {
         "type": "string",

@@ -39,6 +39,12 @@ class CallRequest(BaseModel):
     tenant: int | None = Field(None, description="Tenant ID")
 
 
+class VoiceAIProviderResponse(BaseModel):
+    """Response model for voice AI provider configuration."""
+
+    provider: str = Field(..., description="Voice AI provider name")
+
+
 class VoiceAIErrorResponse(BaseModel):
     """Error response from Voice AI operations."""
 
@@ -173,7 +179,7 @@ class TranscriptMessage(BaseModel):
 
 class CallResponse(BaseModel):
     """Response model for call information."""
-
+    
     model_config = {"arbitrary_types_allowed": True}
 
     call_id: str = Field(..., description="Unique call identifier")

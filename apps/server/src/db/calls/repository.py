@@ -7,7 +7,7 @@ Provides CRUD operations for Call records using SQLAlchemy async sessions.
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import desc, select, update
+from sqlalchemy import desc, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.ai.voice_ai.constants import CallStatus, VoiceAIProvider
@@ -123,6 +123,30 @@ class CallRepository:
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def get_call_by_customer_call_sid(
+        self, customer_call_sid: str
+    ) -> Call | None:
+        """
+        Get a call by customer call SID stored in provider_data.
+
+        This is used for Twilio calls where the customer call SID is stored
+        in provider_data after the browser-to-customer bridge is established.
+
+        Args:
+            customer_call_sid: Twilio customer call SID from provider_data
+
+        Returns:
+            Call | None: Call record if found, None otherwise
+        """
+        # Use PostgreSQL's ->> operator to extract JSON field as text
+        stmt = (
+            select(Call)
+            .where(text("provider_data->>'customer_call_sid' = :call_sid"))
+            .params(call_sid=customer_call_sid)
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
     async def update_call_status(
         self,
         call_id: str,
@@ -152,7 +176,26 @@ class CallRepository:
         call.updated_at = datetime.now(UTC)
 
         if provider_data is not None:
-            call.provider_data = provider_data
+            # Merge new provider_data with existing to preserve important fields
+            # like conference_name, customer_phone, user_phone that shouldn't be
+            # overwritten by status updates
+            if call.provider_data:
+                # Always preserve these fields from existing data (status updates shouldn't change them)
+                preserved_fields = {
+                    "conference_name",
+                    "customer_phone",
+                    "user_phone",
+                    "customer_call_sid",
+                }
+                for field in preserved_fields:
+                    if (
+                        field in call.provider_data
+                        and call.provider_data[field] is not None
+                    ):
+                        provider_data[field] = call.provider_data[field]
+
+            # Create a new dict to ensure SQLAlchemy detects the change
+            call.provider_data = dict(provider_data)
 
         await self.session.flush()
         await self.session.refresh(call)
@@ -201,7 +244,23 @@ class CallRepository:
         call.updated_at = datetime.now(UTC)
 
         if provider_data is not None:
-            call.provider_data = provider_data
+            # Merge new provider_data with existing to preserve important fields
+            if call.provider_data:
+                preserved_fields = {
+                    "conference_name",
+                    "customer_phone",
+                    "user_phone",
+                    "customer_call_sid",
+                }
+                for field in preserved_fields:
+                    if (
+                        field in call.provider_data
+                        and call.provider_data[field] is not None
+                    ):
+                        provider_data[field] = call.provider_data[field]
+
+            # Create a new dict to ensure SQLAlchemy detects the change
+            call.provider_data = dict(provider_data)
 
         if analysis_data is not None:
             call.analysis_data = analysis_data

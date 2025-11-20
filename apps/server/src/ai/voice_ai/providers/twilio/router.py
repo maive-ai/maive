@@ -36,8 +36,30 @@ async def status_webhook(
 
     internal_status = map_twilio_status(CallStatus)
 
-    await call_repository.update_call_status(call_id=CallSid, status=internal_status)
-    await call_repository.session.commit()
+    # Try to find call by CallSid (could be browser or customer call)
+    call = await call_repository.get_call_by_call_id(CallSid)
+
+    # If not found, it might be the customer call - look for it in provider_data
+    if not call:
+        call = await call_repository.get_call_by_customer_call_sid(CallSid)
+
+        if call:
+            logger.debug(
+                "[TWILIO] Status webhook - found call by customer_call_sid",
+                browser_call_sid=call.call_id,
+                customer_call_sid=CallSid,
+            )
+
+    if call:
+        await call_repository.update_call_status(
+            call_id=call.call_id, status=internal_status
+        )
+        await call_repository.session.commit()
+    else:
+        logger.warning(
+            "[TWILIO] Status webhook - call not found",
+            call_sid=CallSid,
+        )
 
     return Response(status_code=HTTPStatus.OK)
 
@@ -77,13 +99,31 @@ async def bridge_webhook(
         logger.warning("[TWILIO] Bridge webhook - no provider_data", call_sid=CallSid)
         return Response(status_code=HTTPStatus.OK)
 
+    logger.debug(
+        "[TWILIO] Bridge webhook - provider_data",
+        call_sid=CallSid,
+        provider_data=call.provider_data,
+    )
+
     conference_name = call.provider_data.get("conference_name")
     customer_phone = call.provider_data.get("customer_phone")
     user_phone = call.provider_data.get("user_phone")
 
+    logger.debug(
+        "[TWILIO] Bridge webhook - extracted values",
+        call_sid=CallSid,
+        conference_name=conference_name,
+        customer_phone=customer_phone,
+        user_phone=user_phone,
+    )
+
     if not all([conference_name, customer_phone, user_phone]):
         logger.warning(
-            "[TWILIO] Bridge webhook - missing required info", call_sid=CallSid
+            "[TWILIO] Bridge webhook - missing required info",
+            call_sid=CallSid,
+            conference_name=conference_name,
+            customer_phone=customer_phone,
+            user_phone=user_phone,
         )
         return Response(status_code=HTTPStatus.OK)
 
@@ -106,7 +146,14 @@ async def bridge_webhook(
         )
 
         # Update call record with customer call SID
-        call.provider_data["customer_call_sid"] = customer_call.sid
+        # Create a new dict to trigger SQLAlchemy's change detection
+        updated_provider_data = dict(call.provider_data)
+        updated_provider_data["customer_call_sid"] = customer_call.sid
+        call.provider_data = updated_provider_data
+
+        # Explicitly flush and refresh to ensure the change is persisted
+        await call_repository.session.flush()
+        await call_repository.session.refresh(call)
         await call_repository.session.commit()
 
     except Exception as e:
@@ -137,10 +184,30 @@ async def recording_webhook(
     else:
         recording_url_mp3 = f"{RecordingUrl}.mp3"
 
-    await call_repository.update_call_recording(
-        call_id=CallSid, recording_url=recording_url_mp3
-    )
-    await call_repository.session.commit()
+    # Try to find call by CallSid (could be browser or customer call)
+    call = await call_repository.get_call_by_call_id(CallSid)
+
+    # If not found, it might be the customer call - look for it in provider_data
+    if not call:
+        call = await call_repository.get_call_by_customer_call_sid(CallSid)
+
+        if call:
+            logger.debug(
+                "[TWILIO] Recording webhook - found call by customer_call_sid",
+                browser_call_sid=call.call_id,
+                customer_call_sid=CallSid,
+            )
+
+    if call:
+        await call_repository.update_call_recording(
+            call_id=call.call_id, recording_url=recording_url_mp3
+        )
+        await call_repository.session.commit()
+    else:
+        logger.warning(
+            "[TWILIO] Recording webhook - call not found",
+            call_sid=CallSid,
+        )
 
     return Response(status_code=HTTPStatus.OK)
 

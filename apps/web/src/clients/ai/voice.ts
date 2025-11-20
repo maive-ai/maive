@@ -1,6 +1,5 @@
 // Voice AI client - handles voice AI API calls
 
-import { env } from '@/env';
 import {
   Configuration,
   TwilioApi,
@@ -15,6 +14,8 @@ import {
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
+
+import { env } from '@/env';
 import { baseClient } from '../base';
 
 // Re-export types from the generated client
@@ -79,6 +80,15 @@ export async function getTwilioToken(): Promise<string> {
 }
 
 /**
+ * Get the configured Voice AI provider
+ */
+export async function getVoiceAIProvider(): Promise<string> {
+  const api = createVoiceAIApi();
+  const response = await api.getProviderApiVoiceAiProviderGet();
+  return response.data.provider;
+}
+
+/**
  * End an ongoing call by call ID
  */
 export async function endCall(callId: string): Promise<void> {
@@ -114,6 +124,17 @@ export function useCallStatus(
     enabled: options?.enabled !== false && callId !== null,
     refetchInterval: options?.refetchInterval ?? 3000, // Poll every 3 seconds by default
     refetchIntervalInBackground: true,
+  });
+}
+
+/**
+ * React Query hook for getting the configured Voice AI provider
+ */
+export function useVoiceAIProvider(): UseQueryResult<string, Error> {
+  return useQuery({
+    queryKey: ['voice-ai-provider'],
+    queryFn: getVoiceAIProvider,
+    staleTime: Infinity, // Provider doesn't change during session
   });
 }
 

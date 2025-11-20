@@ -15,10 +15,9 @@ import {
   User,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import type { Value as E164Number } from 'react-phone-number-input';
-import { isValidPhoneNumber } from 'react-phone-number-input';
+import { isValidPhoneNumber, type Value as E164Number } from 'react-phone-number-input';
 
-import { useEndCall } from '@/clients/ai/voice';
+import { useEndCall, useVoiceAIProvider } from '@/clients/ai/voice';
 import { downloadFile, useFetchJobFiles, useFetchProject } from '@/clients/crm';
 import { useCallAndWriteToCrm } from '@/clients/workflows';
 import { CallAudioVisualizer } from '@/components/call/CallAudioVisualizer';
@@ -27,6 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { useActiveCallPolling } from '@/hooks/useActiveCallPolling';
+import { resumeAudio } from '@/lib/audio';
 import { formatPhoneNumber, getStatusColor } from '@/lib/utils';
 
 export const Route = createFileRoute('/_authed/project-detail')({
@@ -56,6 +56,9 @@ function ProjectDetail() {
   const callAndWritetoCrmMutation = useCallAndWriteToCrm(projectId);
   const endCallMutation = useEndCall();
 
+  // Check voice AI provider (Twilio vs Vapi)
+  const { data: voiceProvider } = useVoiceAIProvider();
+
   // Poll for active call status every 2.5 seconds
   const { data: activeCall } = useActiveCallPolling({
     onCallEnded: () => {
@@ -68,8 +71,13 @@ function ProjectDetail() {
     },
   });
 
-  // Only allow ending the call when we have the control URL AND the call is ringing or connected
-  const canEndCall = controlUrl !== null && callStatus === 'in_progress';
+  // Determine if we can end the call
+  // For Vapi: requires controlUrl AND in_progress status
+  // For Twilio: End call not yet implemented, keep button disabled
+  const canEndCall =
+    voiceProvider === 'twilio'
+      ? false // TODO: Implement Twilio end call functionality
+      : controlUrl !== null && callStatus === 'in_progress';
 
   // Debug logging for button state
   useEffect(() => {
@@ -208,10 +216,14 @@ function ProjectDetail() {
     );
   }
 
-  const handleStartCall = (): void => {
+  const handleStartCall = async (): Promise<void> => {
     if (!phoneNumber || !isValid) {
       return;
     }
+
+    // Resume audio context before initiating call (required for browser audio)
+    // This is a no-op if Twilio isn't configured (e.g., Vapi provider)
+    await resumeAudio();
 
     const companyName = localStorage.getItem('companyName') || undefined;
 
