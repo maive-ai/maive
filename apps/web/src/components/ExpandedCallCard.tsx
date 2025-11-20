@@ -105,27 +105,22 @@ export function ExpandedCallCard({
       {/* SECTION 1: Call Status Information */}
       <div className="w-full">
         <ItemHeader>
-          <div className="flex items-center gap-2">
-            <Badge className={`${getStatusColor(projectStatus)} pointer-events-none`}>
-              {projectStatus}
-            </Badge>
-            {callStatus && (
-              <div className="flex items-center gap-2">
-                {callStatus === 'in_progress' ? (
-                  <PhoneCall className="size-4 text-green-600 animate-pulse" />
-                ) : callStatus === 'ringing' ? (
-                  <Loader2 className="size-4 text-blue-600 animate-spin" />
-                ) : callStatus === 'queued' ? (
-                  <Clock className="size-4 text-blue-600" />
-                ) : (
-                  <CheckCircle2 className="size-4 text-gray-600" />
-                )}
-                <span className="text-xs font-medium text-gray-600 capitalize">
-                  {callStatus === 'in_progress' ? 'Connected' : callStatus}
-                </span>
-              </div>
-            )}
-          </div>
+          {callStatus && (
+            <div className="flex items-center gap-2">
+              {callStatus === 'in_progress' ? (
+                <PhoneCall className="size-4 text-green-600 animate-pulse" />
+              ) : callStatus === 'ringing' ? (
+                <Loader2 className="size-4 text-blue-600 animate-spin" />
+              ) : callStatus === 'queued' ? (
+                <Clock className="size-4 text-blue-600" />
+              ) : (
+                <CheckCircle2 className="size-4 text-gray-600" />
+              )}
+              <span className="text-xs font-medium text-gray-600 capitalize">
+                {callStatus === 'in_progress' ? 'Connected' : callStatus}
+              </span>
+            </div>
+          )}
 
           {/* Call control buttons */}
           <TooltipProvider>
@@ -254,9 +249,14 @@ export function ExpandedCallCard({
       {/* SECTION 3: Claim Summary */}
       <div className="w-full pt-3 border-t">
         <div className="bg-gray-50 rounded p-3">
-          <p className="text-xs font-semibold text-gray-700 mb-1.5">
-            Claim Summary
-          </p>
+          <div className="flex items-center gap-2 mb-1.5">
+            <p className="text-xs font-semibold text-gray-700">
+              Claim Summary
+            </p>
+            <Badge className={`${getStatusColor(projectStatus)} pointer-events-none`}>
+              {projectStatus}
+            </Badge>
+          </div>
           <p className="text-xs text-gray-600 leading-relaxed">
             Following up on claim status and payment timeline. Verify estimate
             approval and schedule next steps.
