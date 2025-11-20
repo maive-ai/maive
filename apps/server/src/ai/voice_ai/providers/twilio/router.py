@@ -20,10 +20,10 @@ from src.db.calls.repository import CallRepository
 from src.db.dependencies import get_call_repository
 from src.utils.logger import logger
 
-router = APIRouter(prefix="/twilio", tags=["Voice AI - Twilio"])
+router = APIRouter(prefix="/twilio", tags=["Twilio"])
 
 
-@router.post("/webhooks/status")
+@router.post("/webhooks/status", include_in_schema=False)
 async def status_webhook(
     CallSid: str = Form(...),
     CallStatus: str = Form(...),
@@ -40,7 +40,7 @@ async def status_webhook(
     return Response(status_code=HTTPStatus.OK)
 
 
-@router.post("/webhooks/recording")
+@router.post("/webhooks/recording", include_in_schema=False)
 async def recording_webhook(
     CallSid: str = Form(...),
     RecordingUrl: str = Form(...),
@@ -66,7 +66,7 @@ async def recording_webhook(
     return Response(status_code=HTTPStatus.OK)
 
 
-@router.post("/twiml/join-conference")
+@router.post("/twiml/join-conference", include_in_schema=False)
 async def twiml_join_conference(conference_name: str = "default"):
     """TwiML endpoint to join conference room."""
     twiml_response = VoiceResponse()

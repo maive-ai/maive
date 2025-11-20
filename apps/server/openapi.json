@@ -1174,7 +1174,7 @@
       "get": {
         "tags": [
           "Voice AI",
-          "Voice AI - Twilio"
+          "Twilio"
         ],
         "summary": "Get Token",
         "description": "Generate Twilio Access Token for browser calling.",
