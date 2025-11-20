@@ -1,7 +1,9 @@
 // Voice AI client - handles voice AI API calls
 
+import { env } from '@/env';
 import {
   Configuration,
+  TwilioApi,
   VoiceAIApi,
   type ActiveCallResponse,
   type CallRequest,
@@ -13,7 +15,6 @@ import {
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
-import { env } from '@/env';
 import { baseClient } from '../base';
 
 // Re-export types from the generated client
@@ -24,6 +25,19 @@ export type { ActiveCallResponse, CallRequest, CallResponse };
  */
 const createVoiceAIApi = (): VoiceAIApi => {
   return new VoiceAIApi(
+    new Configuration({
+      basePath: env.PUBLIC_SERVER_URL,
+    }),
+    undefined,
+    baseClient,
+  );
+};
+
+/**
+ * Create a configured Twilio API instance using the shared axios client
+ */
+const createTwilioApi = (): TwilioApi => {
+  return new TwilioApi(
     new Configuration({
       basePath: env.PUBLIC_SERVER_URL,
     }),
@@ -49,6 +63,19 @@ export async function getActiveCall(): Promise<ActiveCallResponse | null> {
   const api = createVoiceAIApi();
   const response = await api.getActiveCallApiVoiceAiCallsActiveGet();
   return response.data; // Will be null if no active call
+}
+
+/**
+ * Get Twilio access token for browser-based calling
+ */
+export async function getTwilioToken(): Promise<string> {
+  const api = createTwilioApi();
+  const response = await api.getTokenApiVoiceAiTwilioTokenGet();
+  const token = response.data.token;
+  if (!token) {
+    throw new Error('No token received from server');
+  }
+  return token;
 }
 
 /**
