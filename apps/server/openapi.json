@@ -2010,37 +2010,6 @@
         ]
       }
     },
-    "/api/workflows/autodialer/start": {
-      "post": {
-        "tags": [
-          "Workflows"
-        ],
-        "summary": "Start Autodialer",
-        "description": "Start autodialer background loop.\n\nReturns immediately while calls continue in background.\n\nArgs:\n    current_user: The authenticated user\n\nReturns:\n    dict with status",
-        "operationId": "start_autodialer_api_workflows_autodialer_start_post",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "type": "object",
-                  "title": "Response Start Autodialer Api Workflows Autodialer Start Post"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
     "/": {
       "get": {
         "summary": "Root",
