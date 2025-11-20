@@ -9,4 +9,3 @@ from src.ai.voice_ai.providers.vapi.schemas import (
 )
 
 __all__ = ["VapiProvider", "VapiPaymentDetails", "VapiRequiredActions"]
-
