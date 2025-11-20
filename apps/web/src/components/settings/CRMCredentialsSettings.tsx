@@ -128,6 +128,9 @@ export function CRMCredentialsSettings({
 
       // Show success message
       toast.success('✓ Credentials saved successfully!');
+
+      // Notify parent component
+      onSuccess?.();
     } catch (error) {
       console.error('[CRMCredentialsSettings] Failed to save or test credentials:', error);
       setIsLoading(false);
@@ -156,6 +159,7 @@ export function CRMCredentialsSettings({
       toast.success('CRM credentials deleted successfully!');
       setExistingCredentials(null);
       setSelectedProvider(null);
+      onSuccess?.();
     } catch (error) {
       console.error('Failed to delete credentials:', error);
       toast.error(
@@ -291,11 +295,11 @@ export function CRMCredentialsSettings({
                 <span className="text-3xl">🧪</span>
               </div>
             ) : (
-              <img
+            <img
                 src={selectedProvider === CRMProvider.JobNimbus ? jobNimbusLogo : serviceTitanLogo}
                 alt={getProviderDisplayName(selectedProvider)}
-                className="h-10 object-contain"
-              />
+              className="h-10 object-contain"
+            />
             )}
             <div className="flex-1">
               <p className="font-medium">{getProviderDisplayName(selectedProvider)}</p>
