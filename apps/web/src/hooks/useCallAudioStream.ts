@@ -22,7 +22,27 @@ export function useCallAudioStream(listenUrl: string | null) {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const volumeIntervalRef = useRef<number | null>(null);
   const isConnectingRef = useRef(false);
+  const lastMessageTimeRef = useRef<number>(0);
+  const messageCountRef = useRef<number>(0);
+  const healthCheckIntervalRef = useRef<number | null>(null);
 
+  // Note: THESE SETTINGS NEED TO BE TUNED BASED ON THE AGENT
+  // The following settings work for an agent that was STT -> TTS -> Audio Stream, but they sound bad after switching to a speech-to-speech agent.
+  /*
+  - Input Codec: Int16
+  - Channels: 1
+  - Sample Rate: 32000
+  - Flush Time: 150
+  - FFT Size: 256
+  */
+  // Good settings for a speech-to-speech agent
+  /*
+ - Input Codec: Int16
+ - Channels: 1
+ - Sample Rate: 48000
+ - Flush Time: 150
+ - FFT Size: 256
+ */
   const setupPlayer = (): void => {
     // Initialize PCMPlayer with built-in analyser
     const player = new PCMPlayer({
@@ -52,13 +72,62 @@ export function useCallAudioStream(listenUrl: string | null) {
 
   const handleWebSocketMessage = (event: MessageEvent): void => {
     if (event.data instanceof ArrayBuffer) {
+      lastMessageTimeRef.current = Date.now();
+      messageCountRef.current += 1;
+
+      // Log every 100th message to track data flow without spamming
+      if (messageCountRef.current % 100 === 0) {
+        console.log(
+          '[Audio Stream] Received messages:',
+          messageCountRef.current,
+          'Latest size:',
+          event.data.byteLength,
+          'bytes',
+        );
+      }
+
       playerRef.current?.feed(event.data);
+    } else {
+      console.warn(
+        '[Audio Stream] Received non-ArrayBuffer message:',
+        typeof event.data,
+      );
+    }
+  };
+
+  const startHealthCheck = (): void => {
+    // Check every 5 seconds if we're still receiving audio data
+    healthCheckIntervalRef.current = window.setInterval(() => {
+      const timeSinceLastMessage = Date.now() - lastMessageTimeRef.current;
+      const ws = wsRef.current;
+
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        if (timeSinceLastMessage > 10000) {
+          // 10 seconds without data
+          console.warn(
+            '[Audio Stream] No audio data received for',
+            Math.round(timeSinceLastMessage / 1000),
+            'seconds. WebSocket state:',
+            ws.readyState,
+          );
+        }
+      }
+    }, 5000);
+  };
+
+  const stopHealthCheck = (): void => {
+    if (healthCheckIntervalRef.current) {
+      clearInterval(healthCheckIntervalRef.current);
+      healthCheckIntervalRef.current = null;
     }
   };
 
   const handleWebSocketOpen = (): void => {
     console.log('[Audio Stream] WebSocket connected');
     isConnectingRef.current = false;
+    lastMessageTimeRef.current = Date.now();
+    messageCountRef.current = 0;
+    startHealthCheck();
     setState((prev) => ({ ...prev, isConnected: true, error: null }));
   };
 
@@ -68,9 +137,23 @@ export function useCallAudioStream(listenUrl: string | null) {
     setState((prev) => ({ ...prev, error: 'Connection error' }));
   };
 
-  const handleWebSocketClose = (): void => {
+  const handleWebSocketClose = (event: CloseEvent): void => {
+    console.log(
+      '[Audio Stream] WebSocket closed',
+      'Code:',
+      event.code,
+      'Reason:',
+      event.reason || 'none',
+      'Clean:',
+      event.wasClean,
+      'Total messages received:',
+      messageCountRef.current,
+    );
     isConnectingRef.current = false;
+    stopHealthCheck();
     stopVolumeMonitoring();
+    cleanupPlayer();
+    wsRef.current = null; // Clear the ref so we can reconnect
     setState((prev) => ({ ...prev, isConnected: false, volumeLevel: 0 }));
   };
 
@@ -86,7 +169,36 @@ export function useCallAudioStream(listenUrl: string | null) {
   };
 
   const connect = () => {
-    if (!listenUrl || wsRef.current || isConnectingRef.current) return;
+    if (!listenUrl) {
+      console.warn('[Audio Stream] Cannot connect: No listenUrl provided');
+      return;
+    }
+
+    // If there's an existing WebSocket, check its state
+    if (wsRef.current) {
+      const readyState = wsRef.current.readyState;
+      // WebSocket.CLOSED (3) or WebSocket.CLOSING (2) - clean it up and reconnect
+      if (readyState === WebSocket.CLOSED || readyState === WebSocket.CLOSING) {
+        console.log(
+          '[Audio Stream] Cleaning up stale WebSocket before reconnecting',
+        );
+        disconnect();
+      } else {
+        // WebSocket.CONNECTING (0) or WebSocket.OPEN (1) - don't interrupt
+        console.warn(
+          '[Audio Stream] Cannot connect: WebSocket already active',
+          {
+            readyState,
+          },
+        );
+        return;
+      }
+    }
+
+    if (isConnectingRef.current) {
+      console.warn('[Audio Stream] Cannot connect: Already connecting');
+      return;
+    }
 
     console.log('[Audio Stream] Attempting to connect to:', listenUrl);
     isConnectingRef.current = true;
@@ -156,6 +268,11 @@ export function useCallAudioStream(listenUrl: string | null) {
   };
 
   const disconnect = () => {
+    console.log(
+      '[Audio Stream] Disconnecting... Total messages received:',
+      messageCountRef.current,
+    );
+    stopHealthCheck();
     stopVolumeMonitoring();
     cleanupWebSocket();
     cleanupPlayer();
