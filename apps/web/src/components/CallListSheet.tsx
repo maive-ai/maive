@@ -1,4 +1,4 @@
-import { Info, X } from 'lucide-react';
+import { Info, PhoneOff, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { isValidPhoneNumber } from 'react-phone-number-input';
 
@@ -16,6 +16,13 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog';
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle
+} from '@/components/ui/empty';
 import {
   Item,
   ItemContent,
@@ -56,19 +63,11 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   // Auto-clean call list: remove items whose projects no longer exist
   useEffect(() => {
     if (callListData && projectsData && !isLoadingProjects) {
-      console.log('[CallListSheet] Call list items:', callListData.items.length);
-      console.log('[CallListSheet] Projects loaded:', projectsData.projects.length);
-
       const missingProjects = callListData.items.filter(
         (item) => !projectsData.projects.some((p) => p.id === item.project_id)
       );
 
       if (missingProjects.length > 0) {
-        console.warn(
-          '[CallListSheet] Auto-cleaning call list - removing projects that no longer exist:',
-          missingProjects.map((item) => item.project_id)
-        );
-
         // Remove each missing project from the call list
         missingProjects.forEach((item) => {
           removeFromCallList.mutate(item.project_id);
@@ -116,7 +115,6 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   // Poll for active call status
   const { data: activeCall } = useActiveCallPolling({
     onCallEnded: () => {
-      console.log('[CallListSheet] Call ended - advancing to next contact');
       setActiveCallId(null);
       setCallStatus(null);
       setListenUrl(null);
@@ -134,7 +132,6 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
           }, 1000);
         } else {
           // End of list - stop dialer
-          console.log('[CallListSheet] End of call list reached');
           setIsDialerActive(false);
           setCurrentDialingIndex(0);
         }
@@ -158,7 +155,6 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   // Restore active call state on mount and update status when polling
   useEffect(() => {
     if (activeCall) {
-      console.log('[CallListSheet] Restoring active call state:', activeCall);
       setActiveCallId(activeCall.call_id);
       setCallStatus(activeCall.status ?? null);
       setListenUrl(activeCall.listen_url ?? null);
@@ -184,10 +180,6 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   // Store call ID and status when call starts successfully
   useEffect(() => {
     if (callAndWriteToCrmMutation.isSuccess && callAndWriteToCrmMutation.data) {
-      console.log(
-        '[CallListSheet] Call mutation successful:',
-        callAndWriteToCrmMutation.data,
-      );
       setActiveCallId(callAndWriteToCrmMutation.data.call_id);
       setCallStatus(callAndWriteToCrmMutation.data.status);
 
@@ -219,7 +211,6 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
 
     // Validate phone number
     if (!adjusterPhone) {
-      console.error('[CallListSheet] No phone number for project:', project.id);
       // Skip to next contact
       const nextIndex = index + 1;
       if (nextIndex < callListItems.length) {
@@ -238,12 +229,6 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
 
     // Validate phone number format
     if (!isValidPhoneNumber(adjusterPhone)) {
-      console.error(
-        '[CallListSheet] Invalid phone number:',
-        adjusterPhone,
-        'for project:',
-        project.id,
-      );
       // Skip to next contact
       const nextIndex = index + 1;
       if (nextIndex < callListItems.length) {
@@ -257,7 +242,6 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
 
     const companyName = localStorage.getItem('companyName') || undefined;
 
-    console.log('[CallListSheet] Initiating call for project:', project.id);
     callAndWriteToCrmMutation.mutate({
       phone_number: adjusterPhone,
       customer_id: project.id,
@@ -360,9 +344,18 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
                 </p>
               </div>
             ) : callListItems.length === 0 ? (
-              <div className="flex items-center justify-center py-12">
-                <p className="text-gray-500">No projects in call list</p>
-              </div>
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <PhoneOff />
+                  </EmptyMedia>
+                  <EmptyTitle>No contacts in call list</EmptyTitle>
+                  <EmptyDescription>
+                    Add projects to your call list to start making calls with
+                    the power dialer.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             ) : (
               <ItemGroup>
                 {callListItems.map((item, index) => {
