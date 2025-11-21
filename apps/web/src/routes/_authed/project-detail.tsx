@@ -727,11 +727,14 @@ function ProjectDetail() {
                 )}
               </Button>
 
-              <CallAudioVisualizer
-                listenUrl={listenUrl}
-                callStatus={callStatus}
-                onDisconnect={() => setListenUrl(null)}
-              />
+              {/* CallAudioVisualizer - Only show for Vapi */}
+              {voiceProvider === VoiceAIProvider.Vapi && (
+                <CallAudioVisualizer
+                  listenUrl={listenUrl}
+                  callStatus={callStatus}
+                  onDisconnect={() => setListenUrl(null)}
+                />
+              )}
             </CardContent>
           </Card>
         </div>

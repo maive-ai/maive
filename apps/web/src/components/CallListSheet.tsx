@@ -452,6 +452,7 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
                           callStatus={callStatus}
                           listenUrl={listenUrl}
                           canEndCall={canEndCall}
+                          voiceProvider={voiceProvider}
                           onEndCall={handleEndCall}
                           isEndingCall={endCallMutation.isPending}
                         />

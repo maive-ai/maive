@@ -1,4 +1,4 @@
-import { CallStatus } from '@maive/api/client';
+import { CallStatus, VoiceAIProvider } from '@maive/api/client';
 import {
   CheckCircle2,
   Clock,
@@ -43,6 +43,7 @@ interface ExpandedCallCardProps {
   callStatus: CallStatus | null;
   listenUrl: string | null;
   canEndCall: boolean;
+  voiceProvider?: string | null;
 
   // Actions
   onEndCall: () => void;
@@ -59,6 +60,7 @@ export function ExpandedCallCard({
   callStatus,
   listenUrl,
   canEndCall,
+  voiceProvider,
   onEndCall,
   isEndingCall,
 }: ExpandedCallCardProps) {
@@ -123,27 +125,29 @@ export function ExpandedCallCard({
           {/* Call control buttons */}
           <TooltipProvider>
             <div className="flex items-center gap-1">
-              {/* Live Listen Toggle */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Toggle
-                    pressed={isConnected}
-                    onPressedChange={handleListenToggle}
-                    disabled={!canListen}
-                    size="sm"
-                    aria-label="Toggle live listen"
-                  >
-                    <Headphones className="size-4" />
-                  </Toggle>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {!canListen
-                    ? 'Live listen available when connected'
-                    : isConnected
-                      ? 'Stop listening'
-                      : 'Listen to call'}
-                </TooltipContent>
-              </Tooltip>
+              {/* Live Listen Toggle - Only show for Vapi */}
+              {voiceProvider === VoiceAIProvider.Vapi && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Toggle
+                      pressed={isConnected}
+                      onPressedChange={handleListenToggle}
+                      disabled={!canListen}
+                      size="sm"
+                      aria-label="Toggle live listen"
+                    >
+                      <Headphones className="size-4" />
+                    </Toggle>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {!canListen
+                      ? 'Live listen available when connected'
+                      : isConnected
+                        ? 'Stop listening'
+                        : 'Listen to call'}
+                  </TooltipContent>
+                </Tooltip>
+              )}
 
               {/* End Call Button */}
               <Tooltip>
@@ -175,8 +179,8 @@ export function ExpandedCallCard({
           </TooltipProvider>
         </ItemHeader>
 
-        {/* Audio visualization when listening */}
-        {isConnected && (
+        {/* Audio visualization when listening - Only show for Vapi */}
+        {voiceProvider === VoiceAIProvider.Vapi && isConnected && (
           <div className="px-4 pb-3">
             <div className="flex items-center gap-2 text-xs text-green-600">
               <Headphones className="size-3 animate-pulse" />
