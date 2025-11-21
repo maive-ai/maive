@@ -8,6 +8,7 @@ from http import HTTPStatus
 
 from fastapi import APIRouter, Depends, Form
 from fastapi.responses import Response
+from sqlalchemy.exc import SQLAlchemyError
 from twilio.jwt.access_token import AccessToken
 from twilio.jwt.access_token.grants import VoiceGrant
 from twilio.twiml.voice_response import VoiceResponse
@@ -156,11 +157,23 @@ async def bridge_webhook(
         await call_repository.session.refresh(call)
         await call_repository.session.commit()
 
+    except SQLAlchemyError as e:
+        # Database transaction failure - roll back to prevent inconsistent state
+        await call_repository.session.rollback()
+        logger.error(
+            "[TWILIO] Database error while bridging customer call",
+            browser_call_sid=CallSid,
+            error=str(e),
+            exc_info=True,
+        )
     except Exception as e:
+        # Twilio API or other non-database errors
+        # Note: If customer_call was created but DB update failed, it's handled above
         logger.error(
             "[TWILIO] Failed to bridge customer call",
             browser_call_sid=CallSid,
             error=str(e),
+            exc_info=True,
         )
 
     return Response(status_code=HTTPStatus.OK)
