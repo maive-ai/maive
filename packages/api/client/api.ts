@@ -1674,6 +1674,31 @@ export interface ProjectList {
 
 
 /**
+ * AI-generated project summary with structured information.
+ * @export
+ * @interface ProjectSummary
+ */
+export interface ProjectSummary {
+    /**
+     * Brief one-sentence summary of the project status
+     * @type {string}
+     * @memberof ProjectSummary
+     */
+    'summary': string;
+    /**
+     * List of recent actions taken on the project (2-3 bullet points)
+     * @type {Array<string>}
+     * @memberof ProjectSummary
+     */
+    'recent_actions'?: Array<string>;
+    /**
+     * List of recommended next steps (2-3 bullet points)
+     * @type {Array<string>}
+     * @memberof ProjectSummary
+     */
+    'next_steps'?: Array<string>;
+}
+/**
  * Provider-agnostic required actions from claim status calls.
  * @export
  * @interface RequiredActions
@@ -2674,6 +2699,44 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
             };
         },
         /**
+         * Generate an AI summary for a project.  This endpoint analyzes project notes and generates a structured summary including: - Brief project status summary - Recent actions taken (2-3 bullet points) - Next steps (2-3 bullet points)  Args:     project_id: The unique identifier for the project     current_user: The authenticated user     crm_service: The CRM service instance from dependency injection  Returns:     ProjectSummary: AI-generated structured summary  Raises:     HTTPException: If the project is not found or an error occurs
+         * @summary Generate Project Summary
+         * @param {string} projectId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        generateProjectSummaryApiCrmProjectsProjectIdSummaryPost: async (projectId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'projectId' is not null or undefined
+            assertParamExists('generateProjectSummaryApiCrmProjectsProjectIdSummaryPost', 'projectId', projectId)
+            const localVarPath = `/api/crm/projects/{project_id}/summary`
+                .replace(`{${"project_id"}}`, encodeURIComponent(String(projectId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
          * Get all contacts with pagination.  This endpoint works across all CRM providers and returns a standardized ContactList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     ContactList: Paginated list of contacts in universal format  Raises:     HTTPException: If an error occurs while fetching contacts
          * @summary Get All Contacts
          * @param {number} [page] Page number (1-indexed)
@@ -3171,6 +3234,19 @@ export const CRMApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
+         * Generate an AI summary for a project.  This endpoint analyzes project notes and generates a structured summary including: - Brief project status summary - Recent actions taken (2-3 bullet points) - Next steps (2-3 bullet points)  Args:     project_id: The unique identifier for the project     current_user: The authenticated user     crm_service: The CRM service instance from dependency injection  Returns:     ProjectSummary: AI-generated structured summary  Raises:     HTTPException: If the project is not found or an error occurs
+         * @summary Generate Project Summary
+         * @param {string} projectId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async generateProjectSummaryApiCrmProjectsProjectIdSummaryPost(projectId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ProjectSummary>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.generateProjectSummaryApiCrmProjectsProjectIdSummaryPost(projectId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CRMApi.generateProjectSummaryApiCrmProjectsProjectIdSummaryPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
          * Get all contacts with pagination.  This endpoint works across all CRM providers and returns a standardized ContactList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     ContactList: Paginated list of contacts in universal format  Raises:     HTTPException: If an error occurs while fetching contacts
          * @summary Get All Contacts
          * @param {number} [page] Page number (1-indexed)
@@ -3364,6 +3440,16 @@ export const CRMApiFactory = function (configuration?: Configuration, basePath?:
             return localVarFp.downloadFileApiCrmFilesFileIdDownloadGet(fileId, filename, contentType, options).then((request) => request(axios, basePath));
         },
         /**
+         * Generate an AI summary for a project.  This endpoint analyzes project notes and generates a structured summary including: - Brief project status summary - Recent actions taken (2-3 bullet points) - Next steps (2-3 bullet points)  Args:     project_id: The unique identifier for the project     current_user: The authenticated user     crm_service: The CRM service instance from dependency injection  Returns:     ProjectSummary: AI-generated structured summary  Raises:     HTTPException: If the project is not found or an error occurs
+         * @summary Generate Project Summary
+         * @param {string} projectId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        generateProjectSummaryApiCrmProjectsProjectIdSummaryPost(projectId: string, options?: RawAxiosRequestConfig): AxiosPromise<ProjectSummary> {
+            return localVarFp.generateProjectSummaryApiCrmProjectsProjectIdSummaryPost(projectId, options).then((request) => request(axios, basePath));
+        },
+        /**
          * Get all contacts with pagination.  This endpoint works across all CRM providers and returns a standardized ContactList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     ContactList: Paginated list of contacts in universal format  Raises:     HTTPException: If an error occurs while fetching contacts
          * @summary Get All Contacts
          * @param {number} [page] Page number (1-indexed)
@@ -3532,6 +3618,18 @@ export class CRMApi extends BaseAPI {
      */
     public downloadFileApiCrmFilesFileIdDownloadGet(fileId: string, filename?: string | null, contentType?: string | null, options?: RawAxiosRequestConfig) {
         return CRMApiFp(this.configuration).downloadFileApiCrmFilesFileIdDownloadGet(fileId, filename, contentType, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Generate an AI summary for a project.  This endpoint analyzes project notes and generates a structured summary including: - Brief project status summary - Recent actions taken (2-3 bullet points) - Next steps (2-3 bullet points)  Args:     project_id: The unique identifier for the project     current_user: The authenticated user     crm_service: The CRM service instance from dependency injection  Returns:     ProjectSummary: AI-generated structured summary  Raises:     HTTPException: If the project is not found or an error occurs
+     * @summary Generate Project Summary
+     * @param {string} projectId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CRMApi
+     */
+    public generateProjectSummaryApiCrmProjectsProjectIdSummaryPost(projectId: string, options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).generateProjectSummaryApiCrmProjectsProjectIdSummaryPost(projectId, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**

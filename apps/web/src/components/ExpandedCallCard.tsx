@@ -1,4 +1,8 @@
-import { CallStatus, VoiceAIProvider } from '@maive/api/client';
+import {
+  CallStatus,
+  VoiceAIProvider,
+  type ProjectSummary,
+} from '@maive/api/client';
 import {
   CheckCircle2,
   Clock,
@@ -35,6 +39,7 @@ interface ExpandedCallCardProps {
   address: string;
   claimNumber?: string;
   projectStatus: string;
+  projectSummary?: ProjectSummary;
 
   // Call state
   callStatus: CallStatus | null;
@@ -54,6 +59,7 @@ export function ExpandedCallCard({
   address,
   claimNumber,
   projectStatus,
+  projectSummary,
   callStatus,
   listenUrl,
   canEndCall,
@@ -250,21 +256,69 @@ export function ExpandedCallCard({
         </div>
       )}
 
-      {/* SECTION 3: Claim Summary */}
+      {/* SECTION 3: Project Summary */}
       <div className="w-full pt-3 border-t">
         <div className="bg-gray-50 rounded p-3">
           <div className="flex items-center gap-2 mb-1.5">
-            <p className="text-xs font-semibold text-gray-700">Claim Summary</p>
+            <p className="text-xs font-semibold text-gray-700">
+              Project Summary
+            </p>
             <Badge
               className={`${getStatusColor(projectStatus)} pointer-events-none`}
             >
               {projectStatus}
             </Badge>
           </div>
-          <p className="text-xs text-gray-600 leading-relaxed">
-            Following up on claim status and payment timeline. Verify estimate
-            approval and schedule next steps.
-          </p>
+
+          {projectSummary ? (
+            <div className="space-y-2">
+              {/* Brief Summary */}
+              <p className="text-xs text-gray-700 leading-relaxed">
+                {projectSummary.summary}
+              </p>
+
+              {/* Recent Actions */}
+              {projectSummary.recent_actions &&
+                projectSummary.recent_actions.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 mb-1">
+                      Recent Actions:
+                    </p>
+                    <ul className="text-xs text-gray-600 leading-relaxed space-y-0.5 pl-3">
+                      {projectSummary.recent_actions.map((action, idx) => (
+                        <li key={idx} className="flex items-start gap-1">
+                          <span className="text-gray-400 mt-0.5">•</span>
+                          <span>{action}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+              {/* Next Steps */}
+              {projectSummary.next_steps &&
+                projectSummary.next_steps.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 mb-1">
+                      Next Steps:
+                    </p>
+                    <ul className="text-xs text-gray-600 leading-relaxed space-y-0.5 pl-3">
+                      {projectSummary.next_steps.map((step, idx) => (
+                        <li key={idx} className="flex items-start gap-1">
+                          <span className="text-gray-400 mt-0.5">•</span>
+                          <span>{step}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>Generating project summary...</span>
+            </div>
+          )}
         </div>
       </div>
     </Item>

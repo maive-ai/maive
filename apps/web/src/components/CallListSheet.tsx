@@ -5,7 +5,11 @@ import { isValidPhoneNumber } from 'react-phone-number-input';
 
 import { useEndCall, useVoiceAIProvider } from '@/clients/ai/voice';
 import { useCallList, useRemoveFromCallList } from '@/clients/callList';
-import { useFetchProjects } from '@/clients/crm';
+import {
+  useFetchProjectSummary,
+  useFetchProjects,
+  type ProjectSummary,
+} from '@/clients/crm';
 import { useCallAndWriteToCrm } from '@/clients/workflows';
 import { ExpandedCallCard } from '@/components/ExpandedCallCard';
 import {
@@ -36,6 +40,22 @@ import { getStatusColor } from '@/lib/utils';
 interface CallListSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+/**
+ * Wrapper component that fetches project summary using TanStack Query (with caching)
+ * and passes it to ExpandedCallCard
+ */
+function ExpandedCallCardWithSummary({
+  projectId,
+  ...props
+}: Omit<React.ComponentProps<typeof ExpandedCallCard>, 'projectSummary'> & {
+  projectId: string;
+}) {
+  // Fetch summary with automatic caching (2-minute stale time, 5-minute cache)
+  const { data: projectSummary } = useFetchProjectSummary(projectId);
+
+  return <ExpandedCallCard {...props} projectSummary={projectSummary} />;
 }
 
 export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
@@ -121,6 +141,7 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
     () => projectsData?.projects || [],
     [projectsData?.projects],
   );
+
 
   // Create a map of project IDs to projects for quick lookup
   const projectMap = useMemo(
@@ -488,7 +509,8 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
                   return (
                     <div key={item.id} className="mb-3">
                       {isExpanded ? (
-                        <ExpandedCallCard
+                        <ExpandedCallCardWithSummary
+                          projectId={item.project_id}
                           adjusterName={adjusterName}
                           adjusterPhone={adjusterPhone}
                           customerName={customerName}
