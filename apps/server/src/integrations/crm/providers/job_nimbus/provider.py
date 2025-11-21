@@ -255,7 +255,7 @@ class JobNimbusProvider(CRMProvider):
                     {"wildcard": {"primary.mobile": f"*{search_terms}*"}},
                 ]
                 search_should_conditions.extend(phone_conditions)
-                
+
                 should_conditions.extend(search_should_conditions)
 
         customer_name = filters.get("customer_name")
@@ -400,6 +400,8 @@ class JobNimbusProvider(CRMProvider):
 
         Args:
             filters: Optional dictionary of filters:
+                - search: str - General search query that searches across multiple fields
+                  (customer name, address, claim number, job ID, phone, etc.)
                 - customer_name: str - Partial match on customer name (case-insensitive)
                 - job_id: str - Exact match on job ID
                 - address: str - Partial match on address
@@ -467,7 +469,14 @@ class JobNimbusProvider(CRMProvider):
         In JobNimbus, projects and jobs are the same entity (flat structure).
 
         Args:
-            filters: Optional dictionary of filters
+            filters: Optional dictionary of filters:
+                - search: str - General search query that searches across multiple fields
+                  (customer name, address, claim number, project ID, phone, etc.)
+                - customer_name: str - Partial match on customer name (case-insensitive)
+                - job_id: str - Exact match on job/project ID
+                - address: str - Partial match on address
+                - claim_number: str - Exact match on claim number
+                - status: str - Exact match on status
             page: Page number (1-indexed)
             page_size: Number of items per page
 

@@ -590,7 +590,7 @@ function ProjectDetail() {
                 <div>
                   <CardTitle className="text-xl">Maive Assistant AI</CardTitle>
                   <p className="text-sm text-gray-600">
-                    Let your AI Assistant Riley check on a claim.
+                    Let your AI Assistant check on a claim.
                   </p>
                 </div>
               </div>

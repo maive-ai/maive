@@ -59,7 +59,14 @@ class CRMProvider(ABC):
         Get all jobs with optional filtering and pagination.
 
         Args:
-            filters: Optional dictionary of provider-specific filters
+            filters: Optional dictionary of provider-specific filters. Common filters include:
+                - search: str - General search query that searches across multiple fields
+                  (customer name, address, claim number, job ID, phone, etc.)
+                - customer_name: str - Filter by customer name
+                - job_id: str - Filter by job ID
+                - address: str - Filter by address
+                - claim_number: str - Filter by claim number
+                - status: str - Filter by status
             page: Page number (1-indexed)
             page_size: Number of items per page
 
@@ -99,7 +106,9 @@ class CRMProvider(ABC):
         Get all contacts with optional filtering and pagination.
 
         Args:
-            filters: Optional dictionary of provider-specific filters
+            filters: Optional dictionary of provider-specific filters. Common filters include:
+                - search: str - General search query that searches across multiple fields
+                  (name, email, phone, company, address, etc.)
             page: Page number (1-indexed)
             page_size: Number of items per page
 
@@ -190,7 +199,14 @@ class CRMProvider(ABC):
         In flat CRMs (JobNimbus), this returns the same data as get_all_jobs().
 
         Args:
-            filters: Optional dictionary of provider-specific filters
+            filters: Optional dictionary of provider-specific filters. Common filters include:
+                - search: str - General search query that searches across multiple fields
+                  (customer name, address, claim number, project ID, phone, etc.)
+                - customer_name: str - Filter by customer name
+                - job_id: str - Filter by job/project ID
+                - address: str - Filter by address
+                - claim_number: str - Filter by claim number
+                - status: str - Filter by status
             page: Page number (1-indexed)
             page_size: Number of items per page
 
