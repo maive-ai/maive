@@ -258,8 +258,8 @@ export function ExpandedCallCard({
 
       {/* SECTION 3: Project Summary */}
       <div className="w-full pt-3 border-t">
-        <div className="bg-gray-50 rounded p-3">
-          <div className="flex items-center gap-2 mb-1.5">
+        <div className="bg-gray-50 rounded p-3 relative">
+          <div className="flex items-center justify-between mb-1.5">
             <p className="text-xs font-semibold text-gray-700">
               Project Summary
             </p>
