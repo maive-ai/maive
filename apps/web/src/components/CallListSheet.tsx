@@ -103,6 +103,8 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   const activeCallIdRef = useRef<string | null>(null);
   // Ref to track if user manually stopped the dialer
   const userStoppedDialerRef = useRef(false);
+  // Ref to track the call ID we're currently ending to prevent race conditions
+  const endingCallIdRef = useRef<string | null>(null);
 
   // Call mutations
   const callAndWriteToCrmMutation = useCallAndWriteToCrm();
@@ -222,7 +224,8 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   // Store call ID and status when call starts successfully
   useEffect(() => {
     if (callAndWriteToCrmMutation.isSuccess && callAndWriteToCrmMutation.data) {
-      setActiveCallId(callAndWriteToCrmMutation.data.call_id);
+      const newCallId = callAndWriteToCrmMutation.data.call_id;
+      setActiveCallId(newCallId);
       setCallStatus(callAndWriteToCrmMutation.data.status);
 
       // Extract listenUrl and controlUrl from provider_data
@@ -233,6 +236,11 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
       if (providerData?.monitor?.controlUrl) {
         setControlUrl(providerData.monitor.controlUrl);
       }
+
+      // Clear any pending end call ref to prevent race conditions
+      // This ensures that if a new call starts while an old end call mutation is pending,
+      // the old mutation won't clear the new call's state
+      endingCallIdRef.current = null;
     }
   }, [callAndWriteToCrmMutation.isSuccess, callAndWriteToCrmMutation.data]);
 
@@ -327,6 +335,8 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
       // Start dialing from the beginning
       setIsDialerActive(true);
       userStoppedDialerRef.current = false; // Clear manual stop flag
+      // Clear any pending end call ref to prevent race conditions
+      endingCallIdRef.current = null;
       setCurrentDialingIndex(0);
       initiateCall(0);
     }
@@ -337,18 +347,28 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
 
     // Store the call ID we're ending to prevent race conditions
     const callIdToEnd = activeCallId;
+    endingCallIdRef.current = callIdToEnd;
 
     endCallMutation.mutate(callIdToEnd, {
       onSuccess: () => {
-        // Only clear state if this is still the active call
-        // Prevents clearing state from a new call that started after this mutation
-        // Use ref to get current value, not closure value
-        if (activeCallIdRef.current === callIdToEnd) {
+        // Only clear state if:
+        // 1. This is still the active call (not a new call that started)
+        // 2. We're still ending this specific call (not cleared by a new call start)
+        // This prevents clearing state from a new call that started after this mutation
+        // If endingCallIdRef was cleared (set to null), it means a new call started
+        if (
+          activeCallIdRef.current === callIdToEnd &&
+          endingCallIdRef.current === callIdToEnd
+        ) {
           setActiveCallId(null);
           setListenUrl(null);
           setControlUrl(null);
           setCallStatus(null);
           callAndWriteToCrmMutation.reset();
+        }
+        // Clear the ending call ID ref if this was the call we were ending
+        if (endingCallIdRef.current === callIdToEnd) {
+          endingCallIdRef.current = null;
         }
       },
     });
