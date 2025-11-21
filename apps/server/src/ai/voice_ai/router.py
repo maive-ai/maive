@@ -196,30 +196,20 @@ async def end_call(
 
     if isinstance(result, VoiceAIErrorResponse):
         logger.error(
-            "[End Call] Failed to end call via Vapi",
+            "[End Call] Failed to end call via provider",
             call_id=call_id,
             error=result.error,
         )
-        # If Vapi fails, still mark as ended in DB so UI can update
-        # The monitoring task will sync the actual state
-        await call_repository.end_call(
-            call_id=call_id,
-            final_status=CallStatus.ENDED,
-        )
-        await call_repository.session.commit()
         raise HTTPException(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             detail=f"Failed to end call: {result.error}",
         )
 
-    # Vapi succeeded - now update database
-    await call_repository.end_call(
-        call_id=call_id,
-        final_status=CallStatus.ENDED,
-    )
-    await call_repository.session.commit()
+    # Successfully sent end-call command to provider
+    # The monitoring workflow will detect the call ended and update the database
     logger.info(
-        "[End Call] Successfully ended call and updated database", call_id=call_id
+        "[End Call] Successfully sent end-call command to provider",
+        call_id=call_id,
     )
 
     # Success - 204 No Content response
