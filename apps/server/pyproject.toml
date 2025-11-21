@@ -25,6 +25,7 @@ dependencies = [
     "autoevals>=0.0.130",
     "python-json-logger>=4.0.0",
     "tenacity>=9.1.2",
+    "twilio>=9.8.6",
 ]
 
 [dependency-groups]

@@ -76,7 +76,7 @@ export const envSchema = v.object({
       v.string(),
       v.transform((s) => s.toLowerCase() === 'true'),
     ),
-    'false',
+    'true',
   ),
 
   /**

@@ -39,6 +39,12 @@ class CallRequest(BaseModel):
     tenant: int | None = Field(None, description="Tenant ID")
 
 
+class VoiceAIProviderResponse(BaseModel):
+    """Response model for voice AI provider configuration."""
+
+    provider: str = Field(..., description="Voice AI provider name")
+
+
 class VoiceAIErrorResponse(BaseModel):
     """Error response from Voice AI operations."""
 
@@ -65,7 +71,7 @@ class PaymentDetails(BaseModel):
     @classmethod
     def from_vapi(cls, vapi_payment: Any) -> "PaymentDetails":
         """Create from Vapi payment details."""
-        from src.ai.voice_ai.providers.vapi_schemas import VapiPaymentDetails
+        from src.ai.voice_ai.providers.vapi.schemas import VapiPaymentDetails
 
         if isinstance(vapi_payment, VapiPaymentDetails):
             return cls(
@@ -93,7 +99,7 @@ class RequiredActions(BaseModel):
     @classmethod
     def from_vapi(cls, vapi_actions: Any) -> "RequiredActions":
         """Create from Vapi required actions."""
-        from src.ai.voice_ai.providers.vapi_schemas import VapiRequiredActions
+        from src.ai.voice_ai.providers.vapi.schemas import VapiRequiredActions
 
         if isinstance(vapi_actions, VapiRequiredActions):
             return cls(

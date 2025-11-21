@@ -9,6 +9,7 @@ from src.ai.voice_ai.router import router as voice_ai_router
 from src.auth.router import router as auth_router
 from src.config import get_client_base_url
 from src.db.call_list.router import router as call_list_router
+from src.db.phone_numbers.router import router as phone_numbers_router
 from src.db.scheduled_groups.router import router as scheduled_groups_router
 from src.integrations.creds.router import router as creds_router
 from src.integrations.crm.mcp import get_crm_mcp_server
@@ -61,6 +62,7 @@ if crm_mcp_app:
 app.include_router(auth_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
 app.include_router(creds_router, prefix="/api")
+app.include_router(phone_numbers_router, prefix="/api")
 app.include_router(crm_router, prefix="/api")
 app.include_router(voice_ai_router, prefix="/api")
 app.include_router(call_list_router, prefix="/api")

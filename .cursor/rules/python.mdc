@@ -35,6 +35,10 @@ Error Handling and Validation
   - Implement proper error logging and user-friendly error messages.
   - Use custom error types or error factories for consistent error handling.
 
+OpenAPI Client Generation
+- After adding/modifying FastAPI endpoints, regenerate the TypeScript client: `./scripts/sync-api-client.sh`
+- This ensures frontend has type-safe access to all backend APIs
+
 Logging
 - Use structured logging with keyword arguments instead of f-strings
 - Prefix all log messages with `[MODULE]` or `[COMPONENT]` to identify the source at a glance

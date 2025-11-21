@@ -1372,6 +1372,50 @@ export interface PaymentDetails {
     'check_number'?: string | null;
 }
 /**
+ * Request schema for assigning a phone number.
+ * @export
+ * @interface PhoneNumberCreate
+ */
+export interface PhoneNumberCreate {
+    /**
+     * Phone number in E.164 format (+1...)
+     * @type {string}
+     * @memberof PhoneNumberCreate
+     */
+    'phone_number': string;
+}
+/**
+ * Response schema for phone number configuration.
+ * @export
+ * @interface PhoneNumberResponse
+ */
+export interface PhoneNumberResponse {
+    /**
+     * 
+     * @type {string}
+     * @memberof PhoneNumberResponse
+     */
+    'user_id': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof PhoneNumberResponse
+     */
+    'phone_number': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof PhoneNumberResponse
+     */
+    'created_at': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof PhoneNumberResponse
+     */
+    'updated_at': string;
+}
+/**
  * Universal project model that works across all CRM providers.  In hierarchical CRMs (Service Titan), projects are top-level containers that may contain multiple jobs. In flat CRMs (JobNimbus), projects and jobs are the same entity.
  * @export
  * @interface Project
@@ -2100,12 +2144,26 @@ export interface ValidationErrorLocInner {
  */
 
 export const VoiceAIProvider = {
-    Vapi: 'vapi'
+    Vapi: 'vapi',
+    Twilio: 'twilio'
 } as const;
 
 export type VoiceAIProvider = typeof VoiceAIProvider[keyof typeof VoiceAIProvider];
 
 
+/**
+ * Response model for voice AI provider configuration.
+ * @export
+ * @interface VoiceAIProviderResponse
+ */
+export interface VoiceAIProviderResponse {
+    /**
+     * Voice AI provider name
+     * @type {string}
+     * @memberof VoiceAIProviderResponse
+     */
+    'provider': string;
+}
 /**
  * Who to call enum for scheduled groups.
  * @export
@@ -4517,6 +4575,252 @@ export class DefaultApi extends BaseAPI {
 
 
 /**
+ * PhoneNumbersApi - axios parameter creator
+ * @export
+ */
+export const PhoneNumbersApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * Assign phone number to current user.  Args:     data: Phone number assignment data     current_user: Current authenticated user     service: Phone number service  Returns:     Created or updated configuration  Raises:     HTTPException: If assignment fails
+         * @summary Assign Phone Number
+         * @param {PhoneNumberCreate} phoneNumberCreate 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        assignPhoneNumberApiPhoneNumbersPost: async (phoneNumberCreate: PhoneNumberCreate, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'phoneNumberCreate' is not null or undefined
+            assertParamExists('assignPhoneNumberApiPhoneNumbersPost', 'phoneNumberCreate', phoneNumberCreate)
+            const localVarPath = `/api/phone-numbers`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(phoneNumberCreate, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Remove phone number assignment for current user.  Args:     current_user: Current authenticated user     service: Phone number service
+         * @summary Delete Phone Number
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        deletePhoneNumberApiPhoneNumbersDelete: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/phone-numbers`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Get phone number for current user.  Args:     current_user: Current authenticated user     service: Phone number service  Returns:     User\'s phone number configuration  Raises:     HTTPException: If no phone number is configured
+         * @summary Get Phone Number
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getPhoneNumberApiPhoneNumbersGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/phone-numbers`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * PhoneNumbersApi - functional programming interface
+ * @export
+ */
+export const PhoneNumbersApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = PhoneNumbersApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * Assign phone number to current user.  Args:     data: Phone number assignment data     current_user: Current authenticated user     service: Phone number service  Returns:     Created or updated configuration  Raises:     HTTPException: If assignment fails
+         * @summary Assign Phone Number
+         * @param {PhoneNumberCreate} phoneNumberCreate 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async assignPhoneNumberApiPhoneNumbersPost(phoneNumberCreate: PhoneNumberCreate, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PhoneNumberResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.assignPhoneNumberApiPhoneNumbersPost(phoneNumberCreate, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['PhoneNumbersApi.assignPhoneNumberApiPhoneNumbersPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Remove phone number assignment for current user.  Args:     current_user: Current authenticated user     service: Phone number service
+         * @summary Delete Phone Number
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async deletePhoneNumberApiPhoneNumbersDelete(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.deletePhoneNumberApiPhoneNumbersDelete(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['PhoneNumbersApi.deletePhoneNumberApiPhoneNumbersDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Get phone number for current user.  Args:     current_user: Current authenticated user     service: Phone number service  Returns:     User\'s phone number configuration  Raises:     HTTPException: If no phone number is configured
+         * @summary Get Phone Number
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getPhoneNumberApiPhoneNumbersGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PhoneNumberResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getPhoneNumberApiPhoneNumbersGet(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['PhoneNumbersApi.getPhoneNumberApiPhoneNumbersGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+    }
+};
+
+/**
+ * PhoneNumbersApi - factory interface
+ * @export
+ */
+export const PhoneNumbersApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = PhoneNumbersApiFp(configuration)
+    return {
+        /**
+         * Assign phone number to current user.  Args:     data: Phone number assignment data     current_user: Current authenticated user     service: Phone number service  Returns:     Created or updated configuration  Raises:     HTTPException: If assignment fails
+         * @summary Assign Phone Number
+         * @param {PhoneNumberCreate} phoneNumberCreate 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        assignPhoneNumberApiPhoneNumbersPost(phoneNumberCreate: PhoneNumberCreate, options?: RawAxiosRequestConfig): AxiosPromise<PhoneNumberResponse> {
+            return localVarFp.assignPhoneNumberApiPhoneNumbersPost(phoneNumberCreate, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Remove phone number assignment for current user.  Args:     current_user: Current authenticated user     service: Phone number service
+         * @summary Delete Phone Number
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        deletePhoneNumberApiPhoneNumbersDelete(options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.deletePhoneNumberApiPhoneNumbersDelete(options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Get phone number for current user.  Args:     current_user: Current authenticated user     service: Phone number service  Returns:     User\'s phone number configuration  Raises:     HTTPException: If no phone number is configured
+         * @summary Get Phone Number
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getPhoneNumberApiPhoneNumbersGet(options?: RawAxiosRequestConfig): AxiosPromise<PhoneNumberResponse> {
+            return localVarFp.getPhoneNumberApiPhoneNumbersGet(options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * PhoneNumbersApi - object-oriented interface
+ * @export
+ * @class PhoneNumbersApi
+ * @extends {BaseAPI}
+ */
+export class PhoneNumbersApi extends BaseAPI {
+    /**
+     * Assign phone number to current user.  Args:     data: Phone number assignment data     current_user: Current authenticated user     service: Phone number service  Returns:     Created or updated configuration  Raises:     HTTPException: If assignment fails
+     * @summary Assign Phone Number
+     * @param {PhoneNumberCreate} phoneNumberCreate 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof PhoneNumbersApi
+     */
+    public assignPhoneNumberApiPhoneNumbersPost(phoneNumberCreate: PhoneNumberCreate, options?: RawAxiosRequestConfig) {
+        return PhoneNumbersApiFp(this.configuration).assignPhoneNumberApiPhoneNumbersPost(phoneNumberCreate, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Remove phone number assignment for current user.  Args:     current_user: Current authenticated user     service: Phone number service
+     * @summary Delete Phone Number
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof PhoneNumbersApi
+     */
+    public deletePhoneNumberApiPhoneNumbersDelete(options?: RawAxiosRequestConfig) {
+        return PhoneNumbersApiFp(this.configuration).deletePhoneNumberApiPhoneNumbersDelete(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Get phone number for current user.  Args:     current_user: Current authenticated user     service: Phone number service  Returns:     User\'s phone number configuration  Raises:     HTTPException: If no phone number is configured
+     * @summary Get Phone Number
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof PhoneNumbersApi
+     */
+    public getPhoneNumberApiPhoneNumbersGet(options?: RawAxiosRequestConfig) {
+        return PhoneNumbersApiFp(this.configuration).getPhoneNumberApiPhoneNumbersGet(options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+
+/**
  * ScheduledGroupsApi - axios parameter creator
  * @export
  */
@@ -5257,6 +5561,111 @@ export class ScheduledGroupsApi extends BaseAPI {
 
 
 /**
+ * TwilioApi - axios parameter creator
+ * @export
+ */
+export const TwilioApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * Generate Twilio Access Token for browser calling.
+         * @summary Get Token
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getTokenApiVoiceAiTwilioTokenGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/voice-ai/twilio/token`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * TwilioApi - functional programming interface
+ * @export
+ */
+export const TwilioApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = TwilioApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * Generate Twilio Access Token for browser calling.
+         * @summary Get Token
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getTokenApiVoiceAiTwilioTokenGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<{ [key: string]: string | null; }>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getTokenApiVoiceAiTwilioTokenGet(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['TwilioApi.getTokenApiVoiceAiTwilioTokenGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+    }
+};
+
+/**
+ * TwilioApi - factory interface
+ * @export
+ */
+export const TwilioApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = TwilioApiFp(configuration)
+    return {
+        /**
+         * Generate Twilio Access Token for browser calling.
+         * @summary Get Token
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getTokenApiVoiceAiTwilioTokenGet(options?: RawAxiosRequestConfig): AxiosPromise<{ [key: string]: string | null; }> {
+            return localVarFp.getTokenApiVoiceAiTwilioTokenGet(options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * TwilioApi - object-oriented interface
+ * @export
+ * @class TwilioApi
+ * @extends {BaseAPI}
+ */
+export class TwilioApi extends BaseAPI {
+    /**
+     * Generate Twilio Access Token for browser calling.
+     * @summary Get Token
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof TwilioApi
+     */
+    public getTokenApiVoiceAiTwilioTokenGet(options?: RawAxiosRequestConfig) {
+        return TwilioApiFp(this.configuration).getTokenApiVoiceAiTwilioTokenGet(options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+
+/**
  * VoiceAIApi - axios parameter creator
  * @export
  */
@@ -5372,6 +5781,70 @@ export const VoiceAIApiAxiosParamCreator = function (configuration?: Configurati
                 options: localVarRequestOptions,
             };
         },
+        /**
+         * Get the configured Voice AI provider.  Returns:     VoiceAIProviderResponse: Provider configuration
+         * @summary Get Provider
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getProviderApiVoiceAiProviderGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/voice-ai/provider`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Generate Twilio Access Token for browser calling.
+         * @summary Get Token
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getTokenApiVoiceAiTwilioTokenGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/voice-ai/twilio/token`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication HTTPBearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
     }
 };
 
@@ -5420,6 +5893,30 @@ export const VoiceAIApiFp = function(configuration?: Configuration) {
             const localVarOperationServerBasePath = operationServerMap['VoiceAIApi.getCallStatusApiVoiceAiCallsCallIdGet']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
+        /**
+         * Get the configured Voice AI provider.  Returns:     VoiceAIProviderResponse: Provider configuration
+         * @summary Get Provider
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getProviderApiVoiceAiProviderGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<VoiceAIProviderResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getProviderApiVoiceAiProviderGet(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['VoiceAIApi.getProviderApiVoiceAiProviderGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Generate Twilio Access Token for browser calling.
+         * @summary Get Token
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getTokenApiVoiceAiTwilioTokenGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<{ [key: string]: string | null; }>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getTokenApiVoiceAiTwilioTokenGet(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['VoiceAIApi.getTokenApiVoiceAiTwilioTokenGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
     }
 };
 
@@ -5458,6 +5955,24 @@ export const VoiceAIApiFactory = function (configuration?: Configuration, basePa
          */
         getCallStatusApiVoiceAiCallsCallIdGet(callId: string, options?: RawAxiosRequestConfig): AxiosPromise<CallResponse> {
             return localVarFp.getCallStatusApiVoiceAiCallsCallIdGet(callId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Get the configured Voice AI provider.  Returns:     VoiceAIProviderResponse: Provider configuration
+         * @summary Get Provider
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getProviderApiVoiceAiProviderGet(options?: RawAxiosRequestConfig): AxiosPromise<VoiceAIProviderResponse> {
+            return localVarFp.getProviderApiVoiceAiProviderGet(options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Generate Twilio Access Token for browser calling.
+         * @summary Get Token
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getTokenApiVoiceAiTwilioTokenGet(options?: RawAxiosRequestConfig): AxiosPromise<{ [key: string]: string | null; }> {
+            return localVarFp.getTokenApiVoiceAiTwilioTokenGet(options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -5502,6 +6017,28 @@ export class VoiceAIApi extends BaseAPI {
      */
     public getCallStatusApiVoiceAiCallsCallIdGet(callId: string, options?: RawAxiosRequestConfig) {
         return VoiceAIApiFp(this.configuration).getCallStatusApiVoiceAiCallsCallIdGet(callId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Get the configured Voice AI provider.  Returns:     VoiceAIProviderResponse: Provider configuration
+     * @summary Get Provider
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof VoiceAIApi
+     */
+    public getProviderApiVoiceAiProviderGet(options?: RawAxiosRequestConfig) {
+        return VoiceAIApiFp(this.configuration).getProviderApiVoiceAiProviderGet(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Generate Twilio Access Token for browser calling.
+     * @summary Get Token
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof VoiceAIApi
+     */
+    public getTokenApiVoiceAiTwilioTokenGet(options?: RawAxiosRequestConfig) {
+        return VoiceAIApiFp(this.configuration).getTokenApiVoiceAiTwilioTokenGet(options).then((request) => request(this.axios, this.basePath));
     }
 }
 

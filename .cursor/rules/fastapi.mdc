@@ -227,6 +227,8 @@ class UserBase(BaseModel):
 ### Use Pydantic for Request / Response Objects
 For a router or service layer function, use a pydantic model for both the input and return type object.
 
+**For ORM Models:** When returning SQLAlchemy models, add `model_config = ConfigDict(from_attributes=True)` to response schemas.
+
 ### Custom Base Model
 Having a controllable global base model allows us to customize all the models within the app. For instance, we can enforce a standard datetime format or introduce a common method for all subclasses of the base model.
 ```python

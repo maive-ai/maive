@@ -169,8 +169,12 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
           </div>
 
           {/* Actions */}
-          <div className="pt-12 mt-12 px-4">
-            <Button onClick={() => onOpenChange(false)} className="w-full">
+          <div className="pt-6 mt-6 px-4 space-y-4 border-t">
+            <Button
+              onClick={() => onOpenChange(false)}
+              variant="outline"
+              className="w-full"
+            >
               Close
             </Button>
           </div>
