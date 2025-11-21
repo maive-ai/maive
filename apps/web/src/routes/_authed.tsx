@@ -25,13 +25,13 @@ export const Route: any = createFileRoute('/_authed')({
     }
 
     return (
-      <SidebarProvider>
+      <SidebarProvider className="h-full">
         <AppSidebar user={auth.user} />
-        <SidebarInset>
+        <SidebarInset className="flex flex-col overflow-hidden">
           <HeaderBar user={auth.user} />
-          <main className="flex-1 overflow-auto">
+          <div className="flex flex-1 flex-col overflow-hidden">
             <Outlet />
-          </main>
+          </div>
         </SidebarInset>
       </SidebarProvider>
     );

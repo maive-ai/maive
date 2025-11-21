@@ -282,7 +282,7 @@ export function ChatRuntimeProvider() {
       <FileSearchToolUI />
       <McpToolUI />
       <ReasoningToolUI />
-      <div className="h-full">
+      <div className="flex h-full flex-1 flex-col overflow-hidden">
         <Thread />
       </div>
     </AssistantRuntimeProvider>
