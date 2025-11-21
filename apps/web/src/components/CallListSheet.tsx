@@ -1,4 +1,4 @@
-import { VoiceAIProvider } from '@maive/api/client';
+import { CallStatus, VoiceAIProvider } from '@maive/api/client';
 import { Home, Pause, PhoneOff, Play, ShieldCheck, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { isValidPhoneNumber } from 'react-phone-number-input';
@@ -97,7 +97,7 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   const [isDialerActive, setIsDialerActive] = useState(false);
   const [currentDialingIndex, setCurrentDialingIndex] = useState(0);
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
-  const [callStatus, setCallStatus] = useState<string | null>(null);
+  const [callStatus, setCallStatus] = useState<CallStatus | null>(null);
   const [listenUrl, setListenUrl] = useState<string | null>(null);
   const [controlUrl, setControlUrl] = useState<string | null>(null);
 
@@ -169,8 +169,8 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   // For Twilio: only requires in_progress status (no controlUrl needed)
   const canEndCall =
     voiceProvider === VoiceAIProvider.Twilio
-      ? callStatus === 'in_progress'
-      : controlUrl !== null && callStatus === 'in_progress';
+      ? callStatus === CallStatus.InProgress
+      : controlUrl !== null && callStatus === CallStatus.InProgress;
 
   // Clear removing state when the item is actually gone from the list
   useEffect(() => {

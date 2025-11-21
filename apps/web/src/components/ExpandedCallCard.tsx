@@ -1,3 +1,4 @@
+import { CallStatus } from '@maive/api/client';
 import {
   CheckCircle2,
   Clock,
@@ -15,10 +16,7 @@ import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import {
   Item,
-  ItemContent,
-  ItemHeader,
-  ItemMedia,
-  ItemTitle,
+  ItemHeader
 } from '@/components/ui/item';
 import { Toggle } from '@/components/ui/toggle';
 import {
@@ -42,7 +40,7 @@ interface ExpandedCallCardProps {
   projectStatus: string;
 
   // Call state
-  callStatus: string | null;
+  callStatus: CallStatus | null;
   listenUrl: string | null;
   canEndCall: boolean;
 
@@ -68,7 +66,7 @@ export function ExpandedCallCard({
   const { volumeLevel, isConnected, connect, disconnect } =
     useCallAudioStream(listenUrl);
 
-  const canListen = callStatus === 'in_progress' && listenUrl;
+  const canListen = callStatus === CallStatus.InProgress && listenUrl;
 
   // Auto-connect when call becomes in progress (default to listening)
   useEffect(() => {
@@ -107,17 +105,17 @@ export function ExpandedCallCard({
         <ItemHeader>
           {callStatus && (
             <div className="flex items-center gap-2">
-              {callStatus === 'in_progress' ? (
+              {callStatus === CallStatus.InProgress ? (
                 <PhoneCall className="size-4 text-green-600 animate-pulse" />
-              ) : callStatus === 'ringing' ? (
+              ) : callStatus === CallStatus.Ringing ? (
                 <Loader2 className="size-4 text-blue-600 animate-spin" />
-              ) : callStatus === 'queued' ? (
+              ) : callStatus === CallStatus.Queued ? (
                 <Clock className="size-4 text-blue-600" />
               ) : (
                 <CheckCircle2 className="size-4 text-gray-600" />
               )}
               <span className="text-xs font-medium text-gray-600 capitalize">
-                {callStatus === 'in_progress' ? 'Connected' : callStatus}
+                {callStatus === CallStatus.InProgress ? 'Connected' : callStatus}
               </span>
             </div>
           )}
