@@ -228,16 +228,16 @@ export function ExpandedCallCard({
           <p className="text-xs font-semibold text-gray-500 uppercase">
             Homeowner
           </p>
-          <div className="flex items-start gap-2">
-            <User className="size-4 text-gray-400 mt-0.5 shrink-0" />
-            <div>
+          <div className="space-y-1">
+            <div className="flex items-start gap-2">
+              <User className="size-4 text-gray-400 mt-0.5 shrink-0" />
               <p className="text-sm font-medium text-gray-900">
                 {customerName}
               </p>
-              <div className="flex items-start gap-1 mt-1">
-                <MapPin className="size-3 text-gray-400 mt-0.5 shrink-0" />
-                <p className="text-xs text-gray-600">{address}</p>
-              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <MapPin className="size-4 text-gray-400 mt-0.5 shrink-0" />
+              <p className="text-xs text-gray-600">{address}</p>
             </div>
           </div>
         </div>
