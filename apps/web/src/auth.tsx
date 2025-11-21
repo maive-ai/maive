@@ -1,12 +1,9 @@
-import {
-  Configuration as AuthConfiguration,
-  AuthenticationApi,
-} from '@maive/api/client';
 import * as React from 'react';
 import { useCallback, useContext, useEffect } from 'react';
+
 import type { User } from '@maive/api/client';
 import { signOut as apiSignOut, getCurrentUser } from './clients/auth';
-import { COGNITO_SIGN_IN_URL, env } from './env';
+import { COGNITO_SIGN_IN_URL } from './env';
 
 export interface AuthContext {
   isAuthenticated: boolean;
@@ -58,4 +55,14 @@ export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
+}
+
+/**
+ * Check if current user is from maive.ai domain (internal developer).
+ *
+ * @returns true if user email ends with @maive.ai
+ */
+export function useIsMaiveUser(): boolean {
+  const { user } = useAuth();
+  return user?.email?.endsWith('@maive.ai') ?? false;
 }

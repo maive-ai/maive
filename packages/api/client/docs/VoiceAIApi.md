@@ -7,6 +7,8 @@ All URIs are relative to *http://localhost*
 |[**endCallApiVoiceAiCallsCallIdDelete**](#endcallapivoiceaicallscalliddelete) | **DELETE** /api/voice-ai/calls/{call_id} | End Call|
 |[**getActiveCallApiVoiceAiCallsActiveGet**](#getactivecallapivoiceaicallsactiveget) | **GET** /api/voice-ai/calls/active | Get Active Call|
 |[**getCallStatusApiVoiceAiCallsCallIdGet**](#getcallstatusapivoiceaicallscallidget) | **GET** /api/voice-ai/calls/{call_id} | Get Call Status|
+|[**getProviderApiVoiceAiProviderGet**](#getproviderapivoiceaiproviderget) | **GET** /api/voice-ai/provider | Get Provider|
+|[**getTokenApiVoiceAiTwilioTokenGet**](#gettokenapivoiceaitwiliotokenget) | **GET** /api/voice-ai/twilio/token | Get Token|
 
 # **endCallApiVoiceAiCallsCallIdDelete**
 > endCallApiVoiceAiCallsCallIdDelete()
@@ -153,6 +155,94 @@ const { status, data } = await apiInstance.getCallStatusApiVoiceAiCallsCallIdGet
 |-------------|-------------|------------------|
 |**200** | Successful Response |  -  |
 |**422** | Validation Error |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getProviderApiVoiceAiProviderGet**
+> VoiceAIProviderResponse getProviderApiVoiceAiProviderGet()
+
+Get the configured Voice AI provider.  Returns:     VoiceAIProviderResponse: Provider configuration
+
+### Example
+
+```typescript
+import {
+    VoiceAIApi,
+    Configuration
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new VoiceAIApi(configuration);
+
+const { status, data } = await apiInstance.getProviderApiVoiceAiProviderGet();
+```
+
+### Parameters
+This endpoint does not have any parameters.
+
+
+### Return type
+
+**VoiceAIProviderResponse**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | Successful Response |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getTokenApiVoiceAiTwilioTokenGet**
+> { [key: string]: string | null; } getTokenApiVoiceAiTwilioTokenGet()
+
+Generate Twilio Access Token for browser calling.
+
+### Example
+
+```typescript
+import {
+    VoiceAIApi,
+    Configuration
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new VoiceAIApi(configuration);
+
+const { status, data } = await apiInstance.getTokenApiVoiceAiTwilioTokenGet();
+```
+
+### Parameters
+This endpoint does not have any parameters.
+
+
+### Return type
+
+**{ [key: string]: string | null; }**
+
+### Authorization
+
+[HTTPBearer](../README.md#HTTPBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | Successful Response |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 

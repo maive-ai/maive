@@ -1,8 +1,11 @@
 import { CRMProvider } from '@maive/api/client';
+import jobNimbusLogo from '@maive/brand/logos/integrations/jobnimbus/jobnimbus_logo.png';
+import serviceTitanLogo from '@maive/brand/logos/integrations/servicetitan/ServiceTitan_Logo_Black_2.png';
 import { Loader2, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
+import { useIsMaiveUser } from '@/auth';
 import {
   createCRMCredentials,
   deleteCRMCredentials,
@@ -14,10 +17,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-// Import logos
-import jobNimbusLogo from '@maive/brand/logos/integrations/jobnimbus/jobnimbus_logo.png';
-import serviceTitanLogo from '@maive/brand/logos/integrations/servicetitan/ServiceTitan_Logo_Black_2.png';
-
 interface CRMCredentialsSettingsProps {
   onSuccess?: () => void;
 }
@@ -25,6 +24,7 @@ interface CRMCredentialsSettingsProps {
 export function CRMCredentialsSettings({
   onSuccess,
 }: CRMCredentialsSettingsProps) {
+  const isMaiveUser = useIsMaiveUser();
   const [existingCredentials, setExistingCredentials] =
     useState<CRMCredentials | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<CRMProvider | null>(
@@ -72,7 +72,12 @@ export function CRMCredentialsSettings({
   }, []);
 
   const buildCredentialsData = (): CRMCredentialsCreate => {
-    if (selectedProvider === CRMProvider.JobNimbus) {
+    if (selectedProvider === CRMProvider.Mock) {
+      return {
+        provider: CRMProvider.Mock,
+        credentials: {},
+      };
+    } else if (selectedProvider === CRMProvider.JobNimbus) {
       return {
         provider: CRMProvider.JobNimbus,
         credentials: {
@@ -132,6 +137,9 @@ export function CRMCredentialsSettings({
 
       // Show success message
       toast.success('✓ Credentials saved successfully!');
+
+      // Notify parent component
+      onSuccess?.();
     } catch (error) {
       console.error(
         '[CRMCredentialsSettings] Failed to save or test credentials:',
@@ -163,6 +171,7 @@ export function CRMCredentialsSettings({
       toast.success('CRM credentials deleted successfully!');
       setExistingCredentials(null);
       setSelectedProvider(null);
+      onSuccess?.();
     } catch (error) {
       console.error('Failed to delete credentials:', error);
       toast.error(
@@ -248,7 +257,9 @@ export function CRMCredentialsSettings({
       return (
         <div className="space-y-4">
           <p className="text-sm font-medium">Choose your CRM provider:</p>
-          <div className="grid grid-cols-2 gap-4">
+          <div
+            className={`grid gap-4 ${isMaiveUser ? 'grid-cols-3' : 'grid-cols-2'}`}
+          >
             <button
               onClick={() => setSelectedProvider(CRMProvider.JobNimbus)}
               className="flex flex-col items-center gap-4 p-6 border-2 border-gray-200 rounded-lg hover:border-primary-900 hover:bg-primary-50 transition-colors"
@@ -272,27 +283,62 @@ export function CRMCredentialsSettings({
               />
               <span className="font-medium">ServiceTitan</span>
             </button>
+
+            {isMaiveUser && (
+              <button
+                onClick={() => setSelectedProvider(CRMProvider.Mock)}
+                className="flex flex-col items-center gap-4 p-6 border-2 border-gray-200 rounded-lg hover:border-primary-900 hover:bg-primary-50 transition-colors"
+              >
+                <div className="h-12 flex items-center justify-center">
+                  <span className="text-2xl">🧪</span>
+                </div>
+                <span className="font-medium">Mock (Dev)</span>
+              </button>
+            )}
           </div>
         </div>
       );
     }
 
-    const isJobNimbus = selectedProvider === CRMProvider.JobNimbus;
+    const getProviderDisplayName = (provider: CRMProvider): string => {
+      switch (provider) {
+        case CRMProvider.Mock:
+          return 'Mock (Dev)';
+        case CRMProvider.JobNimbus:
+          return 'JobNimbus';
+        case CRMProvider.ServiceTitan:
+          return 'ServiceTitan';
+        default:
+          return 'Unknown';
+      }
+    };
 
     return (
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="flex items-center gap-4 pb-4 border-b">
-          <img
-            src={isJobNimbus ? jobNimbusLogo : serviceTitanLogo}
-            alt={isJobNimbus ? 'JobNimbus' : 'ServiceTitan'}
-            className="h-10 object-contain"
-          />
+          {selectedProvider === CRMProvider.Mock ? (
+            <div className="h-10 flex items-center">
+              <span className="text-3xl">🧪</span>
+            </div>
+          ) : (
+            <img
+              src={
+                selectedProvider === CRMProvider.JobNimbus
+                  ? jobNimbusLogo
+                  : serviceTitanLogo
+              }
+              alt={getProviderDisplayName(selectedProvider)}
+              className="h-10 object-contain"
+            />
+          )}
           <div className="flex-1">
             <p className="font-medium">
-              {isJobNimbus ? 'JobNimbus' : 'ServiceTitan'}
+              {getProviderDisplayName(selectedProvider)}
             </p>
             <p className="text-sm text-muted-foreground">
-              Configure your credentials
+              {selectedProvider === CRMProvider.Mock
+                ? 'Testing provider with hardcoded data'
+                : 'Configure your credentials'}
             </p>
           </div>
           <Button
@@ -312,7 +358,16 @@ export function CRMCredentialsSettings({
           </Button>
         </div>
 
-        {isJobNimbus ? (
+        {selectedProvider === CRMProvider.Mock ? (
+          <div className="space-y-4">
+            <div className="rounded-lg bg-amber-50 border border-amber-200 p-4">
+              <p className="text-sm text-amber-900">
+                <strong>Developer Mode:</strong> Mock provider uses hardcoded
+                test data. No credentials required.
+              </p>
+            </div>
+          </div>
+        ) : selectedProvider === CRMProvider.JobNimbus ? (
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="api-key">API Key *</Label>

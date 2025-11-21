@@ -18,6 +18,7 @@ from src.integrations.creds.service import (
 from src.integrations.crm.base import CRMProvider
 from src.integrations.crm.constants import CRMProvider as CRMProviderEnum
 from src.integrations.crm.providers.job_nimbus.provider import JobNimbusProvider
+from src.integrations.crm.providers.mock.provider import MockProvider
 from src.integrations.crm.providers.service_titan.provider import ServiceTitanProvider
 from src.integrations.crm.service import CRMService
 from src.utils.logger import logger
@@ -66,21 +67,28 @@ async def get_crm_provider(
     credentials: dict = Depends(get_org_crm_credentials),
 ) -> CRMProvider:
     """
-    Get CRM provider instance with organization-specific credentials.
+    Get CRM provider instance.
 
-    FastAPI ensures this uses the cached credentials from get_org_crm_credentials.
+    For Mock provider (local dev): Uses env var CRM_PROVIDER=mock, no credentials needed
+    For real providers: Requires database credentials per organization
 
     Args:
-        credentials: Decrypted credentials from dependency
+        credentials: CRM credentials dict from dependency injection
 
     Returns:
-        CRMProvider instance configured with org credentials
+        CRMProvider instance
 
     Raises:
-        HTTPException: If provider type is unknown or credentials invalid
+        HTTPException: If credentials not configured for real providers
     """
     provider_type = credentials.get("provider")
     creds = credentials.get("credentials", {})
+
+    # Mock provider - for maive.ai developer users only
+    # No credentials required, just provider type
+    if provider_type == CRMProviderEnum.MOCK:
+        logger.info("Using Mock provider (from database credentials)")
+        return MockProvider()
 
     if provider_type == CRMProviderEnum.JOB_NIMBUS:
         logger.info("Instantiating JobNimbus provider from org credentials")

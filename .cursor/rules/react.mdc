@@ -45,6 +45,12 @@ globs: **/*.tsx, **/*.jsx, components/**/*
 - Avoid prop drilling through proper state management
 - Use state management libraries only when necessary
 
+## API Clients
+- **Always use the generated OpenAPI client from `@maive/api/client`** - TypeScript types are auto-generated from backend
+- Pass the shared `apiClient` as the third parameter for automatic auth handling
+- Never use manual `fetch()` or raw `apiClient.get/post` calls - always use the generated API classes
+- After backend changes, regenerate client: `./scripts/sync-api-client.sh`
+
 ## Performance
 - Implement proper memoization (useMemo, useCallback)
 - Use React.memo for expensive components

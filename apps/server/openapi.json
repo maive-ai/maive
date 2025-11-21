@@ -279,6 +279,96 @@
         ]
       }
     },
+    "/api/phone-numbers": {
+      "get": {
+        "tags": [
+          "Phone Numbers"
+        ],
+        "summary": "Get Phone Number",
+        "description": "Get phone number for current user.\n\nArgs:\n    current_user: Current authenticated user\n    service: Phone number service\n\nReturns:\n    User's phone number configuration\n\nRaises:\n    HTTPException: If no phone number is configured",
+        "operationId": "get_phone_number_api_phone_numbers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhoneNumberResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Phone Numbers"
+        ],
+        "summary": "Assign Phone Number",
+        "description": "Assign phone number to current user.\n\nArgs:\n    data: Phone number assignment data\n    current_user: Current authenticated user\n    service: Phone number service\n\nReturns:\n    Created or updated configuration\n\nRaises:\n    HTTPException: If assignment fails",
+        "operationId": "assign_phone_number_api_phone_numbers_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhoneNumberCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhoneNumberResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Phone Numbers"
+        ],
+        "summary": "Delete Phone Number",
+        "description": "Remove phone number assignment for current user.\n\nArgs:\n    current_user: Current authenticated user\n    service: Phone number service",
+        "operationId": "delete_phone_number_api_phone_numbers_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/crm/jobs/{job_id}": {
       "get": {
         "tags": [
@@ -1073,6 +1163,60 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/voice-ai/twilio/token": {
+      "get": {
+        "tags": [
+          "Voice AI",
+          "Twilio"
+        ],
+        "summary": "Get Token",
+        "description": "Generate Twilio Access Token for browser calling.",
+        "operationId": "get_token_api_voice_ai_twilio_token_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Get Token Api Voice Ai Twilio Token Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/voice-ai/provider": {
+      "get": {
+        "tags": [
+          "Voice AI"
+        ],
+        "summary": "Get Provider",
+        "description": "Get the configured Voice AI provider.\n\nReturns:\n    VoiceAIProviderResponse: Provider configuration",
+        "operationId": "get_provider_api_voice_ai_provider_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceAIProviderResponse"
                 }
               }
             }
@@ -3881,6 +4025,52 @@
         "title": "PaymentDetails",
         "description": "Provider-agnostic payment information from claim status calls."
       },
+      "PhoneNumberCreate": {
+        "properties": {
+          "phone_number": {
+            "type": "string",
+            "title": "Phone Number",
+            "description": "Phone number in E.164 format (+1...)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "phone_number"
+        ],
+        "title": "PhoneNumberCreate",
+        "description": "Request schema for assigning a phone number."
+      },
+      "PhoneNumberResponse": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "phone_number": {
+            "type": "string",
+            "title": "Phone Number"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "phone_number",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "PhoneNumberResponse",
+        "description": "Response schema for phone number configuration."
+      },
       "Project": {
         "properties": {
           "id": {
@@ -4942,10 +5132,26 @@
       "VoiceAIProvider": {
         "type": "string",
         "enum": [
-          "vapi"
+          "vapi",
+          "twilio"
         ],
         "title": "VoiceAIProvider",
         "description": "Available Voice AI providers."
+      },
+      "VoiceAIProviderResponse": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "title": "Provider",
+            "description": "Voice AI provider name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider"
+        ],
+        "title": "VoiceAIProviderResponse",
+        "description": "Response model for voice AI provider configuration."
       },
       "WhoToCall": {
         "type": "string",

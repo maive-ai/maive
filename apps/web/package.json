@@ -49,6 +49,7 @@
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "^1.127.2",
     "@tanstack/router-devtools": "^1.127.2",
+    "@twilio/voice-sdk": "^2.16.0",
     "ai": "^5.0.28",
     "axios": "^1.6.0",
     "axios-auth-refresh": "^3.3.6",

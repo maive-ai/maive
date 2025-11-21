@@ -2,6 +2,7 @@
 
 import {
   Configuration,
+  TwilioApi,
   VoiceAIApi,
   type ActiveCallResponse,
   type CallRequest,
@@ -13,6 +14,7 @@ import {
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
+
 import { env } from '@/env';
 import { baseClient } from '../base';
 
@@ -24,6 +26,19 @@ export type { ActiveCallResponse, CallRequest, CallResponse };
  */
 const createVoiceAIApi = (): VoiceAIApi => {
   return new VoiceAIApi(
+    new Configuration({
+      basePath: env.PUBLIC_SERVER_URL,
+    }),
+    undefined,
+    baseClient,
+  );
+};
+
+/**
+ * Create a configured Twilio API instance using the shared axios client
+ */
+const createTwilioApi = (): TwilioApi => {
+  return new TwilioApi(
     new Configuration({
       basePath: env.PUBLIC_SERVER_URL,
     }),
@@ -49,6 +64,28 @@ export async function getActiveCall(): Promise<ActiveCallResponse | null> {
   const api = createVoiceAIApi();
   const response = await api.getActiveCallApiVoiceAiCallsActiveGet();
   return response.data; // Will be null if no active call
+}
+
+/**
+ * Get Twilio access token for browser-based calling
+ */
+export async function getTwilioToken(): Promise<string> {
+  const api = createTwilioApi();
+  const response = await api.getTokenApiVoiceAiTwilioTokenGet();
+  const token = response.data.token;
+  if (!token) {
+    throw new Error('No token received from server');
+  }
+  return token;
+}
+
+/**
+ * Get the configured Voice AI provider
+ */
+export async function getVoiceAIProvider(): Promise<string> {
+  const api = createVoiceAIApi();
+  const response = await api.getProviderApiVoiceAiProviderGet();
+  return response.data.provider;
 }
 
 /**
@@ -87,6 +124,17 @@ export function useCallStatus(
     enabled: options?.enabled !== false && callId !== null,
     refetchInterval: options?.refetchInterval ?? 3000, // Poll every 3 seconds by default
     refetchIntervalInBackground: true,
+  });
+}
+
+/**
+ * React Query hook for getting the configured Voice AI provider
+ */
+export function useVoiceAIProvider(): UseQueryResult<string, Error> {
+  return useQuery({
+    queryKey: ['voice-ai-provider'],
+    queryFn: getVoiceAIProvider,
+    staleTime: Infinity, // Provider doesn't change during session
   });
 }
 

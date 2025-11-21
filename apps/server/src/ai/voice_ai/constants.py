@@ -33,6 +33,7 @@ class VoiceAIProvider(str, Enum):
     """Available Voice AI providers."""
 
     VAPI = "vapi"
+    TWILIO = "twilio"
 
 
 class VoiceAIErrorCode(str, Enum):
