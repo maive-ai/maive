@@ -257,7 +257,9 @@ export function CRMCredentialsSettings({
       return (
         <div className="space-y-4">
           <p className="text-sm font-medium">Choose your CRM provider:</p>
-          <div className={`grid gap-4 ${isMaiveUser ? 'grid-cols-3' : 'grid-cols-2'}`}>
+          <div
+            className={`grid gap-4 ${isMaiveUser ? 'grid-cols-3' : 'grid-cols-2'}`}
+          >
             <button
               onClick={() => setSelectedProvider(CRMProvider.JobNimbus)}
               className="flex flex-col items-center gap-4 p-6 border-2 border-gray-200 rounded-lg hover:border-primary-900 hover:bg-primary-50 transition-colors"
@@ -312,8 +314,8 @@ export function CRMCredentialsSettings({
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="flex items-center gap-4 pb-4 border-b">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="flex items-center gap-4 pb-4 border-b">
           {selectedProvider === CRMProvider.Mock ? (
             <div className="h-10 flex items-center">
               <span className="text-3xl">🧪</span>
@@ -329,55 +331,55 @@ export function CRMCredentialsSettings({
               className="h-10 object-contain"
             />
           )}
-            <div className="flex-1">
+          <div className="flex-1">
             <p className="font-medium">
               {getProviderDisplayName(selectedProvider)}
             </p>
-              <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               {selectedProvider === CRMProvider.Mock
                 ? 'Testing provider with hardcoded data'
                 : 'Configure your credentials'}
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setSelectedProvider(null);
-                setJobNimbusApiKey('');
-                setServiceTitanTenantId('');
-                setServiceTitanClientId('');
-                setServiceTitanClientSecret('');
-                setServiceTitanAppKey('');
-              }}
-            >
-              Change
-            </Button>
+            </p>
           </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setSelectedProvider(null);
+              setJobNimbusApiKey('');
+              setServiceTitanTenantId('');
+              setServiceTitanClientId('');
+              setServiceTitanClientSecret('');
+              setServiceTitanAppKey('');
+            }}
+          >
+            Change
+          </Button>
+        </div>
 
         {selectedProvider === CRMProvider.Mock ? (
           <div className="space-y-4">
             <div className="rounded-lg bg-amber-50 border border-amber-200 p-4">
               <p className="text-sm text-amber-900">
-                <strong>Developer Mode:</strong> Mock provider uses hardcoded test
-                data. No credentials required.
+                <strong>Developer Mode:</strong> Mock provider uses hardcoded
+                test data. No credentials required.
               </p>
             </div>
           </div>
         ) : selectedProvider === CRMProvider.JobNimbus ? (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="api-key">API Key *</Label>
-                <Input
-                  id="api-key"
-                  type="password"
-                  value={jobNimbusApiKey}
-                  onChange={(e) => setJobNimbusApiKey(e.target.value)}
-                  placeholder="Enter your JobNimbus API key"
-                  required
-                />
-                <p className="text-xs text-muted-foreground">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="api-key">API Key *</Label>
+              <Input
+                id="api-key"
+                type="password"
+                value={jobNimbusApiKey}
+                onChange={(e) => setJobNimbusApiKey(e.target.value)}
+                placeholder="Enter your JobNimbus API key"
+                required
+              />
+              <p className="text-xs text-muted-foreground">
                 Find or create an API key by following the instructions in the{' '}
                 <a
                   href="https://support.jobnimbus.com/how-do-i-create-an-api-key"
@@ -387,71 +389,71 @@ export function CRMCredentialsSettings({
                 >
                   JobNimbus documentation
                 </a>
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="tenant-id">Tenant ID *</Label>
-                <Input
-                  id="tenant-id"
-                  value={serviceTitanTenantId}
-                  onChange={(e) => setServiceTitanTenantId(e.target.value)}
-                  placeholder="Enter your ServiceTitan tenant ID"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="client-id">Client ID *</Label>
-                <Input
-                  id="client-id"
-                  value={serviceTitanClientId}
-                  onChange={(e) => setServiceTitanClientId(e.target.value)}
-                  placeholder="Enter your client ID"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="client-secret">Client Secret *</Label>
-                <Input
-                  id="client-secret"
-                  type="password"
-                  value={serviceTitanClientSecret}
-                  onChange={(e) => setServiceTitanClientSecret(e.target.value)}
-                  placeholder="Enter your client secret"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="app-key">App Key *</Label>
-                <Input
-                  id="app-key"
-                  type="password"
-                  value={serviceTitanAppKey}
-                  onChange={(e) => setServiceTitanAppKey(e.target.value)}
-                  placeholder="Enter your app key"
-                  required
-                />
-              </div>
-
-              <p className="text-xs text-muted-foreground">
-                Find your credentials in ServiceTitan Settings → Integrations →
-                API Application Access
               </p>
             </div>
-          )}
-
-          <div className="flex justify-end pt-4">
-            <Button type="submit" disabled={isLoading} className="min-w-[180px]">
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Credentials
-            </Button>
           </div>
-        </form>
+        ) : (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="tenant-id">Tenant ID *</Label>
+              <Input
+                id="tenant-id"
+                value={serviceTitanTenantId}
+                onChange={(e) => setServiceTitanTenantId(e.target.value)}
+                placeholder="Enter your ServiceTitan tenant ID"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="client-id">Client ID *</Label>
+              <Input
+                id="client-id"
+                value={serviceTitanClientId}
+                onChange={(e) => setServiceTitanClientId(e.target.value)}
+                placeholder="Enter your client ID"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="client-secret">Client Secret *</Label>
+              <Input
+                id="client-secret"
+                type="password"
+                value={serviceTitanClientSecret}
+                onChange={(e) => setServiceTitanClientSecret(e.target.value)}
+                placeholder="Enter your client secret"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="app-key">App Key *</Label>
+              <Input
+                id="app-key"
+                type="password"
+                value={serviceTitanAppKey}
+                onChange={(e) => setServiceTitanAppKey(e.target.value)}
+                placeholder="Enter your app key"
+                required
+              />
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Find your credentials in ServiceTitan Settings → Integrations →
+              API Application Access
+            </p>
+          </div>
+        )}
+
+        <div className="flex justify-end pt-4">
+          <Button type="submit" disabled={isLoading} className="min-w-[180px]">
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save Credentials
+          </Button>
+        </div>
+      </form>
     );
   };
 

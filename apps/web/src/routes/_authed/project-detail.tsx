@@ -15,7 +15,10 @@ import {
   User,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { isValidPhoneNumber, type Value as E164Number } from 'react-phone-number-input';
+import {
+  isValidPhoneNumber,
+  type Value as E164Number,
+} from 'react-phone-number-input';
 
 import { useEndCall, useVoiceAIProvider } from '@/clients/ai/voice';
 import { downloadFile, useFetchJobFiles, useFetchProject } from '@/clients/crm';

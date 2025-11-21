@@ -3,10 +3,10 @@
  */
 
 import {
-    Configuration,
-    PhoneNumbersApi,
-    type PhoneNumberCreate,
-    type PhoneNumberResponse,
+  Configuration,
+  PhoneNumbersApi,
+  type PhoneNumberCreate,
+  type PhoneNumberResponse,
 } from '@maive/api/client';
 
 import { baseClient } from './base';
@@ -24,7 +24,7 @@ const createPhoneNumbersApi = (): PhoneNumbersApi => {
       basePath: env.PUBLIC_SERVER_URL,
     }),
     undefined,
-    baseClient
+    baseClient,
   );
 };
 
@@ -32,7 +32,7 @@ const createPhoneNumbersApi = (): PhoneNumbersApi => {
  * Assign phone number to current user.
  */
 export async function assignPhoneNumber(
-  data: PhoneNumberCreate
+  data: PhoneNumberCreate,
 ): Promise<PhoneNumberResponse> {
   const api = createPhoneNumbersApi();
   const response = await api.assignPhoneNumberApiPhoneNumbersPost(data);
@@ -55,4 +55,3 @@ export async function deletePhoneNumber(): Promise<void> {
   const api = createPhoneNumbersApi();
   await api.deletePhoneNumberApiPhoneNumbersDelete();
 }
-

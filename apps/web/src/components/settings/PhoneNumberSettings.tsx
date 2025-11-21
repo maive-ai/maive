@@ -7,10 +7,10 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import {
-    assignPhoneNumber,
-    deletePhoneNumber,
-    getPhoneNumber,
-    type PhoneNumberResponse,
+  assignPhoneNumber,
+  deletePhoneNumber,
+  getPhoneNumber,
+  type PhoneNumberResponse,
 } from '@/clients/phoneNumbers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +21,8 @@ interface PhoneNumberSettingsProps {
 }
 
 export function PhoneNumberSettings({ onSuccess }: PhoneNumberSettingsProps) {
-  const [existingConfig, setExistingConfig] = useState<PhoneNumberResponse | null>(null);
+  const [existingConfig, setExistingConfig] =
+    useState<PhoneNumberResponse | null>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
@@ -68,7 +69,9 @@ export function PhoneNumberSettings({ onSuccess }: PhoneNumberSettingsProps) {
       onSuccess?.();
     } catch (err) {
       console.error('Failed to assign phone number:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to save phone number');
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to save phone number',
+      );
     } finally {
       setIsLoading(false);
     }
@@ -78,7 +81,7 @@ export function PhoneNumberSettings({ onSuccess }: PhoneNumberSettingsProps) {
     if (!existingConfig || isDeleting) return;
 
     const confirmed = window.confirm(
-      'Are you sure you want to remove this phone number configuration?'
+      'Are you sure you want to remove this phone number configuration?',
     );
     if (!confirmed) return;
 
@@ -122,7 +125,9 @@ export function PhoneNumberSettings({ onSuccess }: PhoneNumberSettingsProps) {
               <p className="text-sm font-medium text-green-900">
                 Phone number configured
               </p>
-              <p className="text-sm text-green-700">{existingConfig.phone_number}</p>
+              <p className="text-sm text-green-700">
+                {existingConfig.phone_number}
+              </p>
             </div>
           </div>
           <Button
@@ -153,7 +158,8 @@ export function PhoneNumberSettings({ onSuccess }: PhoneNumberSettingsProps) {
               required
             />
             <p className="text-xs text-muted-foreground">
-              Enter in E.164 format (e.g., +1 for US, followed by area code and number)
+              Enter in E.164 format (e.g., +1 for US, followed by area code and
+              number)
             </p>
           </div>
         </div>
@@ -168,11 +174,10 @@ export function PhoneNumberSettings({ onSuccess }: PhoneNumberSettingsProps) {
 
       <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
         <p className="text-sm text-blue-900">
-          <strong>Note:</strong> This phone number will be used for all outbound calls
-          you make via the autodialer feature.
+          <strong>Note:</strong> This phone number will be used for all outbound
+          calls you make via the autodialer feature.
         </p>
       </div>
     </div>
   );
 }
-

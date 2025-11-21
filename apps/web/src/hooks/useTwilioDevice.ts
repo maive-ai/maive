@@ -124,4 +124,3 @@ export function useTwilioDevice(): UseTwilioDeviceReturn {
 
   return { device, isReady, activeCall, error };
 }
-
