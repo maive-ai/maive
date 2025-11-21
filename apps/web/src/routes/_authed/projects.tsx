@@ -1,19 +1,19 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import {
-    AlertCircle,
-    ChevronLeft,
-    ChevronRight,
-    Eye,
-    FileSearch,
-    Search,
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  FileSearch,
+  Search,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { useAddToCallList, useCallList } from '@/clients/callList';
 import { useFetchProjects } from '@/clients/crm';
 import {
-    useAddProjectsToGroup,
-    useScheduledGroups,
+  useAddProjectsToGroup,
+  useScheduledGroups,
 } from '@/clients/scheduledGroups';
 import { CallListSheet } from '@/components/CallListSheet';
 import { ProjectCard } from '@/components/ProjectCard';
@@ -22,11 +22,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
 import { env } from '@/env';
 
@@ -184,7 +184,10 @@ function Projects() {
   }
 
   // Empty State (only show if not loading, not searching, and truly no data)
-  const showEmptyState = !isLoading && !isError && (!data || (data.projects.length === 0 && !debouncedSearchQuery));
+  const showEmptyState =
+    !isLoading &&
+    !isError &&
+    (!data || (data.projects.length === 0 && !debouncedSearchQuery));
 
   // Success State with Projects Grid
   return (
@@ -283,7 +286,8 @@ function Projects() {
           <p className="text-sm text-gray-600 mt-2">
             {data?.total_count || 0}{' '}
             {data?.total_count === 1 ? 'result' : 'results'} found
-            {data && ` (showing page ${page} of ${Math.ceil(data.total_count / pageSize) || 1})`}
+            {data &&
+              ` (showing page ${page} of ${Math.ceil(data.total_count / pageSize) || 1})`}
           </p>
         )}
       </div>
@@ -311,8 +315,8 @@ function Projects() {
             No results found
           </h2>
           <p className="text-gray-600 text-center max-w-md">
-            No projects match your search query &ldquo;{debouncedSearchQuery}&rdquo;. Try
-            a different search term.
+            No projects match your search query &ldquo;{debouncedSearchQuery}
+            &rdquo;. Try a different search term.
           </p>
         </div>
       ) : isLoading && projects.length === 0 ? (
@@ -353,9 +357,10 @@ function Projects() {
                 {debouncedSearchQuery ? (
                   <>
                     Showing {projects.length}{' '}
-                    {projects.length === 1 ? 'result' : 'results'} on page {page}{' '}
-                    of {Math.ceil(data.total_count / pageSize) || 1} (
-                    {data.total_count} total {data.total_count === 1 ? 'result' : 'results'})
+                    {projects.length === 1 ? 'result' : 'results'} on page{' '}
+                    {page} of {Math.ceil(data.total_count / pageSize) || 1} (
+                    {data.total_count} total{' '}
+                    {data.total_count === 1 ? 'result' : 'results'})
                   </>
                 ) : (
                   <>

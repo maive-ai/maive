@@ -300,7 +300,7 @@ const { status, data } = await apiInstance.getAllContactsApiCrmContactsGet(
 # **getAllJobsApiCrmJobsGet**
 > JobList getAllJobsApiCrmJobsGet()
 
-Get all jobs with pagination.  This endpoint works across all CRM providers and returns a standardized JobList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     JobList: Paginated list of jobs in universal format  Raises:     HTTPException: If an error occurs while fetching jobs
+Get all jobs with pagination.  This endpoint works across all CRM providers and returns a standardized JobList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     search: Optional search query to filter jobs     crm_service: The CRM service instance from dependency injection  Returns:     JobList: Paginated list of jobs in universal format  Raises:     HTTPException: If an error occurs while fetching jobs
 
 ### Example
 
@@ -315,10 +315,12 @@ const apiInstance = new CRMApi(configuration);
 
 let page: number; //Page number (1-indexed) (optional) (default to 1)
 let pageSize: number; //Number of items per page (optional) (default to 50)
+let search: string; //Search query to filter jobs by name, address, phone, or claim number (optional) (default to undefined)
 
 const { status, data } = await apiInstance.getAllJobsApiCrmJobsGet(
     page,
-    pageSize
+    pageSize,
+    search
 );
 ```
 
@@ -328,6 +330,7 @@ const { status, data } = await apiInstance.getAllJobsApiCrmJobsGet(
 |------------- | ------------- | ------------- | -------------|
 | **page** | [**number**] | Page number (1-indexed) | (optional) defaults to 1|
 | **pageSize** | [**number**] | Number of items per page | (optional) defaults to 50|
+| **search** | [**string**] | Search query to filter jobs by name, address, phone, or claim number | (optional) defaults to undefined|
 
 
 ### Return type
@@ -355,7 +358,7 @@ const { status, data } = await apiInstance.getAllJobsApiCrmJobsGet(
 # **getAllProjectsApiCrmProjectsGet**
 > ProjectList getAllProjectsApiCrmProjectsGet()
 
-Get all projects with pagination.  This endpoint works across all CRM providers and returns a standardized ProjectList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     ProjectList: Paginated list of projects in universal format  Raises:     HTTPException: If an error occurs while fetching projects
+Get all projects with pagination.  This endpoint works across all CRM providers and returns a standardized ProjectList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     search: Optional search query to filter projects     crm_service: The CRM service instance from dependency injection  Returns:     ProjectList: Paginated list of projects in universal format  Raises:     HTTPException: If an error occurs while fetching projects
 
 ### Example
 
@@ -370,10 +373,12 @@ const apiInstance = new CRMApi(configuration);
 
 let page: number; //Page number (1-indexed) (optional) (default to 1)
 let pageSize: number; //Number of items per page (optional) (default to 50)
+let search: string; //Search query to filter projects by name, address, phone, or claim number (optional) (default to undefined)
 
 const { status, data } = await apiInstance.getAllProjectsApiCrmProjectsGet(
     page,
-    pageSize
+    pageSize,
+    search
 );
 ```
 
@@ -383,6 +388,7 @@ const { status, data } = await apiInstance.getAllProjectsApiCrmProjectsGet(
 |------------- | ------------- | ------------- | -------------|
 | **page** | [**number**] | Page number (1-indexed) | (optional) defaults to 1|
 | **pageSize** | [**number**] | Number of items per page | (optional) defaults to 50|
+| **search** | [**string**] | Search query to filter projects by name, address, phone, or claim number | (optional) defaults to undefined|
 
 
 ### Return type
