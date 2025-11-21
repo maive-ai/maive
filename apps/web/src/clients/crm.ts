@@ -1,19 +1,19 @@
 // CRM client - using generated API client
 
 import {
-  CRMApi,
-  Configuration,
-  type MockNote,
-  type MockProject,
-  type Project,
-  type ProjectList,
+    CRMApi,
+    Configuration,
+    type MockNote,
+    type MockProject,
+    type Project,
+    type ProjectList,
 } from '@maive/api/client';
 import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-  type UseMutationResult,
-  type UseQueryResult,
+    useMutation,
+    useQuery,
+    useQueryClient,
+    type UseMutationResult,
+    type UseQueryResult,
 } from '@tanstack/react-query';
 
 import { env } from '@/env';
@@ -95,6 +95,7 @@ export function useFetchProjects(
     staleTime: 30 * 1000, // Data is fresh for 30 seconds
     refetchInterval: 30 * 1000, // Poll every 30 seconds
     refetchIntervalInBackground: true,
+    placeholderData: (previousData) => previousData, // Keep previous data while fetching to prevent flash
   });
 }
 
