@@ -26,6 +26,7 @@ from src.integrations.crm.schemas import (
     Note,
     Project,
     ProjectList,
+    ProjectSummary,
 )
 from src.integrations.crm.service import CRMService
 
@@ -336,6 +337,46 @@ async def get_project(
         HTTPException: If the project is not found or an error occurs
     """
     result = await crm_service.get_project(project_id)
+
+    if isinstance(result, CRMErrorResponse):
+        if result.error_code == "NOT_FOUND":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=result.error
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result.error
+            )
+
+    return result
+
+
+@router.post("/projects/{project_id}/summary", response_model=ProjectSummary)
+async def generate_project_summary(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    crm_service: CRMService = Depends(get_crm_service),
+) -> ProjectSummary:
+    """
+    Generate an AI summary for a project.
+
+    This endpoint analyzes project notes and generates a structured summary including:
+    - Brief project status summary
+    - Recent actions taken (2-3 bullet points)
+    - Next steps (2-3 bullet points)
+
+    Args:
+        project_id: The unique identifier for the project
+        current_user: The authenticated user
+        crm_service: The CRM service instance from dependency injection
+
+    Returns:
+        ProjectSummary: AI-generated structured summary
+
+    Raises:
+        HTTPException: If the project is not found or an error occurs
+    """
+    result = await crm_service.generate_project_summary(project_id)
 
     if isinstance(result, CRMErrorResponse):
         if result.error_code == "NOT_FOUND":

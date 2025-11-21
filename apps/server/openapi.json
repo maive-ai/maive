@@ -854,6 +854,54 @@
         }
       }
     },
+    "/api/crm/projects/{project_id}/summary": {
+      "post": {
+        "tags": [
+          "CRM"
+        ],
+        "summary": "Generate Project Summary",
+        "description": "Generate an AI summary for a project.\n\nThis endpoint analyzes project notes and generates a structured summary including:\n- Brief project status summary\n- Recent actions taken (2-3 bullet points)\n- Next steps (2-3 bullet points)\n\nArgs:\n    project_id: The unique identifier for the project\n    current_user: The authenticated user\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    ProjectSummary: AI-generated structured summary\n\nRaises:\n    HTTPException: If the project is not found or an error occurs",
+        "operationId": "generate_project_summary_api_crm_projects__project_id__summary_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/crm/projects": {
       "get": {
         "tags": [
@@ -4572,6 +4620,37 @@
         ],
         "title": "ProjectList",
         "description": "Universal project list response with pagination."
+      },
+      "ProjectSummary": {
+        "properties": {
+          "summary": {
+            "type": "string",
+            "title": "Summary",
+            "description": "Brief one-sentence summary of the project status"
+          },
+          "recent_actions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Recent Actions",
+            "description": "List of recent actions taken on the project (2-3 bullet points)"
+          },
+          "next_steps": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Next Steps",
+            "description": "List of recommended next steps (2-3 bullet points)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "summary"
+        ],
+        "title": "ProjectSummary",
+        "description": "AI-generated project summary with structured information."
       },
       "RequiredActions": {
         "properties": {
