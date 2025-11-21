@@ -157,11 +157,16 @@ async def end_call(
         logger.info("[End Call] Call already ended, returning success", call_id=call_id)
         return None
 
-    # Extract control URL from stored provider data
+    # Extract provider-specific data from stored provider data
     control_url = None
+    customer_call_sid = None
     if call.provider_data and isinstance(call.provider_data, dict):
+        # Vapi-specific: extract control URL
         monitor = call.provider_data.get("monitor", {})
         control_url = monitor.get("control_url")
+
+        # Twilio-specific: extract customer call SID (for bridge architecture)
+        customer_call_sid = call.provider_data.get("customer_call_sid")
 
     # If control URL not in database, the service will fetch it from the provider
     # This handles the case where the call was created but control URL wasn't available yet
@@ -177,8 +182,17 @@ async def end_call(
             call_id=call_id,
         )
 
-    # Try to end call via Vapi (will fetch control URL if not provided)
-    result = await voice_ai_service.end_call(call_id, control_url=control_url)
+    if customer_call_sid:
+        logger.info(
+            "[End Call] Ending both browser and customer calls",
+            call_id=call_id,
+            customer_call_sid=customer_call_sid,
+        )
+
+    # Try to end call via provider (will fetch control URL if not provided for Vapi)
+    result = await voice_ai_service.end_call(
+        call_id, control_url=control_url, customer_call_sid=customer_call_sid
+    )
 
     if isinstance(result, VoiceAIErrorResponse):
         logger.error(

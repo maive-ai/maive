@@ -101,7 +101,10 @@ class VoiceAIService:
             )
 
     async def end_call(
-        self, call_id: str, control_url: str | None = None
+        self,
+        call_id: str,
+        control_url: str | None = None,
+        customer_call_sid: str | None = None,
     ) -> bool | VoiceAIErrorResponse:
         """
         End an ongoing call programmatically.
@@ -109,14 +112,21 @@ class VoiceAIService:
         Args:
             call_id: The call identifier
             control_url: Optional control URL for ending the call
+            customer_call_sid: Optional customer call SID (for Twilio bridge architecture)
 
         Returns:
             bool (True if successful) or VoiceAIErrorResponse on error
         """
         try:
-            logger.info("Ending call", call_id=call_id)
+            logger.info(
+                "Ending call",
+                call_id=call_id,
+                customer_call_sid=customer_call_sid,
+            )
+            # Pass customer_call_sid if provider supports it (Twilio-specific)
+            # Other providers will ignore this parameter
             result = await self.voice_ai_provider.end_call(
-                call_id, control_url=control_url
+                call_id, control_url=control_url, customer_call_sid=customer_call_sid
             )
             logger.info("Successfully ended call", call_id=call_id)
             return result

@@ -170,24 +170,60 @@ class TwilioProvider(BaseVoiceAIProvider):
             )
             raise VoiceAIError(f"Failed to get Twilio call status: {e}") from e
 
-    async def end_call(self, call_id: str, control_url: str | None = None) -> bool:
+    async def end_call(
+        self,
+        call_id: str,
+        control_url: str | None = None,
+        customer_call_sid: str | None = None,
+    ) -> bool:
         """
         End an ongoing call programmatically.
 
+        For Twilio's bridge architecture, there are two active calls:
+        - The browser call (call_id parameter)
+        - The customer call (customer_call_sid, stored in provider_data)
+
+        Both calls must be ended to prevent charges.
+
         Args:
-            call_id: Twilio Call SID
+            call_id: Twilio Call SID (browser call)
             control_url: Unused for Twilio (kept for interface compatibility)
+            customer_call_sid: Optional customer call SID to end as well
 
         Returns:
-            True if call was successfully ended
+            True if call(s) were successfully ended
 
         Raises:
             VoiceAIError: If call cannot be ended
         """
         try:
-            logger.info("[TWILIO] Ending call", call_sid=call_id)
+            logger.info(
+                "[TWILIO] Ending call",
+                call_sid=call_id,
+                customer_call_sid=customer_call_sid,
+            )
+
+            # End browser call
             await self.client.end_call(call_id)
-            logger.info("[TWILIO] Call ended", call_sid=call_id)
+            logger.info("[TWILIO] Browser call ended", call_sid=call_id)
+
+            # End customer call if it exists
+            if customer_call_sid:
+                try:
+                    await self.client.end_call(customer_call_sid)
+                    logger.info(
+                        "[TWILIO] Customer call ended",
+                        customer_call_sid=customer_call_sid,
+                    )
+                except Exception as customer_error:
+                    # Log but don't fail if customer call already ended
+                    logger.warning(
+                        "[TWILIO] Failed to end customer call (may already be ended)",
+                        customer_call_sid=customer_call_sid,
+                        error=str(customer_error),
+                    )
+
+            logger.info("[TWILIO] Call ended successfully", call_sid=call_id)
             return True
 
         except Exception as e:
