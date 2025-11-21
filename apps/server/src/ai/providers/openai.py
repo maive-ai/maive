@@ -463,14 +463,6 @@ class OpenAIProvider(AIProvider):
             if tools:
                 parse_params["tools"] = tools
 
-            # Only add reasoning for reasoning models
-            model = kwargs.get("model", self.settings.model_name)
-            if self._is_reasoning_model(model):
-                reasoning: Reasoning = Reasoning(
-                    effort=self.settings.reasoning_effort, summary="detailed"
-                )
-                parse_params["reasoning"] = reasoning
-
             parsed_response = await client.responses.parse(**parse_params)
 
             # Extract reasoning summaries if they exist
