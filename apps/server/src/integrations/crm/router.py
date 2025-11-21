@@ -363,7 +363,7 @@ async def generate_project_summary(
     This endpoint analyzes project notes and generates a structured summary including:
     - Brief project status summary
     - Recent actions taken (2-3 bullet points)
-    - Next steps (2-3 bullet points)Ae
+    - Next steps (2-3 bullet points)
 
     Args:
         project_id: The unique identifier for the project

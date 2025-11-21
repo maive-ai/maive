@@ -860,7 +860,7 @@
           "CRM"
         ],
         "summary": "Generate Project Summary",
-        "description": "Generate an AI summary for a project.\n\nThis endpoint analyzes project notes and generates a structured summary including:\n- Brief project status summary\n- Recent actions taken (2-3 bullet points)\n- Next steps (2-3 bullet points)Ae\n\nArgs:\n    project_id: The unique identifier for the project\n    current_user: The authenticated user\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    ProjectSummary: AI-generated structured summary\n\nRaises:\n    HTTPException: If the project is not found or an error occurs",
+        "description": "Generate an AI summary for a project.\n\nThis endpoint analyzes project notes and generates a structured summary including:\n- Brief project status summary\n- Recent actions taken (2-3 bullet points)\n- Next steps (2-3 bullet points)\n\nArgs:\n    project_id: The unique identifier for the project\n    current_user: The authenticated user\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    ProjectSummary: AI-generated structured summary\n\nRaises:\n    HTTPException: If the project is not found or an error occurs",
         "operationId": "generate_project_summary_api_crm_projects__project_id__summary_post",
         "security": [
           {

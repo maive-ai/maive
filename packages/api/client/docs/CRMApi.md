@@ -246,7 +246,7 @@ const { status, data } = await apiInstance.downloadFileApiCrmFilesFileIdDownload
 # **generateProjectSummaryApiCrmProjectsProjectIdSummaryPost**
 > ProjectSummary generateProjectSummaryApiCrmProjectsProjectIdSummaryPost()
 
-Generate an AI summary for a project.  This endpoint analyzes project notes and generates a structured summary including: - Brief project status summary - Recent actions taken (2-3 bullet points) - Next steps (2-3 bullet points)Ae  Args:     project_id: The unique identifier for the project     current_user: The authenticated user     crm_service: The CRM service instance from dependency injection  Returns:     ProjectSummary: AI-generated structured summary  Raises:     HTTPException: If the project is not found or an error occurs
+Generate an AI summary for a project.  This endpoint analyzes project notes and generates a structured summary including: - Brief project status summary - Recent actions taken (2-3 bullet points) - Next steps (2-3 bullet points)  Args:     project_id: The unique identifier for the project     current_user: The authenticated user     crm_service: The CRM service instance from dependency injection  Returns:     ProjectSummary: AI-generated structured summary  Raises:     HTTPException: If the project is not found or an error occurs
 
 ### Example
 
