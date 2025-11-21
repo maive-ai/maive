@@ -101,6 +101,8 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
 
   // Ref to track current activeCallId for race condition prevention
   const activeCallIdRef = useRef<string | null>(null);
+  // Ref to track if user manually stopped the dialer
+  const userStoppedDialerRef = useRef(false);
 
   // Call mutations
   const callAndWriteToCrmMutation = useCallAndWriteToCrm();
@@ -208,7 +210,11 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
       );
       if (callProjectIndex !== -1) {
         setCurrentDialingIndex(callProjectIndex);
-        setIsDialerActive(true);
+        // Only restore dialer state if user hasn't manually stopped it
+        // This prevents polling from reactivating the dialer after user clicks "Stop"
+        if (!userStoppedDialerRef.current) {
+          setIsDialerActive(true);
+        }
       }
     }
   }, [activeCall, callListItems]);
@@ -312,6 +318,7 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
     if (isDialerActive) {
       // Stop dialing
       setIsDialerActive(false);
+      userStoppedDialerRef.current = true; // Track that user manually stopped
       // If there's an active call, end it
       if (activeCallId && canEndCall) {
         handleEndCall();
@@ -319,6 +326,7 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
     } else {
       // Start dialing from the beginning
       setIsDialerActive(true);
+      userStoppedDialerRef.current = false; // Clear manual stop flag
       setCurrentDialingIndex(0);
       initiateCall(0);
     }
