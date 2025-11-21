@@ -1,6 +1,6 @@
 import { CallStatus, VoiceAIProvider } from '@maive/api/client';
 import { Home, Pause, PhoneOff, Play, ShieldCheck, Trash2 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { isValidPhoneNumber } from 'react-phone-number-input';
 
 import { useEndCall, useVoiceAIProvider } from '@/clients/ai/voice';
@@ -99,6 +99,9 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   const [listenUrl, setListenUrl] = useState<string | null>(null);
   const [controlUrl, setControlUrl] = useState<string | null>(null);
 
+  // Ref to track current activeCallId for race condition prevention
+  const activeCallIdRef = useRef<string | null>(null);
+
   // Call mutations
   const callAndWriteToCrmMutation = useCallAndWriteToCrm();
   const endCallMutation = useEndCall();
@@ -179,6 +182,11 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
       setRemovingProjectId(null);
     }
   }, [removingProjectId, callListItems]);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    activeCallIdRef.current = activeCallId;
+  }, [activeCallId]);
 
   // Restore active call state on mount and update status when polling
   useEffect(() => {
@@ -319,13 +327,21 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   const handleEndCall = () => {
     if (!activeCallId) return;
 
-    endCallMutation.mutate(activeCallId, {
+    // Store the call ID we're ending to prevent race conditions
+    const callIdToEnd = activeCallId;
+
+    endCallMutation.mutate(callIdToEnd, {
       onSuccess: () => {
-        setActiveCallId(null);
-        setListenUrl(null);
-        setControlUrl(null);
-        setCallStatus(null);
-        callAndWriteToCrmMutation.reset();
+        // Only clear state if this is still the active call
+        // Prevents clearing state from a new call that started after this mutation
+        // Use ref to get current value, not closure value
+        if (activeCallIdRef.current === callIdToEnd) {
+          setActiveCallId(null);
+          setListenUrl(null);
+          setControlUrl(null);
+          setCallStatus(null);
+          callAndWriteToCrmMutation.reset();
+        }
       },
     });
   };
@@ -344,6 +360,7 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
               isLoadingCallList ||
               isLoadingProjects ||
               callAndWriteToCrmMutation.isPending ||
+              endCallMutation.isPending ||
               callListItems.length === 0
             }
             size="sm"
