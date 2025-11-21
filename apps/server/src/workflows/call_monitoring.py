@@ -208,30 +208,6 @@ class CallAndWriteToCRMWorkflow:
                         status=status_result.status,
                     )
 
-                    # Update call status in database
-                    if user_id:
-                        try:
-                            await task_repository.update_call_status(
-                                call_id=call_id,
-                                status=status_result.status,
-                                provider_data=status_result.provider_data.model_dump(
-                                    mode="json"
-                                )
-                                if status_result.provider_data
-                                else None,
-                            )
-                            await session.commit()
-                            logger.debug(
-                                "[Call Monitoring Workflow] Committed status update for call",
-                                call_id=call_id,
-                            )
-                        except Exception as e:
-                            logger.error(
-                                "[Call Monitoring Workflow] Failed to update call status",
-                                error=str(e),
-                            )
-                            await session.rollback()
-
                     # Check if call has ended
                     if CallStatus.is_call_ended(status_result.status):
                         logger.info(
@@ -276,6 +252,31 @@ class CallAndWriteToCRMWorkflow:
                             )
 
                         break
+
+                    # Update call status in database (only for non-ended calls)
+                    # Ended calls are handled by _persist_completed_call above
+                    if user_id:
+                        try:
+                            await task_repository.update_call_status(
+                                call_id=call_id,
+                                status=status_result.status,
+                                provider_data=status_result.provider_data.model_dump(
+                                    mode="json"
+                                )
+                                if status_result.provider_data
+                                else None,
+                            )
+                            await session.commit()
+                            logger.debug(
+                                "[Call Monitoring Workflow] Committed status update for call",
+                                call_id=call_id,
+                            )
+                        except Exception as e:
+                            logger.error(
+                                "[Call Monitoring Workflow] Failed to update call status",
+                                error=str(e),
+                            )
+                            await session.rollback()
 
                     await asyncio.sleep(poll_interval_seconds)
 
