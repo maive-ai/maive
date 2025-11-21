@@ -1,5 +1,6 @@
-import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, PhoneOff, Loader2 } from 'lucide-react';
+import { CallStatus } from '@maive/api/client';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Loader2, Phone, PhoneOff } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,7 @@ import { useCallAudioStream } from '@/hooks/useCallAudioStream';
 
 interface CallAudioVisualizerProps {
   listenUrl: string | null;
-  callStatus?: string | null;
+  callStatus?: CallStatus | null;
   onDisconnect?: () => void;
 }
 
@@ -21,7 +22,7 @@ export function CallAudioVisualizer({
   const [bars, setBars] = useState(Array(50).fill(5));
 
   // Only allow connection when call is actually in progress
-  const canConnect = callStatus === 'in_progress';
+  const canConnect = callStatus === CallStatus.InProgress;
 
   const updateBars = useCallback((volume: number) => {
     setBars(
@@ -78,7 +79,7 @@ export function CallAudioVisualizer({
   };
 
   // Only show the component when call is in progress and we have a listen URL
-  if (!listenUrl || callStatus !== 'in_progress') return null;
+  if (!listenUrl || callStatus !== CallStatus.InProgress) return null;
 
   return (
     <div className="border-t pt-4">

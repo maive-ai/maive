@@ -1,3 +1,4 @@
+import { CallStatus, VoiceAIProvider } from '@maive/api/client';
 import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
 import { createFileRoute } from '@tanstack/react-router';
 import {
@@ -50,7 +51,7 @@ function ProjectDetail() {
   const providerData = project?.provider_data as any;
   const [phoneNumber, setPhoneNumber] = useState<E164Number | ''>('');
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
-  const [callStatus, setCallStatus] = useState<string | null>(null);
+  const [callStatus, setCallStatus] = useState<CallStatus | null>(null);
   const [listenUrl, setListenUrl] = useState<string | null>(null);
   const [controlUrl, setControlUrl] = useState<string | null>(null);
   const [downloadingFileId, setDownloadingFileId] = useState<string | null>(
@@ -76,11 +77,11 @@ function ProjectDetail() {
 
   // Determine if we can end the call
   // For Vapi: requires controlUrl AND in_progress status
-  // For Twilio: End call not yet implemented, keep button disabled
+  // For Twilio: only requires in_progress status (no controlUrl needed)
   const canEndCall =
-    voiceProvider === 'twilio'
-      ? false // TODO: Implement Twilio end call functionality
-      : controlUrl !== null && callStatus === 'in_progress';
+    voiceProvider === VoiceAIProvider.Twilio
+      ? callStatus === CallStatus.InProgress
+      : controlUrl !== null && callStatus === CallStatus.InProgress;
 
   // Debug logging for button state
   useEffect(() => {
@@ -616,18 +617,19 @@ function ProjectDetail() {
               {activeCallId && callStatus && (
                 <div
                   className={`flex items-start gap-3 rounded-lg p-4 ${
-                    callStatus === 'in_progress'
+                    callStatus === CallStatus.InProgress
                       ? 'bg-green-50 border border-green-200'
-                      : callStatus === 'ringing' || callStatus === 'queued'
+                      : callStatus === CallStatus.Ringing ||
+                          callStatus === CallStatus.Queued
                         ? 'bg-blue-50 border border-blue-200'
                         : 'bg-gray-50 border border-gray-200'
                   }`}
                 >
-                  {callStatus === 'in_progress' ? (
+                  {callStatus === CallStatus.InProgress ? (
                     <PhoneCall className="size-5 text-green-600 mt-0.5 animate-pulse" />
-                  ) : callStatus === 'ringing' ? (
+                  ) : callStatus === CallStatus.Ringing ? (
                     <Loader2 className="size-5 text-blue-600 mt-0.5 animate-spin" />
-                  ) : callStatus === 'queued' ? (
+                  ) : callStatus === CallStatus.Queued ? (
                     <Clock className="size-5 text-blue-600 mt-0.5" />
                   ) : (
                     <CheckCircle2 className="size-5 text-gray-600 mt-0.5" />
@@ -635,36 +637,44 @@ function ProjectDetail() {
                   <div className="flex-1 space-y-1">
                     <p
                       className={`text-sm font-medium ${
-                        callStatus === 'in_progress'
+                        callStatus === CallStatus.InProgress
                           ? 'text-green-900'
-                          : callStatus === 'ringing' || callStatus === 'queued'
+                          : callStatus === CallStatus.Ringing ||
+                              callStatus === CallStatus.Queued
                             ? 'text-blue-900'
                             : 'text-gray-900'
                       }`}
                     >
-                      {callStatus === 'queued' && 'Call queued'}
-                      {callStatus === 'ringing' && 'Call ringing...'}
-                      {callStatus === 'in_progress' && 'Call in progress'}
-                      {!['queued', 'ringing', 'in_progress'].includes(
-                        callStatus,
-                      ) && 'Call started'}
+                      {callStatus === CallStatus.Queued && 'Call queued'}
+                      {callStatus === CallStatus.Ringing && 'Call ringing...'}
+                      {callStatus === CallStatus.InProgress &&
+                        'Call in progress'}
+                      {callStatus !== CallStatus.Queued &&
+                        callStatus !== CallStatus.Ringing &&
+                        callStatus !== CallStatus.InProgress &&
+                        'Call started'}
                     </p>
                     <p
                       className={`text-xs ${
-                        callStatus === 'in_progress'
+                        callStatus === CallStatus.InProgress
                           ? 'text-green-700'
-                          : callStatus === 'ringing' || callStatus === 'queued'
+                          : callStatus === CallStatus.Ringing ||
+                              callStatus === CallStatus.Queued
                             ? 'text-blue-700'
                             : 'text-gray-700'
                       }`}
                     >
-                      {callStatus === 'queued' && 'Waiting in queue...'}
-                      {callStatus === 'ringing' && 'Waiting for answer...'}
-                      {callStatus === 'in_progress' &&
+                      {callStatus === CallStatus.Queued &&
+                        'Waiting in queue...'}
+                      {callStatus === CallStatus.Ringing &&
+                        'Waiting for answer...'}
+                      {callStatus === CallStatus.InProgress &&
                         'Connected - You can now listen to the call'}
-                      {!['queued', 'ringing', 'in_progress'].includes(
-                        callStatus,
-                      ) && `Status: ${callStatus}`}
+                      {callStatus !== CallStatus.Queued &&
+                        callStatus !== CallStatus.Ringing &&
+                        callStatus !== CallStatus.InProgress &&
+                        callStatus &&
+                        `Status: ${callStatus}`}
                     </p>
                   </div>
                 </div>
@@ -723,11 +733,14 @@ function ProjectDetail() {
                 )}
               </Button>
 
-              <CallAudioVisualizer
-                listenUrl={listenUrl}
-                callStatus={callStatus}
-                onDisconnect={() => setListenUrl(null)}
-              />
+              {/* CallAudioVisualizer - Only show for Vapi */}
+              {voiceProvider === VoiceAIProvider.Vapi && (
+                <CallAudioVisualizer
+                  listenUrl={listenUrl}
+                  callStatus={callStatus}
+                  onDisconnect={() => setListenUrl(null)}
+                />
+              )}
             </CardContent>
           </Card>
         </div>
