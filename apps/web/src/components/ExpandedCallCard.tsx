@@ -104,27 +104,30 @@ export function ExpandedCallCard({
     <Item variant="outline" className="flex-col items-start">
       {/* SECTION 1: Call Status Information */}
       <div className="w-full">
-        <ItemHeader>
-          {callStatus && (
-            <div className="flex items-center gap-2">
-              {callStatus === CallStatus.InProgress ? (
-                <PhoneCall className="size-4 text-green-600 animate-pulse" />
-              ) : callStatus === CallStatus.Ringing ? (
-                <Loader2 className="size-4 text-blue-600 animate-spin" />
-              ) : callStatus === CallStatus.Queued ? (
-                <Clock className="size-4 text-blue-600" />
-              ) : (
-                <CheckCircle2 className="size-4 text-gray-600" />
-              )}
-              <span className="text-xs font-medium text-gray-600 capitalize">
-                {callStatus === CallStatus.InProgress ? 'Connected' : callStatus}
-              </span>
-            </div>
-          )}
+        <ItemHeader className="flex items-center justify-between">
+          {/* Left side - Call status or empty spacer */}
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            {callStatus && (
+              <>
+                {callStatus === CallStatus.InProgress ? (
+                  <PhoneCall className="size-4 text-green-600 animate-pulse" />
+                ) : callStatus === CallStatus.Ringing ? (
+                  <Loader2 className="size-4 text-blue-600 animate-spin" />
+                ) : callStatus === CallStatus.Queued ? (
+                  <Clock className="size-4 text-blue-600" />
+                ) : (
+                  <CheckCircle2 className="size-4 text-gray-600" />
+                )}
+                <span className="text-xs font-medium text-gray-600 capitalize">
+                  {callStatus === CallStatus.InProgress ? 'Connected' : callStatus}
+                </span>
+              </>
+            )}
+          </div>
 
-          {/* Call control buttons */}
+          {/* Right side - Call control buttons - Always anchored to the right */}
           <TooltipProvider>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 ml-auto">
               {/* Live Listen Toggle - Only show for Vapi */}
               {voiceProvider === VoiceAIProvider.Vapi && (
                 <Tooltip>
@@ -149,7 +152,7 @@ export function ExpandedCallCard({
                 </Tooltip>
               )}
 
-              {/* End Call Button */}
+              {/* End Call Button - Always destructive red */}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Toggle
@@ -158,7 +161,7 @@ export function ExpandedCallCard({
                     disabled={isEndingCall || !canEndCall}
                     size="sm"
                     aria-label="End call"
-                    className="data-[state=on]:bg-destructive data-[state=on]:text-destructive-foreground hover:bg-destructive/90 hover:text-destructive-foreground"
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:text-destructive-foreground"
                   >
                     {isEndingCall ? (
                       <Loader2 className="size-4 animate-spin" />
