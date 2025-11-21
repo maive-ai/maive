@@ -1,23 +1,24 @@
+import { VoiceAIProvider } from '@maive/api/client';
 import MaiveLogo from '@maive/brand/logos/Maive-Main-Icon.png';
 import { createFileRoute } from '@tanstack/react-router';
 import {
-  AlertCircle,
-  Building2,
-  CheckCircle2,
-  Clock,
-  Download,
-  FileText,
-  Loader2,
-  Mail,
-  MapPin,
-  Phone,
-  PhoneCall,
-  User,
+    AlertCircle,
+    Building2,
+    CheckCircle2,
+    Clock,
+    Download,
+    FileText,
+    Loader2,
+    Mail,
+    MapPin,
+    Phone,
+    PhoneCall,
+    User,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
-  isValidPhoneNumber,
-  type Value as E164Number,
+    isValidPhoneNumber,
+    type Value as E164Number,
 } from 'react-phone-number-input';
 
 import { useEndCall, useVoiceAIProvider } from '@/clients/ai/voice';
@@ -76,10 +77,10 @@ function ProjectDetail() {
 
   // Determine if we can end the call
   // For Vapi: requires controlUrl AND in_progress status
-  // For Twilio: End call not yet implemented, keep button disabled
+  // For Twilio: only requires in_progress status (no controlUrl needed)
   const canEndCall =
-    voiceProvider === 'twilio'
-      ? false // TODO: Implement Twilio end call functionality
+    voiceProvider === VoiceAIProvider.Twilio
+      ? callStatus === 'in_progress'
       : controlUrl !== null && callStatus === 'in_progress';
 
   // Debug logging for button state

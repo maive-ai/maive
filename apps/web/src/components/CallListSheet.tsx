@@ -1,8 +1,9 @@
+import { VoiceAIProvider } from '@maive/api/client';
 import { Home, Pause, PhoneOff, Play, ShieldCheck, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { isValidPhoneNumber } from 'react-phone-number-input';
 
-import { useEndCall } from '@/clients/ai/voice';
+import { useEndCall, useVoiceAIProvider } from '@/clients/ai/voice';
 import { useCallList, useRemoveFromCallList } from '@/clients/callList';
 import { useFetchProjects } from '@/clients/crm';
 import { useCallAndWriteToCrm } from '@/clients/workflows';
@@ -104,6 +105,9 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
   const callAndWriteToCrmMutation = useCallAndWriteToCrm();
   const endCallMutation = useEndCall();
 
+  // Check voice AI provider (Twilio vs Vapi)
+  const { data: voiceProvider } = useVoiceAIProvider();
+
   const callListItems = useMemo(
     () => callListData?.items || [],
     [callListData?.items],
@@ -160,8 +164,13 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
     },
   });
 
-  // Only allow ending the call when we have the control URL AND the call is ringing or connected
-  const canEndCall = controlUrl !== null && callStatus === 'in_progress';
+  // Determine if we can end the call
+  // For Vapi: requires controlUrl AND in_progress status
+  // For Twilio: only requires in_progress status (no controlUrl needed)
+  const canEndCall =
+    voiceProvider === VoiceAIProvider.Twilio
+      ? callStatus === 'in_progress'
+      : controlUrl !== null && callStatus === 'in_progress';
 
   // Clear removing state when the item is actually gone from the list
   useEffect(() => {
