@@ -2699,7 +2699,7 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
             };
         },
         /**
-         * Generate an AI summary for a project.  This endpoint analyzes project notes and generates a structured summary including: - Brief project status summary - Recent actions taken (2-3 bullet points) - Next steps (2-3 bullet points)  Args:     project_id: The unique identifier for the project     current_user: The authenticated user     crm_service: The CRM service instance from dependency injection  Returns:     ProjectSummary: AI-generated structured summary  Raises:     HTTPException: If the project is not found or an error occurs
+         * Generate an AI summary for a project.  This endpoint analyzes project notes and generates a structured summary including: - Brief project status summary - Recent actions taken (2-3 bullet points) - Next steps (2-3 bullet points)Ae  Args:     project_id: The unique identifier for the project     current_user: The authenticated user     crm_service: The CRM service instance from dependency injection  Returns:     ProjectSummary: AI-generated structured summary  Raises:     HTTPException: If the project is not found or an error occurs
          * @summary Generate Project Summary
          * @param {string} projectId 
          * @param {*} [options] Override http request option.
@@ -3234,7 +3234,7 @@ export const CRMApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * Generate an AI summary for a project.  This endpoint analyzes project notes and generates a structured summary including: - Brief project status summary - Recent actions taken (2-3 bullet points) - Next steps (2-3 bullet points)  Args:     project_id: The unique identifier for the project     current_user: The authenticated user     crm_service: The CRM service instance from dependency injection  Returns:     ProjectSummary: AI-generated structured summary  Raises:     HTTPException: If the project is not found or an error occurs
+         * Generate an AI summary for a project.  This endpoint analyzes project notes and generates a structured summary including: - Brief project status summary - Recent actions taken (2-3 bullet points) - Next steps (2-3 bullet points)Ae  Args:     project_id: The unique identifier for the project     current_user: The authenticated user     crm_service: The CRM service instance from dependency injection  Returns:     ProjectSummary: AI-generated structured summary  Raises:     HTTPException: If the project is not found or an error occurs
          * @summary Generate Project Summary
          * @param {string} projectId 
          * @param {*} [options] Override http request option.
@@ -3440,7 +3440,7 @@ export const CRMApiFactory = function (configuration?: Configuration, basePath?:
             return localVarFp.downloadFileApiCrmFilesFileIdDownloadGet(fileId, filename, contentType, options).then((request) => request(axios, basePath));
         },
         /**
-         * Generate an AI summary for a project.  This endpoint analyzes project notes and generates a structured summary including: - Brief project status summary - Recent actions taken (2-3 bullet points) - Next steps (2-3 bullet points)  Args:     project_id: The unique identifier for the project     current_user: The authenticated user     crm_service: The CRM service instance from dependency injection  Returns:     ProjectSummary: AI-generated structured summary  Raises:     HTTPException: If the project is not found or an error occurs
+         * Generate an AI summary for a project.  This endpoint analyzes project notes and generates a structured summary including: - Brief project status summary - Recent actions taken (2-3 bullet points) - Next steps (2-3 bullet points)Ae  Args:     project_id: The unique identifier for the project     current_user: The authenticated user     crm_service: The CRM service instance from dependency injection  Returns:     ProjectSummary: AI-generated structured summary  Raises:     HTTPException: If the project is not found or an error occurs
          * @summary Generate Project Summary
          * @param {string} projectId 
          * @param {*} [options] Override http request option.
@@ -3621,7 +3621,7 @@ export class CRMApi extends BaseAPI {
     }
 
     /**
-     * Generate an AI summary for a project.  This endpoint analyzes project notes and generates a structured summary including: - Brief project status summary - Recent actions taken (2-3 bullet points) - Next steps (2-3 bullet points)  Args:     project_id: The unique identifier for the project     current_user: The authenticated user     crm_service: The CRM service instance from dependency injection  Returns:     ProjectSummary: AI-generated structured summary  Raises:     HTTPException: If the project is not found or an error occurs
+     * Generate an AI summary for a project.  This endpoint analyzes project notes and generates a structured summary including: - Brief project status summary - Recent actions taken (2-3 bullet points) - Next steps (2-3 bullet points)Ae  Args:     project_id: The unique identifier for the project     current_user: The authenticated user     crm_service: The CRM service instance from dependency injection  Returns:     ProjectSummary: AI-generated structured summary  Raises:     HTTPException: If the project is not found or an error occurs
      * @summary Generate Project Summary
      * @param {string} projectId 
      * @param {*} [options] Override http request option.

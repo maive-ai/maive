@@ -277,24 +277,6 @@ export function ExpandedCallCard({
                 {projectSummary.summary}
               </p>
 
-              {/* Recent Actions */}
-              {projectSummary.recent_actions &&
-                projectSummary.recent_actions.length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold text-gray-600 mb-1">
-                      Recent Actions:
-                    </p>
-                    <ul className="text-xs text-gray-600 leading-relaxed space-y-0.5 pl-3">
-                      {projectSummary.recent_actions.map((action, idx) => (
-                        <li key={idx} className="flex items-start gap-1">
-                          <span className="text-gray-400 mt-0.5">•</span>
-                          <span>{action}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
               {/* Next Steps */}
               {projectSummary.next_steps &&
                 projectSummary.next_steps.length > 0 && (
@@ -307,6 +289,24 @@ export function ExpandedCallCard({
                         <li key={idx} className="flex items-start gap-1">
                           <span className="text-gray-400 mt-0.5">•</span>
                           <span>{step}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+              {/* Recent Actions */}
+              {projectSummary.recent_actions &&
+                projectSummary.recent_actions.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 mb-1">
+                      Recent Actions:
+                    </p>
+                    <ul className="text-xs text-gray-600 leading-relaxed space-y-0.5 pl-3">
+                      {projectSummary.recent_actions.map((action, idx) => (
+                        <li key={idx} className="flex items-start gap-1">
+                          <span className="text-gray-400 mt-0.5">•</span>
+                          <span>{action}</span>
                         </li>
                       ))}
                     </ul>
