@@ -30,8 +30,8 @@ export function useCallAudioStream(listenUrl: string | null) {
   // The following settings work for an agent that was STT -> TTS -> Audio Stream, but they sound bad after switching to a speech-to-speech agent.
   /*
   - Input Codec: Int16
-  - Channels: 1
-  - Sample Rate: 32000
+  - Channels: 2
+  - Sample Rate: 16000
   - Flush Time: 150
   - FFT Size: 256
   */
@@ -47,9 +47,9 @@ export function useCallAudioStream(listenUrl: string | null) {
     // Initialize PCMPlayer with built-in analyser
     const player = new PCMPlayer({
       inputCodec: 'Int16',
-      channels: 1,
-      sampleRate: 32000, // Match Vapi's stream format
-      flushTime: 150, // Increased buffer to reduce crackling
+      channels: 2,
+      sampleRate: 16000, // Match Vapi's stream format
+      flushTime: 50, // Reduced buffer to prevent audio loss when WebSocket closes
       fftSize: FFT_SIZE,
     });
     playerRef.current = player;
