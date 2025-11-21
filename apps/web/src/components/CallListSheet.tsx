@@ -142,7 +142,6 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
     [projectsData?.projects],
   );
 
-
   // Create a map of project IDs to projects for quick lookup
   const projectMap = useMemo(
     () => new Map(projects.map((p) => [p.id, p])),

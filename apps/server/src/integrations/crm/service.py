@@ -7,6 +7,7 @@ the universal interface that works across all CRM providers.
 
 from typing import Any
 
+from src.ai.providers.factory import AIProviderType, create_ai_provider
 from src.integrations.crm.base import CRMError, CRMProvider
 from src.integrations.crm.schemas import (
     Contact,
@@ -310,7 +311,6 @@ class CRMService:
         Returns:
             ProjectSummary or CRMErrorResponse: The result of the operation
         """
-        from src.ai.providers.factory import AIProviderType, create_ai_provider
 
         try:
             logger.info("Generating project summary", project_id=project_id)
