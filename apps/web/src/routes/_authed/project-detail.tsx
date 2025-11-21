@@ -275,12 +275,12 @@ function ProjectDetail() {
   };
 
   return (
-    <div className="flex h-full bg-white p-6">
+    <div className="bg-white p-6">
       <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left Column: Project Details */}
         <div className="space-y-6">
-          <Card className="w-full">
-            <CardHeader>
+          <Card className="w-full flex flex-col max-h-[calc(100vh-12rem)]">
+            <CardHeader className="flex-shrink-0">
               <div className="flex items-center gap-3">
                 <div className="size-10 rounded-lg bg-gradient-to-br from-orange-400 to-pink-400 flex items-center justify-center">
                   <Building2 className="size-6 text-white" />
@@ -301,7 +301,7 @@ function ProjectDetail() {
                 )}
               </div>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 overflow-y-auto flex-1 min-h-0">
               {/* Customer Information */}
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
@@ -590,7 +590,7 @@ function ProjectDetail() {
                 <div>
                   <CardTitle className="text-xl">Maive Assistant AI</CardTitle>
                   <p className="text-sm text-gray-600">
-                    Let your AI Assistant Riley check on a claim.
+                    Let your AI Assistant check on a claim.
                   </p>
                 </div>
               </div>

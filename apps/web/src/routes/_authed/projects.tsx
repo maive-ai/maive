@@ -7,7 +7,7 @@ import {
   FileSearch,
   Search,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useAddToCallList, useCallList } from '@/clients/callList';
 import { useFetchProjects } from '@/clients/crm';
@@ -29,7 +29,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { env } from '@/env';
-import { useProjectSearch } from '@/hooks/useProjectSearch';
 
 export const Route = createFileRoute('/_authed/projects')({
   component: Projects,
@@ -38,12 +37,28 @@ export const Route = createFileRoute('/_authed/projects')({
 function Projects() {
   const [page, setPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(50);
-  const { data, isLoading, isError, error } = useFetchProjects(page, pageSize);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>('');
+
+  // Debounce search query - wait 300ms after user stops typing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+      setPage(1); // Reset to first page when search changes
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const { data, isLoading, isError, error } = useFetchProjects(
+    page,
+    pageSize,
+    debouncedSearchQuery || null,
+  );
   const { data: callListData } = useCallList();
   const { data: scheduledGroupsData } = useScheduledGroups();
   const addToCallList = useAddToCallList();
   const addProjectsToGroup = useAddProjectsToGroup();
-  const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSelectMode, setIsSelectMode] = useState<boolean>(false);
   const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(
     new Set(),
@@ -123,42 +138,35 @@ function Projects() {
     setSelectedProjectIds(new Set());
   };
 
-  // Filter projects based on search query
-  const filteredProjects = useProjectSearch(data?.projects, searchQuery);
+  const handleSearchChange = (value: string): void => {
+    setSearchQuery(value);
+  };
 
-  // Loading State
-  if (isLoading) {
-    return (
-      <div className="p-6 max-w-7xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Projects</h1>
-          <p className="text-gray-600 mt-1">Loading your projects...</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-6 space-y-4">
-                <div className="h-10 bg-gray-200 rounded" />
-                <div className="space-y-3">
-                  <div className="h-4 bg-gray-200 rounded w-3/4" />
-                  <div className="h-4 bg-gray-200 rounded w-1/2" />
-                  <div className="h-4 bg-gray-200 rounded w-2/3" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  // Use projects directly from API (already filtered on backend)
+  const projects = data?.projects || [];
 
   // Error State
-  if (isError) {
+  if (isError && !isLoading) {
     return (
       <div className="p-6 max-w-7xl mx-auto">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900">Projects</h1>
         </div>
+
+        {/* Search Bar - Keep visible even in error state */}
+        <div className="mb-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="Search by name, address, phone, or claim number..."
+              value={searchQuery}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="pl-10 h-12 text-base"
+            />
+          </div>
+        </div>
+
         <div className="flex flex-col items-center justify-center py-12">
           <div className="rounded-full bg-red-100 p-4 mb-4">
             <AlertCircle className="size-8 text-red-600" />
@@ -175,30 +183,11 @@ function Projects() {
     );
   }
 
-  // Empty State
-  if (!data || data.projects.length === 0) {
-    return (
-      <div className="p-6 max-w-7xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Projects</h1>
-          <p className="text-gray-600 mt-1">
-            {data ? `${data.total_count} projects` : 'No projects found'}
-          </p>
-        </div>
-        <div className="flex flex-col items-center justify-center py-12">
-          <div className="rounded-full bg-gray-100 p-4 mb-4">
-            <FileSearch className="size-8 text-gray-400" />
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            No projects found
-          </h2>
-          <p className="text-gray-600 text-center max-w-md">
-            There are currently no projects in your CRM system.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // Empty State (only show if not loading, not searching, and truly no data)
+  const showEmptyState =
+    !isLoading &&
+    !isError &&
+    (!data || (data.projects.length === 0 && !debouncedSearchQuery));
 
   // Success State with Projects Grid
   return (
@@ -289,22 +278,35 @@ function Projects() {
             type="text"
             placeholder="Search by name, address, phone, or claim number..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="pl-10 h-12 text-base"
           />
         </div>
-        {searchQuery && (
+        {debouncedSearchQuery && (
           <p className="text-sm text-gray-600 mt-2">
-            {filteredProjects.length}{' '}
-            {filteredProjects.length === 1 ? 'result' : 'results'} found on this
-            page
-            {data && ` (${data.total_count} total projects)`}
+            {data?.total_count || 0}{' '}
+            {data?.total_count === 1 ? 'result' : 'results'} found
+            {data &&
+              ` (showing page ${page} of ${Math.ceil(data.total_count / pageSize) || 1})`}
           </p>
         )}
       </div>
 
-      {/* No Results State */}
-      {searchQuery && filteredProjects.length === 0 ? (
+      {/* Empty State - only show when not loading and truly no data */}
+      {showEmptyState ? (
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="rounded-full bg-gray-100 p-4 mb-4">
+            <FileSearch className="size-8 text-gray-400" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            No projects found
+          </h2>
+          <p className="text-gray-600 text-center max-w-md">
+            There are currently no projects in your CRM system.
+          </p>
+        </div>
+      ) : debouncedSearchQuery && projects.length === 0 && !isLoading ? (
+        // No Results State for search
         <div className="flex flex-col items-center justify-center py-12">
           <div className="rounded-full bg-gray-100 p-4 mb-4">
             <FileSearch className="size-8 text-gray-400" />
@@ -313,14 +315,30 @@ function Projects() {
             No results found
           </h2>
           <p className="text-gray-600 text-center max-w-md">
-            No projects match your search query &ldquo;{searchQuery}&rdquo;. Try
-            a different search term.
+            No projects match your search query &ldquo;{debouncedSearchQuery}
+            &rdquo;. Try a different search term.
           </p>
+        </div>
+      ) : isLoading && projects.length === 0 ? (
+        // Show loading skeletons when loading and no projects yet
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-6 space-y-4">
+                <div className="h-10 bg-gray-200 rounded" />
+                <div className="space-y-3">
+                  <div className="h-4 bg-gray-200 rounded w-3/4" />
+                  <div className="h-4 bg-gray-200 rounded w-1/2" />
+                  <div className="h-4 bg-gray-200 rounded w-2/3" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProjects.map((project) => (
+            {projects.map((project) => (
               <ProjectCard
                 key={project.id}
                 project={project}
@@ -336,11 +354,13 @@ function Projects() {
           {data && (
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="text-sm text-gray-600">
-                {searchQuery ? (
+                {debouncedSearchQuery ? (
                   <>
-                    Showing {filteredProjects.length}{' '}
-                    {filteredProjects.length === 1 ? 'result' : 'results'} on
-                    page {page} of {Math.ceil(data.total_count / pageSize) || 1}
+                    Showing {projects.length}{' '}
+                    {projects.length === 1 ? 'result' : 'results'} on page{' '}
+                    {page} of {Math.ceil(data.total_count / pageSize) || 1} (
+                    {data.total_count} total{' '}
+                    {data.total_count === 1 ? 'result' : 'results'})
                   </>
                 ) : (
                   <>

@@ -35,7 +35,7 @@ function AuthedLayout() {
       <AppSidebar user={auth.user} />
       <SidebarInset>
         <HeaderBar user={auth.user} />
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 min-h-0 overflow-auto">
           <Outlet />
         </main>
       </SidebarInset>

@@ -2718,14 +2718,15 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
             };
         },
         /**
-         * Get all jobs with pagination.  This endpoint works across all CRM providers and returns a standardized JobList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     JobList: Paginated list of jobs in universal format  Raises:     HTTPException: If an error occurs while fetching jobs
+         * Get all jobs with pagination.  This endpoint works across all CRM providers and returns a standardized JobList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     search: Optional search query to filter jobs     crm_service: The CRM service instance from dependency injection  Returns:     JobList: Paginated list of jobs in universal format  Raises:     HTTPException: If an error occurs while fetching jobs
          * @summary Get All Jobs
          * @param {number} [page] Page number (1-indexed)
          * @param {number} [pageSize] Number of items per page
+         * @param {string | null} [search] Search query to filter jobs by name, address, phone, or claim number
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getAllJobsApiCrmJobsGet: async (page?: number, pageSize?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        getAllJobsApiCrmJobsGet: async (page?: number, pageSize?: number, search?: string | null, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/api/crm/jobs`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -2750,6 +2751,10 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
                 localVarQueryParameter['page_size'] = pageSize;
             }
 
+            if (search !== undefined) {
+                localVarQueryParameter['search'] = search;
+            }
+
 
     
             setSearchParams(localVarUrlObj, localVarQueryParameter);
@@ -2762,14 +2767,15 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
             };
         },
         /**
-         * Get all projects with pagination.  This endpoint works across all CRM providers and returns a standardized ProjectList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     ProjectList: Paginated list of projects in universal format  Raises:     HTTPException: If an error occurs while fetching projects
+         * Get all projects with pagination.  This endpoint works across all CRM providers and returns a standardized ProjectList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     search: Optional search query to filter projects     crm_service: The CRM service instance from dependency injection  Returns:     ProjectList: Paginated list of projects in universal format  Raises:     HTTPException: If an error occurs while fetching projects
          * @summary Get All Projects
          * @param {number} [page] Page number (1-indexed)
          * @param {number} [pageSize] Number of items per page
+         * @param {string | null} [search] Search query to filter projects by name, address, phone, or claim number
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getAllProjectsApiCrmProjectsGet: async (page?: number, pageSize?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        getAllProjectsApiCrmProjectsGet: async (page?: number, pageSize?: number, search?: string | null, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/api/crm/projects`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -2792,6 +2798,10 @@ export const CRMApiAxiosParamCreator = function (configuration?: Configuration) 
 
             if (pageSize !== undefined) {
                 localVarQueryParameter['page_size'] = pageSize;
+            }
+
+            if (search !== undefined) {
+                localVarQueryParameter['search'] = search;
             }
 
 
@@ -3175,29 +3185,31 @@ export const CRMApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * Get all jobs with pagination.  This endpoint works across all CRM providers and returns a standardized JobList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     JobList: Paginated list of jobs in universal format  Raises:     HTTPException: If an error occurs while fetching jobs
+         * Get all jobs with pagination.  This endpoint works across all CRM providers and returns a standardized JobList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     search: Optional search query to filter jobs     crm_service: The CRM service instance from dependency injection  Returns:     JobList: Paginated list of jobs in universal format  Raises:     HTTPException: If an error occurs while fetching jobs
          * @summary Get All Jobs
          * @param {number} [page] Page number (1-indexed)
          * @param {number} [pageSize] Number of items per page
+         * @param {string | null} [search] Search query to filter jobs by name, address, phone, or claim number
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getAllJobsApiCrmJobsGet(page?: number, pageSize?: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<JobList>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getAllJobsApiCrmJobsGet(page, pageSize, options);
+        async getAllJobsApiCrmJobsGet(page?: number, pageSize?: number, search?: string | null, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<JobList>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getAllJobsApiCrmJobsGet(page, pageSize, search, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['CRMApi.getAllJobsApiCrmJobsGet']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * Get all projects with pagination.  This endpoint works across all CRM providers and returns a standardized ProjectList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     ProjectList: Paginated list of projects in universal format  Raises:     HTTPException: If an error occurs while fetching projects
+         * Get all projects with pagination.  This endpoint works across all CRM providers and returns a standardized ProjectList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     search: Optional search query to filter projects     crm_service: The CRM service instance from dependency injection  Returns:     ProjectList: Paginated list of projects in universal format  Raises:     HTTPException: If an error occurs while fetching projects
          * @summary Get All Projects
          * @param {number} [page] Page number (1-indexed)
          * @param {number} [pageSize] Number of items per page
+         * @param {string | null} [search] Search query to filter projects by name, address, phone, or claim number
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getAllProjectsApiCrmProjectsGet(page?: number, pageSize?: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ProjectList>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getAllProjectsApiCrmProjectsGet(page, pageSize, options);
+        async getAllProjectsApiCrmProjectsGet(page?: number, pageSize?: number, search?: string | null, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ProjectList>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getAllProjectsApiCrmProjectsGet(page, pageSize, search, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['CRMApi.getAllProjectsApiCrmProjectsGet']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -3363,26 +3375,28 @@ export const CRMApiFactory = function (configuration?: Configuration, basePath?:
             return localVarFp.getAllContactsApiCrmContactsGet(page, pageSize, options).then((request) => request(axios, basePath));
         },
         /**
-         * Get all jobs with pagination.  This endpoint works across all CRM providers and returns a standardized JobList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     JobList: Paginated list of jobs in universal format  Raises:     HTTPException: If an error occurs while fetching jobs
+         * Get all jobs with pagination.  This endpoint works across all CRM providers and returns a standardized JobList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     search: Optional search query to filter jobs     crm_service: The CRM service instance from dependency injection  Returns:     JobList: Paginated list of jobs in universal format  Raises:     HTTPException: If an error occurs while fetching jobs
          * @summary Get All Jobs
          * @param {number} [page] Page number (1-indexed)
          * @param {number} [pageSize] Number of items per page
+         * @param {string | null} [search] Search query to filter jobs by name, address, phone, or claim number
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getAllJobsApiCrmJobsGet(page?: number, pageSize?: number, options?: RawAxiosRequestConfig): AxiosPromise<JobList> {
-            return localVarFp.getAllJobsApiCrmJobsGet(page, pageSize, options).then((request) => request(axios, basePath));
+        getAllJobsApiCrmJobsGet(page?: number, pageSize?: number, search?: string | null, options?: RawAxiosRequestConfig): AxiosPromise<JobList> {
+            return localVarFp.getAllJobsApiCrmJobsGet(page, pageSize, search, options).then((request) => request(axios, basePath));
         },
         /**
-         * Get all projects with pagination.  This endpoint works across all CRM providers and returns a standardized ProjectList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     ProjectList: Paginated list of projects in universal format  Raises:     HTTPException: If an error occurs while fetching projects
+         * Get all projects with pagination.  This endpoint works across all CRM providers and returns a standardized ProjectList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     search: Optional search query to filter projects     crm_service: The CRM service instance from dependency injection  Returns:     ProjectList: Paginated list of projects in universal format  Raises:     HTTPException: If an error occurs while fetching projects
          * @summary Get All Projects
          * @param {number} [page] Page number (1-indexed)
          * @param {number} [pageSize] Number of items per page
+         * @param {string | null} [search] Search query to filter projects by name, address, phone, or claim number
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getAllProjectsApiCrmProjectsGet(page?: number, pageSize?: number, options?: RawAxiosRequestConfig): AxiosPromise<ProjectList> {
-            return localVarFp.getAllProjectsApiCrmProjectsGet(page, pageSize, options).then((request) => request(axios, basePath));
+        getAllProjectsApiCrmProjectsGet(page?: number, pageSize?: number, search?: string | null, options?: RawAxiosRequestConfig): AxiosPromise<ProjectList> {
+            return localVarFp.getAllProjectsApiCrmProjectsGet(page, pageSize, search, options).then((request) => request(axios, basePath));
         },
         /**
          * Get a specific contact by ID.  This endpoint works across all CRM providers and returns a standardized Contact schema.  Args:     contact_id: The unique identifier for the contact (provider-specific format)     crm_service: The CRM service instance from dependency injection  Returns:     Contact: The contact information in universal format  Raises:     HTTPException: If the contact is not found or an error occurs
@@ -3534,29 +3548,31 @@ export class CRMApi extends BaseAPI {
     }
 
     /**
-     * Get all jobs with pagination.  This endpoint works across all CRM providers and returns a standardized JobList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     JobList: Paginated list of jobs in universal format  Raises:     HTTPException: If an error occurs while fetching jobs
+     * Get all jobs with pagination.  This endpoint works across all CRM providers and returns a standardized JobList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     search: Optional search query to filter jobs     crm_service: The CRM service instance from dependency injection  Returns:     JobList: Paginated list of jobs in universal format  Raises:     HTTPException: If an error occurs while fetching jobs
      * @summary Get All Jobs
      * @param {number} [page] Page number (1-indexed)
      * @param {number} [pageSize] Number of items per page
+     * @param {string | null} [search] Search query to filter jobs by name, address, phone, or claim number
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof CRMApi
      */
-    public getAllJobsApiCrmJobsGet(page?: number, pageSize?: number, options?: RawAxiosRequestConfig) {
-        return CRMApiFp(this.configuration).getAllJobsApiCrmJobsGet(page, pageSize, options).then((request) => request(this.axios, this.basePath));
+    public getAllJobsApiCrmJobsGet(page?: number, pageSize?: number, search?: string | null, options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).getAllJobsApiCrmJobsGet(page, pageSize, search, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
-     * Get all projects with pagination.  This endpoint works across all CRM providers and returns a standardized ProjectList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     crm_service: The CRM service instance from dependency injection  Returns:     ProjectList: Paginated list of projects in universal format  Raises:     HTTPException: If an error occurs while fetching projects
+     * Get all projects with pagination.  This endpoint works across all CRM providers and returns a standardized ProjectList schema.  Args:     page: Page number (1-indexed)     page_size: Number of items per page (max 100)     search: Optional search query to filter projects     crm_service: The CRM service instance from dependency injection  Returns:     ProjectList: Paginated list of projects in universal format  Raises:     HTTPException: If an error occurs while fetching projects
      * @summary Get All Projects
      * @param {number} [page] Page number (1-indexed)
      * @param {number} [pageSize] Number of items per page
+     * @param {string | null} [search] Search query to filter projects by name, address, phone, or claim number
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof CRMApi
      */
-    public getAllProjectsApiCrmProjectsGet(page?: number, pageSize?: number, options?: RawAxiosRequestConfig) {
-        return CRMApiFp(this.configuration).getAllProjectsApiCrmProjectsGet(page, pageSize, options).then((request) => request(this.axios, this.basePath));
+    public getAllProjectsApiCrmProjectsGet(page?: number, pageSize?: number, search?: string | null, options?: RawAxiosRequestConfig) {
+        return CRMApiFp(this.configuration).getAllProjectsApiCrmProjectsGet(page, pageSize, search, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**

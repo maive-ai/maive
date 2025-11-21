@@ -423,7 +423,7 @@
           "CRM"
         ],
         "summary": "Get All Jobs",
-        "description": "Get all jobs with pagination.\n\nThis endpoint works across all CRM providers and returns a standardized JobList schema.\n\nArgs:\n    page: Page number (1-indexed)\n    page_size: Number of items per page (max 100)\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    JobList: Paginated list of jobs in universal format\n\nRaises:\n    HTTPException: If an error occurs while fetching jobs",
+        "description": "Get all jobs with pagination.\n\nThis endpoint works across all CRM providers and returns a standardized JobList schema.\n\nArgs:\n    page: Page number (1-indexed)\n    page_size: Number of items per page (max 100)\n    search: Optional search query to filter jobs\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    JobList: Paginated list of jobs in universal format\n\nRaises:\n    HTTPException: If an error occurs while fetching jobs",
         "operationId": "get_all_jobs_api_crm_jobs_get",
         "security": [
           {
@@ -457,6 +457,24 @@
               "title": "Page Size"
             },
             "description": "Number of items per page"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Search query to filter jobs by name, address, phone, or claim number",
+              "title": "Search"
+            },
+            "description": "Search query to filter jobs by name, address, phone, or claim number"
           }
         ],
         "responses": {
@@ -842,7 +860,7 @@
           "CRM"
         ],
         "summary": "Get All Projects",
-        "description": "Get all projects with pagination.\n\nThis endpoint works across all CRM providers and returns a standardized ProjectList schema.\n\nArgs:\n    page: Page number (1-indexed)\n    page_size: Number of items per page (max 100)\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    ProjectList: Paginated list of projects in universal format\n\nRaises:\n    HTTPException: If an error occurs while fetching projects",
+        "description": "Get all projects with pagination.\n\nThis endpoint works across all CRM providers and returns a standardized ProjectList schema.\n\nArgs:\n    page: Page number (1-indexed)\n    page_size: Number of items per page (max 100)\n    search: Optional search query to filter projects\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    ProjectList: Paginated list of projects in universal format\n\nRaises:\n    HTTPException: If an error occurs while fetching projects",
         "operationId": "get_all_projects_api_crm_projects_get",
         "security": [
           {
@@ -876,6 +894,24 @@
               "title": "Page Size"
             },
             "description": "Number of items per page"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Search query to filter projects by name, address, phone, or claim number",
+              "title": "Search"
+            },
+            "description": "Search query to filter projects by name, address, phone, or claim number"
           }
         ],
         "responses": {
