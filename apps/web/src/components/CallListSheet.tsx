@@ -25,18 +25,10 @@ import {
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
-  EmptyTitle
+  EmptyTitle,
 } from '@/components/ui/empty';
-import {
-  Item,
-  ItemGroup,
-  ItemHeader
-} from '@/components/ui/item';
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle
-} from '@/components/ui/sheet';
+import { Item, ItemGroup, ItemHeader } from '@/components/ui/item';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Spinner } from '@/components/ui/spinner';
 import { useActiveCallPolling } from '@/hooks/useActiveCallPolling';
 import { getStatusColor } from '@/lib/utils';
@@ -47,8 +39,11 @@ interface CallListSheetProps {
 }
 
 export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
-  const { data: callListData, isLoading: isLoadingCallList, refetch } =
-    useCallList();
+  const {
+    data: callListData,
+    isLoading: isLoadingCallList,
+    refetch,
+  } = useCallList();
 
   // Refetch call list when sheet opens
   useEffect(() => {
@@ -66,14 +61,17 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
       const missingProjects = callListData.items.filter(
         (item) =>
           !projectsData.projects.some((p) => p.id === item.project_id) &&
-          !cleanedProjectIds.has(item.project_id)
+          !cleanedProjectIds.has(item.project_id),
       );
 
       if (missingProjects.length > 0) {
         // Track that we're cleaning these projects
         setCleanedProjectIds(
           (prev) =>
-            new Set([...prev, ...missingProjects.map((item) => item.project_id)])
+            new Set([
+              ...prev,
+              ...missingProjects.map((item) => item.project_id),
+            ]),
         );
 
         // Remove each missing project from the call list
@@ -334,7 +332,10 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[400px] sm:w-[540px] bg-white [&>button]:hidden">
+      <SheetContent
+        side="right"
+        className="w-[400px] sm:w-[540px] bg-white [&>button]:hidden"
+      >
         {/* Centered Start Dialing button */}
         <div className="flex justify-center pt-4 pb-4">
           <Button
@@ -426,7 +427,9 @@ export function CallListSheet({ open, onOpenChange }: CallListSheetProps) {
                     ? [
                         project.address_line1,
                         project.address_line2,
-                        [project.city, project.state].filter(Boolean).join(', '),
+                        [project.city, project.state]
+                          .filter(Boolean)
+                          .join(', '),
                         project.postal_code,
                       ]
                         .filter(Boolean)

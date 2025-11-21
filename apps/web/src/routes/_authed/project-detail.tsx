@@ -619,7 +619,8 @@ function ProjectDetail() {
                   className={`flex items-start gap-3 rounded-lg p-4 ${
                     callStatus === CallStatus.InProgress
                       ? 'bg-green-50 border border-green-200'
-                      : callStatus === CallStatus.Ringing || callStatus === CallStatus.Queued
+                      : callStatus === CallStatus.Ringing ||
+                          callStatus === CallStatus.Queued
                         ? 'bg-blue-50 border border-blue-200'
                         : 'bg-gray-50 border border-gray-200'
                   }`}
@@ -638,14 +639,16 @@ function ProjectDetail() {
                       className={`text-sm font-medium ${
                         callStatus === CallStatus.InProgress
                           ? 'text-green-900'
-                          : callStatus === CallStatus.Ringing || callStatus === CallStatus.Queued
+                          : callStatus === CallStatus.Ringing ||
+                              callStatus === CallStatus.Queued
                             ? 'text-blue-900'
                             : 'text-gray-900'
                       }`}
                     >
                       {callStatus === CallStatus.Queued && 'Call queued'}
                       {callStatus === CallStatus.Ringing && 'Call ringing...'}
-                      {callStatus === CallStatus.InProgress && 'Call in progress'}
+                      {callStatus === CallStatus.InProgress &&
+                        'Call in progress'}
                       {callStatus !== CallStatus.Queued &&
                         callStatus !== CallStatus.Ringing &&
                         callStatus !== CallStatus.InProgress &&
@@ -655,13 +658,16 @@ function ProjectDetail() {
                       className={`text-xs ${
                         callStatus === CallStatus.InProgress
                           ? 'text-green-700'
-                          : callStatus === CallStatus.Ringing || callStatus === CallStatus.Queued
+                          : callStatus === CallStatus.Ringing ||
+                              callStatus === CallStatus.Queued
                             ? 'text-blue-700'
                             : 'text-gray-700'
                       }`}
                     >
-                      {callStatus === CallStatus.Queued && 'Waiting in queue...'}
-                      {callStatus === CallStatus.Ringing && 'Waiting for answer...'}
+                      {callStatus === CallStatus.Queued &&
+                        'Waiting in queue...'}
+                      {callStatus === CallStatus.Ringing &&
+                        'Waiting for answer...'}
                       {callStatus === CallStatus.InProgress &&
                         'Connected - You can now listen to the call'}
                       {callStatus !== CallStatus.Queued &&

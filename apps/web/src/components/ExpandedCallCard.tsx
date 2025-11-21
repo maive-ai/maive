@@ -14,10 +14,7 @@ import {
 import { useEffect, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
-import {
-  Item,
-  ItemHeader
-} from '@/components/ui/item';
+import { Item, ItemHeader } from '@/components/ui/item';
 import { Toggle } from '@/components/ui/toggle';
 import {
   Tooltip,
@@ -119,7 +116,9 @@ export function ExpandedCallCard({
                   <CheckCircle2 className="size-4 text-gray-600" />
                 )}
                 <span className="text-xs font-medium text-gray-600 capitalize">
-                  {callStatus === CallStatus.InProgress ? 'Connected' : callStatus}
+                  {callStatus === CallStatus.InProgress
+                    ? 'Connected'
+                    : callStatus}
                 </span>
               </>
             )}
@@ -255,10 +254,10 @@ export function ExpandedCallCard({
       <div className="w-full pt-3 border-t">
         <div className="bg-gray-50 rounded p-3">
           <div className="flex items-center gap-2 mb-1.5">
-            <p className="text-xs font-semibold text-gray-700">
-              Claim Summary
-            </p>
-            <Badge className={`${getStatusColor(projectStatus)} pointer-events-none`}>
+            <p className="text-xs font-semibold text-gray-700">Claim Summary</p>
+            <Badge
+              className={`${getStatusColor(projectStatus)} pointer-events-none`}
+            >
               {projectStatus}
             </Badge>
           </div>
