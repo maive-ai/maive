@@ -233,6 +233,31 @@ class JobNimbusProvider(CRMProvider):
         filter_query: dict[str, Any] = {"must": []}
         should_conditions: list[dict[str, Any]] = []
 
+        # General search - searches across multiple fields
+        search_query = filters.get("search")
+        if search_query:
+            search_terms = search_query.lower().strip()
+            if search_terms:
+                # Search across customer name, address, claim number, job ID, and phone
+                search_should_conditions = [
+                    {"wildcard": {"primary.name": f"*{search_terms}*"}},
+                    {"wildcard": {"address_line1": f"*{search_terms}*"}},
+                    {"wildcard": {"address_line2": f"*{search_terms}*"}},
+                    {"wildcard": {"city": f"*{search_terms}*"}},
+                    {"wildcard": {"state_text": f"*{search_terms}*"}},
+                    {"wildcard": {"zip": f"*{search_terms}*"}},
+                    {"wildcard": {"claim_number": f"*{search_terms}*"}},
+                    {"wildcard": {"jnid": f"*{search_terms}*"}},
+                ]
+                # Search in phone fields if they exist
+                phone_conditions = [
+                    {"wildcard": {"primary.phone": f"*{search_terms}*"}},
+                    {"wildcard": {"primary.mobile": f"*{search_terms}*"}},
+                ]
+                search_should_conditions.extend(phone_conditions)
+                
+                should_conditions.extend(search_should_conditions)
+
         customer_name = filters.get("customer_name")
         if customer_name:
             filter_query["must"].append(

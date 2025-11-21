@@ -41,9 +41,26 @@ const createCRMApi = (): CRMApi => {
 export async function fetchAllProjects(
   page: number = 1,
   pageSize: number = 50,
+  search?: string | null,
 ): Promise<ProjectList> {
   const api = createCRMApi();
 
+  // Use baseClient directly to add search parameter until API client is regenerated
+  if (search) {
+    const response = await baseClient.get<ProjectList>('/api/crm/projects', {
+      params: {
+        page,
+        page_size: pageSize,
+        search: search.trim() || undefined,
+      },
+    });
+    console.log(
+      `[CRM Client] Fetched ${response.data.total_count} projects (page ${page}, search: "${search}")`,
+    );
+    return response.data;
+  }
+
+  // Use generated client when no search parameter
   const response = await api.getAllProjectsApiCrmProjectsGet(page, pageSize);
   console.log(
     `[CRM Client] Fetched ${response.data.total_count} projects (page ${page})`,
@@ -70,10 +87,11 @@ export async function fetchProject(projectId: string): Promise<Project> {
 export function useFetchProjects(
   page: number = 1,
   pageSize: number = 50,
+  search?: string | null,
 ): UseQueryResult<ProjectList, Error> {
   return useQuery({
-    queryKey: ['projects', page, pageSize],
-    queryFn: () => fetchAllProjects(page, pageSize),
+    queryKey: ['projects', page, pageSize, search],
+    queryFn: () => fetchAllProjects(page, pageSize, search),
     staleTime: 30 * 1000, // Data is fresh for 30 seconds
     refetchInterval: 30 * 1000, // Poll every 30 seconds
     refetchIntervalInBackground: true,
