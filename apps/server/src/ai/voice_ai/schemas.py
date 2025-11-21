@@ -179,7 +179,7 @@ class TranscriptMessage(BaseModel):
 
 class CallResponse(BaseModel):
     """Response model for call information."""
-    
+
     model_config = {"arbitrary_types_allowed": True}
 
     call_id: str = Field(..., description="Unique call identifier")
