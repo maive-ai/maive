@@ -134,13 +134,19 @@ class VapiProvider(VoiceAIProvider):
             logger.error("[Vapi Provider] Error getting call status", error=str(e))
             raise VoiceAIError(error_msg, error_code=VoiceAIErrorCode.HTTP_ERROR)
 
-    async def end_call(self, call_id: str, control_url: str | None = None) -> bool:
+    async def end_call(
+        self,
+        call_id: str,
+        control_url: str | None = None,
+        customer_call_sid: str | None = None,
+    ) -> bool:
         """
         End an ongoing call programmatically using Vapi's control URL.
 
         Args:
             call_id: The unique identifier for the call
             control_url: Optional control URL. If not provided, will fetch from call status.
+            customer_call_sid: Unused for Vapi (kept for interface compatibility with Twilio)
 
         Returns:
             bool: True if call was successfully ended
