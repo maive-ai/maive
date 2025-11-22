@@ -8,16 +8,23 @@ on:
     branches:
       - main
 
+# Cancel in-progress runs for the same workflow on the same PR/branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  lint-and-format:
-    name: Lint & Format Check
+  # Frontend checks run in parallel
+  frontend-checks:
+    name: Frontend Checks
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Needed for Turbo to detect changes
 
-      # ===== Frontend Setup =====
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -42,7 +49,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
-      # ===== Python Setup (before pnpm install to avoid postinstall hook failure) =====
+      # Setup Python for pnpm postinstall hooks
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -63,16 +70,78 @@ jobs:
         working-directory: apps/server
         run: uv sync --all-groups
 
-      # ===== Install Node dependencies =====
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # ===== Checks (using Turbo) =====
-      - name: Check formatting (Prettier + Ruff)
+      # Setup Turborepo remote caching
+      - name: Setup Turborepo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
+      # Run checks (Turbo handles parallelization internally)
+      - name: Check formatting
         run: pnpm format:check
 
-      - name: Run linting (ESLint + Ruff)
+      - name: Run linting
         run: pnpm lint
 
       - name: Run TypeScript type checking
         run: pnpm typecheck
+
+  # Backend checks run in parallel
+  backend-checks:
+    name: Backend Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Cache Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('apps/server/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Install Python dependencies
+        working-directory: apps/server
+        run: uv sync --all-groups
+
+      # Run Python checks
+      - name: Check Python formatting (Ruff)
+        working-directory: apps/server
+        run: uv run ruff format --check .
+
+      - name: Run Python linting (Ruff)
+        working-directory: apps/server
+        run: uv run ruff check .
+
+  # Status check job for branch protection rules
+  ci-status:
+    name: CI Status
+    runs-on: ubuntu-latest
+    needs: [frontend-checks, backend-checks]
+    if: always()
+
+    steps:
+      - name: Check all jobs succeeded
+        run: |
+          if [[ "${{ needs.frontend-checks.result }}" != "success" || "${{ needs.backend-checks.result }}" != "success" ]]; then
+            echo "One or more CI jobs failed"
+            exit 1
+          fi
+          echo "All CI checks passed!"
