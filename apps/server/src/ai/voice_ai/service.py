@@ -146,3 +146,25 @@ class VoiceAIService:
                 error_code=VoiceAIErrorCode.UNKNOWN_ERROR,
                 provider=getattr(self.voice_ai_provider, "provider_name", None),
             )
+
+    async def download_recording(self, recording_url: str) -> tuple[bytes, str]:
+        """
+        Download a call recording from the voice AI provider.
+
+        Args:
+            recording_url: URL to the call recording
+
+        Returns:
+            tuple[bytes, str]: Tuple of (file_bytes, content_type)
+
+        Raises:
+            VoiceAIError: If the recording cannot be downloaded
+        """
+        logger.info("Downloading call recording", url=recording_url)
+        result = await self.voice_ai_provider.download_recording(recording_url)
+        logger.info(
+            "Successfully downloaded recording",
+            size_bytes=len(result[0]),
+            content_type=result[1],
+        )
+        return result

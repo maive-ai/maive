@@ -6,8 +6,15 @@ voice AI calls, and updating CRM systems with call results.
 """
 
 import asyncio
+import mimetypes
+import tempfile
+import textwrap
+from pathlib import Path
 
+from src.ai.base import AIProvider
+from src.ai.providers.factory import AIProviderType, create_ai_provider
 from src.ai.voice_ai.constants import CallStatus
+from src.ai.voice_ai.constants import VoiceAIProvider as VoiceAIProviderEnum
 from src.ai.voice_ai.schemas import (
     AnalysisData,
     CallRequest,
@@ -43,6 +50,10 @@ class CallAndWriteToCRMWorkflow:
         self.crm_service = crm_service
         self.call_repository = call_repository
         self.settings = get_call_monitoring_settings()
+        # Initialize AI provider for recording analysis (explicitly use Gemini for audio)
+        self.gemini_ai_provider: AIProvider = create_ai_provider(
+            provider_type=AIProviderType.GEMINI
+        )
 
     async def call_and_write_results_to_crm(
         self,
@@ -222,7 +233,26 @@ class CallAndWriteToCRMWorkflow:
                             "status_result should be CallResponse at this point"
                         )
 
-                        # Update database with final call state
+                        # Update call status to ended immediately (for downstream systems)
+                        await task_repository.update_call_status(
+                            call_id=call_id,
+                            status=status_result.status,
+                            provider_data=status_result.provider_data.model_dump(
+                                mode="json"
+                            )
+                            if status_result.provider_data
+                            else None,
+                        )
+                        await session.commit()
+
+                        # Generate structured data from recording using AI (may take several seconds)
+                        await self._generate_structured_data_from_call(
+                            call_id=call_id,
+                            call_response=status_result,
+                            repository=task_repository,
+                        )
+
+                        # Persist complete call data including AI-generated analysis
                         await self._persist_completed_call(
                             call_id=call_id,
                             call_response=status_result,
@@ -337,6 +367,272 @@ class CallAndWriteToCRMWorkflow:
                 "[Call Monitoring Workflow] Error persisting completed call",
                 call_id=call_id,
                 error=str(e),
+            )
+
+    async def _poll_for_recording_url(
+        self,
+        call_id: str,
+        repository: CallRepository,
+        max_attempts: int = 10,
+        poll_interval: int = 3,
+    ) -> str | None:
+        """
+        Poll database for recording URL with timeout.
+
+        Args:
+            call_id: The call identifier
+            repository: The call repository with an active session
+            max_attempts: Maximum number of polling attempts
+            poll_interval: Seconds between polling attempts
+
+        Returns:
+            str | None: Recording URL if found, None otherwise
+        """
+        logger.debug(
+            "[Call Monitoring Workflow] Polling for recording URL",
+            call_id=call_id,
+        )
+
+        # TODO: Change this to be event driven instead of polling
+        for attempt in range(max_attempts):
+            call = await repository.get_call_by_call_id(call_id)
+            if call and call.recording_url:
+                logger.debug(
+                    "[Call Monitoring Workflow] Found recording URL",
+                    call_id=call_id,
+                    url=call.recording_url,
+                    attempt=attempt + 1,
+                )
+                return call.recording_url
+
+            if attempt < max_attempts - 1:
+                await asyncio.sleep(poll_interval)
+
+        logger.warning(
+            "[Call Monitoring Workflow] Recording URL not available after polling",
+            call_id=call_id,
+            max_attempts=max_attempts,
+        )
+        return None
+
+    async def _download_and_save_recording(
+        self,
+        call_id: str,
+        recording_url: str,
+    ) -> Path:
+        """
+        Download recording from voice AI provider and save to temporary file.
+
+        Args:
+            call_id: The call identifier
+            recording_url: URL to the recording
+
+        Returns:
+            Path: Path to the temporary file
+
+        Raises:
+            Exception: If download or file creation fails
+        """
+        logger.debug(
+            "[Call Monitoring Workflow] Downloading recording",
+            call_id=call_id,
+        )
+
+        file_bytes, content_type = await self.voice_ai_service.download_recording(
+            recording_url
+        )
+
+        # Determine file extension from content type using mimetypes
+        extension = mimetypes.guess_extension(content_type) or ".mp3"
+
+        # Create temporary file
+        with tempfile.NamedTemporaryFile(suffix=extension, delete=False) as temp_file:
+            temp_file.write(file_bytes)
+            temp_file_path = Path(temp_file.name)
+
+        logger.debug(
+            "[Call Monitoring Workflow] Created temporary file",
+            call_id=call_id,
+            path=str(temp_file_path),
+        )
+
+        return temp_file_path
+
+    def _create_analysis_prompt(self) -> str:
+        """
+        Create prompt for AI analysis of call recording.
+
+        The Pydantic schema (AnalysisData) provides detailed field descriptions,
+        so this prompt focuses on context and high-level instructions.
+
+        Returns:
+            str: Formatted prompt for AI analysis
+        """
+        return textwrap.dedent(
+            """
+            You are analyzing a recorded phone call between a contractor and an insurance company / adjuster / homeowner
+            regarding an insurance claim for a project.
+
+            Listen to the call recording and extract all relevant information into the structured format.
+            Pay special attention to:
+            - Whether the call was successful or went to voicemail
+            - Any status updates about the claim or project
+            - Payment information if discussed (amount, check number, dates)
+            - Required documents or next steps mentioned
+            - Overall success of the call in achieving its objective
+
+            Provide a clear summary of the call and evaluate how well it went.
+            """
+        ).strip()
+
+    async def _cleanup_recording_files(
+        self,
+        call_id: str,
+        temp_file_path: Path | None,
+        uploaded_file_id: str | None,
+    ) -> None:
+        """
+        Clean up temporary file and uploaded file from AI provider.
+
+        Args:
+            call_id: The call identifier (for logging)
+            temp_file_path: Path to temporary file to delete
+            uploaded_file_id: ID of uploaded file to delete from AI provider
+        """
+        # Clean up temporary file
+        if temp_file_path and temp_file_path.exists():
+            try:
+                temp_file_path.unlink()
+                logger.debug(
+                    "[Call Monitoring Workflow] Deleted temporary file",
+                    call_id=call_id,
+                    path=str(temp_file_path),
+                )
+            except Exception as e:
+                logger.warning(
+                    "[Call Monitoring Workflow] Failed to delete temporary file",
+                    path=str(temp_file_path),
+                    error=str(e),
+                )
+
+        # Delete uploaded file from AI provider
+        if uploaded_file_id:
+            try:
+                await self.gemini_ai_provider.delete_file(uploaded_file_id)
+                logger.debug(
+                    "[Call Monitoring Workflow] Deleted uploaded file from AI provider",
+                    call_id=call_id,
+                    file_id=uploaded_file_id,
+                )
+            except Exception as e:
+                logger.warning(
+                    "[Call Monitoring Workflow] Failed to delete uploaded file",
+                    file_id=uploaded_file_id,
+                    error=str(e),
+                )
+
+    async def _generate_structured_data_from_call(
+        self,
+        call_id: str,
+        call_response: CallResponse,
+        repository: CallRepository,
+    ) -> None:
+        """
+        Generate structured data from call recording using AI analysis.
+
+        This method orchestrates the full recording analysis pipeline:
+        1. Checks if provider is Twilio (returns early if not)
+        2. Polls database for recording URL (with timeout)
+        3. Downloads recording from voice AI provider
+        4. Uploads to AI provider (Gemini)
+        5. Generates structured analysis data
+        6. Updates call_response.analysis in-place
+        7. Cleans up temporary files
+
+        Note: This function updates call_response.analysis but does NOT persist to database.
+        The caller should persist the updated call_response after this returns.
+
+        Args:
+            call_id: The call identifier
+            call_response: The call response to update with analysis data
+            repository: The call repository with an active session
+        """
+        # Check if provider is Twilio
+        if call_response.provider != VoiceAIProviderEnum.TWILIO:
+            return
+
+        logger.info(
+            "[Call Monitoring Workflow] Processing Twilio recording with AI",
+            call_id=call_id,
+        )
+
+        uploaded_file_id: str | None = None
+        temp_file_path: Path | None = None
+
+        try:
+            # Poll for recording URL
+            recording_url = await self._poll_for_recording_url(call_id, repository)
+            if not recording_url:
+                return
+
+            # Download and save recording to temporary file
+            temp_file_path = await self._download_and_save_recording(
+                call_id, recording_url
+            )
+
+            # Upload to AI provider
+            logger.debug(
+                "[Call Monitoring Workflow] Uploading recording to AI provider",
+                call_id=call_id,
+            )
+
+            file_metadata = await self.gemini_ai_provider.upload_file(
+                str(temp_file_path)
+            )
+            uploaded_file_id = file_metadata.id
+
+            logger.debug(
+                "[Call Monitoring Workflow] Uploaded recording to AI provider",
+                call_id=call_id,
+                file_id=uploaded_file_id,
+            )
+
+            prompt = self._create_analysis_prompt()
+            analysis_data: AnalysisData = (
+                await self.gemini_ai_provider.generate_structured_content(
+                    prompt=prompt,
+                    response_schema=AnalysisData,
+                    file_ids=[uploaded_file_id],
+                )
+            )
+
+            logger.debug(
+                "[Call Monitoring Workflow] Successfully generated structured data",
+                call_id=call_id,
+            )
+
+            # Update call_response with AI-generated analysis (in-place mutation)
+            call_response.analysis = analysis_data
+            logger.debug(
+                "[Call Monitoring Workflow] Updated call_response with AI-generated analysis",
+                call_id=call_id,
+            )
+
+        except Exception as e:
+            logger.error(
+                "[Call Monitoring Workflow] Error generating structured data from recording",
+                call_id=call_id,
+                error=str(e),
+                exc_info=True,
+            )
+            logger.warning(
+                "[Call Monitoring Workflow] Failed to generate structured data from recording",
+                call_id=call_id,
+            )
+
+        finally:
+            await self._cleanup_recording_files(
+                call_id, temp_file_path, uploaded_file_id
             )
 
     async def _update_crm_with_call_results(
