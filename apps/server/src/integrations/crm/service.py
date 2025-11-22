@@ -5,6 +5,7 @@ This module provides the business logic layer for CRM operations using
 the universal interface that works across all CRM providers.
 """
 
+import textwrap
 from typing import Any
 
 from src.ai.providers.factory import AIProviderType, create_ai_provider
@@ -347,22 +348,24 @@ class CRMService:
             )
 
             # Build prompt
-            prompt = f"""Analyze these project notes and provide a concise summary:
+            prompt = textwrap.dedent(f"""\
+                Analyze these project notes and provide a concise summary:
 
-Project: {project.name or "Unknown"}
-Status: {project.status}
-Claim Number: {project.claim_number or "N/A"}
-Customer: {project.customer_name or "Unknown"}
+                Project: {project.name or "Unknown"}
+                Status: {project.status}
+                Claim Number: {project.claim_number or "N/A"}
+                Customer: {project.customer_name or "Unknown"}
 
-Recent Notes (most recent first):
-{notes_text}
+                Recent Notes (most recent first):
+                {notes_text}
 
-Provide:
-1. A very concise one-sentence summary of the current project status
-2. Max 2 recent actions taken (as bullet points, sorted by most recent first). Lead each bullet point with a date if available.
-3. Single bullet point next step or recommendation
+                Provide:
+                1. A very concise one-sentence summary of the current project status
+                2. Max 2 recent actions taken (as bullet points, sorted by most recent first). Lead each bullet point with a date if available.
+                3. Single bullet point next step or recommendation
 
-Be concise and focus on the most important information."""
+                Be concise and focus on the most important information.\
+            """).strip()
 
             # Generate structured summary using AI provider
             ai_provider = create_ai_provider(provider_type=AIProviderType.OPENAI)

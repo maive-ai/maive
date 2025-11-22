@@ -85,10 +85,19 @@ class PaymentDetails(BaseModel):
         return cls()
 
 
+class DocumentNeeded(BaseModel):
+    """Document information from required actions."""
+
+    document_name: str = Field(..., description="Name of the required document")
+    description: str | None = Field(
+        None, description="Optional description of the document"
+    )
+
+
 class RequiredActions(BaseModel):
     """Provider-agnostic required actions from claim status calls."""
 
-    documents_needed: list[str] = Field(
+    documents_needed: list[DocumentNeeded] = Field(
         default_factory=list, description="List of required documents"
     )
     submission_method: str | None = Field(
@@ -102,11 +111,7 @@ class RequiredActions(BaseModel):
         from src.ai.voice_ai.providers.vapi.schemas import VapiRequiredActions
 
         if isinstance(vapi_actions, VapiRequiredActions):
-            return cls(
-                documents_needed=vapi_actions.documents_needed,
-                submission_method=vapi_actions.submission_method,
-                next_steps=vapi_actions.next_steps,
-            )
+            return cls(**vapi_actions.model_dump())
         elif isinstance(vapi_actions, dict):
             return cls(**vapi_actions)
         return cls()

@@ -6,7 +6,7 @@ Provider-agnostic required actions from claim status calls.
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**documents_needed** | **Array&lt;string&gt;** | List of required documents | [optional] [default to undefined]
+**documents_needed** | [**Array&lt;DocumentNeeded&gt;**](DocumentNeeded.md) | List of required documents | [optional] [default to undefined]
 **submission_method** | **string** |  | [optional] [default to undefined]
 **next_steps** | **string** |  | [optional] [default to undefined]
 

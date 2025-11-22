@@ -879,6 +879,25 @@ export interface CreateScheduledGroupRequest {
 
 
 /**
+ * Document information from required actions.
+ * @export
+ * @interface DocumentNeeded
+ */
+export interface DocumentNeeded {
+    /**
+     * Name of the required document
+     * @type {string}
+     * @memberof DocumentNeeded
+     */
+    'document_name': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof DocumentNeeded
+     */
+    'description'?: string | null;
+}
+/**
  * Goal type enum for scheduled groups.
  * @export
  * @enum {string}
@@ -1706,10 +1725,10 @@ export interface ProjectSummary {
 export interface RequiredActions {
     /**
      * List of required documents
-     * @type {Array<string>}
+     * @type {Array<DocumentNeeded>}
      * @memberof RequiredActions
      */
-    'documents_needed'?: Array<string>;
+    'documents_needed'?: Array<DocumentNeeded>;
     /**
      * 
      * @type {string}

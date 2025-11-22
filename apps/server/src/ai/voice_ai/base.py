@@ -46,13 +46,19 @@ class VoiceAIProvider(ABC):
         pass
 
     @abstractmethod
-    async def end_call(self, call_id: str, control_url: str | None = None) -> bool:
+    async def end_call(
+        self,
+        call_id: str,
+        control_url: str | None = None,
+        customer_call_sid: str | None = None,
+    ) -> bool:
         """
         End an ongoing call programmatically.
 
         Args:
             call_id: The unique identifier for the call
             control_url: Optional control URL for ending the call
+            customer_call_sid: Optional customer call SID (provider-specific, e.g., Twilio bridge architecture)
 
         Returns:
             bool: True if call was successfully ended

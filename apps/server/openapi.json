@@ -3322,6 +3322,33 @@
         "title": "CreateScheduledGroupRequest",
         "description": "Request model for creating a scheduled group."
       },
+      "DocumentNeeded": {
+        "properties": {
+          "document_name": {
+            "type": "string",
+            "title": "Document Name",
+            "description": "Name of the required document"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Optional description of the document"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_name"
+        ],
+        "title": "DocumentNeeded",
+        "description": "Document information from required actions."
+      },
       "GoalType": {
         "type": "string",
         "enum": [
@@ -4656,7 +4683,7 @@
         "properties": {
           "documents_needed": {
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/DocumentNeeded"
             },
             "type": "array",
             "title": "Documents Needed",

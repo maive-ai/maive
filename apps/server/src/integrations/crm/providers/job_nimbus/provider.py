@@ -637,10 +637,12 @@ class JobNimbusProvider(CRMProvider):
             )
 
             # Create activity in JobNimbus
+            # Note: JobNimbus API requires note, recordTypeName, and primary fields
             activity_request = JobNimbusCreateActivityRequest(
-                type="note",
-                related=[entity_id],
-                body=text,
+                note=text,
+                record_type_name="Note",  # Standard note type
+                primary={"id": entity_id},
+                date_created=int(datetime.now(UTC).timestamp()),
             )
 
             endpoint = JobNimbusEndpoints.ACTIVITIES
@@ -655,7 +657,7 @@ class JobNimbusProvider(CRMProvider):
             # Transform to universal Note
             return Note(
                 id=jn_activity.jnid,
-                text=jn_activity.body or text,
+                text=jn_activity.note or text,
                 entity_id=entity_id,
                 entity_type=entity_type,
                 created_by_id=jn_activity.created_by,
@@ -672,7 +674,7 @@ class JobNimbusProvider(CRMProvider):
                 provider=CRMProviderEnum.JOB_NIMBUS,
                 provider_data={
                     "activity_type": jn_activity.type,
-                    "recid": jn_activity.recid,
+                    "recid": getattr(jn_activity, "recid", None),
                 },
             )
 
@@ -697,14 +699,13 @@ class JobNimbusProvider(CRMProvider):
         Args:
             job_id: The JobNimbus JNID
             status: The new status value (status name)
-            **kwargs: Optional parameters (status_id, etc.)
+            **kwargs: Optional parameters (status_id, record_type_name, etc.)
 
         Raises:
             CRMError: If the job is not found or update fails
         """
         logger.info("Updating JobNimbus job status", job_id=job_id, status=status)
 
-        # JobNimbus requires updating via PATCH with status_name
         try:
             endpoint = JobNimbusEndpoints.JOB_BY_ID.format(jnid=job_id)
 
@@ -713,7 +714,7 @@ class JobNimbusProvider(CRMProvider):
             if "status_id" in kwargs:
                 update_data["status"] = kwargs["status_id"]
 
-            response = await self._make_request("PATCH", endpoint, json=update_data)
+            response = await self._make_request("PUT", endpoint, json=update_data)
             response.raise_for_status()
 
             logger.info("Successfully updated job status", job_id=job_id)
@@ -721,6 +722,19 @@ class JobNimbusProvider(CRMProvider):
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
                 raise CRMError(f"Job with JNID {job_id} not found", "NOT_FOUND")
+
+            # Log response body for debugging
+            try:
+                error_body = e.response.text
+                logger.error(
+                    "JobNimbus API error updating job status",
+                    job_id=job_id,
+                    status_code=e.response.status_code,
+                    response_body=error_body,
+                )
+            except Exception:
+                pass
+
             raise CRMError(f"Failed to update job status: {e}", "HTTP_ERROR")
         except Exception as e:
             raise CRMError(f"Failed to update job status: {str(e)}", "UNKNOWN_ERROR")

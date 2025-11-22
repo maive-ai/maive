@@ -11,13 +11,10 @@ import httpx
 import phonenumbers
 from vapi import AsyncVapi
 from vapi.types import (
-    AnalysisPlan,
     AssistantOverrides,
     BotMessage,
     CallMessagesItem,
     CreateCustomerDto,
-    JsonSchema,
-    StructuredDataPlan,
     UserMessage,
 )
 from vapi.types import (
@@ -84,22 +81,24 @@ class VapiProvider(VoiceAIProvider):
             )
             assistant_overrides = self._build_assistant_overrides(request)
 
-            # Create call using SDK with typed objects
             # Use squad_id or assistant_id based on configuration
-            if self._vapi_settings.use_squad:
-                call: VapiCall = await self._client.calls.create(
-                    squad_id=self._vapi_settings.default_assistant_id,
-                    phone_number_id=self._vapi_settings.phone_number_id,
-                    customer=customer,
-                    assistant_overrides=assistant_overrides,
-                )
+            _use_squad = self._vapi_settings.use_squad
+            _default_assistant_id = self._vapi_settings.default_assistant_id
+            squad_id = None
+            assistant_id = None
+            if _use_squad:
+                squad_id = _default_assistant_id
             else:
-                call: VapiCall = await self._client.calls.create(
-                    assistant_id=self._vapi_settings.default_assistant_id,
-                    phone_number_id=self._vapi_settings.phone_number_id,
-                    customer=customer,
-                    assistant_overrides=assistant_overrides,
-                )
+                assistant_id = _default_assistant_id
+
+            # Create call
+            call: VapiCall = await self._client.calls.create(
+                squad_id=squad_id,
+                assistant_id=assistant_id,
+                phone_number_id=self._vapi_settings.phone_number_id,
+                customer=customer,
+                assistant_overrides=assistant_overrides,
+            )
 
             # Return call response using SDK's Call object directly
             return self._parse_call_response(call)
@@ -134,13 +133,19 @@ class VapiProvider(VoiceAIProvider):
             logger.error("[Vapi Provider] Error getting call status", error=str(e))
             raise VoiceAIError(error_msg, error_code=VoiceAIErrorCode.HTTP_ERROR)
 
-    async def end_call(self, call_id: str, control_url: str | None = None) -> bool:
+    async def end_call(
+        self,
+        call_id: str,
+        control_url: str | None = None,
+        customer_call_sid: str | None = None,
+    ) -> bool:
         """
         End an ongoing call programmatically using Vapi's control URL.
 
         Args:
             call_id: The unique identifier for the call
             control_url: Optional control URL. If not provided, will fetch from call status.
+            customer_call_sid: Unused for Vapi (kept for interface compatibility with Twilio)
 
         Returns:
             bool: True if call was successfully ended
@@ -248,7 +253,7 @@ class VapiProvider(VoiceAIProvider):
         return phone_number
 
     def _build_assistant_overrides(self, request: CallRequest) -> AssistantOverrides:
-        """Build assistant overrides with customer variables and structured outputs using SDK types."""
+        """Build assistant overrides with customer variables."""
         # Extract customer context variables
         variable_values = self._extract_customer_variables(request)
 
@@ -258,13 +263,9 @@ class VapiProvider(VoiceAIProvider):
             variable_values=variable_values,
         )
 
-        # Build analysis plan with structured data extraction
-        analysis_plan = self._build_claim_status_analysis_plan()
-
         # Return typed AssistantOverrides object
         return AssistantOverrides(
             variable_values=variable_values if variable_values else None,
-            analysis_plan=analysis_plan,
         )
 
     def _extract_customer_variables(self, request: CallRequest) -> dict[str, Any]:
@@ -276,84 +277,6 @@ class VapiProvider(VoiceAIProvider):
             exclude_none=True,
             exclude={"phone_number", "metadata", "customer_id"},
         )
-
-    def _build_claim_status_analysis_plan(self) -> AnalysisPlan:
-        """Build analysis plan for claim status structured data extraction using SDK types."""
-        # Build typed JSON Schema for structured data extraction
-        schema = JsonSchema(
-            type="object",
-            properties={
-                "call_outcome": {
-                    "type": "string",
-                    "enum": [
-                        "completed",  # Successfully determined claim status
-                        "voicemail",  # Reached voicemail
-                        "gatekeeper",  # Blocked by gatekeeper
-                        "inconclusive",  # Call happened but couldn't determine status
-                        "no_answer",  # No connection established
-                    ],
-                    "description": "Result of the claim status inquiry call",
-                },
-                "claim_status": {
-                    "type": "string",
-                    # "enum": [status.value for status in Status],
-                    "description": "Current status of the job/project",
-                },
-                "payment_details": {
-                    "type": "object",
-                    "properties": {
-                        "status": {
-                            "type": "string",
-                            "enum": ["issued", "not_issued", "pending"],
-                            "description": "Payment status",
-                        },
-                        "amount": {
-                            "type": "number",
-                            "description": "Payment amount if mentioned",
-                        },
-                        "issue_date": {
-                            "type": "string",
-                            "format": "date",
-                            "description": "Date payment was issued",
-                        },
-                        "check_number": {
-                            "type": "string",
-                            "description": "Check number if provided",
-                        },
-                    },
-                },
-                "required_actions": {
-                    "type": "object",
-                    "properties": {
-                        "documents_needed": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "List of documents required",
-                        },
-                        "submission_method": {
-                            "type": "string",
-                            "enum": ["email", "portal", "mail"],
-                            "description": "How to submit documents",
-                        },
-                        "next_steps": {
-                            "type": "string",
-                            "description": "Summary of next actions needed",
-                        },
-                    },
-                },
-            },
-            required=["call_outcome", "claim_status"],
-        )
-
-        # Build the structured data plan with typed JsonSchema
-        structured_data_plan = StructuredDataPlan(
-            enabled=True,
-            schema_=schema,
-            timeout_seconds=30,
-        )
-
-        # Return typed AnalysisPlan object
-        return AnalysisPlan(structured_data_plan=structured_data_plan)
 
     def _parse_call_response(self, call: VapiCall) -> CallResponse:
         """Parse Vapi SDK Call object into standard CallResponse format."""
