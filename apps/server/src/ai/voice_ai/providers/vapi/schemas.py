@@ -19,10 +19,19 @@ class VapiPaymentDetails(BaseModel):
     check_number: str | None = Field(None, description="Check number")
 
 
+class VapiDocumentNeeded(BaseModel):
+    """Document information from required actions."""
+
+    document_name: str = Field(..., description="Name of the required document")
+    description: str | None = Field(
+        None, description="Optional description of the document"
+    )
+
+
 class VapiRequiredActions(BaseModel):
     """Required actions from claim status call."""
 
-    documents_needed: list[str] = Field(
+    documents_needed: list[VapiDocumentNeeded] = Field(
         default_factory=list, description="List of required documents"
     )
     submission_method: str | None = Field(
