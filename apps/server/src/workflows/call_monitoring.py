@@ -395,6 +395,9 @@ class CallAndWriteToCRMWorkflow:
 
         # TODO: Change this to be event driven instead of polling
         for attempt in range(max_attempts):
+            # Expire all cached instances to force fresh database query
+            repository.session.expire_all()
+
             call = await repository.get_call_by_call_id(call_id)
             if call and call.recording_url:
                 logger.debug(
@@ -589,7 +592,7 @@ class CallAndWriteToCRMWorkflow:
             file_metadata = await self.gemini_ai_provider.upload_file(
                 str(temp_file_path)
             )
-            uploaded_file_id = file_metadata.id
+            uploaded_file_id = file_metadata.name
 
             logger.debug(
                 "[Call Monitoring Workflow] Uploaded recording to AI provider",

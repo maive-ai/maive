@@ -161,8 +161,11 @@ class TwilioVoiceClient:
         try:
             logger.info("[TWILIO] Downloading recording", url=recording_url)
 
+            # Twilio API requires HTTP Basic Auth
+            auth = (self.client.username, self.client.password)
+
             async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.get(recording_url)
+                response = await client.get(recording_url, auth=auth)
                 response.raise_for_status()
 
                 content_type = response.headers.get("content-type", "audio/mpeg")
