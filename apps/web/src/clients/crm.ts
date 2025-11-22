@@ -7,7 +7,6 @@ import {
   type MockProject,
   type Project,
   type ProjectList,
-  type ProjectSummary,
 } from '@maive/api/client';
 import {
   useMutation,
@@ -21,7 +20,7 @@ import { env } from '@/env';
 import { baseClient } from './base';
 
 // Re-export types from the generated client
-export type { MockNote, MockProject, Project, ProjectList, ProjectSummary };
+export type { MockNote, MockProject, Project, ProjectList };
 
 /**
  * Create a configured CRM API instance using the shared axios client
@@ -260,33 +259,3 @@ export function useUpdateMockProject(): UseMutationResult<
   });
 }
 
-/**
- * Generate an AI summary for a project based on its notes
- */
-export async function generateProjectSummary(
-  projectId: string,
-): Promise<ProjectSummary> {
-  const api = createCRMApi();
-  const response =
-    await api.generateProjectSummaryApiCrmProjectsProjectIdSummaryPost(
-      projectId,
-    );
-  console.log(`[CRM Client] Generated summary for project ${projectId}`);
-  return response.data;
-}
-
-/**
- * React Query hook for fetching a project summary
- * Uses TanStack Query caching with 2-minute stale time
- */
-export function useFetchProjectSummary(
-  projectId: string,
-): UseQueryResult<ProjectSummary, Error> {
-  return useQuery({
-    queryKey: ['project-summary', projectId],
-    queryFn: () => generateProjectSummary(projectId),
-    staleTime: 2 * 60 * 1000, // Data is fresh for 2 minutes
-    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes after last use
-    enabled: !!projectId, // Only run if projectId is provided
-  });
-}

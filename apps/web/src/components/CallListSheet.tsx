@@ -5,12 +5,11 @@ import { isValidPhoneNumber } from 'react-phone-number-input';
 
 import { useEndCall, useVoiceAIProvider } from '@/clients/ai/voice';
 import { useCallList, useRemoveFromCallList } from '@/clients/callList';
+import { useFetchProjects } from '@/clients/crm';
 import {
+  useCallAndWriteToCrm,
   useFetchProjectSummary,
-  useFetchProjects,
-  type ProjectSummary,
-} from '@/clients/crm';
-import { useCallAndWriteToCrm } from '@/clients/workflows';
+} from '@/clients/workflows';
 import { ExpandedCallCard } from '@/components/ExpandedCallCard';
 import {
   AlertDialog,
