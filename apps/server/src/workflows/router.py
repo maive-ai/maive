@@ -96,9 +96,7 @@ async def generate_project_summary(
 
     if isinstance(result, CRMErrorResponse):
         if result.error_code == "NOT_FOUND":
-            raise HTTPException(
-                status_code=HTTPStatus.NOT_FOUND, detail=result.error
-            )
+            raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=result.error)
         else:
             raise HTTPException(
                 status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail=result.error

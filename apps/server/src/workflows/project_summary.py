@@ -36,8 +36,8 @@ class ProjectSummaryWorkflow:
         2. Analyzes notes using AI (OpenAI gpt-4o-mini)
         3. Returns a structured summary with:
            - Brief project status summary
-           - Recent actions taken (2-3 bullet points)
-           - Next steps (2-3 bullet points)
+           - Recent actions taken
+           - Next steps
 
         Args:
             project_id: The project identifier
@@ -92,9 +92,9 @@ class ProjectSummaryWorkflow:
                 {notes_text}
 
                 Provide:
-                1. A brief one-sentence summary of the current project status
-                2. 2-3 recent actions taken (as bullet points)
-                3. 2-3 next steps or recommendations (as bullet points)
+                1. A very concise one-sentence summary of the current project status
+                2. Max 2 recent actions taken (as bullet points, sorted by most recent first). Lead each bullet point with a date if available.
+                3. Single bullet point next step or recommendation
 
                 Be concise and focus on the most important information.\
             """).strip()
@@ -117,12 +117,12 @@ class ProjectSummaryWorkflow:
                 return CRMErrorResponse(
                     error="Failed to generate project summary",
                     error_code="AI_GENERATION_ERROR",
-                    provider=getattr(self.crm_service.crm_provider, "provider_name", None),
+                    provider=getattr(
+                        self.crm_service.crm_provider, "provider_name", None
+                    ),
                 )
 
-            logger.info(
-                "Successfully generated project summary", project_id=project_id
-            )
+            logger.info("Successfully generated project summary", project_id=project_id)
             return summary_result
 
         except Exception as e:
