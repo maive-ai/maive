@@ -8,7 +8,6 @@ All URIs are relative to *http://localhost*
 |[**addJobNoteApiCrmJobsJobIdNotesPost**](#addjobnoteapicrmjobsjobidnotespost) | **POST** /api/crm/jobs/{job_id}/notes | Add Job Note|
 |[**createMockProjectApiCrmProjectsPost**](#createmockprojectapicrmprojectspost) | **POST** /api/crm/projects | Create Mock Project|
 |[**downloadFileApiCrmFilesFileIdDownloadGet**](#downloadfileapicrmfilesfileiddownloadget) | **GET** /api/crm/files/{file_id}/download | Download File|
-|[**generateProjectSummaryApiCrmProjectsProjectIdSummaryPost**](#generateprojectsummaryapicrmprojectsprojectidsummarypost) | **POST** /api/crm/projects/{project_id}/summary | Generate Project Summary|
 |[**getAllContactsApiCrmContactsGet**](#getallcontactsapicrmcontactsget) | **GET** /api/crm/contacts | Get All Contacts|
 |[**getAllJobsApiCrmJobsGet**](#getalljobsapicrmjobsget) | **GET** /api/crm/jobs | Get All Jobs|
 |[**getAllProjectsApiCrmProjectsGet**](#getallprojectsapicrmprojectsget) | **GET** /api/crm/projects | Get All Projects|
@@ -224,58 +223,6 @@ const { status, data } = await apiInstance.downloadFileApiCrmFilesFileIdDownload
 ### Return type
 
 **any**
-
-### Authorization
-
-[HTTPBearer](../README.md#HTTPBearer)
-
-### HTTP request headers
-
- - **Content-Type**: Not defined
- - **Accept**: application/json
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-|**200** | Successful Response |  -  |
-|**422** | Validation Error |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **generateProjectSummaryApiCrmProjectsProjectIdSummaryPost**
-> ProjectSummary generateProjectSummaryApiCrmProjectsProjectIdSummaryPost()
-
-Generate an AI summary for a project.  This endpoint analyzes project notes and generates a structured summary including: - Brief project status summary - Recent actions taken (2-3 bullet points) - Next steps (2-3 bullet points)  Args:     project_id: The unique identifier for the project     current_user: The authenticated user     crm_service: The CRM service instance from dependency injection  Returns:     ProjectSummary: AI-generated structured summary  Raises:     HTTPException: If the project is not found or an error occurs
-
-### Example
-
-```typescript
-import {
-    CRMApi,
-    Configuration
-} from './api';
-
-const configuration = new Configuration();
-const apiInstance = new CRMApi(configuration);
-
-let projectId: string; // (default to undefined)
-
-const { status, data } = await apiInstance.generateProjectSummaryApiCrmProjectsProjectIdSummaryPost(
-    projectId
-);
-```
-
-### Parameters
-
-|Name | Type | Description  | Notes|
-|------------- | ------------- | ------------- | -------------|
-| **projectId** | [**string**] |  | defaults to undefined|
-
-
-### Return type
-
-**ProjectSummary**
 
 ### Authorization
 
