@@ -463,12 +463,7 @@ class OpenAIProvider(AIProvider):
             if tools:
                 parse_params["tools"] = tools
 
-            reasoning: Reasoning = Reasoning(
-                effort=self.settings.reasoning_effort, summary="detailed"
-            )
-            parsed_response = await client.responses.parse(
-                reasoning=reasoning, **parse_params
-            )
+            parsed_response = await client.responses.parse(**parse_params)
 
             # Extract reasoning summaries if they exist
             for item in parsed_response.output:

@@ -78,7 +78,9 @@ class JobNimbusJobResponse(BaseModel):
 
     # Creator info
     created_by: str = Field(..., description="Creator JNID", alias="createdBy")
-    created_by_name: str = Field(..., description="Creator name", alias="createdByName")
+    created_by_name: str | None = Field(
+        None, description="Creator name (None for automations)", alias="createdByName"
+    )
 
     # Dates
     date_created: int = Field(
@@ -460,7 +462,9 @@ class JobNimbusContactResponse(BaseModel):
     customer: str = Field(..., description="Customer JNID")
     type: str = Field(..., description="Record type (should be 'contact')")
     created_by: str = Field(..., description="Creator JNID", alias="createdBy")
-    created_by_name: str = Field(..., description="Creator name", alias="createdByName")
+    created_by_name: str | None = Field(
+        None, description="Creator name (None for automations)", alias="createdByName"
+    )
     date_created: int = Field(
         ..., description="Unix timestamp of creation", alias="dateCreated"
     )
@@ -747,7 +751,9 @@ class JobNimbusFileResponse(BaseModel):
 
     # Creator info
     created_by: str = Field(..., description="Creator JNID", alias="createdBy")
-    created_by_name: str = Field(..., description="Creator name", alias="createdByName")
+    created_by_name: str | None = Field(
+        None, description="Creator name (None for automations)", alias="createdByName"
+    )
 
     # Status flags
     is_active: bool = Field(
