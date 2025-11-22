@@ -272,3 +272,26 @@ class TwilioProvider(BaseVoiceAIProvider):
             messages=[],
             provider_data=self._serialize_call(call),
         )
+
+    async def download_recording(self, recording_url: str) -> tuple[bytes, str]:
+        """
+        Download a call recording from Twilio.
+
+        Args:
+            recording_url: URL to the Twilio recording
+
+        Returns:
+            tuple[bytes, str]: Tuple of (file_bytes, content_type)
+
+        Raises:
+            VoiceAIError: If the recording cannot be downloaded
+        """
+        try:
+            return await self.client.download_recording(recording_url)
+        except Exception as e:
+            logger.error(
+                "[TWILIO] Failed to download recording",
+                url=recording_url,
+                error=str(e),
+            )
+            raise VoiceAIError(f"Failed to download Twilio recording: {e}") from e

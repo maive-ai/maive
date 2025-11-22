@@ -7,8 +7,11 @@ This module provides async wrappers around the synchronous Twilio SDK.
 import asyncio
 from typing import Any
 
+import httpx
 from twilio.rest import Client
 from twilio.rest.api.v2010.account.call import CallInstance
+
+from src.utils.logger import logger
 
 
 class TwilioVoiceClient:
@@ -141,3 +144,46 @@ class TwilioVoiceClient:
             recording_status_callback=recording_callback,
             status_callback=status_callback,
         )
+
+    async def download_recording(self, recording_url: str) -> tuple[bytes, str]:
+        """
+        Download a call recording from Twilio.
+
+        Args:
+            recording_url: URL to the Twilio recording
+
+        Returns:
+            Tuple of (file_bytes, content_type)
+
+        Raises:
+            Exception: If download fails
+        """
+        try:
+            logger.info("[TWILIO] Downloading recording", url=recording_url)
+
+            # Twilio API requires HTTP Basic Auth
+            auth = (self.client.username, self.client.password)
+
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.get(recording_url, auth=auth)
+                response.raise_for_status()
+
+                content_type = response.headers.get("content-type", "audio/mpeg")
+                file_bytes = response.content
+
+                logger.info(
+                    "[TWILIO] Successfully downloaded recording",
+                    url=recording_url,
+                    size_bytes=len(file_bytes),
+                    content_type=content_type,
+                )
+
+                return file_bytes, content_type
+
+        except Exception as e:
+            logger.error(
+                "[TWILIO] Failed to download recording",
+                url=recording_url,
+                error=str(e),
+            )
+            raise

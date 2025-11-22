@@ -354,3 +354,23 @@ class VapiProvider(VoiceAIProvider):
             # ToolCallMessage, SystemMessage, etc. don't have user/bot transcript content
 
         return messages
+
+    async def download_recording(self, recording_url: str) -> tuple[bytes, str]:
+        """
+        Download a call recording from Vapi.
+
+        Args:
+            recording_url: URL to the Vapi recording
+
+        Returns:
+            tuple[bytes, str]: Tuple of (file_bytes, content_type)
+
+        Raises:
+            NotImplementedError: Vapi recording download not yet implemented
+        """
+        # TODO: Implement Vapi recording download
+        # Will need to fetch recording URL from Vapi API and download the file
+        raise NotImplementedError(
+            "Vapi recording download not yet implemented. "
+            "This will be added when Vapi call recording analysis is needed."
+        )

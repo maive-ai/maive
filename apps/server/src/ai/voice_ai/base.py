@@ -68,6 +68,22 @@ class VoiceAIProvider(ABC):
         """
         pass
 
+    @abstractmethod
+    async def download_recording(self, recording_url: str) -> tuple[bytes, str]:
+        """
+        Download a call recording from the provider.
+
+        Args:
+            recording_url: URL to the call recording
+
+        Returns:
+            tuple[bytes, str]: Tuple of (file_bytes, content_type)
+
+        Raises:
+            VoiceAIError: If the recording cannot be downloaded
+        """
+        pass
+
 
 class VoiceAIError(Exception):
     """Base exception for Voice AI-related errors."""
