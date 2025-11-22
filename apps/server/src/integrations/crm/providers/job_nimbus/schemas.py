@@ -638,7 +638,9 @@ class JobNimbusActivityResponse(BaseModel):
     type: str = Field(..., description="Record type (should be 'activity')")
     customer: str = Field(..., description="Customer JNID")
     created_by: str = Field(..., description="Creator JNID", alias="createdBy")
-    created_by_name: str | None = Field(None, description="Creator name", alias="createdByName")
+    created_by_name: str | None = Field(
+        None, description="Creator name", alias="createdByName"
+    )
     date_created: int = Field(
         ..., description="Unix timestamp of creation", alias="dateCreated"
     )
