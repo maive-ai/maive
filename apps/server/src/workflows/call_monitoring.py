@@ -371,11 +371,10 @@ class CallAndWriteToCRMWorkflow:
                 call_id=call_id,
             )
 
-            # Update CRM if we have tenant and job_id
-            tenant = request.tenant
+            # Update CRM if we have job_id
             job_id = request.job_id
 
-            if tenant is None or job_id is None:
+            if job_id is None:
                 logger.info(
                     "[Call Monitoring Workflow] Missing tenant/job_id for call; skipping CRM note",
                     call_id=call_id,
@@ -405,31 +404,8 @@ class CallAndWriteToCRMWorkflow:
                     job_id=job_id,
                 )
 
-            # Update project status in CRM (skip if status is empty)
-            if analysis.structured_data.claim_status:
-                logger.info(
-                    "[Call Monitoring Workflow] Updating project status",
-                    job_id=job_id,
-                    claim_status=analysis.structured_data.claim_status,
-                )
-                status_update_result = await self.crm_service.update_job_status(
-                    job_id=job_id,
-                    status=analysis.structured_data.claim_status,
-                )
-
-                if isinstance(status_update_result, object) and hasattr(
-                    status_update_result, "error"
-                ):
-                    logger.error(
-                        "[Call Monitoring Workflow] Failed to update project status",
-                        job_id=job_id,
-                        error=status_update_result.error,
-                    )
-                else:
-                    logger.info(
-                        "[Call Monitoring Workflow] Successfully updated project status",
-                        job_id=job_id,
-                    )
+            # Status updates disabled for JobNimbus - will be re-enabled later
+            # TODO: Re-enable status updates once status name mapping is implemented
 
         except Exception as e:
             logger.error(
@@ -504,7 +480,10 @@ class CallAndWriteToCRMWorkflow:
             ):
                 note_lines.extend(["", "Required Documents:"])
                 for doc in structured_data.required_actions.documents_needed:
-                    note_lines.append(f"- {doc}")
+                    doc_text = doc.document_name
+                    if doc.description:
+                        doc_text += f": {doc.description}"
+                    note_lines.append(f"- {doc_text}")
 
             return "\n".join(note_lines)
 
