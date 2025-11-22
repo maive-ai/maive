@@ -1,26 +1,23 @@
 """Gemini AI integration package."""
 
-from src.ai.gemini.client import GeminiClient
-from src.ai.gemini.config import get_gemini_settings
+from src.ai.providers.gemini import GeminiProvider
 
 
 def get_gemini_client(
     enable_braintrust: bool = False,
     braintrust_project_name: str | None = None,
-) -> GeminiClient:
+) -> GeminiProvider:
     """
-    Get a configured Gemini client instance.
+    Get a configured Gemini provider instance.
 
     Args:
-        enable_braintrust: Whether to enable Braintrust tracing for this client instance
+        enable_braintrust: Whether to enable Braintrust tracing for this provider instance
         braintrust_project_name: Braintrust project name (only used if enable_braintrust=True)
 
     Returns:
-        GeminiClient: The configured Gemini client
+        GeminiProvider: The configured Gemini provider
     """
-    settings = get_gemini_settings()
-    return GeminiClient(
-        settings=settings,
+    return GeminiProvider(
         enable_braintrust=enable_braintrust,
         braintrust_project_name=braintrust_project_name,
     )

@@ -1,5 +1,7 @@
 """Gemini provider implementation."""
 
+import mimetypes
+from pathlib import Path
 from typing import AsyncGenerator, TypeVar
 
 from braintrust.wrappers.google_genai import setup_genai
@@ -19,13 +21,8 @@ from src.ai.base import (
     ContentGenerationResult,
     FileMetadata,
 )
-from src.ai.gemini import get_gemini_client
 from src.ai.gemini.config import get_gemini_settings
 from src.ai.gemini.exceptions import GeminiError
-from src.ai.gemini.schemas import (
-    FileUploadRequest,
-    GenerateContentRequest,
-)
 from src.utils.logger import logger
 
 T = TypeVar("T", bound=BaseModel)
@@ -49,10 +46,6 @@ class GeminiProvider(AIProvider):
             enable_braintrust: Whether to enable Braintrust tracing for this provider instance
             braintrust_project_name: Braintrust project name (only used if enable_braintrust=True)
         """
-        self.client = get_gemini_client(
-            enable_braintrust=enable_braintrust,
-            braintrust_project_name=braintrust_project_name,
-        )
         self._client: genai.Client | None = None
         self.enable_braintrust = enable_braintrust
         self.braintrust_project_name = braintrust_project_name
@@ -90,15 +83,42 @@ class GeminiProvider(AIProvider):
             FileMetadata: Metadata of the uploaded file
         """
         try:
-            request = FileUploadRequest(
-                file_path=file_path,
-                display_name=kwargs.get("display_name"),
-                mime_type=kwargs.get("mime_type"),
+            client = self._get_client()
+            file_path_obj = Path(file_path)
+
+            if not file_path_obj.exists():
+                raise GeminiError(f"File not found: {file_path}")
+
+            # Auto-detect MIME type if not provided
+            mime_type = kwargs.get("mime_type")
+            if not mime_type:
+                mime_type, _ = mimetypes.guess_type(str(file_path_obj))
+                if not mime_type:
+                    mime_type = "application/octet-stream"
+
+            logger.info(
+                "Uploading file", file_path=str(file_path_obj), mime_type=mime_type
             )
-            return await self.client.upload_file(request)
+
+            # Upload file using the google-genai library
+            uploaded_file = client.files.upload(file=str(file_path_obj))
+
+            # Convert to our metadata format
+            metadata = FileMetadata(
+                id=uploaded_file.name,
+                name=getattr(uploaded_file, "display_name", None) or file_path_obj.name,
+                mime_type=getattr(uploaded_file, "mime_type", None),
+                size_bytes=getattr(uploaded_file, "size_bytes", None),
+            )
+
+            logger.info("File uploaded successfully", file_name=metadata.name)
+            return metadata
+
         except Exception as e:
             logger.error("File upload failed", error=str(e))
-            raise
+            if isinstance(e, GeminiError):
+                raise
+            raise GeminiError(f"File upload failed: {e}")
 
     async def delete_file(self, file_id: str) -> bool:
         """Delete a file from Gemini Files API.
@@ -110,8 +130,10 @@ class GeminiProvider(AIProvider):
             bool: True if deletion was successful
         """
         try:
-            result = await self.client.delete_file(file_id)
-            return result.success
+            client = self._get_client()
+            client.files.delete(name=file_id)
+            logger.info("File deleted successfully", file_id=file_id)
+            return True
         except Exception as e:
             logger.error("Failed to delete file", file_id=file_id, error=str(e))
             return False
@@ -147,25 +169,75 @@ class GeminiProvider(AIProvider):
             )
 
         try:
+            client = self._get_client()
             logger.info("Generating content with Gemini")
-            request = GenerateContentRequest(
-                prompt=prompt,
-                files=file_ids or [],
-                file_search_store_names=file_search_store_names,
-                temperature=kwargs.get("temperature"),
-                model_name=kwargs.get("model"),
-            )
 
-            response = await self.client.generate_content(request)
+            # Prepare content list
+            contents = [prompt]
+
+            # Add files if provided
+            if file_ids:
+                for file_name in file_ids:
+                    try:
+                        file_obj = client.files.get(name=file_name)
+                        contents.append(file_obj)
+                        logger.info("Added file to content", file_name=file_name)
+                    except Exception as e:
+                        logger.warning(
+                            "Failed to retrieve file", file_name=file_name, error=str(e)
+                        )
+                        # Continue without this file rather than failing completely
+
+            # Prepare generation config
+            model_name = kwargs.get("model") or self.settings.model_name
+            temperature = kwargs.get("temperature") or self.settings.temperature
+
+            generation_config = {}
+            if temperature is not None:
+                generation_config["temperature"] = temperature
+
+            # Configure File Search tool if store names provided
+            tools = []
+            if file_search_store_names:
+                tools.append(
+                    Tool(
+                        file_search=FileSearch(
+                            file_search_store_names=file_search_store_names
+                        )
+                    )
+                )
+                logger.info(
+                    "Configuring File Search tool",
+                    store_count=len(file_search_store_names),
+                )
+
+            if tools:
+                generation_config["tools"] = tools
+
+            logger.info("Generating content with model", model_name=model_name)
+
+            # Generate content
+            response = client.models.generate_content(
+                model=model_name,
+                contents=contents,
+                config=GenerateContentConfig(**generation_config)
+                if generation_config
+                else None,
+            )
 
             return ContentGenerationResult(
                 text=response.text,
-                usage=response.usage,
-                finish_reason=response.finish_reason,
+                usage=response.usage_metadata.__dict__
+                if hasattr(response, "usage_metadata")
+                else None,
+                finish_reason=getattr(response, "finish_reason", None),
             )
+
         except Exception as e:
             logger.error("Content generation failed", error=str(e))
-            raise
+            if isinstance(e, GeminiError):
+                raise
+            raise GeminiError(f"Content generation failed: {e}")
 
     async def generate_structured_content(
         self,
@@ -272,6 +344,141 @@ class GeminiProvider(AIProvider):
         except Exception as e:
             logger.error("Content generation failed", error=str(e))
             raise
+
+    async def create_file_search_store(self, display_name: str) -> str:
+        """Create a new File Search store.
+
+        Args:
+            display_name: Display name for the File Search store
+
+        Returns:
+            str: Store name (format: fileSearchStores/xxxxx)
+
+        Raises:
+            GeminiError: If store creation fails
+        """
+        try:
+            client = self._get_client()
+            logger.info("Creating File Search store", display_name=display_name)
+
+            store = client.file_search_stores.create(
+                config={"display_name": display_name}
+            )
+            store_name = store.name
+
+            logger.info("File Search store created", store_name=store_name)
+            return store_name
+
+        except Exception as e:
+            logger.error("Failed to create File Search store", error=str(e))
+            if isinstance(e, GeminiError):
+                raise
+            raise GeminiError(f"Create File Search store failed: {e}")
+
+    async def list_file_search_stores(self) -> list[dict]:
+        """List all File Search stores.
+
+        Returns:
+            list[dict]: List of store information dictionaries with 'name' and 'display_name'
+
+        Raises:
+            GeminiError: If listing stores fails
+        """
+        try:
+            client = self._get_client()
+            logger.info("Listing File Search stores")
+
+            stores = client.file_search_stores.list()
+            store_list = [
+                {
+                    "name": store.name,
+                    "display_name": getattr(store, "display_name", None),
+                }
+                for store in stores
+            ]
+
+            logger.info("Listed File Search stores", count=len(store_list))
+            return store_list
+
+        except Exception as e:
+            logger.error("Failed to list File Search stores", error=str(e))
+            if isinstance(e, GeminiError):
+                raise
+            raise GeminiError(f"List File Search stores failed: {e}")
+
+    async def upload_to_file_search_store(
+        self, file_path: str, store_name: str, display_name: str | None = None
+    ):
+        """Upload a file directly to a File Search store.
+
+        Args:
+            file_path: Path to the file to upload
+            store_name: Name of the File Search store (format: fileSearchStores/xxxxx)
+            display_name: Optional display name for the file
+
+        Returns:
+            UploadToFileSearchStoreOperation object for polling completion
+
+        Raises:
+            GeminiError: If upload fails
+        """
+        try:
+            client = self._get_client()
+            file_path_obj = Path(file_path)
+
+            if not file_path_obj.exists():
+                raise GeminiError(f"File not found: {file_path}")
+
+            if display_name is None:
+                display_name = file_path_obj.name
+
+            logger.info(
+                "Uploading file to File Search store",
+                file_path=str(file_path),
+                store_name=store_name,
+                display_name=display_name,
+            )
+
+            operation = client.file_search_stores.upload_to_file_search_store(
+                file=str(file_path),
+                file_search_store_name=store_name,
+                config={"display_name": display_name},
+            )
+
+            logger.info("File upload operation started", operation_name=operation.name)
+            return operation
+
+        except Exception as e:
+            logger.error("Failed to upload file to File Search store", error=str(e))
+            if isinstance(e, GeminiError):
+                raise
+            raise GeminiError(f"Upload to File Search store failed: {e}")
+
+    async def get_operation(self, operation):
+        """Get the status of an operation.
+
+        Args:
+            operation: Operation object from upload or previous get_operation call
+
+        Returns:
+            Updated operation object with .done attribute
+
+        Raises:
+            GeminiError: If getting operation fails
+        """
+        try:
+            client = self._get_client()
+            updated_operation = client.operations.get(operation)
+            return updated_operation
+
+        except Exception as e:
+            operation_name = getattr(operation, "name", str(operation))
+            logger.error(
+                "Failed to get operation", operation_name=operation_name, error=str(e)
+            )
+            if isinstance(e, GeminiError):
+                raise
+            raise GeminiError(f"Get operation failed: {e}")
 
     async def stream_chat(
         self,
