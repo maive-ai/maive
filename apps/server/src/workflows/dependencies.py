@@ -14,6 +14,7 @@ from src.db.dependencies import get_call_repository
 from src.integrations.crm.dependencies import get_crm_service
 from src.integrations.crm.service import CRMService
 from src.workflows.call_monitoring import CallAndWriteToCRMWorkflow
+from src.workflows.project_summary import ProjectSummaryWorkflow
 
 
 def get_call_monitoring_workflow(
@@ -39,3 +40,20 @@ def get_call_monitoring_workflow(
         crm_service=crm_service,
         call_repository=call_repository,
     )
+
+
+def get_project_summary_workflow(
+    crm_service: CRMService = Depends(get_crm_service),
+) -> ProjectSummaryWorkflow:
+    """
+    FastAPI dependency for getting the project summary workflow.
+
+    This workflow generates AI-powered summaries of projects based on their notes.
+
+    Args:
+        crm_service: The CRM service from dependency injection
+
+    Returns:
+        ProjectSummaryWorkflow: The workflow instance
+    """
+    return ProjectSummaryWorkflow(crm_service=crm_service)

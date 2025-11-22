@@ -854,54 +854,6 @@
         }
       }
     },
-    "/api/crm/projects/{project_id}/summary": {
-      "post": {
-        "tags": [
-          "CRM"
-        ],
-        "summary": "Generate Project Summary",
-        "description": "Generate an AI summary for a project.\n\nThis endpoint analyzes project notes and generates a structured summary including:\n- Brief project status summary\n- Recent actions taken (2-3 bullet points)\n- Next steps (2-3 bullet points)\n\nArgs:\n    project_id: The unique identifier for the project\n    current_user: The authenticated user\n    crm_service: The CRM service instance from dependency injection\n\nReturns:\n    ProjectSummary: AI-generated structured summary\n\nRaises:\n    HTTPException: If the project is not found or an error occurs",
-        "operationId": "generate_project_summary_api_crm_projects__project_id__summary_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "project_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Project Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProjectSummary"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/crm/projects": {
       "get": {
         "tags": [
@@ -2114,6 +2066,54 @@
             "HTTPBearer": []
           }
         ]
+      }
+    },
+    "/api/workflows/generate-project-summary/{project_id}": {
+      "post": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Generate Project Summary",
+        "description": "Generate an AI summary for a project.\n\nThis workflow endpoint:\n1. Fetches the project with notes from CRM\n2. Analyzes notes using OpenAI gpt-4o-mini\n3. Returns a structured summary with:\n   - Brief project status summary\n   - Recent actions taken (2-3 bullet points)\n   - Next steps (2-3 bullet points)\n\nArgs:\n    project_id: The unique identifier for the project\n    _current_user: The authenticated user (used for auth, not accessed)\n    workflow: The project summary workflow from dependency injection\n\nReturns:\n    ProjectSummary: AI-generated structured summary\n\nRaises:\n    HTTPException: If the project is not found or an error occurs",
+        "operationId": "generate_project_summary_api_workflows_generate_project_summary__project_id__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/": {
