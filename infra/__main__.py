@@ -1,5 +1,6 @@
 """AWS Infrastructure for Maive application using Pulumi"""
 
+import subprocess
 import time
 
 import pulumi
@@ -1303,6 +1304,52 @@ if deploy_containers:
         },
     )
 
+    # Auto-run migrations when task definition changes
+    # This runs the migration task in ECS before the service is updated
+    def run_migration_task(args):
+        """Run the migration task and wait for it to complete."""
+        cluster_name, task_def_arn, subnet1, subnet2, sg, log_group = args
+
+        # Call the Python script to run migrations
+        result = subprocess.run(
+            [
+                "uv",
+                "run",
+                "python",
+                "run_migration.py",
+                cluster_name,
+                task_def_arn,
+                f"{subnet1},{subnet2}",
+                sg,
+                log_group,
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        # Print output
+        if result.stdout:
+            pulumi.log.info(result.stdout)
+        if result.stderr:
+            pulumi.log.warn(result.stderr)
+
+        # Check if migration succeeded
+        if result.returncode != 0:
+            raise Exception(f"Database migration failed with exit code {result.returncode}")
+
+        return task_def_arn
+
+    # Run migrations whenever the task definition changes
+    migration_result = pulumi.Output.all(
+        cluster.name,
+        migration_task_definition.arn,
+        public_subnet_1.id,
+        public_subnet_2.id,
+        ecs_security_group.id,
+        log_group.name,
+    ).apply(run_migration_task)
+
 # ECS Service (conditional)
 service = None
 if deploy_containers:
@@ -1333,8 +1380,8 @@ if deploy_containers:
             )
         ],
         opts=pulumi.ResourceOptions(
-            depends_on=[alb_listener_rule_api] if deploy_containers else None
-        ),  # Depend on the listener rule only if frontend is deployed
+            depends_on=[alb_listener_rule_api, migration_result] if deploy_containers else None
+        ),  # Depend on the listener rule and migration completion
         tags={
             "Name": f"{server_app_name}-service",
             "Environment": environment,
