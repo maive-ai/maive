@@ -4,10 +4,13 @@ Project summary generation workflow.
 This workflow generates AI-powered summaries of projects based on their notes.
 """
 
+import textwrap
+
 from src.ai.providers.factory import AIProviderType, create_ai_provider
-from src.integrations.crm.schemas import CRMErrorResponse, ProjectSummary
+from src.integrations.crm.schemas import CRMErrorResponse
 from src.integrations.crm.service import CRMService
 from src.utils.logger import logger
+from src.workflows.schemas import ProjectSummary
 
 
 class ProjectSummaryWorkflow:
@@ -77,22 +80,24 @@ class ProjectSummaryWorkflow:
             )
 
             # Build prompt
-            prompt = f"""Analyze these project notes and provide a concise summary:
+            prompt = textwrap.dedent(f"""\
+                Analyze these project notes and provide a concise summary:
 
-Project: {project.name or 'Unknown'}
-Status: {project.status}
-Claim Number: {project.claim_number or 'N/A'}
-Customer: {project.customer_name or 'Unknown'}
+                Project: {project.name or "Unknown"}
+                Status: {project.status}
+                Claim Number: {project.claim_number or "N/A"}
+                Customer: {project.customer_name or "Unknown"}
 
-Recent Notes (most recent first):
-{notes_text}
+                Recent Notes (most recent first):
+                {notes_text}
 
-Provide:
-1. A brief one-sentence summary of the current project status
-2. 2-3 recent actions taken (as bullet points)
-3. 2-3 next steps or recommendations (as bullet points)
+                Provide:
+                1. A brief one-sentence summary of the current project status
+                2. 2-3 recent actions taken (as bullet points)
+                3. 2-3 next steps or recommendations (as bullet points)
 
-Be concise and focus on the most important information."""
+                Be concise and focus on the most important information.\
+            """).strip()
 
             # Generate structured summary using AI provider
             ai_provider = create_ai_provider(provider_type=AIProviderType.OPENAI)

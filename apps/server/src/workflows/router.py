@@ -12,13 +12,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from src.ai.voice_ai.schemas import CallRequest, CallResponse, VoiceAIErrorResponse
 from src.auth.dependencies import get_current_user
 from src.auth.schemas import User
-from src.integrations.crm.schemas import CRMErrorResponse, ProjectSummary
+from src.integrations.crm.schemas import CRMErrorResponse
 from src.workflows.call_monitoring import CallAndWriteToCRMWorkflow
 from src.workflows.dependencies import (
     get_call_monitoring_workflow,
     get_project_summary_workflow,
 )
 from src.workflows.project_summary import ProjectSummaryWorkflow
+from src.workflows.schemas import ProjectSummary
 
 router = APIRouter(prefix="/workflows", tags=["Workflows"])
 
